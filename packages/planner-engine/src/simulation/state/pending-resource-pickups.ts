@@ -3,6 +3,7 @@ import type { Catalog, InRunTraitRarity } from '../../catalog-schema';
 import { acquisitionOrdinalValue, type TraitPickupDeclaration } from '../../catalog-schema/traits';
 import {
   resolveAcquisitionRole,
+  type ConcreteAcquisitionEvent,
   type MaxStatGrant,
   type ResolvedRewardOffer,
   type ResourceAmounts,
@@ -267,5 +268,54 @@ export function closePendingResourcePickupRoom(
   state: SimulationState,
   room: string,
 ): SimulationState {
-  return state.pendingResourcePickups[room] === undefined ? state : withRoom(state, room, {});
+  const closed =
+    state.pendingResourcePickups[room] === undefined ? state : withRoom(state, room, {});
+  return closed.forfeitedPickups?.[room] === undefined
+    ? closed
+    : withForfeitedRoom(closed, room, {});
+}
+
+function withForfeitedRoom(
+  state: SimulationState,
+  room: string,
+  records: Readonly<Record<string, ConcreteAcquisitionEvent>>,
+): SimulationState {
+  const { [room]: _previous, ...rest } = state.forfeitedPickups ?? {};
+  void _previous;
+  const rooms = Object.keys(records).length === 0 ? rest : { ...rest, [room]: records };
+  const { forfeitedPickups: _rooms, ...without } = state;
+  void _rooms;
+  return Object.freeze(
+    Object.keys(rooms).length === 0
+      ? without
+      : { ...without, forfeitedPickups: Object.freeze(rooms) },
+  );
+}
+
+/** Records the consumable Forfeit realized each role of one object as, as it spawned. */
+export function recordForfeitedPickup(
+  state: SimulationState,
+  owner: SemanticAddress,
+  realized: readonly ConcreteAcquisitionEvent[],
+): SimulationState {
+  const room = traitOfferRoomKey(owner);
+  if (room === undefined || realized.length === 0) return state;
+  return withForfeitedRoom(
+    state,
+    room,
+    Object.freeze({
+      ...(state.forfeitedPickups?.[room] ?? {}),
+      ...Object.fromEntries(realized.map((event) => [roleKey(owner, event.role), event])),
+    }),
+  );
+}
+
+/** What Forfeit realized one spawned object's role as, if it replaced the object. */
+export function forfeitedPickupOf(
+  state: SimulationState,
+  owner: SemanticAddress,
+  role: string,
+): ConcreteAcquisitionEvent | undefined {
+  const room = traitOfferRoomKey(owner);
+  return room === undefined ? undefined : state.forfeitedPickups?.[room]?.[roleKey(owner, role)];
 }

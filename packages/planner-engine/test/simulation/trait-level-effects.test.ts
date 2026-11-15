@@ -22,8 +22,10 @@ import {
   recordReachedTraitOffer,
   targetedAcquisitionTargetKeys,
   type TraitOfferEvent,
+  assembleRoomActionRoster,
   executeRoomLifecycle,
 } from '@run-planner/engine/simulation';
+import { gateFreeGraphEvents } from '../support/event-graph';
 import { describe, expect, it } from 'vitest';
 
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
@@ -634,6 +636,7 @@ describe('Supply Chain lifecycle', () => {
     const postbossLifecycle = executeRoomLifecycle(catalog, {
       origin: dreamOccurrence,
       lifecycleProfileKey: 'PostBossRoom',
+      roomDeclaration: postboss,
       encounterEnvelopeKey: postboss.encounterEnvelopeKey,
       encounterPhases: [
         {
@@ -653,6 +656,18 @@ describe('Supply Chain lifecycle', () => {
         },
       ],
       counterEffects: postboss.counters,
+      roomActionRoster: assembleRoomActionRoster({
+        owner: dreamOccurrence,
+        order: [],
+        eventGraph: Object.freeze({
+          profileKey: 'PostBossRoom',
+          activeEncounterSlotKeys: ['Encounter'],
+          phases: [{ phaseKey: 'Encounter' }],
+          pressFights: [],
+          events: gateFreeGraphEvents(['Encounter'], false),
+        }),
+        contributions: [],
+      }),
     });
     expect(postbossLifecycle.events.map((event) => event.kind)).not.toContain(
       'encounterEndEffectsApplied',

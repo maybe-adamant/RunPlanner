@@ -415,6 +415,37 @@ describe('run import of Rarify clicks and rows a held rarify source logged one r
     expect(spends(imported.project)).toEqual(new Map([['RarifyKeepsake', 1]]));
   });
 
+  it("reads an unslotted Calling Card's vanished last charge as spent, a swapped-away one's as unknown", () => {
+    // N_Combat03 enters holding an unslotted Calling Card with one charge; N_Hub's entry has lost it.
+    const base = oceanusOpening();
+    const start = simulateProjectAssembly(catalog, projectFromRunRecord(catalog, base).project);
+    const spends = (slotted: boolean) => {
+      const rooms = base.rooms.map((room, index) =>
+        index === 3
+          ? {
+              ...room,
+              entry: {
+                ...room.entry!,
+                ...(slotted ? { keepsake: 'RarifyKeepsake' } : {}),
+                traits: {
+                  ...room.entry!.traits,
+                  RarifyKeepsake: { rarity: 'Epic', rarityUpgradeUses: 1 },
+                },
+              },
+            }
+          : index === 4
+            ? { ...room, entry: { ...room.entry!, lostTraits: ['RarifyKeepsake'] } }
+            : room,
+      );
+      return recordedRarifySpends(
+        new RunImportWalk(catalog, { ...base, rooms }, start, []).context,
+        3,
+      );
+    };
+    expect(spends(false)).toEqual(new Map([['RarifyKeepsake', 1]]));
+    expect(spends(true)).toEqual(new Map());
+  });
+
   it('authors no click in a Cherished Heirloom room whose charges rose by its rank advance', () => {
     const imported = projectFromRunRecord(catalog, heirloomRoom('Common', 6));
     expect(screenOffer(imported, 'N-r7')).toMatchObject({

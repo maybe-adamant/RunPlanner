@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { loadSurfaceOrdinaryHexPathCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
@@ -69,11 +70,16 @@ describe('Path of Stars screen selections', () => {
       value: { rewardType: 'MaxManaDrop' },
     });
     expect(pathSelection(mana.project)).toBeUndefined();
-    const big = settle(mana.project, {
-      kind: 'ReplaceIncomingReward',
-      reward,
-      value: { rewardType: 'TalentDrop' },
-    });
+    // The owner picks up the new Path of Stars drop.
+    const big = evaluate(
+      collectTestRequiredItems(
+        settle(mana.project, {
+          kind: 'ReplaceIncomingReward',
+          reward,
+          value: { rewardType: 'TalentDrop' },
+        }).project,
+      ),
+    );
     expect(pathSelection(big.project)).toBeUndefined();
     expect(
       big.evaluation.findings.map((finding) => [finding.code, finding.origin, finding.evidence]),
@@ -175,12 +181,14 @@ describe('Path of Stars screen selections', () => {
       document.route.biomes[0]!.topology!.occurrences[0]!.startingRewardAcquisition
         ?.hexActivationsByAcquisitionRole?.self?.selectedNodeKeys;
     expect(selection(settled)).toBeUndefined();
+    // The screen opens once the Spell Drop is picked up.
+    const collected = collectTestRequiredItems(settled);
     const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(
-      evaluate(settled),
+      evaluate(collected),
       start,
     )?.hexActivation;
     expect(capability).toMatchObject({ count: 3, investedNodeKeys: [] });
-    const edited = applyProjectCommand(settled, catalog, {
+    const edited = applyProjectCommand(collected, catalog, {
       kind: 'ReplaceHexActivation',
       acquisition: start,
       value: { selectedNodeKeys: ['1:2', '1:4'] },

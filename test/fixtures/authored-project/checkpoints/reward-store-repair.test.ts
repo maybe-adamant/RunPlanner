@@ -42,7 +42,8 @@ describe('run-scoped reward-store checkpoint repair', () => {
       const encoded = encodeProjectDocument(repaired);
       const file = resolve(checkpointDirectory, entry.file);
       if (rewrite) {
-        if (encoded !== readFileSync(file, 'utf8')) writeFileSync(file, encoded);
+        if (withoutSchemaRevision(encoded) !== withoutSchemaRevision(readFileSync(file, 'utf8')))
+          writeFileSync(file, encoded);
         continue;
       }
       // The committed bytes already carry the repair, so re-applying the

@@ -162,14 +162,14 @@ local function validateFieldsCageSlots(row, label)
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
         end
     end
-    -- A cage without a point stays native; a listed one names an active cage, in order.
-    local previous = 0
-    for _, point in ipairs(layout.cagePoints) do
-        local rank = tonumber(string.match(point.slotKey, "^cage(%d+)$"))
-        if rank == nil or rank > #activeCagePhases or rank <= previous then
+    -- Every active cage stands on a point, in cage order.
+    if #layout.cagePoints ~= #activeCagePhases then
+        return p.fail(label .. ".cagePoints must name a point for each active cage")
+    end
+    for index, point in ipairs(layout.cagePoints) do
+        if point.slotKey ~= "cage" .. index then
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
         end
-        previous = rank
     end
     return true
 end
@@ -337,13 +337,12 @@ local function guideDescription(value, label)
         end
         return row
     end
-    if kind == "purchaseHermesShrineOffer" then
-        local row, rowError = p.exact(record, { "kind", "generationKey", "rewardType", "rushed" }, {}, label)
+    if kind == "purchaseHermesShrineOffer" or kind == "rushHermesShrineOffer" then
+        local row, rowError = p.exact(record, { "kind", "generationKey", "rewardType" }, {}, label)
         if not row then return nil, rowError end
         if not p.one(row.generationKey, { ["initial:first"] = true, ["initial:secondLeft"] = true,
             ["initial:secondRight"] = true, travelDealRefill = true }, label .. ".generationKey")
-            or not p.str(row.rewardType, label .. ".rewardType")
-            or not p.bool(row.rushed, label .. ".rushed") then
+            or not p.str(row.rewardType, label .. ".rewardType") then
             return p.fail(label .. " has invalid Shrine guide operands")
         end
         return row
@@ -451,8 +450,9 @@ local function roomGuide(value, transactionsByOwner, requiredReward, label)
             and not overview.sameRequiredReward(description.drop, requiredReward) then
             return p.fail(label .. "[" .. index .. "].description.drop must be the overview's required reward")
         end
-        if description.kind == "purchaseHermesShrineOffer" and row.transactionOwner ~= nil then
-            return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases")
+        if (description.kind == "purchaseHermesShrineOffer" or description.kind == "rushHermesShrineOffer")
+            and row.transactionOwner ~= nil then
+            return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases or rushes")
         end
     end
     return rows
@@ -711,6 +711,10 @@ function occurrences.decode(value, selected, label)
         selectedSeen[id] = true
     end
     for _, row in ipairs(result) do
+        -- Every entered room, and only one, publishes its layout.
+        if (row.overview.layout ~= nil) ~= (selectedSeen[row.id] == true) then
+            return p.fail(label .. "[" .. row.id .. "].overview.layout must be published exactly for a selected occurrence")
+        end
         -- Only a selected Ship room is entered, so only it spins its wheels.
         if row.kind == "ShipEncounter"
             and #(row.overview.rewardWheels or {}) ~= (selectedSeen[row.id] and shipCombatPhaseCount(row) or 0) then

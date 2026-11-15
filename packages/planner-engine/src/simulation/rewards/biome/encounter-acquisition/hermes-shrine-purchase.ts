@@ -5,7 +5,7 @@ import {
   createTravelDealRefillRealizationAddress,
 } from '../../../../authored-project/addresses';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { HermesShrineGenerationKey } from '../../../../authored-project/model';
@@ -29,18 +29,17 @@ import { addRewardFinding, rewardFinding } from '../../findings';
 export interface HermesShrinePurchaseReachedTransition {
   readonly branch: RewardBranchState | undefined;
   readonly findings: readonly FindingRegionEntry[];
-  /** Published when this rush realizes the room's Travel Deal refill. */
+  /** Published when a rush realizes the room's Travel Deal refill. */
   readonly travelDealRefill?: RealizedHermesShrineTravelDealRefill;
   readonly timelineFacts?: PlannerTimelineFacts;
 }
 
-/** One pending Shrine delivery keyed by its entry; a rush is due in this room. */
+/** One bought Shrine item's pending delivery, keyed by its entry; its rush may later make it due here. */
 export function pendingHermesShrineDelivery(
   room: CanonicalAuthoredRoom,
   generationKey: HermesShrineGenerationKey,
   rewardType: string,
-  purchase: { readonly delay: number; readonly rushed: boolean },
-  historySequence: number,
+  delay: number,
 ): readonly [string, PendingHermesShrineDelivery] {
   const entryKey = hermesShrineDeliveryEntryKey(room.origin, generationKey);
   return [
@@ -50,17 +49,8 @@ export function pendingHermesShrineDelivery(
       source: room.origin,
       generationKey,
       rewardType,
-      rushed: purchase.rushed,
-      remainingUses: purchase.delay,
-      ...(purchase.rushed
-        ? {
-            due: Object.freeze({
-              host: room.origin,
-              cause: 'rush' as const,
-              historySequence,
-            }),
-          }
-        : {}),
+      rushed: false,
+      remainingUses: delay,
     }),
   ] as const;
 }
@@ -78,14 +68,124 @@ function supportedRefill(
 }
 
 /**
- * Settles one ranked Shrine purchase. The first rushed initial purchase made
- * while Travel Deal is held refills its slot (`FirstSpeedUpPurchase`);
- * a rush without the trait leaves the refill available to a later rush.
+ * Settles one ranked Shrine purchase. An initial item's delivery is scheduled
+ * at the Shrine checkpoint; the refill's purchase schedules its own, and
+ * before a rush made with Travel Deal the refill does not exist yet.
  */
 export function applyHermesShrinePurchaseReachedTransition(inputs: {
   readonly catalog: Catalog;
   readonly snapshot: BiomeRewardSnapshot;
   readonly event: Extract<HistoryEvent, { readonly kind: 'hermesShrinePurchaseReached' }>;
+  readonly room: CanonicalAuthoredRoom | undefined;
+  readonly branch: RewardBranchState | undefined;
+  /** The room's refill domain when an earlier rush already realized it. */
+  readonly realized: RealizedHermesShrineTravelDealRefill | undefined;
+}): HermesShrinePurchaseReachedTransition {
+  const { snapshot, event, room, branch, realized } = inputs;
+  if (room === undefined)
+    throw new BiomeRewardSimulationContractError('Shrine purchases have no authored room');
+  const unchanged = () => Object.freeze({ branch, findings: Object.freeze([]) });
+  if (event.generationKey !== 'travelDealRefill') return unchanged();
+  const offer = room.hermesShrine?.travelDealRefill?.offer;
+  const row = room.roomActionRoster.rows.find(
+    (candidate) =>
+      candidate.rank !== null &&
+      candidate.reference.kind === 'purchaseHermesShrineOffer' &&
+      candidate.reference.generationKey === 'travelDealRefill',
+  );
+  if (row === undefined) return unchanged();
+  if (realized === undefined) {
+    const findings = new Map<string, FindingRegionEntry>();
+    addRewardFinding(
+      findings,
+      rewardFinding('hermesShrineTravelDealRefillUnavailable', row.owner, {
+        generationKey: 'travelDealRefill',
+        reason:
+          firstInitialRush(
+            room.roomActionRoster.rows.flatMap((ranked) =>
+              ranked.rank === null ? [] : [ranked.reference],
+            ),
+          ) === undefined
+            ? 'noRushedPurchase'
+            : 'travelDealInactive',
+      }),
+      ownerRegion(row.owner),
+      rewardFindingChronologyForRoom(snapshot, room.origin, event.sequence, 'localRoomLifecycle'),
+    );
+    return Object.freeze({ branch, findings: Object.freeze([...findings.values()]) });
+  }
+  if (offer === undefined || offer === null || !supportedRefill(room, realized)) return unchanged();
+  const [key, delivery] = pendingHermesShrineDelivery(
+    room,
+    'travelDealRefill',
+    offer.rewardType,
+    offer.delay,
+  );
+  return Object.freeze({
+    branch: mapReached(branch, (reached) =>
+      Object.freeze({
+        ...reached,
+        state: Object.freeze({
+          ...reached.state,
+          pendingHermesShrineDeliveries: Object.freeze({
+            ...reached.state.pendingHermesShrineDeliveries,
+            [key]: delivery,
+          }),
+        }),
+      }),
+    ),
+    findings: Object.freeze([]),
+  });
+}
+
+/** Makes a bought item's pending delivery due at its rush, in the Shrine room, and spawns it. */
+function rushedDelivery(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  branch: RewardBranchState | undefined,
+  generationKey: HermesShrineGenerationKey,
+  sequence: number,
+): RewardBranchState | undefined {
+  return mapReached(branch, (reached) => {
+    const key = hermesShrineDeliveryEntryKey(room.origin, generationKey);
+    const pending = reached.state.pendingHermesShrineDeliveries[key];
+    if (pending === undefined || pending.due !== undefined) return reached;
+    return spawnDueHermesDeliveries(
+      catalog,
+      room,
+      Object.freeze({
+        ...reached,
+        state: Object.freeze({
+          ...reached.state,
+          pendingHermesShrineDeliveries: Object.freeze({
+            ...reached.state.pendingHermesShrineDeliveries,
+            [key]: Object.freeze({
+              ...pending,
+              rushed: true,
+              due: Object.freeze({
+                host: room.origin,
+                cause: 'rush' as const,
+                historySequence: sequence,
+              }),
+            }),
+          }),
+        }),
+      }),
+      sequence,
+    );
+  });
+}
+
+/**
+ * Settles one ranked Shrine rush: the first initial rush made while Travel
+ * Deal is held refills its slot (`FirstSpeedUpPurchase`), a rush without the
+ * trait leaves the refill to a later rush, and the rush closes the Shrine, so
+ * the rushed item spawns here.
+ */
+export function applyHermesShrineRushReachedTransition(inputs: {
+  readonly catalog: Catalog;
+  readonly snapshot: BiomeRewardSnapshot;
+  readonly event: Extract<HistoryEvent, { readonly kind: 'hermesShrineRushReached' }>;
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly declaration: RoomDeclaration | undefined;
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
@@ -95,8 +195,16 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
 }): HermesShrinePurchaseReachedTransition {
   const { catalog, snapshot, event, room, declaration, roomView, branch, realized } = inputs;
   if (room === undefined || declaration === undefined || roomView === undefined)
-    throw new BiomeRewardSimulationContractError('Shrine purchases have no authored room');
+    throw new BiomeRewardSimulationContractError('Shrine rushes have no authored room');
   const shrine = room.hermesShrine;
+  const spawned = () => rushedDelivery(catalog, room, branch, event.generationKey, event.sequence);
+  if (
+    event.generationKey === 'travelDealRefill' ||
+    realized !== undefined ||
+    shrine === undefined ||
+    branch?.state.traitHistory.equippedTraits.RestockBoon === undefined
+  )
+    return Object.freeze({ branch: spawned(), findings: Object.freeze([]) });
   const findings = new Map<string, FindingRegionEntry>();
   const addFinding = (
     kind: Parameters<typeof rewardFinding>[0],
@@ -109,70 +217,6 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
       ownerRegion(origin),
       rewardFindingChronologyForRoom(snapshot, room.origin, event.sequence, 'localRoomLifecycle'),
     );
-  const unchanged = () => Object.freeze({ branch, findings: Object.freeze([]) });
-
-  if (event.generationKey === 'travelDealRefill') {
-    const offer = shrine?.travelDealRefill?.offer;
-    const row = room.roomActionRoster.rows.find(
-      (candidate) =>
-        candidate.rank !== null &&
-        candidate.reference.kind === 'purchaseHermesShrineOffer' &&
-        candidate.reference.generationKey === 'travelDealRefill',
-    );
-    if (row === undefined) return unchanged();
-    // Before a rush made with Travel Deal the purchased refill does not exist yet.
-    if (realized === undefined) {
-      addFinding('hermesShrineTravelDealRefillUnavailable', row.owner, {
-        generationKey: 'travelDealRefill',
-        reason:
-          firstRushedInitialPurchase(
-            room.roomActionRoster.rows.flatMap((ranked) =>
-              ranked.rank === null ? [] : [ranked.reference],
-            ),
-          ) === undefined
-            ? 'noRushedPurchase'
-            : 'travelDealInactive',
-      });
-      return Object.freeze({ branch, findings: Object.freeze([...findings.values()]) });
-    }
-    if (offer === undefined || offer === null || !supportedRefill(room, realized))
-      return unchanged();
-    const [key, delivery] = pendingHermesShrineDelivery(
-      room,
-      'travelDealRefill',
-      offer.rewardType,
-      { delay: offer.delay, rushed: event.rushed },
-      event.sequence,
-    );
-    return Object.freeze({
-      branch: mapReached(branch, (reached) =>
-        spawnDueHermesDeliveries(
-          catalog,
-          room,
-          Object.freeze({
-            ...reached,
-            state: Object.freeze({
-              ...reached.state,
-              pendingHermesShrineDeliveries: Object.freeze({
-                ...reached.state.pendingHermesShrineDeliveries,
-                [key]: delivery,
-              }),
-            }),
-          }),
-          event.sequence,
-        ),
-      ),
-      findings: Object.freeze([]),
-    });
-  }
-
-  if (
-    !event.rushed ||
-    realized !== undefined ||
-    shrine === undefined ||
-    branch?.state.traitHistory.equippedTraits.RestockBoon === undefined
-  )
-    return unchanged();
   const view = roomView.preOutgoing ?? roomView.entry;
   const assessment = assessHermesShrineTravelDealRefill(catalog, shrine, event.generationKey, [
     createBiomeRewardFacts({
@@ -204,7 +248,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
       rewardType: offer.rewardType,
     });
   return Object.freeze({
-    branch,
+    branch: spawned(),
     findings: Object.freeze([...findings.values()]),
     travelDealRefill,
     ...(supported

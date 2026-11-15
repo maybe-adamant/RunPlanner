@@ -1,6 +1,6 @@
 -- Room object anchors through the composed room feature hooks: each object's
--- ChallengeSwitchBase draw takes its published anchor, unplanned draws never
--- take a planned anchor, and the Fields point scope never captures them.
+-- ChallengeSwitchBase draw takes its published anchor, every other draw stays
+-- native, and the Fields point scope never captures them.
 -- luacheck: globals TestRoomAnchors
 local lu = require("luaunit")
 local featureHooks = require("mods.room.features.hooks")
@@ -9,6 +9,27 @@ local support = require("tests.harness.hook_composition")
 TestRoomAnchors = {}
 
 local ANCHORS = { 1, 2, 3, 4, 5 }
+
+-- Strict published objects, each on its anchor; a pinned Well's is its pin.
+local function well(anchorId)
+    return { anchorId = anchorId, offers = {
+        { generationKey = "initial:healing", offerKey = "HealDropRange" },
+        { generationKey = "initial:secondLeft", offerKey = "LastStandShopItem" },
+        { generationKey = "initial:secondRight", offerKey = "RandomStoreItem" },
+    } }
+end
+local function pool(anchorId) return { anchorId = anchorId, traits = {} } end
+local function shrine(anchorId)
+    local offers = {}
+    for index, slot in ipairs({ "first", "secondLeft", "secondRight" }) do
+        offers[index] = { generationKey = "initial:" .. slot, optionKey = "Heal", rewardType = "HealBigDrop",
+            slotIndex = index, roomDelay = 2 }
+    end
+    return { anchorId = anchorId, offers = offers }
+end
+local function switch(anchorId)
+    return { variantKey = "Switch", encounterKey = "Encounter", anchorId = anchorId }
+end
 
 function TestRoomAnchors:setUp()
     self.saved = { _G.GetIdsByType, _G.GetIds, _G.RoomData, _G.IsGameStateEligible }
@@ -97,32 +118,32 @@ local function objects(room)
         id(room.MetaRewardStand) }
 end
 
-function TestRoomAnchors.testPlannedAnchorsAreTakenAndUnplannedObjectsDrawAroundThem()
+function TestRoomAnchors.testEveryPublishedAnchorIsTakenAndTheMetaRewardStandDrawsWhatIsLeft()
     local callbacks, diagnostics = harness({
-        stygianWell = { offers = {} },
-        purgingPool = { anchorId = 1 },
-        hermesShrine = { offers = {}, anchorId = 4 },
-        challengeSwitch = { variantKey = "Switch", anchorId = 2 },
+        stygianWell = well(3),
+        purgingPool = pool(1),
+        hermesShrine = shrine(4),
+        challengeSwitch = switch(2),
     })
     local room = spawn(callbacks, { IsMetaRewardStandEligible = true, switch = true },
         { Name = "F_Combat01", __runPlannerExecutionRoomId = "room", ForceWellShop = true, ForceSurfaceShop = true })
-    -- The Well draws over {3, 5}; the Meta Reward Stand takes what is left.
     lu.assertEquals(objects(room), { 3, 1, 4, 2, 5 })
     lu.assertEquals(diagnostics, {})
 end
 
-function TestRoomAnchors.testWithoutPlannedAnchorsEveryDrawStaysNative()
-    local callbacks, diagnostics = harness({ purgingPool = {}, challengeSwitch = { variantKey = "Switch" } })
-    local room = spawn(callbacks, { switch = true }, { Name = "F_Combat01", __runPlannerExecutionRoomId = "room" })
-    lu.assertEquals(objects(room), { false, 1, false, 2, false })
+function TestRoomAnchors.testAnObjectThePlanDoesNotHoldDrawsNatively()
+    local callbacks, diagnostics = harness({ hermesShrine = shrine(4) })
+    local room = spawn(callbacks, { IsSurfaceShopEligible = true, IsMetaRewardStandEligible = true, switch = true },
+        { Name = "F_Combat01", __runPlannerExecutionRoomId = "room" })
+    lu.assertEquals(objects(room), { false, false, 4, 1, 2 })
     lu.assertEquals(diagnostics, {})
 end
 
 function TestRoomAnchors.testPinnedWellKeepsItsPinAndTheSwitchStillTakesItsAnchor()
     _G.RoomData.F_PostBoss01 = { WellShopChallengeBaseId = 5 }
     local callbacks, diagnostics = harness({
-        stygianWell = { offers = {}, anchorId = 5 },
-        challengeSwitch = { variantKey = "Switch", anchorId = 3 },
+        stygianWell = well(5),
+        challengeSwitch = switch(3),
     })
     local room = spawn(callbacks, { switch = true },
         { Name = "F_PostBoss01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
@@ -130,10 +151,21 @@ function TestRoomAnchors.testPinnedWellKeepsItsPinAndTheSwitchStillTakesItsAncho
     lu.assertEquals(diagnostics, {})
 end
 
+function TestRoomAnchors.testAPinnedWellOffItsPublishedPinDiagnoses()
+    _G.RoomData.F_PostBoss01 = { WellShopChallengeBaseId = 4 }
+    local callbacks, diagnostics = harness({ stygianWell = well(5) })
+    local room = spawn(callbacks, {},
+        { Name = "F_PostBoss01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
+    lu.assertEquals(objects(room), { 4, false, false, false, false })
+    lu.assertEquals(diagnostics, {
+        { kind = "room-anchor", observed = { object = "stygianWell", expected = 5, observed = 4 } },
+    })
+end
+
 function TestRoomAnchors.testUnavailableAnchorDiagnosesAndFallsBackToNative()
     local callbacks, diagnostics = harness({
-        purgingPool = { anchorId = 1 },
-        challengeSwitch = { variantKey = "Switch", anchorId = 9 },
+        purgingPool = pool(1),
+        challengeSwitch = switch(9),
     })
     local room = spawn(callbacks, { switch = true }, { Name = "F_Combat01", __runPlannerExecutionRoomId = "room" })
     lu.assertEquals(objects(room), { false, 1, false, 2, false })
@@ -144,7 +176,7 @@ function TestRoomAnchors.testUnavailableAnchorDiagnosesAndFallsBackToNative()
 end
 
 function TestRoomAnchors.testUnsynchronizedAndOtherRoomsStayNative()
-    local callbacks, diagnostics, state = harness({ purgingPool = { anchorId = 3 } })
+    local callbacks, diagnostics, state = harness({ purgingPool = pool(3) })
     local present = { IsSellTraitShopEligible = true }
     local other = spawn(callbacks, present, { Name = "F_Combat01", __runPlannerExecutionRoomId = "other" })
     lu.assertEquals(objects(other), { false, 1, false, false, false })
@@ -157,7 +189,7 @@ end
 function TestRoomAnchors.testFieldsAndAnchorScopesNeverCaptureEachOthersDraws()
     local callbacks, diagnostics = harness({
         fields = { cagePoints = { { slotKey = "cage1", pointId = 13 } }, optionalRewards = {} },
-        purgingPool = { anchorId = 2 },
+        purgingPool = pool(2),
     })
     local room = { Name = "H_Combat01", __runPlannerExecutionRoomId = "room", OptionalRewardChances = {},
         BonusRewardStoreName = "FieldsOptionalRewards" }

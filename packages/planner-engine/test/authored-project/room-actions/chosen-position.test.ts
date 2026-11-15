@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
-  objectCommandInsertionIndexes,
+  hermesShrineDeliveryEntryKey,
+  positionedCommandInsertionIndexes,
   roomActionKey,
-  type PositionedObjectCommand,
+  type PositionedCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -22,9 +25,17 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { loadSurfaceShrineTravelDealCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceScheduledLifecycleCheckpoint,
+  loadSurfaceShrineTravelDealCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import { placeRoomActionsAtChosenIndex } from '../../../src/authored-project/room-actions/chosen-position';
 import { createCompleteNProject } from '../support/complete-n-project';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const well = createOccurrenceAddress(
   goldenFBiome,
@@ -82,7 +93,7 @@ describe('placing actions at a chosen index', () => {
       });
     expect(at(0)).toMatchObject({
       kind: 'refused',
-      reason: expect.stringMatching(/a required action of an earlier window/),
+      reason: expect.stringMatching(/a required action whose deadline passes first/),
     });
     expect(
       placeRoomActionsAtChosenIndex(
@@ -93,7 +104,7 @@ describe('placing actions at a chosen index', () => {
     ).toEqual({ kind: 'refused', reason: 'has no placed action to position' });
   });
 
-  it('lists exactly the indices each object command accepts', () => {
+  it('lists exactly the indices each positioned command accepts', () => {
     const goldenShop = createOccurrenceId('golden-f-preboss-shop');
     const nShop = createOccurrenceId('round-trip-n-preboss');
     const nBiome = createBiomeAddress('Surface', 'N');
@@ -121,7 +132,7 @@ describe('placing actions at a chosen index', () => {
     });
     const shrine = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const oShrine = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-    const cases: readonly [ProjectDocument, string, PositionedObjectCommand][] = [
+    const cases: readonly [ProjectDocument, string, PositionedCommand][] = [
       [
         fShop,
         goldenShop,
@@ -132,15 +143,15 @@ describe('placing actions at a chosen index', () => {
         },
       ],
       [
-        nProject,
+        applyProjectCommand(nProject, catalog, {
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(nBiome, nShop, 'travelDealRefill'),
+          value: { optionKey: travelOption(nProject).key, offer: { rewardType: 'BlindBoxLoot' } },
+        }),
         nShop,
         {
           kind: 'PurchaseShopTravelDealRefill',
           occurrence: createOccurrenceAddress(nBiome, nShop),
-          value: {
-            optionKey: travelOption(nProject).key,
-            offer: { rewardType: 'BlindBoxLoot' },
-          },
         },
       ],
       [
@@ -170,12 +181,65 @@ describe('placing actions at a chosen index', () => {
           kind: 'PurchaseHermesShrineOffer',
           occurrence: shrine,
           generationKey: 'initial:secondRight',
+        },
+      ],
+      [
+        oShrine,
+        shrine.occurrenceId,
+        {
+          kind: 'SetHermesShrineRush',
+          occurrence: shrine,
+          generationKey: 'initial:secondLeft',
           rushed: true,
         },
       ],
     ];
-    for (const [project, occurrenceId, command] of cases) {
-      const listed = objectCommandInsertionIndexes(project, catalog, command);
+    // Derived pickups the walk leaves unplaced: a due delivery, Gold Gold Gold's duplicate and a
+    // matured Supply Chain drop.
+    const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const scheduled = loadSurfaceScheduledLifecycleCheckpoint();
+    const pCombat = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'P'),
+      createOccurrenceId('surface-p-1-1-p_combat03'),
+    );
+    const drop = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, scheduled),
+      pCombat,
+    )!.moments[0]!.items.at(-1)!;
+    if (drop.placement.kind !== 'unplaced' || drop.placement.command === undefined)
+      throw new Error('the Supply Chain drop is placed');
+    const derived: readonly [ProjectDocument, string, PositionedCommand][] = [
+      [
+        oShrine,
+        deliveryHost.occurrenceId,
+        {
+          kind: 'PlaceHermesShrineDelivery',
+          entry: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery'),
+            hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
+          ),
+        },
+      ],
+      [
+        fShop,
+        goldenShop,
+        {
+          kind: 'PlaceEchoGoldPickup',
+          entry: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(
+              createOccurrenceAddress(goldenFBiome, goldenShop),
+              'roomExit',
+            ),
+            'echoDoubleShopReward',
+          ),
+          sourceOfferKey: 'Boon',
+        },
+      ],
+      [scheduled, pCombat.occurrenceId, drop.placement.command as PositionedCommand],
+    ];
+    for (const [project, occurrenceId, command] of [...cases, ...derived]) {
+      const listed = positionedCommandInsertionIndexes(project, catalog, command);
       expect(listed.length, command.kind).toBeGreaterThan(0);
       for (let index = 0; index <= order(project, occurrenceId).length; index += 1) {
         const apply = () => applyProjectCommand(project, catalog, { ...command, index });
@@ -193,53 +257,54 @@ describe('placing actions at a chosen index', () => {
     );
     // The Travel Deal item is blank and no value stocks it.
     expect(
-      objectCommandInsertionIndexes(project, catalog, {
+      positionedCommandInsertionIndexes(project, catalog, {
         kind: 'PurchaseShopTravelDealRefill',
         occurrence: nShop,
       }),
     ).toEqual([]);
   });
 
-  it('moves a rushed Shrine purchase before or after the refill trigger with its pickup', () => {
-    const project = loadSurfaceShrineTravelDealCheckpoint();
+  it('places a Shrine rush at any gap after its purchase, without its pickup', () => {
+    const loaded = loadSurfaceShrineTravelDealCheckpoint();
     const postboss = 'surface-n-preboss:postboss';
     const source = createOccurrenceAddress(
-      createBiomeAddress(project.route.routeKey, 'N'),
+      createBiomeAddress(loaded.route.routeKey, 'N'),
       createOccurrenceId(postboss),
     );
-    const before = order(project, postboss);
-    // [fountain, rack, rushed first (the trigger), refill, first's pickup]
-    expect(before.map((reference) => reference.kind)).toEqual([
+    // [fountain, rack, first, its rush (the trigger), refill, first's pickup]
+    expect(order(loaded, postboss).map((reference) => reference.kind)).toEqual([
       'useFountain',
       'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
+    // Bought before the first item, its rush may stand at any gap after its purchase.
+    const project = applyProjectCommand(loaded, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      index: 2,
+    });
+    const before = order(project, postboss);
     const command = {
-      kind: 'PurchaseHermesShrineOffer' as const,
+      kind: 'SetHermesShrineRush' as const,
       occurrence: source,
       generationKey: 'initial:secondLeft' as const,
       rushed: true,
     };
-    expect(objectCommandInsertionIndexes(project, catalog, command)).toEqual([1, 2, 3, 4, 5]);
+    expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([3, 4, 5, 6, 7]);
     const placed = (index: number) =>
       order(applyProjectCommand(project, catalog, { ...command, index }), postboss);
-    const purchase = { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' };
-    const pickup = { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery' };
-    // Before the trigger it becomes the first rush; the refill still follows it.
-    expect(placed(2)).toEqual([
-      ...before.slice(0, 2),
-      expect.objectContaining(purchase),
-      expect.objectContaining(pickup),
-      ...before.slice(2),
-    ]);
-    // After the refill's purchase it changes nothing about the trigger.
-    expect(placed(4)).toEqual([
-      ...before.slice(0, 4),
-      expect.objectContaining(purchase),
-      expect.objectContaining(pickup),
-      before[4],
-    ]);
+    const rush = withItemContent(project, source, {
+      kind: 'rushHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+    });
+    expect(placed(3)).toEqual([...before.slice(0, 3), rush, ...before.slice(3)]);
+    // After the first item's rush, which stays the Travel Deal trigger.
+    expect(placed(5)).toEqual([...before.slice(0, 5), rush, ...before.slice(5)]);
+    for (const index of [0, 2])
+      expect(() => placed(index)).toThrow(new RegExp(`index ${index} is not a legal position`));
   });
 });

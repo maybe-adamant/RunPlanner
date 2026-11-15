@@ -4,6 +4,7 @@ import {
   type AuthoredRoutePlan,
   type DraftFillerRank,
   type DraftRoomForcing,
+  type DraftSpending,
   type ProjectDocument,
   type RouteLoadout,
   createProjectDocument,
@@ -65,8 +66,8 @@ export interface DraftSpec {
   readonly pursueTartarusGoal?: boolean;
   /** How early a windowed room is forced; absent is the softened ramp. */
   readonly roomForcing?: DraftRoomForcing;
-  /** Shop god boon purchases paced per planned biome; absent is the default. */
-  readonly purchasesPerBiome?: number;
+  /** How readily Shop items are bought against the expected gold; absent is normal. */
+  readonly spending?: DraftSpending;
   /** Further attempts per biome after its first success; absent is the default. */
   readonly retriesPerBiome?: number;
   /** Percent chance a room rolls a resource point; absent is the default. */

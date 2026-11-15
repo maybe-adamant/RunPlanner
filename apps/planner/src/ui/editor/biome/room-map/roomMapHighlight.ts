@@ -11,7 +11,7 @@ import {
 
 /**
  * What the room's map previews for the control being worked on: one door by
- * its number, an Ephyra side door by its slot, a Ship wheel offer, the Chaos gate, every Chaos point with one position previewed,
+ * its number, an Ephyra side door by its slot, a Ship wheel offer, the Chaos gate, the Contract door, every Chaos point with one position previewed,
  * the entry being picked (one entry with the flip choosing it sets), an
  * object anchor, or a Fields slot's point with the free points it can pick
  * numbered.
@@ -21,6 +21,7 @@ export type RoomMapHighlight =
   | { readonly kind: 'sideDoor'; readonly slotKey: string }
   | { readonly kind: 'wheelOffer'; readonly offerKey: string }
   | { readonly kind: 'chaosGate' }
+  | { readonly kind: 'contractExit' }
   | { readonly kind: 'chaosPoints'; readonly position?: number | undefined }
   | { readonly kind: 'entry'; readonly pointId?: number; readonly flipped?: boolean | undefined }
   | { readonly kind: 'anchor'; readonly anchorId: number }
@@ -69,6 +70,7 @@ export const highlightOwner = (highlight: RoomMapHighlight): string => {
     case 'fieldsPoint':
       return `fieldsPoint:${highlight.pointId ?? '?'}`;
     case 'chaosGate':
+    case 'contractExit':
     case 'chaosPoints':
     case 'entry':
       return highlight.kind;

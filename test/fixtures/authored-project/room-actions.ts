@@ -11,6 +11,8 @@ import {
   roomActionDomainForOccurrence,
   roomActionKey,
   scheduleRequiredRoomActions,
+  seaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
   structurallyActiveOccurrenceIds,
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
@@ -50,9 +52,7 @@ export function replaceTestRoomActionOrder(
   if (structurallyActiveOccurrenceIds(topology).has(occurrenceId)) {
     const requiredKeys = new Set(
       domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' && entry.participation === 'required'
-          ? [roomActionKey(entry.reference)]
-          : [],
+        entry.participation === 'required' ? [roomActionKey(entry.reference)] : [],
       ),
     );
     const omitted = [...requiredKeys].filter((key) => !requestedKeys.includes(key));
@@ -103,7 +103,6 @@ export function replaceTestRoomActionOrder(
     }
     const required = domain.contributions.some(
       (entry) =>
-        entry.kind === 'action' &&
         entry.participation === 'required' &&
         roomActionKey(entry.reference) === roomActionKey(reference),
     );
@@ -247,7 +246,7 @@ export function authorTestArtificerReplacement(
   return document;
 }
 
-/** Purchases one Shrine generation, or clears it, and sets its purchase action's rush. */
+/** Purchases one Shrine generation, or clears it, and rushes it right after when asked. */
 export function purchaseTestHermesShrineOffer(
   initial: ProjectDocument,
   catalog: Catalog,
@@ -272,8 +271,9 @@ export function purchaseTestHermesShrineOffer(
   });
   if (purchase === null) return purchased;
   return applyProjectCommand(purchased, catalog, {
-    kind: 'SetHermesShrinePurchaseRush',
-    action: testHermesShrinePurchaseAction(occurrence, generationKey),
+    kind: 'SetHermesShrineRush',
+    occurrence,
+    generationKey,
     rushed: purchase.rushed,
   });
 }
@@ -286,6 +286,99 @@ export function testHermesShrinePurchaseAction(
   return createRoomActionAddress(
     createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
     occurrence.occurrenceId,
-    roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
+    roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey }),
   );
+}
+
+/** The room-action address of one Shrine generation's rush. */
+export function testHermesShrineRushAction(
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+) {
+  return createRoomActionAddress(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    occurrence.occurrenceId,
+    roomActionKey({ kind: 'rushHermesShrineOffer', generationKey }),
+  );
+}
+
+/**
+ * Places each structurally active room's unplaced required rows at the
+ * engine's deterministic schedule, for fixtures that compose a biome's
+ * history directly rather than through the walk.
+ */
+export function scheduleTestRequiredRoomActions(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  biome: ReturnType<typeof createBiomeAddress>,
+): ProjectDocument {
+  const topology = initial.route.biomes.find(
+    (candidate) => candidate.biomeKey === biome.biomeKey,
+  )?.topology;
+  if (topology === null || topology === undefined) throw new Error('test biome has no topology');
+  let document = initial;
+  for (const occurrenceId of structurallyActiveOccurrenceIds(topology)) {
+    const located = roomActionDomainForOccurrence(document, catalog, biome, occurrenceId);
+    if (located === undefined) continue;
+    const order = located.occurrence.roomActions.order;
+    const placed = new Set(order.map(roomActionKey));
+    const requiredKeys = new Set(
+      located.domain.contributions.flatMap((entry) =>
+        entry.participation === 'required' ? [roomActionKey(entry.reference)] : [],
+      ),
+    );
+    const scheduled = scheduleRequiredRoomActions({
+      catalog,
+      domain: located.domain,
+      order,
+      requiredKeys,
+    });
+    for (const [index, reference] of scheduled.entries()) {
+      if (placed.has(roomActionKey(reference))) continue;
+      document = applyProjectCommand(document, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+        reference,
+        index,
+      });
+    }
+  }
+  return document;
+}
+
+/**
+ * Procs Sea Star on one acquisition and picks up its live duplicate where the
+ * room's actions end, as the owner would.
+ */
+export function procTestSeaStar(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  acquisition: AcquisitionRoleAddress,
+): ProjectDocument {
+  const procced = applyProjectCommand(initial, catalog, {
+    kind: 'ReplaceSeaStarResult',
+    acquisition,
+    procced: true,
+  });
+  const reference: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: seaStarDuplicateSiteKey(acquisition),
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  };
+  const order =
+    procced.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? [];
+  return applyProjectCommand(procced, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+      occurrence.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: order.length,
+  });
 }

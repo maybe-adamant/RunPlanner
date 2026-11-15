@@ -72,6 +72,7 @@ export {
   resolveTraitAcquisitionOrdinalEffect,
 } from './traits';
 export { nativeExitDoorOrder, type OpenExitDoor } from './exit-door-order';
+export { worldShopItemPoints } from './world-shop-points';
 import type {
   AspectDeclaration,
   TraitDeclaration,
@@ -471,6 +472,9 @@ interface EncounterLocalRewardAttachment {
   readonly slotKey: string;
 }
 
+/** A room action that starts a slot's encounter. */
+export type EncounterSlotActivationVerb = 'completeFieldsCage';
+
 export type EncounterSlotRewardAttachment =
   EncounterLocalRewardAttachment | EncounterRewardWheelAttachment;
 
@@ -485,6 +489,8 @@ export interface EncounterEnvelopeSlot {
    */
   readonly activationRequirement?: RequirementExpression;
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
+  /** The room action whose use starts this slot's encounter (a Fields cage). */
+  readonly activatedByVerb?: EncounterSlotActivationVerb;
   /**
    * The slot whose encounter's money store this slot's kills drain. Native
    * pays kill gold from the room's own encounter, and a slot started beside it
@@ -499,7 +505,66 @@ export interface EncounterEnvelopeSlot {
  */
 export interface EncounterEnvelope {
   readonly key: string;
+  readonly kind: EncounterEnvelopeKind;
+  /**
+   * Native `MultipleEncountersData`: the room prepares its ordered encounters
+   * before entry and starts each in turn. Fields cages are chosen separately.
+   */
+  readonly multiEncounter: boolean;
   readonly slots: readonly EncounterEnvelopeSlot[];
+}
+
+/**
+ * How a room runs its encounters: none, one, a sequence started in turn, Ship
+ * wheel phases each opened by the previous phase's end, or Fields cages the
+ * player activates.
+ */
+export type EncounterEnvelopeKind =
+  'none' | 'single' | 'sequential' | 'wheelPhases' | 'playerActivatedCages';
+
+/** What starts an encounter's combat once the encounter has begun. */
+export type EncounterGate =
+  /** Automatic: `StartEncounter` calls `StartEncounterEffects` itself, or its own event list does. */
+  | { readonly kind: 'none' }
+  /** Using the room reward's pickup in this producer role starts combat. */
+  | { readonly kind: 'useItemRole'; readonly role: string }
+  /** Using a Ship wheel selects the phase's reward and starts its combat. */
+  | { readonly kind: 'wheelUse' }
+  /** Activating a Fields cage starts its encounter. */
+  | { readonly kind: 'cageActivation' };
+
+/** An observation the encounter's combat can host. */
+export type EncounterOutcomeKind = 'aetosWave' | 'gorgon' | 'goldBet' | 'nemesisRandomEvent';
+
+/**
+ * The encounter's own trigger script. The encounter kind, `skipEndEncounterEffects`
+ * and `createsIncomingRewardAtStart` stay the authorities for non-combat,
+ * skipped end effects and a reward spawned at the start.
+ */
+export interface EncounterScript {
+  /**
+   * What begins it: the room's own flow, or the press of a row outside the
+   * room's envelope (a challenge switch, a locked door), which starts it at once.
+   */
+  readonly beginTrigger: 'automatic' | 'pressRow';
+  /** Whether its end runs `EndEncounterEffects`; only the room's own encounters do (RoomLogic.lua:2937). */
+  readonly endEffects: 'run' | 'none';
+  /** Whether starting it records it (`RecordEncounter`); a locked door's fight never is. */
+  readonly records: boolean;
+  /**
+   * When its composition is generated: with the room's preparation, at room
+   * entry (`HandleSecretSpawns`), or as it starts (`AttemptUseDoor`).
+   */
+  readonly generatedAt: 'preparation' | 'entry' | 'start';
+  readonly gate: EncounterGate;
+  /** The event list ends by waiting for every required object (`WaitForNextEncounterReady`). */
+  readonly waitReadyBeforeEnd: boolean;
+  /** No fight: answering the encounter's NPC resolves it and unlocks the exits. */
+  readonly endsByInteraction: boolean;
+  /** The fight ends with a boss defeat that runs the post-boss effects. */
+  readonly endsWithBossDefeated: boolean;
+  /** Outcomes this encounter can host; Aetos needs an Outdoor room, Gorgon a room that allows it. */
+  readonly hostsOutcome: readonly EncounterOutcomeKind[];
 }
 
 export type NpcShoppingFamily = 'Nemesis' | 'Heracles';
@@ -528,6 +593,7 @@ export interface EncounterDefinition {
   readonly key: string;
   readonly label: string;
   readonly kind: EncounterPhaseKind;
+  readonly script: EncounterScript;
   readonly countsEncounterDepth: boolean;
   /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses: boolean;
@@ -566,6 +632,12 @@ export interface EncounterDefinition {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
+  /**
+   * The room reward this encounter spawns can never be duplicated, nor can an
+   * Artificer replacement of it. Only a fixed slot binds such an encounter, as
+   * its sole encounter, so the rule is a fact of the room declaration.
+   */
+  readonly incomingRewardCannotDuplicate?: true;
   /**
    * A kill-contest bet on the encounter's end: the bet is the held gold up to
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.
@@ -620,6 +692,8 @@ export interface EncounterDefinition {
         readonly enteredBiome: { readonly min?: number; readonly max?: number };
         readonly requirement: 'none' | 'pomLegal' | 'talentLegal';
       }[];
+      /** Held traits that make her damage lines ineligible (`NoHitShieldAvailable`). */
+      readonly unavailableWhileHeldTraitKeys: readonly string[];
       readonly response: readonly ['accept', 'decline'];
       readonly pickupRequiredOnAccept: true;
     };
@@ -785,78 +859,41 @@ export type EncounterSlotBinding =
       readonly shadowEncounterDefinitionKey?: string;
     };
 
-export type RoomLifecycleEffectKind =
-  | 'advanceEncounterDepth'
-  | 'advanceRoomCounters'
-  | 'recordAppearance'
-  | 'recordCommit'
-  | 'recordEncounter'
-  | 'recordEncounterCompletion'
-  | 'recordEncounterStart'
-  | 'recordEnteredRewardStore'
-  | 'recordExit'
-  | 'recordOfferPoint'
-  | 'recordPhaseOfferPoint'
-  | 'recordOutgoingGeneration'
-  | 'recordPreparation'
-  | 'recordProducerPoint'
-  | 'recordRequiredObjectCompletions'
-  | 'recordRequiredObjectSpawns'
-  | 'recordAcquisitionPoint';
-
-interface OnlyEncounterSlotSelector {
-  readonly kind: 'only';
-}
-
-type EncounterSlotSelector = OnlyEncounterSlotSelector;
-
-interface RoomLifecycleOperationBase {
-  readonly effects: readonly RoomLifecycleEffectKind[];
-}
-
-export type RoomLifecycleOperation =
-  | (RoomLifecycleOperationBase & { readonly kind: 'prepareRoom' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'materializeOfferPoint';
-      readonly offerPoint: string;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'enterRoom' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'spawnRequiredObjects' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'startEncounter';
-      readonly encounter: EncounterSlotSelector;
-    })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'completeEncounter';
-      readonly encounter: EncounterSlotSelector;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'runRewardEncounterSequence' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'advanceProducer';
-      readonly point: ProducerLifecyclePointKey;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'generateOutgoingBatch' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'settleAcquisitionPoint';
-      readonly point: string;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'commitRoom' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'exitRoom' });
-
+/**
+ * The producer a room's pickable reward runs under. Whether the room has one
+ * follows from its reward: a room without a pickable reward runs no producer.
+ */
 export type RoomLifecycleProducerPolicy =
   | { readonly kind: 'none' }
   | {
       readonly kind: 'required';
       readonly lifecycleProfileKeys: readonly string[];
+      /**
+       * The room reward's lifecycle points, in order. `beforeCombat` and an
+       * encounter gate's point come before combat; the rest follow it.
+       */
+      readonly points: readonly ProducerLifecyclePointKey[];
     };
 
+/**
+ * A room's lifecycle: what it adds to its event graph's walk (prepare, enter,
+ * the encounters, Doors open, leave) and its reward's points.
+ */
 export interface RoomLifecycleProfile {
   readonly key: string;
   readonly encounterEnvelopeKeys: readonly string[];
   readonly producer: RoomLifecycleProducerPolicy;
-  readonly operations: readonly RoomLifecycleOperation[];
+  /** The offer point the room materializes, before its entry (Shop inventory) or after it (Fields optionals). */
+  readonly offerPoint?: {
+    readonly key: string;
+    readonly at: 'beforeEntry' | 'afterEntry';
+  };
+  /** The Ephyra pylon: required objects spawned right after entry and completed after the fights. */
+  readonly requiredObjects: boolean;
+  /** Doors open generates the room's outgoing doors; otherwise it only unlocks the exit. */
+  readonly generatesOutgoing: boolean;
+  /** An acquisition point settled as the room is left, before it commits. */
+  readonly exitAcquisitionPoint?: string;
 }
 
 export type RoomKind =
@@ -1115,6 +1152,31 @@ export interface RoomRouteOverlay {
   readonly incomingReward: RewardProducerBinding;
   readonly offerRewardBinding: RoomOfferRewardBinding;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
+  /** The overlaid room's own lifecycle selection, from its overlaid template. */
+  readonly lifecycleProfile: RoomLifecycleProfileSelection;
+  readonly roleLifecycleProfileKeys?: RoomRoleLifecycleProfileKeys;
+}
+
+/**
+ * The lifecycle profile a room runs. A Preboss room chooses by occurrence
+ * state: it runs its shop or its free reward.
+ */
+export type RoomLifecycleProfileSelection =
+  | { readonly kind: 'fixed'; readonly profileKey: string }
+  | {
+      readonly kind: 'prebossOffer';
+      /** Selected when the occurrence hosts the shop. */
+      readonly shopProfileKey: string;
+      readonly freeRewardProfileKey: string;
+    };
+
+/**
+ * An Ephyra Hub's rooms in their Hub roles: a board target, or a side room
+ * entered as a local visit.
+ */
+export interface RoomRoleLifecycleProfileKeys {
+  readonly hubTarget?: string;
+  readonly localVisit?: string;
 }
 
 /**
@@ -1152,8 +1214,10 @@ export interface RoomDeclaration {
   readonly swappableBreakables?: number;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
-  /** Optional declaration-owned lifecycle specialization for this room. */
-  readonly lifecycleProfileKey?: string;
+  /** The lifecycle the room runs, from its declared specialization or its template. */
+  readonly lifecycleProfile: RoomLifecycleProfileSelection;
+  /** The lifecycles the room runs when an Ephyra Hub enters it in another role. */
+  readonly roleLifecycleProfileKeys?: RoomRoleLifecycleProfileKeys;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
@@ -1358,6 +1422,17 @@ export interface RoomMapPoints {
   readonly cocoonRewardPoints?: readonly RoomMapPoint[];
   /** Present wherever the map places a wheel, whether or not the room runs a wheel setup. */
   readonly shipWheel?: RoomMapShipWheel;
+  /**
+   * The `LootPoint`s of a room that can hold a World Shop, where
+   * `SpawnStoreItemsInWorld` spawns its items; see `worldShopItemPoints`.
+   */
+  readonly shopPoints?: readonly RoomMapPoint[];
+  /** RoomData `ZagContractRewardDestinationId`: where the Infernal Contract pedestal item spawns. */
+  readonly contractPedestalPoint?: RoomMapPoint;
+  /** RoomData `ZagContractDestinationId`: where a Midshop's Contract door spawns. */
+  readonly contractExitPoint?: RoomMapPoint;
+  /** The room's one obstacle inheriting `HealthFountain`, where the map places one. */
+  readonly healthFountainPoint?: RoomMapPoint;
 }
 
 /** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */

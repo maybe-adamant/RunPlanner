@@ -100,7 +100,7 @@ describe('room layout commands', () => {
 });
 
 describe('room object anchor commands', () => {
-  it("places a present object on one of the room's anchors and back to native", () => {
+  it("places a present object on one of the room's anchors and clears it", () => {
     const project = createGoldenFGHIProject();
     const anchors = catalog.rooms.byKey.F_PostBoss01!.mapPoints!.challengeSwitchAnchors;
     const placed = applyProjectCommand(project, catalog, {
@@ -120,9 +120,10 @@ describe('room object anchor commands', () => {
       object: 'purgingPool',
       anchorId: null,
     });
-    expect(occurrenceOf(native, postboss).purgingPool).toEqual(
-      occurrenceOf(project, postboss).purgingPool,
-    );
+    expect(occurrenceOf(native, postboss).purgingPool).toEqual({
+      ...occurrenceOf(project, postboss).purgingPool,
+      anchorId: undefined,
+    });
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceRoomObjectAnchor',

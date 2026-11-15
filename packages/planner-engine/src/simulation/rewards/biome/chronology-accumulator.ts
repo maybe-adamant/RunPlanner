@@ -63,12 +63,12 @@ export interface FountainRaritySettlement {
 }
 import type {
   AcquisitionRoleFrontier,
-  FixedAcquisitionRealization,
   GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
+import type { ForfeitPeek } from './offer-lifecycle/spawned-trait-offers';
 import type { RewardBranchState } from '../branch-primitives';
-import type { RerollSurfaceCapability, RerollSurfaceCapture } from './reroll-surfaces';
+import type { RerollSurfaceCapture } from './reroll-surfaces';
 import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
 import type {
   BiomeRewardSimulation,
@@ -80,6 +80,7 @@ import type {
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   HubDepartureRunState,
+  NemesisRandomEventAssessment,
   NemesisRandomEventCandidateSupport,
   MidBiomeStartPoint,
   RewardStoreSupportEntry,
@@ -131,10 +132,7 @@ export type ChronologyEmission =
       readonly kind: 'acquisitionRoleFrontiers';
       readonly frontiers: readonly AcquisitionRoleFrontier[] | undefined;
     }
-  | {
-      readonly kind: 'fixedAcquisitionRealizations';
-      readonly realizations: readonly FixedAcquisitionRealization[];
-    }
+  | { readonly kind: 'forfeitPeeks'; readonly peeks: readonly ForfeitPeek[] }
   | {
       readonly kind: 'traitOfferCandidateContacts';
       readonly contacts: readonly ReachedTraitOfferCandidateContact[] | undefined;
@@ -224,6 +222,11 @@ export type ChronologyEmission =
       readonly key: string;
       readonly candidate: NemesisRandomEventCandidateSupport;
     }
+  | {
+      readonly kind: 'nemesisRandomEventAssessment';
+      readonly key: string;
+      readonly assessment: NemesisRandomEventAssessment;
+    }
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
   | { readonly kind: 'phantomExitSettlement'; readonly settlement: PhantomExitSettlement }
   | { readonly kind: 'roomLayoutSettlement'; readonly settlement: RoomLayoutSettlement }
@@ -267,7 +270,8 @@ export interface ChronologyAccumulation {
     readonly TraitOfferCandidateContext[]
   >;
   readonly acquisitionConversionContexts: ReadonlyMap<string, AcquisitionRoleFrontier>;
-  readonly fixedAcquisitionRealizations: ReadonlyMap<string, FixedAcquisitionRealization>;
+  /** Each reward's latest Onion preview, by owner. */
+  readonly forfeitPeeks: ReadonlyMap<string, ForfeitPeek>;
   readonly derivedAcquisitionEntryContexts: ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
   readonly timelineFacts: PlannerTimelineFacts;
   readonly runStateSnapshots: readonly RunStateSnapshot[];
@@ -292,7 +296,6 @@ export interface ChronologyAccumulation {
   readonly rerolls: readonly RerollSettlement[];
   readonly rerollPool: readonly RerollPoolPoint[];
   readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
-  readonly rerollSurfaceCapabilities: ReadonlyMap<string, RerollSurfaceCapability>;
   readonly steadyGrowthOutcomes: ReadonlyMap<string, SteadyGrowthLandedOutcome>;
   readonly transcendentEmbryoOutcomes: ReadonlyMap<
     string,
@@ -405,7 +408,7 @@ export function createChronologyAccumulator(
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const acquisitionConversionContexts = new Map<string, AcquisitionRoleFrontier>();
-  const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
+  const forfeitPeeks = new Map<string, ForfeitPeek>();
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<string, DerivedAcquisitionEntryFrontier>();
   const timelineFactNodes = new Map<string, PlannerTimelineNode>();
@@ -735,12 +738,8 @@ export function createChronologyAccumulator(
       case 'acquisitionRoleFrontiers':
         recordAcquisitionRoleFrontiers(emission.frontiers);
         return;
-      case 'fixedAcquisitionRealizations':
-        for (const realization of emission.realizations) {
-          const key = semanticAddressKey(realization.address);
-          if (!fixedAcquisitionRealizations.has(key))
-            fixedAcquisitionRealizations.set(key, realization);
-        }
+      case 'forfeitPeeks':
+        for (const peek of emission.peeks) forfeitPeeks.set(semanticAddressKey(peek.origin), peek);
         return;
       case 'traitOfferCandidateContacts':
         recordTraitOfferCandidateContacts(emission.contacts);
@@ -818,6 +817,16 @@ export function createChronologyAccumulator(
       case 'nemesisRandomEventCandidate':
         nemesisRandomEventCandidates.set(emission.key, emission.candidate);
         return;
+      case 'nemesisRandomEventAssessment': {
+        const entry = nemesisRandomEventCandidates.get(emission.key);
+        if (entry === undefined)
+          fail(`Nemesis event ${emission.key} reached her interaction without her spawn`);
+        nemesisRandomEventCandidates.set(
+          emission.key,
+          Object.freeze({ ...entry, assessment: emission.assessment }),
+        );
+        return;
+      }
       case 'bossArcanaOutcomes':
         for (const outcome of emission.outcomes)
           bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
@@ -909,7 +918,7 @@ export function createChronologyAccumulator(
         producerFrontiers,
         reachedTraitOfferCandidateContexts,
         acquisitionConversionContexts,
-        fixedAcquisitionRealizations,
+        forfeitPeeks,
         derivedAcquisitionEntryContexts,
         timelineFacts:
           timelineFactNodes.size === 0 && timelineFactDependencies.size === 0
@@ -941,9 +950,6 @@ export function createChronologyAccumulator(
           [...rerollSurfaces.values()].map(({ capture, poolRemainingAtStart }) =>
             capture.settle(poolRemainingAtStart),
           ),
-        ),
-        rerollSurfaceCapabilities: new Map(
-          [...rerollSurfaces].map(([key, { capture }]) => [key, capture.capability]),
         ),
         steadyGrowthOutcomes,
         transcendentEmbryoOutcomes,

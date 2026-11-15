@@ -1,3 +1,4 @@
+import { resolvedRoomRerollPresses } from '../../../authored-project/rerolls';
 import {
   INITIAL_ROLL_KEY,
   STYGIAN_WELL_SLOT_KEYS,
@@ -13,16 +14,25 @@ import {
 import { routeHasKeepsakeRack } from '../../../authored-project/route-profile';
 import type { StygianWellGenerationKey } from '../../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
+import type { ForcedRewardType } from '../../../authored-project/clockwork-doors';
+import type { RewardProducerBinding } from '../../../reward-kernel/bindings';
 import {
   activeSelectedPickupProducers,
   echoLastRewardPickupEntryKeys,
   sitesWithNemesisResultPickups,
 } from '../../../authored-project/acquisition/pickup-producers';
 import { acquisitionSiteFromStorageKey } from '../../../authored-project/acquisition/artificer';
-import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquisition/sea-star';
+import {
+  roomRewardCannotDuplicate,
+  seaStarDuplicateSourceIsActive,
+} from '../../../authored-project/acquisition/sea-star';
 import { assembleRoomActionDomain } from '../../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
+import {
+  roomActionContentMatches,
+  roomActionReferenceContent,
+} from '../../../authored-project/room-actions/item-content';
 import { resolveRequiredRewardDrop } from './required-reward';
 import {
   alwaysActiveEncounterSlotKeys,
@@ -50,35 +60,59 @@ import {
   type MaterializedRoomLeaf,
 } from './templates';
 import { resolveEntryRoom } from '../../../authored-project/room-state/entry-resolution';
+import {
+  roomLifecycleProfileKey,
+  roomRunsProducer,
+} from '../../../authored-project/room-actions/lifecycle-profile';
 
 function fail(detail: string): never {
   throw new Error(detail);
 }
 
+/**
+ * The room's lifecycle, which admits its envelope and the producer its reward
+ * runs. The template materializes a reward exactly when the room runs a
+ * producer, and a room runs none only as a forced reward's counted room, a
+ * room whose binding is none, or a route start without the run-start reward.
+ */
 function requireLifecycleSelection(
   catalog: Catalog,
   room: RoomDeclaration,
   leaf: MaterializedRoomLeaf,
-  encounterEnvelopeKey: string,
+  lifecycleProfileKey: string,
+  producer: {
+    readonly runs: boolean;
+    readonly binding: RewardProducerBinding;
+    readonly forcedRewardType: ForcedRewardType | undefined;
+    readonly routeStartWithoutReward: boolean;
+  },
 ): void {
-  const profile = catalog.roomLifecycleProfiles.byKey[leaf.lifecycleProfileKey];
+  const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   if (profile === undefined) {
-    fail(`${room.gameName} selected unknown lifecycle ${leaf.lifecycleProfileKey}`);
+    fail(`${room.gameName} selected unknown lifecycle ${lifecycleProfileKey}`);
   }
-  if (!profile.encounterEnvelopeKeys.includes(encounterEnvelopeKey)) {
-    fail(`${room.gameName} envelope ${encounterEnvelopeKey} is incompatible with ${profile.key}`);
+  if (!profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey)) {
+    fail(
+      `${room.gameName} envelope ${room.encounterEnvelopeKey} is incompatible with ${profile.key}`,
+    );
   }
-  const producer = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
-  if (producer === undefined) {
-    if (profile.producer.kind !== 'none') {
-      fail(`${room.gameName} lifecycle ${profile.key} requires a producer`);
-    }
-  } else if (
+  const reward = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
+  if (
+    reward === undefined &&
+    !(producer.forcedRewardType !== undefined && producer.binding.kind === 'countedChoice') &&
+    producer.binding.kind !== 'none' &&
+    !producer.routeStartWithoutReward
+  )
+    fail(`${room.gameName} requires a producer`);
+  if ((reward !== undefined) !== producer.runs)
+    fail(`${room.gameName} materialized a reward that disagrees with its producer`);
+  if (reward === undefined) return;
+  if (
     profile.producer.kind !== 'required' ||
-    !profile.producer.lifecycleProfileKeys.includes(producer.producerLifecycleKey)
+    !profile.producer.lifecycleProfileKeys.includes(reward.producerLifecycleKey)
   ) {
     fail(
-      `${room.gameName} producer ${producer.producerLifecycleKey} is incompatible with ${profile.key}`,
+      `${room.gameName} producer ${reward.producerLifecycleKey} is incompatible with ${profile.key}`,
     );
   }
 }
@@ -142,7 +176,11 @@ export function materializeAuthoredRoom(
             configuredRivalsRank: context.configuredRivalsRank,
           },
     );
-  const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
+  const lifecycleProfileKey = roomLifecycleProfileKey(
+    context.room,
+    context.lifecycleRole ?? 'ordinary',
+    context.occurrence,
+  );
   const infernalContractPedestal = materializeInfernalContractPedestal(context);
   const authoredPhantomExit = context.occurrence.phantomExit;
   const phantomExit =
@@ -153,7 +191,17 @@ export function materializeAuthoredRoom(
           placeholderRoomGameName: authoredPhantomExit.placeholderRoomGameName,
           rewardType: authoredPhantomExit.rewardType,
         });
-  requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
+  const runsProducer = roomRunsProducer(
+    resolvedEntry,
+    context.entry === true,
+    context.forcedRewardType,
+  );
+  requireLifecycleSelection(context.catalog, context.room, leaf, lifecycleProfileKey, {
+    runs: runsProducer,
+    binding: resolvedEntry.incomingRewardBinding,
+    forcedRewardType: context.forcedRewardType,
+    routeStartWithoutReward: context.entry === true && !resolvedEntry.runStartReward,
+  });
   const pickupProducers = activeSelectedPickupProducers(
     context.catalog,
     context.biome,
@@ -204,10 +252,15 @@ export function materializeAuthoredRoom(
       true
     );
   });
+  const cannotDuplicate = roomRewardCannotDuplicate(context.catalog, context.room.gameName);
   const incomingReward =
-    leaf.incomingReward === undefined || !suppressesIncomingReward
+    leaf.incomingReward === undefined || (!suppressesIncomingReward && !cannotDuplicate)
       ? leaf.incomingReward
-      : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
+      : Object.freeze({
+          ...leaf.incomingReward,
+          ...(suppressesIncomingReward ? { acquisitionEnabled: false } : {}),
+          ...(cannotDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
+        });
   const entered = enteredRewardStore(context.room, context.batchStoreKey);
   const enteredRewardStoreKey =
     resolvedEntry.enteredRewardStoreKey ??
@@ -268,7 +321,8 @@ export function materializeAuthoredRoom(
     ...(context.room.unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: context.room.unmodeledEncounterKeys }),
-    lifecycleProfileKey: leaf.lifecycleProfileKey,
+    lifecycleProfileKey,
+    runsProducer,
     counterEffects: context.room.counters,
     entered: context.entered,
     entry: context.entry === true,
@@ -364,7 +418,12 @@ export function materializeAuthoredRoom(
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
-    ...(clockworkReward === undefined ? {} : { clockworkReward }),
+    ...(context.forcedRewardType === undefined
+      ? {}
+      : { forcedRewardType: context.forcedRewardType }),
+    ...(context.countsTowardClockworkGoal === undefined
+      ? {}
+      : { countsTowardClockworkGoal: context.countsTowardClockworkGoal }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
   const structuralEncounterIdentities = base.encounterPhases.flatMap((phase) => {
     const resolutionContext = encounterResolutionContext(
@@ -398,6 +457,7 @@ export function materializeAuthoredRoom(
     occurrence: context.occurrence,
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
+    producer: base.runsProducer,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     // The producer acquires the materialized reward; a retained rerolled reward
     // that no current press draws stays authored for repair, its rows dormant.
@@ -422,45 +482,49 @@ export function materializeAuthoredRoom(
     ...(terminalActionKey === undefined ? {} : { terminalActionKey }),
     contributions: roomActionDomain.contributions,
     retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
-    lifecycleStructure: roomActionDomain.lifecycleStructure,
+    eventGraph: roomActionDomain.eventGraph,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
-      if (
-        entry.kind !== 'action' ||
-        entry.participation !== 'required' ||
-        base.roomActions.order.some(
-          (reference) => roomActionKey(reference) === roomActionKey(entry.reference),
-        )
-      ) {
-        return [];
-      }
+      if (entry.participation !== 'required') return [];
       const actionKey = roomActionKey(entry.reference);
+      const placedIndex = base.roomActions.order.findIndex(
+        (reference) => roomActionKey(reference) === actionKey,
+      );
+      // A row on a replaced item leaves its item to place, judged without the row.
+      const replaced =
+        placedIndex >= 0 &&
+        !roomActionContentMatches(
+          base.roomActions.order[placedIndex]!,
+          roomActionReferenceContent(entry.reference) ?? null,
+        );
+      if (placedIndex >= 0 && !replaced) return [];
       const order = scheduleRequiredRoomActions({
         catalog: context.catalog,
         domain: roomActionDomain,
-        order: base.roomActions.order,
+        order: replaced
+          ? base.roomActions.order.filter((_, index) => index !== placedIndex)
+          : base.roomActions.order,
         requiredKeys: new Set([actionKey]),
       });
-      return [
-        {
-          actionKey,
-          toIndex: order.findIndex((reference) => roomActionKey(reference) === actionKey),
-        },
-      ];
+      const index = order.findIndex((reference) => roomActionKey(reference) === actionKey);
+      return [{ actionKey, toIndex: replaced && index > placedIndex ? index + 1 : index }];
     }),
   });
   const roomLifecycleTimeline = assembleRoomLifecycleTimeline({
     owner: base.origin,
     roomActionRoster,
   });
+  const rerollPresses = context.occurrence.roomActions.order.some(
+    (reference) => reference.kind === 'reroll',
+  )
+    ? resolvedRoomRerollPresses(context.biome, context.topology, context.occurrence)
+    : undefined;
   return Object.freeze({
     ...base,
     ...(structuralEncounterIdentities.length === 0
       ? {}
       : { structuralEncounterIdentities: Object.freeze(structuralEncounterIdentities) }),
     roomActionRoster,
-    ...(roomActionDomain.fieldsCageOrder === undefined
-      ? {}
-      : { fieldsCageOrder: roomActionDomain.fieldsCageOrder }),
+    ...(rerollPresses === undefined ? {} : { rerollPresses }),
     roomLifecycleTimeline,
   });
 }

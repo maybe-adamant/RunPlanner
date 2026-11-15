@@ -2,11 +2,14 @@ import { readdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'n
 import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '../item-content';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createRouteAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/simulation';
@@ -220,12 +223,24 @@ describe('authored-project checkpoint integrity', () => {
               (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
             )
         : undefined;
-    expect(host?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
+    // The placed delivery carries the content the engine records for its item.
+    const delivery = host?.roomActions.order.find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    );
+    if (delivery === undefined) throw new Error('the O Shrine delivery is not placed');
+    expect(delivery).toMatchObject({
       entryKey: expect.stringContaining('initial%3AsecondLeft'),
-      encounterPhaseKey: 'Encounter',
+      content: expect.any(Array),
     });
+    expect(delivery).toEqual(
+      withItemContent(
+        saved,
+        createOccurrenceAddress(createBiomeAddress('Surface', 'O'), oOccurrenceIds.devotion),
+        delivery,
+      ),
+    );
   });
 
   it('keeps the reached N side-room Shrine source separate from its unplaced later host delivery', () => {
@@ -266,9 +281,9 @@ describe('authored-project checkpoint integrity', () => {
     if (project.route.routeKey !== 'Surface') throw new Error('Surface route is missing');
     const route = project.route;
     const authoring = routeResourceAuthoring(catalog, route);
-    expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, reasons: [] });
-    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, reasons: [] });
-    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, reasons: [] });
+    expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, refusals: [] });
+    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, refusals: [] });
+    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, refusals: [] });
     expect(authoring.placements.Exorcism).toEqual({
       biomeKey: 'N',
       occurrenceId: 'surface-n-combat11-sideDoor1',

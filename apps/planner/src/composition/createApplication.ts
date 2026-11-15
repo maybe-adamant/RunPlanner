@@ -20,7 +20,7 @@ import { createProjectOperations } from '../workspace/projectOperations';
 import { createProjectLibraryOperations } from '../workspace/projectLibrary';
 import { createCatalogFeedController } from '../workspace/catalogFeed';
 import type { CatalogFeedHost } from '../persistence/catalogFeedHost';
-import type { RecordHost, RecordingPreference } from '../persistence/recordHost';
+import type { RecordHost, RecordingPreference, RecordingSettings } from '../persistence/recordHost';
 import { createRecordingController } from '../workspace/run-recording/recordingController';
 import { createInProcessRunImporter, type RunImporter } from '../workspace/run-recording/runImport';
 import { prebossRoomsByBiome } from '../workspace/run-recording/runRecorder';
@@ -144,6 +144,13 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     return Object.freeze({ assembly, project });
   };
   const store = createPlannerStore({ catalog, assembleProjectEvaluation });
+  // An edit can publish an assembly the engine stamped with stored positions rather than walked;
+  // returning to its plan by Redo reuses it.
+  const unsubscribeEvaluationCache = store.subscribe(() => {
+    const workspace = store.getState().projectWorkspace;
+    if (workspace.kind === 'openProject' && !evaluationCache.has(workspace.assembly.project))
+      evaluationCache.set(workspace.assembly.project, workspace.assembly);
+  });
   const draftRun = createDraftRunController({
     catalog,
     store,
@@ -178,6 +185,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             },
           },
           store,
+          // An edit is written only when the plan it makes could be opened again.
+          admit: (project) => void prepareProjectWorkspace(project),
         });
   const projectOperations = createProjectOperations({
     catalog,
@@ -256,8 +265,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
           savedValuePaths: runRecordSavedValuePaths(catalog),
           primaryWeapons: new Set(catalog.weapons.values.map((weapon) => weapon.key)),
-          // Raw saves are kept for importer work in development builds only.
-          ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),
         });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);
@@ -294,6 +301,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     structuredWorkspace,
     startupReady,
     dispose(): void {
+      unsubscribeEvaluationCache();
       editorSessionReconciliation.dispose();
       draftRun.dispose();
       librarySaver?.dispose();
@@ -304,10 +312,10 @@ export function createApplication(options: CreateApplicationOptions = {}) {
 }
 
 function memoryRecordingPreference(): RecordingPreference {
-  let value = { enabled: false, folder: null as string | null };
+  let value: RecordingSettings = { enabled: false, folder: null, keepRawSaves: false };
   return {
     read: () => value,
-    write: (next) => void (value = { enabled: next.enabled, folder: next.folder }),
+    write: (next) => void (value = { ...next }),
   };
 }
 

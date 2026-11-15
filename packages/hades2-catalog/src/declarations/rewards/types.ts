@@ -147,6 +147,7 @@ export interface RawShopOptionEntryDeclaration {
   /** Base gold price; required on every option of a priced profile. */
   readonly cost?: ShopOptionCost;
   readonly goldPayout?: ShopOptionEntry['goldPayout'];
+  readonly unmodeledOfferCondition?: ShopOptionEntry['unmodeledOfferCondition'];
 }
 
 export interface RawShopGroupDeclaration {

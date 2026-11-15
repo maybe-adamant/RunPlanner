@@ -17,6 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { collectTestRequiredItems, withItemContents } from '@run-planner/test-fixtures/shared';
 
 import {
   loadSurfaceNEntryFrontierProject,
@@ -107,19 +108,23 @@ describe('canonical N Hub materialization', () => {
       kind: 'CreateBatch',
       decision: openingDecision,
     });
+    // The owner picks up the opening Boon.
+    project = collectTestRequiredItems(project);
 
     const authoredOpening = project.route.biomes
       .find((plan) => plan.biomeKey === 'N')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === nOccurrenceIds.opening,
       );
-    expect(authoredOpening?.roomActions.order).toEqual([
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-    ]);
+    expect(authoredOpening?.roomActions.order).toEqual(
+      withItemContents(project, createOccurrenceAddress(nBiome, nOccurrenceIds.opening), [
+        {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        },
+      ]),
+    );
 
     const biome = simulateProject(catalog, project).route?.biomes.find(
       (candidate) => candidate.biomeKey === 'N',
@@ -148,7 +153,7 @@ describe('canonical N Hub materialization', () => {
           }),
     );
     const start = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted',
     );
     const end = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',

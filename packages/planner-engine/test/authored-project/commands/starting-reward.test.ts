@@ -15,12 +15,14 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   resolveRoutePosition,
+  roomActionDomainForOccurrence,
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix } from '@run-planner/engine/simulation';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 describe('starting reward ownership', () => {
   it('evaluates the route-owned reward before entry identity and reports its absence on the route', () => {
@@ -113,11 +115,20 @@ describe('starting reward ownership', () => {
     )!;
     expect(entry.state).toEqual({ kind: 'none' });
     expect(entry.startingRewardAcquisition).toBeDefined();
-    expect(entry.roomActions.order).toContainEqual({
-      kind: 'interactIncomingReward',
-      producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'source',
-    });
+    // Bound on creation: its pickup is required and live, not placed.
+    expect(entry.roomActions.order).toEqual([]);
+    expect(
+      roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions,
+    ).toContainEqual(
+      expect.objectContaining({
+        participation: 'required',
+        reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        }),
+      }),
+    );
   });
 
   it('creates an entry, composes its acquisition payload, and round-trips it without a room offer', () => {
@@ -147,11 +158,19 @@ describe('starting reward ownership', () => {
       project.route.biomes[0]!.topology!.occurrences.find(
         (occurrence) => occurrence.occurrenceId === occurrenceId,
       )!.roomActions.order,
-    ).toContainEqual({
-      kind: 'interactIncomingReward',
-      producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'source',
-    });
+    ).toEqual([]);
+    expect(
+      roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions,
+    ).toContainEqual(
+      expect.objectContaining({
+        participation: 'required',
+        reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        }),
+      }),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(incoming, 'source'),

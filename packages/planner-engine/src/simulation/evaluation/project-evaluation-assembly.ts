@@ -14,11 +14,19 @@ import {
   type TraitOfferAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type OccurrenceAddress,
 } from '../../authored-project/addresses';
+import type { UnsettledPickupSource } from '../rewards/acquisition/artifacts';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
 import type { ProjectDocument } from '../../authored-project/model';
-import { prefixAuthoredRooms } from '../candidates/evaluated-biome';
+import {
+  candidateBiome,
+  candidateBiomeRooms,
+  prefixAuthoredRooms,
+} from '../candidates/evaluated-biome';
+import { shopPurchaseBounds } from '../../authored-project/room-actions/domain';
+import { roomActionRowContact } from '../room-actions';
 import type { ProjectCandidateArtifacts } from './candidate-artifacts';
 import type {
   EncounterPhaseCandidateSupport,
@@ -185,6 +193,23 @@ export function acquisitionConversionCandidateForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
     ?.acquisitionConversions.at(address);
+}
+
+/**
+ * The conversions a role whose pickup the walk spawned and did not take could
+ * make where its row would be placed: just before the reached row `before`,
+ * or, without one, where its room's reached actions end; undefined once it settled.
+ */
+export function placementAcquisitionConversionForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  room: OccurrenceAddress,
+  address: AcquisitionRoleAddress,
+  source: UnsettledPickupSource,
+  before?: string,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
+    ?.acquisitionConversions.atPlacement(room, address, source, before);
 }
 
 /** Narrow reachability query for one exact immediate-keepsake child. */
@@ -491,7 +516,25 @@ export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
     candidateArtifactsForProjectEvaluationAssembly(assembly)
       .biomeAt(createBiomeAddress(site.routeKey, site.biomeKey))
       ?.derivedAcquisitionEntries.entriesAt(site) ?? Object.freeze([])
-  ).map(({ address, capability }) => Object.freeze({ address, ...capability }));
+  ).map(({ address, capability }) => {
+    if (capability.kind !== 'echoDoubleShopReward')
+      return Object.freeze({ address, ...capability });
+    // Gold Gold Gold's duplicate stands with the Shop's purchases.
+    const biome = candidateBiome(assembly.evaluation, site.routeKey, site.biomeKey);
+    const key = semanticAddressKey(site.owner);
+    const room =
+      biome === undefined
+        ? undefined
+        : candidateBiomeRooms(biome).find(
+            (candidate) => semanticAddressKey(candidate.origin) === key,
+          );
+    const graph = room?.roomActionRoster.eventGraph;
+    return Object.freeze({
+      address,
+      ...capability,
+      ...(graph === undefined ? {} : roomActionRowContact(shopPurchaseBounds(graph), graph)),
+    });
+  });
 }
 
 /** Exact placement intent for one optional clocked pickup exposed at this assembly. */
@@ -515,7 +558,6 @@ export function clockedTraitPickupPlacementForProjectEvaluationAssembly(
   return Object.freeze({
     kind: 'PlaceClockedTraitPickup',
     entry,
-    encounterPhaseKey: capability.encounterPhaseKey,
     producerLifecycleKey: capability.producerLifecycleKey,
     rewardType,
   });
@@ -526,7 +568,9 @@ export function attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
   command: Extract<ProjectCommand, { readonly kind: 'PlaceClockedTraitPickup' }>,
 ): boolean {
   const attested = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, command.entry);
-  return attested !== undefined && JSON.stringify(attested) === JSON.stringify(command);
+  const { index: _index, ...placement } = command;
+  void _index;
+  return attested !== undefined && JSON.stringify(attested) === JSON.stringify(placement);
 }
 
 /**

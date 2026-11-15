@@ -124,6 +124,7 @@ describe('hidden return door', () => {
     expect(roomPinned.control.pinned).toBe(true);
     expect(roomPinned.control.room).toEqual({
       icon: { biomeKey: 'N', kind: 'combat' },
+      number: '13',
       summary: 'Combat 13',
     });
     expect(roomPinned.control.reward.locked).toBeUndefined();

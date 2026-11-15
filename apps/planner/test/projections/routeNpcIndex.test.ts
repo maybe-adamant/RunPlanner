@@ -18,7 +18,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -90,6 +93,7 @@ function withoutArtemisPresentationMetadata(): Catalog {
     key: original.key,
     label: original.label,
     kind: original.kind,
+    script: original.script,
     countsEncounterDepth: original.countsEncounterDepth,
     advancesHermesShrineDeliveryUses: original.advancesHermesShrineDeliveryUses,
     canEncounterSkip: original.canEncounterSkip,
@@ -214,6 +218,8 @@ describe('route NPC index projection', () => {
     let project = createCompleteFGProject();
     project = selectEncounter(project, gArtemisPhase, 'ArtemisCombatG');
     project = selectEncounter(project, fArtemisPhase, 'ArtemisCombatF');
+    // Artemis met in F, the walk reaches her retained G record.
+    project = authorTestTraitsAndRequiredItems(project);
     const fixture = routeIndexFixture(project);
     try {
       const index = projectRouteNpcIndex(

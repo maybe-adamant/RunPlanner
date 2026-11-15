@@ -98,12 +98,14 @@ describe('Purging Pool generation assessment', () => {
       3,
     ],
   ] as const)(
-    'draws min(3, eligible) and leaves blank slots native at cardinality %s',
+    'shows min(3, eligible) slots and reports each blank one missing at cardinality %s',
     (entries, expected) => {
       const assessment = assessPurgingPool(catalog, pool(), equipped(...entries));
       expect(assessment.requiredTraitCount).toBe(expected);
-      expect(assessment.findings).toEqual([]);
-      expect(assessment.complete).toBe(true);
+      expect(assessment.offeredSlotKeys).toHaveLength(expected);
+      expect(assessment.findings.map((finding) => finding.code)).toEqual(
+        Array(expected).fill('purgingPoolTraitMissing'),
+      );
     },
   );
 

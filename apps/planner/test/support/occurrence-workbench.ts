@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { fireEvent, screen, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
+import { takeLive } from './live-row';
 import { expect } from 'vitest';
 import {
   applyProjectCommand,
@@ -32,7 +33,7 @@ import type {
   WorkspaceOrdinaryBatchNode,
 } from '@planner/projections/structured-workspace';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -89,18 +90,15 @@ export function openNotReached(): void {
 }
 
 /**
- * Picks one action from a room object's Timeline entry (World Shop, Hermes
- * Shrine, Pedestal, Stygian Well…); the Room Timeline tab must be open.
+ * Picks one verb of a room object on the live row (World Shop, Hermes Shrine,
+ * Pedestal, Stygian Well…); the Room Timeline tab must be open.
  */
 export async function pickRoomObjectAction(
   user: UserEvent,
   object: string,
   option: string | RegExp,
 ): Promise<void> {
-  await user.click(screen.getByRole('button', { name: object }));
-  await user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', { name: option }),
-  );
+  await takeLive(user, object, option);
 }
 
 export function emptyFProject(): ProjectDocument {
@@ -451,5 +449,5 @@ export function enteredShopProject(): {
       value,
     });
   }
-  return { project: authorLegalTraitOffers(project), shopId: dormant.shopId };
+  return { project: authorTestTraitsAndRequiredItems(project), shopId: dormant.shopId };
 }

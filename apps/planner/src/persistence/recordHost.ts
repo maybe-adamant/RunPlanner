@@ -18,7 +18,7 @@ export interface RecentRunsHost {
 
 /**
  * Raw save bytes in named folders beside the recent-runs documents; a byte store with no
- * meaning of its own. The desktop host serves it only to development builds.
+ * meaning of its own.
  */
 export interface RawSavesHost {
   folders(): Promise<readonly string[]>;
@@ -30,6 +30,10 @@ export interface RawSavesHost {
   move(from: string, to: string): Promise<void>;
   /** Removes a folder with its files; one already gone counts as removed. */
   delete(folder: string): Promise<void>;
+  /** The bytes of every save in every folder. */
+  size(): Promise<number>;
+  /** Shows the folders in the system file manager. */
+  reveal(): Promise<void>;
 }
 
 /** The desktop host's Hades II save watch; the web build has none. */
@@ -140,14 +144,24 @@ export function createTauriRecordHost(
         }),
       move: (from: string, to: string) => invoke<void>('raw_saves_move', { from, to }),
       delete: (folder: string) => invoke<void>('raw_saves_delete', { folder }),
+      size: () => invoke<number>('raw_saves_size'),
+      reveal: () => invoke<void>('raw_saves_reveal'),
     }),
   });
 }
 
-/** Recording on or off and the chosen save folder; device-local, like the app scale. */
+/** Recording's device-local settings, like the app scale. */
+export interface RecordingSettings {
+  readonly enabled: boolean;
+  /** The chosen save folder; null watches the one found on this computer. */
+  readonly folder: string | null;
+  /** Whether each run started from now on keeps every save it was recorded from. */
+  readonly keepRawSaves: boolean;
+}
+
 export interface RecordingPreference {
-  read(): { readonly enabled: boolean; readonly folder: string | null };
-  write(value: { readonly enabled: boolean; readonly folder: string | null }): void;
+  read(): RecordingSettings;
+  write(value: RecordingSettings): void;
 }
 
 const preferenceKey = 'run-planner.recording';
@@ -155,16 +169,21 @@ const preferenceKey = 'run-planner.recording';
 export function createBrowserRecordingPreference(
   storage: () => Pick<Storage, 'getItem' | 'setItem'>,
 ): RecordingPreference {
-  let memory = { enabled: false, folder: null as string | null };
+  let memory: RecordingSettings = { enabled: false, folder: null, keepRawSaves: false };
   return {
     read() {
       try {
         const raw = storage().getItem(preferenceKey);
         if (raw === null) return memory;
-        const value = JSON.parse(raw) as { enabled?: unknown; folder?: unknown };
+        const value = JSON.parse(raw) as {
+          enabled?: unknown;
+          folder?: unknown;
+          keepRawSaves?: unknown;
+        };
         return {
           enabled: value.enabled === true,
           folder: typeof value.folder === 'string' && value.folder !== '' ? value.folder : null,
+          keepRawSaves: value.keepRawSaves === true,
         };
       } catch {
         // Restricted or damaged storage keeps this session's choice.
@@ -172,7 +191,7 @@ export function createBrowserRecordingPreference(
       }
     },
     write(value) {
-      memory = { enabled: value.enabled, folder: value.folder };
+      memory = { enabled: value.enabled, folder: value.folder, keepRawSaves: value.keepRawSaves };
       try {
         storage().setItem(preferenceKey, JSON.stringify(memory));
       } catch {

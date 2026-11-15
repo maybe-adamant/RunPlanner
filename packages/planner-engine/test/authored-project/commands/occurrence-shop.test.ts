@@ -5,7 +5,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   activeRoomActionReferences,
   createProjectHistory,
   createAcquisitionEntryAddress,
@@ -25,7 +25,7 @@ import {
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, withItemContent } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import {
   createEchoGoldIAnvilDuplicateProject,
@@ -374,7 +374,9 @@ describe('authored-project Shop occurrence commands', () => {
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
         ?.roomActions.order,
-    ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'MajorNonBoon' });
+    ).toContainEqual(
+      withItemContent(project, shop, { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' }),
+    );
     expect(replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon'])).toBe(project);
   });
 
@@ -403,23 +405,31 @@ describe('authored-project Shop occurrence commands', () => {
         occurrence: shop,
       }),
     ).toThrow(/Travel Deal item is unresolved/);
-    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+    // The purchase that restocks the slot settles its item; the refill purchase buys it.
+    const stock = (document: typeof project) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer: createShopOfferAddress(nBiome, shop.occurrenceId, 'travelDealRefill'),
+        value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+      });
+    const stocked = stock(project);
+    const history = applyProjectHistoryCommand(createProjectHistory(stocked), catalog, {
       kind: 'PurchaseShopTravelDealRefill',
       occurrence: shop,
-      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
     });
     const bought = room(history.present);
-    expect(bought.roomActions.order.at(-1)).toEqual(reference);
+    expect(bought.roomActions.order.at(-1)).toEqual(
+      withItemContent(history.present, shop, reference),
+    );
     expect(bought.state.kind === 'shop' ? bought.state.shop?.travelDealRefill : undefined).toEqual(
       expect.objectContaining({ optionKey: option.key }),
     );
     expect(bought.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeNull();
-    expect(undoProjectHistory(history).present).toBe(project);
+    expect(undoProjectHistory(history).present).toBe(stocked);
 
     const purchase = {
       kind: 'PurchaseShopTravelDealRefill' as const,
       occurrence: shop,
-      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
     };
     let withPurchases = project;
     for (const offerKey of ['Boon', 'MajorNonBoon', 'Minor'])
@@ -428,13 +438,16 @@ describe('authored-project Shop occurrence commands', () => {
         offer: createShopOfferAddress(nBiome, shopId, offerKey),
         purchased: true,
       });
+    withPurchases = stock(withPurchases);
     const before = room(withPurchases).roomActions.order;
     // Bought after the first purchase, whose Travel Deal stocks it, up to the end.
-    expect(objectCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);
-    expect(
-      room(applyProjectCommand(withPurchases, catalog, { ...purchase, index: 1 })).roomActions
-        .order,
-    ).toEqual([before[0], reference, ...before.slice(1)]);
+    expect(positionedCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);
+    const atOne = applyProjectCommand(withPurchases, catalog, { ...purchase, index: 1 });
+    expect(room(atOne).roomActions.order).toEqual([
+      before[0],
+      withItemContent(atOne, shop, reference),
+      ...before.slice(1),
+    ]);
     expect(() => applyProjectCommand(withPurchases, catalog, { ...purchase, index: 0 })).toThrow(
       /index 0 is not a legal position/,
     );
@@ -526,6 +539,7 @@ describe('authored-project Shop occurrence commands', () => {
         (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === shopId,
       ).roomActions.order = [];
     expect(() => decodeProjectDocument(raw, catalog)).toThrow('requires its Shop purchase action');
+    const placedRow = withItemContent(project, createOccurrenceAddress(nBiome, shopId), reference);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer,
@@ -540,7 +554,8 @@ describe('authored-project Shop occurrence commands', () => {
         ? replacedState.shop?.travelDealRefill?.reward?.levelResolutionsByAcquisitionRole
         : undefined,
     ).toEqual({ self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null } });
-    expect(room(project).roomActions.order).toContainEqual(reference);
+    // Unsettled, the row keeps the item it was placed for.
+    expect(room(project).roomActions.order).toContainEqual(placedRow);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );

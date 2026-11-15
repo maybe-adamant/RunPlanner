@@ -7,8 +7,10 @@ import {
   type WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { RowChoice } from '../RowChoice';
 import { TimelineRow } from '../TimelineRow';
 import { HermesShrineSlotEditor, StygianWellSlotEditor } from './RoomInventoryPanel';
+import { OfferConditionMark } from '@planner/ui/feedback/OfferConditionMark';
 
 /**
  * The Travel Deal item authored as the continuation of the purchase that
@@ -17,15 +19,26 @@ import { HermesShrineSlotEditor, StygianWellSlotEditor } from './RoomInventoryPa
 export function TravelDealLine({
   interactions,
   line,
+  rowKey,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>;
+  /** The purchase or rush row that restocks. */
+  readonly rowKey: string;
 }) {
   return (
     <TimelineRow
       aria-label="Restock"
+      hooked
       notice
-      editors={travelDealLineEditor(interactions, line)}
+      editors={
+        <span className="offer-condition-line">
+          <RowChoice choice="travelDealRefill" rowKey={rowKey}>
+            {travelDealLineEditor(interactions, line)}
+          </RowChoice>
+          <OfferConditionMark conditions={[travelDealLineCondition(interactions, line)]} />
+        </span>
+      }
       data-travel-deal-line=""
       kind="continuation"
       label={
@@ -38,6 +51,29 @@ export function TravelDealLine({
   );
 }
 
+function travelDealLineCondition(
+  interactions: WorkspaceInteractionCatalog,
+  line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>,
+) {
+  switch (line.kind) {
+    case 'hermesShrine':
+      return interactions.hermesShrineOffers.get(line.refill.offerInteractionKey)
+        ?.selectedOfferCondition;
+    case 'stygianWell':
+      return interactions.stygianWellOffers.get(line.refill.offerInteractionKey)
+        ?.selectedOfferCondition;
+    case 'worldShop': {
+      const shopOption = line.offer.rewardControl.shopOption;
+      return shopOption?.options.find((option) => option.key === shopOption.selectedOptionKey)
+        ?.offerCondition;
+    }
+    default: {
+      const unreachable: never = line;
+      return unreachable;
+    }
+  }
+}
+
 function travelDealLineEditor(
   interactions: WorkspaceInteractionCatalog,
   line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>,
@@ -46,7 +82,6 @@ function travelDealLineEditor(
     case 'hermesShrine':
       return (
         <HermesShrineSlotEditor
-          placeholder="Pick"
           label="Travel Deal"
           marker={line.refill.marker}
           rewardType={line.refill.rewardType}

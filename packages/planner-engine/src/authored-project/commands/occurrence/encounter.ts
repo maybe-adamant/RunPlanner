@@ -1,6 +1,6 @@
 import { routeRoomDeclaration } from '../../route-profile';
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
-import type { EncounterPhaseAddress } from '../../addresses';
+import { createBiomeAddress, type EncounterPhaseAddress } from '../../addresses';
 import {
   NEMESIS_BET_OUTCOMES,
   type AuthoredEncounterCustomization,
@@ -34,6 +34,7 @@ import {
 import { replaceOccurrence, updateOccurrenceTopology } from './mutation';
 import { createUnresolvedPickupRewardState } from '../../traits/state';
 import { nemesisGeneratedPickupSiteKey } from '../../acquisition/pickup-producers';
+import { withoutItemsDerivedFromEntry } from '../../acquisition/derived-items';
 import { sameOccurrenceValue } from './leaf-value';
 import type { EncounterOccurrenceCommand, NemesisRandomEventInteraction } from '../types';
 import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
@@ -572,7 +573,15 @@ function replaceTopLevel(
           const prior = occurrence.acquisitionSites?.[siteKey]?.pickupEntries?.result;
           const rewardOffer = nemesisInteractionReward(catalog, command);
           const outcome = withNemesis.nemesisRandomEventByPhase?.[phase.phaseKey];
+          // Another event or contest result is another source: its result and chain go.
+          const previous = occurrence.encounters.nemesisRandomEventByPhase?.[phase.phaseKey];
+          const sourceReplaced =
+            previous?.kind !== outcome?.kind ||
+            (previous?.kind === 'damageContest' &&
+              outcome?.kind === 'damageContest' &&
+              previous.result !== outcome.result);
           const sameOffer =
+            !sourceReplaced &&
             prior !== undefined &&
             prior !== null &&
             rewardOffer !== null &&
@@ -589,17 +598,26 @@ function replaceTopLevel(
                   )
               : null;
           const pickupActive =
+            !sourceReplaced &&
             outcome !== undefined &&
             outcome !== null &&
             hasActiveNemesisPickup(outcome, rewardOffer);
+          const source = sourceReplaced
+            ? withoutItemsDerivedFromEntry(
+                createBiomeAddress(located.routeKey, located.plan.biomeKey),
+                occurrence,
+                siteKey,
+                'result',
+              )
+            : occurrence;
           return Object.freeze({
-            ...occurrence,
+            ...source,
             // Keep compatible offered detail, but retract an inactive or replaced pickup.
             ...(!pickupActive
               ? {
                   roomActions: Object.freeze({
                     order: Object.freeze(
-                      occurrence.roomActions.order.filter(
+                      source.roomActions.order.filter(
                         (reference) =>
                           reference.kind !== 'interactAcquisitionEntry' ||
                           reference.siteKey !== siteKey ||
@@ -613,7 +631,7 @@ function replaceTopLevel(
               ? {}
               : {
                   acquisitionSites: Object.freeze({
-                    ...(occurrence.acquisitionSites ?? {}),
+                    ...(source.acquisitionSites ?? {}),
                     [siteKey]: Object.freeze({ pickupEntries: Object.freeze({ result: reward }) }),
                   }),
                 }),

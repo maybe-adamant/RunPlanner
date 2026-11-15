@@ -229,36 +229,38 @@ export function RouteWorkspace({
         }}
         onMouseLeave={() => setNavigationOpen(false)}
       >
-        <button
-          aria-expanded={pinned || navigationOpen}
-          aria-label={
-            pinned
-              ? 'Unpin panels'
-              : !navigationOpen
-                ? 'Show panels'
-                : navigationAutoFolded
-                  ? 'Hide panels'
-                  : 'Pin panels'
-          }
-          className="panel-navigation-pin"
-          onClick={() => {
-            if (pinned) {
-              setPinned(false);
-              setNavigationOpen(false);
-            } else if (navigationOpen) {
-              // Too narrow to pin beside the editor, the opened list only closes.
-              if (!navigationAutoFolded) setPinned(true);
-              setNavigationOpen(false);
-            } else setNavigationOpen(true);
-          }}
-          type="button"
-        >
-          {pinToggleGlyph({ pinned, open: navigationOpen, autoFolded: navigationAutoFolded })}
-        </button>
+        <div className="panel-navigation-head">
+          <button
+            aria-expanded={pinned || navigationOpen}
+            aria-label={
+              pinned
+                ? 'Unpin panels'
+                : !navigationOpen
+                  ? 'Show panels'
+                  : navigationAutoFolded
+                    ? 'Hide panels'
+                    : 'Pin panels'
+            }
+            className="panel-navigation-pin"
+            onClick={() => {
+              if (pinned) {
+                setPinned(false);
+                setNavigationOpen(false);
+              } else if (navigationOpen) {
+                // Too narrow to pin beside the editor, the opened list only closes.
+                if (!navigationAutoFolded) setPinned(true);
+                setNavigationOpen(false);
+              } else setNavigationOpen(true);
+            }}
+            type="button"
+          >
+            {pinToggleGlyph({ pinned, open: navigationOpen, autoFolded: navigationAutoFolded })}
+          </button>
+          <p className="navigation-label">{navigation.label}</p>
+        </div>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}
           <fieldset className="panel-navigation-fieldset" disabled={drafting}>
-            <p className="navigation-label">{navigation.label}</p>
             {fixedRoutePanels.map((panel) => (
               <button
                 aria-current={displayedPanel.kind === panel.kind ? 'page' : undefined}

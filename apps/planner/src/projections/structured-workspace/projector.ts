@@ -16,6 +16,7 @@ import {
   routeLoadoutEditDomain,
   semanticAddressKey,
   type AuthoredHexTreeConfiguration,
+  type RoomEventPoint,
   type SemanticAddress,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -27,7 +28,6 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
@@ -48,7 +48,10 @@ import {
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
+  roomActionResetsForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
+  chaosGatePositionForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -69,7 +72,11 @@ import {
   indexFindingsByRepairTarget,
   indexTraitDialogFindings,
 } from './navigation/finding-highlights';
-import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
+import {
+  createWorkspaceProjectSourceIndex,
+  workspaceDerivedAcquisitionEntries,
+  type WorkspaceBiomeSource,
+} from './source-index';
 import { bindRunModifiers } from './interactions/run-modifiers';
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
@@ -282,7 +289,7 @@ export function createStructuredWorkspaceProjection(
         },
         (site) => {
           try {
-            return derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site);
+            return workspaceDerivedAcquisitionEntries(catalog, assembly, site);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return Object.freeze([]);
@@ -412,6 +419,18 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        (gate) => chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, gate),
+        (occurrence) => {
+          try {
+            return liveRoomForProjectEvaluationAssembly(catalog, assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
+        (occurrence) => roomActionResetsForProjectEvaluationAssembly(catalog, assembly, occurrence),
       );
       const routeSource = sources.route;
       const authoredRoute =
@@ -858,9 +877,13 @@ export function createStructuredWorkspaceProjection(
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const walkStop = walkStopOf(catalog, evaluation.route.issue, focusByOwner, route);
+      const roomActionsOf = roomActionsByOwner(route);
       const result = Object.freeze({
         ...(walkStop === undefined ? {} : { walkStop }),
-        roomActionLabel: roomActionLabels(route),
+        roomActionLabel: (owner: SemanticAddress, actionKey: string) =>
+          roomActionsOf(owner)?.rows.find((row) => row.key === actionKey)?.label,
+        roomEventPointName: (owner: SemanticAddress, point: RoomEventPoint) =>
+          roomActionsOf(owner)?.pointName(point),
         authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
         findingsByRepairTarget: indexFindingsByRepairTarget(
@@ -886,20 +909,17 @@ export function createStructuredWorkspaceProjection(
   });
 }
 
-/** Each projected room's Timeline row labels, read by the room holding an owner. */
-function roomActionLabels(
+/** Each projected room's Timeline, read by the room holding an owner. */
+function roomActionsByOwner(
   route: import('./contracts/structure').WorkspaceRoute,
-): import('./contracts/structure').StructuredWorkspaceProjection['roomActionLabel'] {
-  const rows = new Map<string, ReadonlyMap<string, string>>();
+): (owner: SemanticAddress) => import('./contracts/timeline').WorkspaceRoomActions | undefined {
+  const rooms = new Map<string, import('./contracts/timeline').WorkspaceRoomActions>();
   for (const biome of route.biomes)
     for (const node of [...biome.nodes, ...biome.completionOutline])
       if (node.kind === 'occurrenceWorkbench' && node.room.roomActions !== undefined)
-        rows.set(
-          `${biome.biomeKey}\u0000${node.room.occurrenceId}`,
-          new Map(node.room.roomActions.rows.map((row) => [row.key, row.label] as const)),
-        );
-  return (owner, actionKey) =>
+        rooms.set(`${biome.biomeKey}\u0000${node.room.occurrenceId}`, node.room.roomActions);
+  return (owner) =>
     'biomeKey' in owner && 'occurrenceId' in owner
-      ? rows.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)?.get(actionKey)
+      ? rooms.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)
       : undefined;
 }

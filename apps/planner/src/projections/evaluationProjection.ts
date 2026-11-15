@@ -1,9 +1,11 @@
 import { challengeSwitchRuleSentence, challengeSwitchRuleTitle } from './challengeSwitchCopy';
 import { requiredFirstTitle } from './walkStopCopy';
+import { roomEventPointName } from './roomEventNames';
 import {
   routeRoomDeclaration,
   semanticAddressKey,
   type ProjectDocument,
+  type RoomEventPoint,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -17,6 +19,7 @@ import {
   type ProjectRouteEvaluation,
   type ResolvedEncounterPhase,
   type SemanticFinding,
+  roomActionOrderEvidence,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -194,14 +197,14 @@ export const findingCopy = {
   phantomExitRewardUnavailable: {
     title: 'Hidden door reward unavailable',
   },
-  rerolledRewardMismatch: {
-    title: 'Rerolled reward no longer matches last reroll',
-  },
   rerollUnavailable: {
     title: 'Rerolls are not available here',
   },
   rerollTargetUnavailable: {
     title: 'This reward cannot be rerolled',
+  },
+  rerollResultMissing: {
+    title: 'Choose the rerolled reward',
   },
   rerollPoolExceeded: {
     title: 'Not enough rerolls left',
@@ -526,16 +529,19 @@ export const findingCopy = {
     title: 'Shrine offer unavailable',
   },
   hermesShrineDeliveryPlacementRequired: {
-    title: 'Restore Shrine delivery',
+    title: 'Collect Shrine delivery',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Restore Gold Gold Gold pickup',
+    title: 'Collect Gold Gold Gold pickup',
   },
   roomActionOrderUnavailable: {
     title: 'Action out of order',
   },
+  roomActionItemReplaced: {
+    title: "Action's item was replaced",
+  },
   roomActionPlacementRequired: {
-    title: 'Restore required action',
+    title: 'Required action not taken',
   },
   hermesShrineTravelDealRefillMissing: {
     title: 'Choose Travel Deal offer',
@@ -578,6 +584,10 @@ export const findingCopy = {
   },
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
+  },
+  nemesisEventUnavailable: {
+    title: 'Nemesis cannot offer this event type here',
+    description: 'She picks her event as she appears and picks again if it no longer fits.',
   },
   hexActivationMissing: {
     title: 'Choose the Path of Stars nodes',
@@ -699,6 +709,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly room?: (biomeKey: string, occurrenceId: string) => string | undefined;
   /** A Timeline row's label, in the room holding the owner. */
   readonly roomAction?: (owner: SemanticAddress, actionKey: string) => string | undefined;
+  /** An event point named with its phase, in the room holding the owner. */
+  readonly roomEventPoint?: (owner: SemanticAddress, point: RoomEventPoint) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -890,6 +902,46 @@ export function presentTraitOfferGenerationFinding(
   return Object.freeze(filler === undefined ? { title } : { title, description: filler });
 }
 
+/** A placement finding's repair, read from the bound its row stands outside. */
+function orderUnavailableCopy(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): FindingPresentation {
+  const evidence = roomActionOrderEvidence(finding);
+  // A point named with its room's phase; end effects resolve after their encounter ends.
+  const moment = (point: RoomEventPoint) => {
+    const name = labels?.roomEventPoint?.(finding.origin, point) ?? roomEventPointName(point);
+    return point.kind === 'endEffects' ? `${name} resolve` : name;
+  };
+  switch (evidence?.reason) {
+    case 'beforeSpawn':
+    case 'beforeEnabler':
+      if (evidence.requiredAction !== undefined)
+        return Object.freeze({ title: requiredFirstTitle(requiredFirstLabel(finding, labels)) });
+      if (evidence.unavailable === true)
+        return Object.freeze({ title: "This action's encounter isn't in the room anymore" });
+      return Object.freeze({
+        title: 'Action out of order',
+        description: `Move it after ${moment(evidence.point)}.`,
+      });
+    case 'pastDeadline': {
+      // The row ordered first stands only after the deadline the other must precede.
+      const preceding =
+        finding.origin.kind === 'roomAction' &&
+        finding.origin.actionKey === evidence.precedingAction;
+      return Object.freeze({
+        title: 'Action out of order',
+        description: `Move it ${preceding ? 'after' : 'before'} ${moment(evidence.deadline)}.`,
+      });
+    }
+    default:
+      return Object.freeze({
+        title: 'Action out of order',
+        description: 'Move it after its prerequisite.',
+      });
+  }
+}
+
 /** The required action a row must follow, by its own row in the finding's room. */
 function requiredFirstLabel(
   finding: SemanticFinding,
@@ -897,6 +949,78 @@ function requiredFirstLabel(
 ): string | undefined {
   const actionKey = evidenceString(finding.evidence.requiredAction);
   return actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
+}
+
+/** A Timeline row's label as the act it names, for "before …": Talk to Nemesis → meeting Nemesis. */
+const DEADLINE_ACTS: Readonly<Record<string, string>> = {
+  Buy: 'buying',
+  Choose: 'choosing the',
+  Clear: 'clearing',
+  Collect: 'collecting',
+  Reroll: 'rerolling',
+  Resolve: 'resolving',
+  Rush: 'rushing',
+  Sell: 'selling',
+  Unlock: 'unlocking',
+  Use: 'using',
+};
+
+/** Two-word Timeline verbs, read as one act. */
+const DEADLINE_PHRASAL_ACTS: Readonly<Record<string, string>> = {
+  'Talk to': 'meeting',
+};
+
+function deadlineAct(label: string): string {
+  for (const [verb, act] of Object.entries(DEADLINE_PHRASAL_ACTS))
+    if (label.startsWith(`${verb} `)) return `${act} ${label.slice(verb.length + 1)}`;
+  const [verb, ...rest] = label.split(' ');
+  const act = verb === undefined ? undefined : DEADLINE_ACTS[verb];
+  return act === undefined || rest.length === 0 ? label : `${act} ${rest.join(' ')}`;
+}
+
+/** When an unplaced required item falls due, as the walk stopped on it. */
+function requiredDeadlineCopy(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): string | undefined {
+  switch (evidenceString(finding.evidence.deadline)) {
+    case 'doorsOpened':
+    case 'exitsReady':
+      return 'before the doors open';
+    case 'leave':
+      return 'before leaving';
+    case 'encounterStarted':
+      return 'before the fight';
+    case 'endEffects':
+      return 'before this phase ends';
+    case 'action': {
+      const actionKey = evidenceString(finding.evidence.deadlineAction);
+      const action =
+        actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
+      return action === undefined ? undefined : `before ${deadlineAct(action)}`;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** A required item left unplaced, named by its own row and when it falls due. */
+function requiredPlacementTitle(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): string | undefined {
+  const origin = finding.origin;
+  const what =
+    finding.code === 'hermesShrineDeliveryPlacementRequired'
+      ? 'Collect Shrine delivery'
+      : finding.code === 'echoGoldPickupPlacementRequired'
+        ? 'Collect Gold Gold Gold pickup'
+        : origin.kind === 'roomAction'
+          ? labels?.roomAction?.(origin, origin.actionKey)
+          : undefined;
+  if (what === undefined) return undefined;
+  const deadline = requiredDeadlineCopy(finding, labels);
+  return deadline === undefined ? what : `${what} ${deadline}`;
 }
 
 function evidenceString(value: unknown): string | undefined {
@@ -1061,6 +1185,17 @@ export function presentFinding(
         ]),
       });
   }
+  // Her row's own finding is repaired by order: talk to her before the shield is taken.
+  if (finding.code === 'nemesisEventUnavailable' && finding.origin.kind === 'roomAction') {
+    const traitKey = evidenceString(finding.evidence.traitKey);
+    const trait = traitKey === undefined ? undefined : labels?.trait(traitKey);
+    return Object.freeze({
+      title: fittingTitle([
+        trait === undefined ? undefined : `Talk to Nemesis before taking ${trait}`,
+        'Talk to Nemesis before taking that boon',
+      ]),
+    });
+  }
   if (finding.code === 'roomAlreadyVisited') {
     const occurrenceId = evidenceString(finding.evidence.occurrenceId);
     const room =
@@ -1130,30 +1265,26 @@ export function presentFinding(
         description: 'Remove the Collect row, or take Champion of Elysium earlier.',
       });
     }
-    if (finding.evidence.reason === 'staleHermesShrineDelivery') {
+    // A delivery whose placement no longer matches its source.
+    if (
+      finding.evidence.reason === 'sourceInactive' ||
+      finding.evidence.reason === 'dueContactMismatch'
+    ) {
       return Object.freeze({ title: 'Shrine delivery is not due here' });
     }
     if (finding.evidence.reason === 'staleClockedTraitPickup') {
       return Object.freeze({ title: 'Supply Chain pickup cannot occur here' });
     }
   }
-  if (finding.code === 'roomActionOrderUnavailable') {
-    if (finding.evidence.reason === 'requiredFirst')
-      return Object.freeze({
-        title: requiredFirstTitle(requiredFirstLabel(finding, labels)),
-      });
-    if (finding.evidence.reason === 'dependency' && finding.evidence.checkpointUnavailable === true)
-      return Object.freeze({ title: 'Room phase for this action is gone' });
-    return Object.freeze({
-      title: 'Action out of order',
-      description:
-        finding.evidence.reason === 'dependency'
-          ? finding.evidence.dependencyKind === 'beforeCheckpoint'
-            ? 'Move it before its required checkpoint.'
-            : 'Move it after its prerequisite.'
-          : 'Move it into its allowed room phase.',
-    });
+  if (
+    finding.code === 'roomActionPlacementRequired' ||
+    finding.code === 'hermesShrineDeliveryPlacementRequired' ||
+    finding.code === 'echoGoldPickupPlacementRequired'
+  ) {
+    const title = requiredPlacementTitle(finding, labels);
+    if (title !== undefined) return Object.freeze({ title: fittingTitle([title]) });
   }
+  if (finding.code === 'roomActionOrderUnavailable') return orderUnavailableCopy(finding, labels);
   if (isChaosGatePositionFinding(finding)) {
     return Object.freeze({
       title: 'Chaos gate position unavailable',
@@ -1238,10 +1369,11 @@ const countedTitles: Partial<Record<FindingCode, (count: number) => string>> = {
   fieldsSpatialPointUnavailable: (n) => `${n} Fields positions unavailable`,
   fieldsSpatialPointDuplicate: (n) => `${n} Fields positions already used`,
   rewardMissing: (n) => `Choose ${n} rewards`,
+  rerollResultMissing: (n) => `Choose ${n} rerolled rewards`,
   targetMissing: (n) => `Choose ${n} rooms`,
   traitOfferMissing: (n) => `Choose ${n} trait offers`,
   roomActionOrderUnavailable: (n) => `${n} actions out of order`,
-  roomActionPlacementRequired: (n) => `Restore ${n} required actions`,
+  roomActionPlacementRequired: (n) => `${n} required actions not taken`,
   purgingPoolTraitMissing: (n) => `Choose ${n} Pool of Purging traits`,
   hermesShrineInventoryMissing: (n) => `Choose ${n} Shrine offers`,
   stygianWellMissing: (n) => `Choose ${n} Well offers`,

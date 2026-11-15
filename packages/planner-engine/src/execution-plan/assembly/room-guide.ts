@@ -198,18 +198,20 @@ function descriptionFor(
       return Object.freeze({ kind: reference.kind, exitKey: reference.exitKey });
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);
-    case 'purchaseHermesShrineOffer': {
+    case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer': {
       const shrine = room.hermesShrine;
       const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
       const offer =
         slotKey === undefined ? shrine?.travelDealRefill?.offer : shrine?.offerBySlot[slotKey];
       if (offer === undefined || offer === null)
-        throw new Error(`room guide Shrine purchase ${reference.generationKey} lacks its offer`);
+        throw new Error(
+          `room guide Shrine ${reference.kind} ${reference.generationKey} lacks its offer`,
+        );
       return Object.freeze({
         kind: reference.kind,
         generationKey: reference.generationKey,
         rewardType: offer.rewardType,
-        rushed: reference.rushed,
       });
     }
   }

@@ -163,7 +163,7 @@ describe('RouteWorkspace', () => {
     );
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
-    expect(markup).toMatch(/>Location \d+</);
+    expect(markup).toMatch(/data-step="\d+"/);
     expect(markup).not.toContain('Ephyra · Location');
     expect(markup).not.toContain('surface-n-opening');
   });

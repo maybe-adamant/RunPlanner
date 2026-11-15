@@ -1,11 +1,11 @@
-import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
+import type { OccurrenceAddress } from '../../authored-project/addresses';
 import {
   roomActionResetApplies,
   roomActionResetPlan,
 } from '../../authored-project/commands/room-action-reset';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { Catalog } from '../../catalog-schema';
-import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
+import { authoredRoom } from './evaluated-room';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 
 type ResetCommand = Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }>;
@@ -23,12 +23,7 @@ export function roomActionResetsForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   occurrence: OccurrenceAddress,
 ): readonly (ResetCommand | undefined)[] | undefined {
-  const biome = candidateBiome(assembly.evaluation, occurrence.routeKey, occurrence.biomeKey);
-  if (biome === undefined) return undefined;
-  const key = semanticAddressKey(occurrence);
-  const room = candidateBiomeRooms(biome).find(
-    (candidate) => semanticAddressKey(candidate.origin) === key,
-  );
+  const room = authoredRoom(assembly, occurrence);
   if (room === undefined) return undefined;
   const ranked = room.roomActionRoster.rows
     .filter((row) => row.rank !== null && !row.stale)

@@ -286,14 +286,15 @@ occurrence and its local controls are active for every supported nonterminal
 route position. The ordinary terminal I and Q positions have no Postboss
 occurrence; physical biome identity alone does not determine finality.
 
-Every structural Postboss state defaults to a `useFountain` action followed,
-where the route offers the rack, by the unchanged rack's `interactKeepsakeRack`
-action. The rack is a permanent timeline row: the codec requires exactly one
-rack action wherever the leaf exists, generic insertion and removal refuse it,
-and `MoveRoomAction` reorders it. `ReplacePostbossKeepsake { keepsakeKey:
-string | null }` sets or clears the key without moving the row. Each equip
-result belongs to one keepsake, so any key change, including null, drops the
-equip results. The action order is the sole chronology owner, and the Postboss
+The rack is an object the owner interacts with, like any other: a Postboss
+room is created with no rows, and with no `interactKeepsakeRack` row the held
+keepsake stays. The codec allows at most one rack action, and only where the
+leaf exists; `InsertRoomAction`, `MoveRoomAction` and `RemoveRoomAction` treat
+it as an ordinary optional row, and removing it clears the key, since the
+choice is made at the rack. `ReplacePostbossKeepsake { keepsakeKey: string |
+null }` sets or clears the key without moving the row; setting a key while the
+rack has no row appends its use. Each equip result belongs to one keepsake, so
+any key change, including null, drops the equip results. The action order is the sole chronology owner, and the Postboss
 occurrence owns its findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
@@ -369,7 +370,7 @@ interface HubDecision {
 type HubAction =
   | { kind: 'roomVisit'; hubSlotKey: string }
   | { kind: 'useFountain' }
-  | { kind: 'reroll'; rerollId: string; hubSlotKey: string; reward: ResolvedRewardOffer };
+  | { kind: 'reroll'; rerollId: string; hubSlotKey: string };
 ```
 
 An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
@@ -462,8 +463,9 @@ biome-scoped; imported occurrence IDs are not rewritten.
 Entry declarations are intrinsically rewardless. Shared entry resolution first
 applies the room's route overlay, if its declaration names the route, then
 binds the route-owned reward only at the first itinerary entry, applies narrow
-contextual encounter rules, and selects the lifecycle and entered-store
-participation consumed by defaults, decoding and simulation. An overlaid room
+contextual encounter rules, and selects the entered-store participation
+consumed by defaults, decoding and simulation. The entry runs its declared
+lifecycle either way; only the run-start reward gives it a producer. An overlaid room
 is decoded and constructed as its realized room. Later entries remain
 rewardless. Multi-choice entry identity belongs to biome Overview at every
 ordinal; the starting offer belongs to Loadout, and its acquisition
@@ -648,10 +650,11 @@ Resetting an empty board is a no-op; Undo restores all cleared contents together
 
 The same order also holds board-door reroll presses (`InsertHubReroll`,
 `ReplaceHubRerollReward`, `RemoveHubReroll`): each names an open slot not yet
-entered and the reward its press drew, carries an engine-allocated `rerollId`,
-and may sit in any Hub stay, before the first visit or between later ones. A
-press placed after its slot's visit redraws nothing. The slot's target keeps
-its first native draw; see [Rerolls](#rerolls).
+entered, carries an engine-allocated `rerollId`, and may sit in any Hub stay,
+before the first visit or between later ones; the reward its press drew is
+the slot room's observation. A press placed after its slot's visit redraws
+nothing, and closing a slot removes its presses, announced at the Hub. The
+slot's target keeps its first native draw; see [Rerolls](#rerolls).
 
 The completed-Hub exit exists for the Hub's whole lifetime and is removed only
 with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
@@ -664,8 +667,8 @@ the Hub frontier and the chain is an authored, unreached context whose state
 stays finding-backed. Fountain placement is not part of that predicate;
 completeness separately requires the use before departure. The unreached chain
 still counts as structurally active for the command boundary's Room Action
-domain closure, so its delivery and pickup rows are kept and seeded like any
-other authored room, but it is not assessed until the Hub is complete.
+domain closure, so its delivery and pickup rows are kept like any other
+authored room, but it is not assessed until the Hub is complete.
 
 Each entered main occurrence may own a `LocalVisitDecision` whose generated
 targets are distinct side-room occurrences. Generation and visit order remain
@@ -709,20 +712,31 @@ A present Shrine of Hermes persists its visible initial inventory, each
 stocked item (initial slot or Travel Deal refill) holding its reward type and
 the delay the game rolls with the stock, so an unbought item keeps its delay
 too. A generation is purchased exactly when `roomActions.order` holds its one
-`{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }` reference, which
-owns its rush and its position among the Shrine's purchases; no purchase state
-is persisted beside it. The codec rejects a purchase action whose item is not
-stocked, and a same-room Shrine pickup without a rushed purchase action. Its
-rushed or delayed delivery owns concrete acquisition payload. A
-Stygian Well or Pool of Purging holds its initial stock with no interaction
-flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
-required only once a purchase or sale uses it; use follows from the room's
-actions. Each later roll is a repeatable `rerollStygianWell` or
-`rerollPurgingPool` room action with an engine-allocated `rerollId` and
-optional slot pins (an unpinned slot stays native); each Well purchase names
-its roll and slot, and each Pool sale its list (`rollKey`, absent for the
-initial list). A purchase or sale pins a blank slot in the same edit. Travel
-Deal refill state is
+`{ kind: 'purchaseHermesShrineOffer', generationKey }` reference, and rushed
+exactly when it also holds its one `{ kind: 'rushHermesShrineOffer',
+generationKey }` reference, the later interaction with the bought item; no
+purchase state is persisted beside them. The codec rejects a purchase action
+whose item is not stocked, a rush without its purchase, and a same-room Shrine
+pickup without its rush; a rush ordered before its purchase is kept with its
+ordering finding. Its rushed or delayed delivery owns concrete acquisition
+payload. A Stygian Well or Pool of Purging holds what the game rolled on it,
+with no interaction flag: its initial stock (a Pool's entry list, the list its
+room generates on entry), stored slot by slot like any stock; use follows from
+the room's actions. A Pool also holds, while its fountain use makes the entry
+list stale, the list the Pool regenerates when it opens. Each later roll is a
+repeatable `rerollStygianWell` or `rerollPurgingPool` room action that holds
+only its engine-allocated `rerollId`; the roll's slots live on the Well or
+Pool under that id. A Well
+generation is bought exactly when the room's actions hold its one purchase,
+which names its roll and slot; the game rolls a Fateful Twist per bought
+generation, and its result lives on the Well under that generation. Pins and
+Twist results exist only for rolls the room holds, so removing a reroll takes
+them with it, and with them the purchases and sales of its list. Each Pool sale names its list (`rollKey`, absent for the initial
+list). Every Well, Pool, Shrine and World Shop stock slot (their rolls,
+Travel Deal refills and Fateful Twist results) is stocked by the edit whose
+settlement first reaches it blank
+([Stock filled on first reach](SIMULATION_AND_VALIDATION.md#stock-filled-on-first-reach)).
+Travel Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation
 state.
@@ -764,15 +778,20 @@ doors observed locked when its doors opened. Only a door the host declares
 lockable may appear, never the first; absence means every door opened, and a
 leaf beside a `challengeSwitch` is rejected because the game never rolls both.
 Each locked door may be pressed once by an optional `unlockExit` room action
-keyed by its `exitKey`, in the doors-open window after every required action,
-which carries optional `customization` of its fight as a room phase's
-`customizationByPhase` entry; a press of a door that is not locked is
-rejected. A door or cage reroll of a locked door depends on that door's press.
+keyed by its `exitKey` and carrying nothing else, in the doors-open window
+after every required action; a press of a door that is not locked is
+rejected. The fight a press starts is an observation of the door, not of the
+press: `encounters.customizationByLockedExit` holds each locked door's optional
+fight decisions by exit key, as a room phase's `customizationByPhase` entry,
+whether or not the door is pressed, and only for a door in `lockedExits`. A
+door or cage reroll of a locked door depends on that door's press.
 `ReplaceLockedExit` locks or opens one door (refused on the first door, off a
-host and in a switch room; opening a door drops its press);
-`ReplaceChallengeSwitch` is refused while a door is locked;
-`ReplaceUnlockExitCustomization` edits the press's fight; the press itself is
-inserted, moved and removed as any optional room action. Each is one history
+host and in a switch room); opening a door ends it as an item, so its press and
+its fight go with it. `ReplaceChallengeSwitch` is refused while a door is
+locked. `ReplaceLockedExitCustomization` edits a locked door's fight, before
+or after its press; the press itself is inserted, moved and removed as any
+optional room action, and removing it keeps the door's fight. A room
+replaced by another loses its locks and their fights. Each is one history
 step. Leaving through a door still locked is a finding on the exit
 selection, never a refused selection. The game rules are owned by
 [G Game Rules](../biomes/G_GAME_RULES.md#locked-extra-exits).
@@ -811,22 +830,33 @@ acquisition entry only when its hidden source must be resolved on collection.
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or
 equipping Narcissus trait owns its exact generated entries after its normal
-trait acquisition. The command that takes such a trait also takes its optional
-same-room drops: their actions go right after the source acquisition (after
-any of its drops already in the order), or into the room-exit window for drops
-that settle there. Only drops the command newly makes active are added, so
-earlier drops keep their authored choice; clocked drops stay manual, and a
+trait acquisition. Its optional same-room drops spawn with it and stay
+unplaced until the owner picks them up, after the source acquisition or in the
+room-exit window for drops that settle there; clocked drops likewise, and a
 whole-route replacement keeps exactly the pickups it carries. Removing or
 replacing the source removes its drops with it. A Sea Star result owns at most one non-recursive duplicate
-entry at its normal source acquisition role; toggling that result adds or
-removes the entry and its ordinary Room Action as one semantic command and one
-undo step. A retained result that becomes inactive remains authored for repair
-but has no active child action. The persisted entry is ordinary
+entry at its normal source acquisition role. The proc is an observation:
+setting it adds the entry, whose duplicate then lies live for its owner to
+pick up through its ordinary Room Action, and clearing it removes the entry and
+any such action, each as one semantic command and one undo step. A retained
+result that becomes inactive remains authored for repair but has no active
+child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
+
+A Sea Star duplicate and an Artificer replacement are items derived from a
+source in the same room. When an edit changes that source, the derived item
+and its own derived items go with their pickups in the same undo step: when
+the source is no longer produced, when its offer changes (a swapped reward),
+when a replacement's source no longer converts with the Artificer, and when a
+Nemesis event's kind or contest result changes, since another event or
+result is another source even with the same reward. An edit that keeps the
+source, such as its Time Piece disposition, keeps them.
 
 A Nemesis random event's site holds her offer as its one `result` entry: the
 item she gives or trades, the trait trade's fixed Triple Gold, and for a
-damage contest the planned success item, kept whatever the contest's result.
+damage contest the planned success item, whatever the contest's result.
+Changing the event's kind or the contest's result renews the entry without
+its authored choices and unplaces its pickup.
 What spawns derives from the outcome: the offer for her free item, an
 accepted trade or a won contest, nothing for a declined trade, and the fixed
 Consolation prize for a lost contest, which therefore needs no offer.
@@ -847,8 +877,7 @@ commands. Shrine and Well purchase references are rejected the same way.
 Removing participation remains accepted for a retained stale purchase after
 its Shop owner disappears, allowing exact repair without deleting unrelated
 actions. `PurchaseShopTravelDealRefill` appends the purchase of the Shop's
-Travel Deal item and, given a value, first stocks a blank item, as one Undo
-step. Every purchase command here and below, including Well purchases, takes
+stocked Travel Deal item. Every purchase command here and below, including Well purchases, takes
 an optional index that places a new purchase at any structurally authorable
 position instead of its default ([roster](ROOM_LIFECYCLE_MODEL.md#roster)), in
 the same edit; an index without a new purchase is refused.
@@ -856,17 +885,20 @@ the same edit; an index without a new purchase is refused.
 `SetHermesShrineOfferDelay` sets the delay of one stocked Shrine item, initial
 slot or refill; stocking an empty slot gives it the default delay, and
 restocking keeps it. `SetHermesShrinePurchase` adds or clears one generation's
-purchase: a new purchase inserts its unrushed purchase action at its canonical
-position, and clearing removes that action, its pickup and placed deliveries
-while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
-the purchase of one unbought item at the end of the room's actions, bought or
-rushed, first stocking a blank Travel Deal refill when given its reward, as one
-Undo step; given an index, a rushed purchase's pickup follows it directly.
-`SetHermesShrinePurchaseRush` changes rush on one exact purchase
-action, ranking or retracting its optional same-room pickup. When any of these
-commands changes the first rushed initial purchase, the refill's purchase
-action and pickup are rescheduled after it; when no rushed initial purchase
-remains, the refill's pickup is retracted.
+purchase: a new purchase inserts its purchase action at its canonical
+position, and clearing removes that action, its rush, its pickup and placed
+deliveries while retaining delivery payload. `PurchaseHermesShrineOffer`
+instead appends the purchase of one unbought item at the end of the room's
+actions. `SetHermesShrineRush` rushes one bought item, inserting its rush
+action directly after its purchase or at any structurally authorable index
+after it in the same room, or un-rushes it, removing that action and retracting
+its optional same-room pickup; a rushed item's pickup is the owner's to place.
+The rush settles at its own row, so it and its purchase move independently,
+each judged by the prefix rule; generic Room Action insertion and removal
+reject the rush reference. When any of these commands changes the
+first initial rush, the refill's purchase, its rush and its pickup are
+rescheduled after that rush; when no initial rush remains, the refill's pickup
+is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete
 chronology; `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible
@@ -893,25 +925,24 @@ derived-pickup family.
 ### Required Room Actions
 
 The engine classifies every structurally active Room Action as required or
-optional from the same action domain consumed by simulation. The semantic
-command that newly activates a required reference inserts it in the
-occurrence's order at its engine-owned lifecycle default position, preserving
-the relative sequence of retained rows. One command and one history entry
-therefore contain both the requested edit and its mandatory membership delta.
-Optional actions remain membership-controlled by their existing owner. An
-active required row may be moved within its legal range but cannot be
-generically removed.
-
-This guarantee is delta-only. A deliberately malformed document may already
-omit a required reference, and an unrelated edit does not normalize that
-omission. Evaluation retains the missing-required finding and publishes one
-engine-owned canonical restore intent. `InsertRoomAction` restores it at that
-canonical index or at any other index the
+optional from the same action domain consumed by simulation. Classification
+is not membership: a newly created room holds no rows, and no command inserts
+a required reference the owner did not place, so the order holds exactly the
+interactions the owner placed. A required reference left out is ordinary
+incomplete state. Evaluation retains its missing-required finding and
+publishes one engine-owned canonical restore intent. Optional actions remain
+membership-controlled by their existing owner. A required row may be moved
+within its legal range or removed by `RemoveRoomAction`, a cross-room delivery
+by `UnplaceGeneratedDelivery`; its item is then live again with its finding.
+`InsertRoomAction` places it at the canonical index or at any other index the
 [roster](ROOM_LIFECYCLE_MODEL.md#roster) judges structurally authorable. The
 placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 `PlaceEchoGoldPickup` take the same optional index for a pickup they newly
 place; absent, it lands at the command's default, and an index for a pickup
-already placed is refused. Rows of a room the run does not enter remain
+already placed is refused. A delivery's or clocked drop's row is only
+`interactAcquisitionEntry` with its site and entry: where it falls due is the
+walk's, never stored, and the engine's placement query publishes the command
+placing it at the last index it may take. Rows of a room the run does not enter remain
 authored untouched, and reactivation of the same key reuses its retained
 position rather than adding a duplicate. Stale, source-gone and invalid rows follow
 [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
@@ -921,27 +952,60 @@ it names an ordered action by its key, or none for the room's entry, and
 removes every row after it, stale rows included, each through the command
 that owns that row's removal (a Shop, Well or Shrine purchase is
 un-purchased, the Contract pedestal uncollected, a cross-room delivery
-unplaced, any other row removed), in one edit and one Undo step. Rows that
-cannot leave the order stay in their relative order after the point: active
-required rows, which automatic placement keeps, and the Postboss keepsake rack.
+unplaced, the keepsake rack's use removed with its choice, any other row
+removed), in one edit and one Undo step. Required rows go too: their items are
+live again with their findings.
 A removal never depends on its item still resolving. No other room's actions,
 and no door pick, encounter setting, Ephyra visit order or Hub action, change,
 except that removing a Shrine purchase retracts that purchase's deliveries
-placed in later rooms, as a manual un-purchase does. A reset is a clean slate
-for the Postboss rack too: from a point before the rack it clears the rack's
-keepsake choice back to keeping the held keepsake, through the rack's own
-command, while the rack row stays; a reset after the rack leaves the choice
-alone. An anchor that is not an ordered action is refused, and a reset that
-would remove no row and clear no choice leaves the document unchanged. A Timeline
+placed in later rooms, as a manual un-purchase does. An anchor that is not an
+ordered action is refused, and a reset that would remove no row leaves the
+document unchanged. A Timeline
 banner is not an address: the engine's reset query maps each Timeline entry
 to its command, a banner to the ranked actions before it.
+
+### Item content on rows
+
+A row that acts on an item (picking up a room, cage, optional or wheel reward,
+a Shop, Pedestal or refill purchase, a Well purchase, a Shrine purchase or
+rush, a Pool sale, an acquisition entry's pickup) may carry an optional
+`content`: the identity-bearing observation of that item when the row was
+placed. It is never part of the row's key, so owners, finding and Undo
+addresses and the published plan do not see it. The engine derives it per
+kind:
+
+| Row                                           | Content                                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Room reward, cage reward                      | the press that drew it (`native`, or the last reroll's id) and its reward                       |
+| Fields optional reward                        | its reward                                                                                      |
+| Wheel reward                                  | the picked offer, its press and its reward                                                      |
+| Shop, Pedestal or Travel Deal refill purchase | the option and its reward                                                                       |
+| Well purchase                                 | the generation's item                                                                           |
+| Shrine purchase or rush                       | the stocked reward type                                                                         |
+| Pool sale                                     | the slot's trait in its list                                                                    |
+| Acquisition entry                             | its payload's reward; a Nemesis result also its event kind, a switch claim the switch's variant |
+
+A reward is named by its type and the gods its payload names (a Devotion
+pair's chosen and spurned gods both). An item not observed yet (an unpinned
+Well or Pool slot, an unset reward, a payload not authored, Echo's replays)
+has no content, and neither has the item of a stale row (one whose action the
+room no longer has, such as a pickup of a role its reward lacks). Every command
+stamps the rows of the biomes it changes that recorded none while their item
+is observed, both before it applies (so a row records the item it was placed
+for, not the one the edit swaps in) and after;
+stamping alone is not an edit of the room. Engine-built references (the
+roster's, the live room's) carry content; `InsertRoomAction` refuses a
+reference whose content its item does not hold, and placing the current item
+of an item-replaced row takes that row's place. The codec accepts any
+recorded content; a row whose item holds other content is
+[an item-replaced row](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
 
 ### Room layout and positions
 
 Whether something exists is never optional; where an existing thing stands is
-optional when the game is free to place it, and an unset position takes the
-engine's stable default, derived on every evaluation and never stored
-([position defaults](SIMULATION_AND_VALIDATION.md#position-defaults)). Each thing owns its own position: the room its layout, an
+optional when the game is free to place it; the edit that first reaches its
+room stores a stable draw for it
+([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)). Each thing owns its own position: the room its layout, an
 anchor object its anchor, a Fields slot its point, a Chaos gate its spawn
 point.
 
@@ -976,37 +1040,54 @@ owns cage completion and pickup chronology.
 [H rules](../biomes/H_GAME_RULES.md#authored-shape) own participation and
 default ordering.
 
-`ReplaceFieldsCageOrder` accepts an exact permutation of the active cage
-identities. It resolves that permutation left-to-right with insertion-style
-moves of the existing completion references, retaining all other actions'
-relative sequence and each cage's leaves, and reconciles the complete order
-once. Context-invalid retained interactions remain repairable through findings.
-Commands and decoding use stable phase, slot, and acquisition-role identities,
-never rendered ordinals.
+Cage order is the order of the cage Unlock rows: each Unlock row triggers its
+cage's encounter, whose end releases the cage's reward, so the walk takes the
+cages in row order and an ordinary room-action move of an Unlock row reorders
+them. No separate cage-order state or command exists. Context-invalid retained
+interactions remain repairable through findings. Commands and decoding use
+stable phase, slot, and acquisition-role identities, never rendered ordinals.
 
 ### Rerolls
 
 A door, Fields cage or ship-wheel reroll press is a repeatable `reroll` room
 action in the source room's order, identified by its engine-allocated
-`rerollId`, never by position. It names its target (an exit door and its
-occurrence, a cage door with the cage slot the game picks at random, or one
-offer of the room's own wheel) and the reward the redraw produced. Rerolls of
+`rerollId`, never by position. It names only its target: an exit door and its
+occurrence, a cage door, or one offer of the room's own wheel. What the
+redraw produced, and for a cage the slot the game picked at random, is an
+observation of the rerolled item (below). Rerolls of
 different targets interleave freely, because each press's candidates depend on
 every target's current reward at that moment; a per-target list could not
 represent them. Board-door presses are the Hub's own actions
 ([N Hub Progression](#n-hub-progression)).
 
 The target keeps its first native draw with its ordinary picker and meaning
-(the incoming reward, the cage or the wheel offer). The reward entered or
-collected after the presses, with its acquisition children, lives beside it in
-`rerolledIncomingReward`, `rerolledCages` or `rerolledOffers`; the first draw
-is inert while it is present. Its offer should equal the last press's; a
-mismatch is retained for repair (`DropRerolledReward`,
-`AdoptRerolledReward`), never rewritten. `InsertReroll` appends a press at an
-engine-supplied index (after the doors unlock, or among a wheel's offers
-before its use), `ReplaceRerollReward` changes its reward, and presses are
-removed and moved as ordinary room actions; a removal keeps later presses it
-invalidates.
+(the incoming reward, the cage or the wheel offer). Beside it,
+`rerolledIncomingReward`, `rerolledCages[slot]` or `rerolledOffers[offer]`
+holds the rerolled item: `results`, the reward each press of this target
+drew, by its `rerollId` (room or Hub presses; a target has one source, so the
+ids are unique), or null while the owner has not set it; `pressId`, the press whose item the owner acquires; and
+`acquisition`, that item's outcomes and acquisition children. The owner's
+effective press is its last press in its source's order (for a board door,
+before its slot's visit), and the owner acquires that press's reward; the
+first draw is inert while a press is effective. Decoding holds `results` to
+exactly the presses naming the target, every press whose target room stands
+to its result, `pressId` to one of them, and `acquisition` present exactly
+while a press is effective and the owner can draw the recorded press's
+reward; an unset result is never effective and holds no outcomes. A press whose door or room is gone holds no result and is stale. An
+edit that rebuilds a target's room keeps its rerolled item wherever it keeps
+the target's first draw, without outcomes the rebuilt room cannot draw;
+otherwise the item's presses go with it, announced as removed actions.
+
+Outcomes belong to one item. When the effective press changes (a later
+press, an earlier one again, none) or its result changes in place, the item
+is replaced: its outcomes reset to the effective press's unresolved defaults,
+or go while no press is effective, and edit settlement announces the reset as
+a [replaced item](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
+Outcomes still at their unresolved defaults simply follow the effective press.
+`InsertReroll` appends a press at an engine-supplied index (after the doors
+unlock, or among a wheel's offers before its use), naming a cage press's slot,
+with its result or unset, `ReplaceRerollReward` sets or changes its result, and presses are removed and moved as
+ordinary room actions; a removal keeps later presses it invalidates.
 
 A rerolled single-pick trait, Chaos or Pom level screen holds its earlier
 screens, oldest first, before the final screen that keeps the pick; the reroll
@@ -1151,16 +1232,14 @@ derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.
 
 Before decoding a successful proposal, the command boundary closes it in one
-explicit command-local order: newly required source actions, then generated
-pickup sites, then a newly taken trait's dropped pickups, then the newly active
-generated actions, with resource topology
-cleanup, Shrine-source and inactive clocked-pickup retraction and Chaos
-topology reconciliation in the same pass. Each closure compares the
-structurally active Room Action domains before and after its step and closes
-only the newly required delta. It may seed several newly active occurrences or
-one Fields/Ship cohort atomically, but it does not invoke simulation or
-materialization, repair pre-existing omissions, or remove rows made dormant by
-the command. Source-owned site, entry and action change together, preserving
+explicit command-local order: resource topology cleanup, Shrine-source and
+inactive clocked-pickup retraction, generated pickup sites, items derived
+from a changed source, a left challenge switch's press and Chaos topology
+reconciliation. No closure places a row: a
+newly required action, a newly taken trait's dropped pickup and a rushed
+Shrine item stay unplaced until the owner places them. The closure does not
+invoke simulation or materialization, repair pre-existing omissions, or remove
+rows made dormant by the command. Source-owned site, entry and action change together, preserving
 compatible authored children when their source survives; a later application
 projection never repairs the document or synthesizes a missing site. An
 extension joins this ordered closure rather than adding a second scheduler or
@@ -1175,21 +1254,20 @@ keepsake selection's equip results) are
 one source and cycle. Hermes deliveries and clocked pickups are likewise keyed
 by their source. Room replacement and other unrelated edits therefore retain
 all of them; edit settlement resets no inherited choice, and one that is
-invalid where it lands keeps its finding. Only a changed purchase or a moved
-due contact re-places a Hermes delivery without its old payload. Vanished
+invalid where it lands keeps its finding. Only a changed purchase or a changed
+arrival host re-places a Hermes delivery without its old payload. Vanished
 structural phases are removed under the existing codec and remain recoverable
 through Undo.
 
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving
 the source purchase and sibling deliveries. It validates structural ownership,
-not simulated validity; application edit settlement refuses to publish removal
-of a reached valid required delivery, proven invalid placements retain this
-explicit repair, and due-contact validation continues to
-require that delivery before publication. Same-room rushed deliveries are
-optional actions ranked by the rush command and removed through
-`RemoveRoomAction`, never unplaced; a rushed purchase may stand without its
-pickup. Source reactivation uses the existing exact placement support rather
+not simulated validity; an unplaced due delivery lies live again with its
+placement finding, proven invalid placements retain this explicit repair, and
+due-contact validation continues to require that delivery before
+publication. Same-room rushed deliveries are
+optional actions the owner places and removes through
+`RemoveRoomAction`, never unplaced; a rush may stand without its pickup. Source reactivation uses the existing exact placement support rather
 than guessing a replacement host.
 
 Retained clocked-pickup payload alone does not create an optional action. The

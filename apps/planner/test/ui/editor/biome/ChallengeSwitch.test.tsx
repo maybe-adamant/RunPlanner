@@ -46,10 +46,10 @@ describe('challenge switch rows on the room Overview', () => {
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    // A kind's toggle adds that kind, which the game places.
+    // A kind's toggle adds that kind on an anchor the edit stores.
     await user.click(screen.getByRole('button', { name: 'Infernal Trove' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
-    expect(hostRoom(application).challengeSwitch?.anchorId).toBeUndefined();
+    expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
 
     // Another kind's toggle replaces it.
     await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
@@ -57,11 +57,11 @@ describe('challenge switch rows on the room Overview', () => {
       'PerfectClearChallengeSwitch_Pom',
     );
 
-    // Its anchor is picked among the free ones, its default A1 included.
+    // Another free anchor is picked in place of the stored one.
     await user.click(screen.getByRole('button', { name: 'Switch spot' }));
     await user.click(
       screen
-        .getAllByRole('option', { name: 'A1' })
+        .getAllByRole('option', { name: /^A\d+$/ })
         .find((option) => option.getAttribute('data-selected-value') !== 'true')!,
     );
     expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
@@ -115,7 +115,7 @@ describe('challenge switch rows on the room Overview', () => {
     await addSwitch(user, 'Infernal Trove');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await pickRoomObjectAction(user, 'Infernal Trove', 'Use Infernal Trove');
+    await pickRoomObjectAction(user, 'Infernal Trove', 'Press Infernal Trove');
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -129,10 +129,10 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await addSwitch(user, 'Unseen Sigil');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await pickRoomObjectAction(user, 'Unseen Sigil', 'Use Unseen Sigil');
+    await pickRoomObjectAction(user, 'Unseen Sigil', 'Press Unseen Sigil');
 
-    await user.click(screen.getByRole('button', { name: 'Switch outcome: succeed' }));
-    await user.click(screen.getByRole('option', { name: 'succeed with Nectar' }));
+    // Pressing the switch opens its outcome on the placed row.
+    await user.click(await screen.findByRole('option', { name: 'succeed with Nectar' }));
     expect(hostRoom(application).challengeSwitch).toMatchObject({
       outcome: 'hitless',
       nectarDropped: true,

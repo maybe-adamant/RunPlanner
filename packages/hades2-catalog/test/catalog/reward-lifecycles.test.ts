@@ -232,8 +232,9 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
       { role: 'chosenSource', lifecyclePoint: 'beforeCombat' },
       { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
     ]);
+    // Zagreus grants the Contract trait once his fight ends; nothing is picked up.
     expect(roomReward?.rewardTypes.byKey.InfernalContractBoon?.acquisitionLifecycle).toEqual([
-      { role: 'self', lifecyclePoint: 'roomRewardPickup' },
+      { role: 'self', lifecyclePoint: 'afterCombat', automatic: true },
     ]);
     expect(roomReward?.rewardTypes.byKey.GiftDrop?.acquisitionLifecycle).toEqual([
       {

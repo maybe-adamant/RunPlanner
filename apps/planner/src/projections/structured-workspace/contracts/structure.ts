@@ -25,7 +25,6 @@ import type {
   OccurrenceAddress,
   PhantomExitAddress,
   ProjectCommand,
-  RerolledRewardOwner,
   RoomActionAddress,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -55,7 +54,6 @@ import type { WorkspaceFountainRarityControl } from './timeline';
 
 export interface WorkspaceAnomalyControl {
   readonly mapChoices: readonly WorkspaceRoomChoice[];
-  readonly rememberedRoomLabel: string;
   readonly success: boolean;
 }
 
@@ -67,14 +65,6 @@ export interface WorkspaceDoorReward {
   /** The reward the door offers after its rerolls, where it differs from the first draw. */
   readonly rerolledOffer?: ResolvedRewardOffer;
   readonly rerolledSummary?: string;
-  /**
-   * A kept rerolled reward that no longer matches: adopt the last reroll's
-   * reward, or drop it where no reroll remains.
-   */
-  readonly rerolledRewardRepair?: {
-    readonly owner: RerolledRewardOwner;
-    readonly repair: 'adopt' | 'drop';
-  };
   /** The reward's short mark among several on one door, such as C1. */
   readonly badge?: string;
   readonly control?: WorkspaceRewardControl;
@@ -140,7 +130,6 @@ export interface WorkspaceMissingPhysicalTarget {
 export interface WorkspaceFieldsBatchContext {
   readonly cageOutcome: 'min' | 'max';
   readonly cageTargetCount: number;
-  readonly doorCageRewardCount: number;
   readonly priorMaxOutcomes?: {
     readonly fieldsMaxDoorsRolled: number;
     readonly maxDoorCageCeiling: number;
@@ -165,10 +154,10 @@ export interface WorkspaceEffectiveRewardPool {
 /**
  * A fact beside the doors, with the word or value it explains: the carried pool, the pool
  * the selected exit counts, the hidden return door's name, the door table's Reward column,
- * or a Fields batch's cage count or door roll.
+ * or a Fields batch's door roll.
  */
 export interface WorkspaceDoorNote {
-  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'rewardColumn' | 'cageCount' | 'doorRoll';
+  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'rewardColumn' | 'doorRoll';
   readonly text: string;
 }
 
@@ -220,7 +209,8 @@ export interface WorkspaceRerollRow {
   readonly targetLabel: string;
   /** A Hub board press's door, by its room's icon and shared-icon number. */
   readonly targetRoom?: { readonly roomIcon: WorkspaceRoomIcon; readonly roomNumber?: string };
-  readonly reward: ResolvedRewardOffer;
+  /** Absent while the owner has not set the press's result. */
+  readonly reward?: ResolvedRewardOffer;
   /** A press's view of its doors or wheel offers: present on door, cage and wheel presses. */
   readonly doors?: {
     /** The pressed door or offer, without its cage: a cage is known by its reward. */
@@ -273,8 +263,6 @@ export interface WorkspaceRoomRerollsInteraction {
   readonly targets: (selectedKey: string | undefined) => ContextualPickerModel<string>;
   /** The reward picker of one authored press. */
   readonly rowReward: (rowKey: string) => WorkspaceRewardOfferResolver;
-  /** The reward picker of a press not yet authored, on one target. */
-  readonly pendingReward: (targetKey: string) => WorkspaceRewardOfferResolver;
   readonly replaceRewardIntent: (
     rowKey: string,
     reward: ResolvedRewardOffer,
@@ -286,12 +274,17 @@ export interface WorkspaceRoomRerollsInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' | 'RemoveHubReroll' }>
   >;
-  readonly appendIntent: (
+  /**
+   * Appends a press of one target, its result unset for its row to choose;
+   * undefined where the game refuses that press.
+   */
+  readonly pressIntent: (
     targetKey: string,
-    reward: ResolvedRewardOffer,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
-  >;
+  ) =>
+    | WorkspaceCommandIntent<
+        Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
+      >
+    | undefined;
 }
 
 export type WorkspaceAuthoringFrontier =
@@ -631,6 +624,8 @@ export interface WorkspacePhantomExitControl {
     readonly summary: string;
     /** The effective room's icon; absent while the room is automatic and unsettled. */
     readonly icon?: WorkspaceRoomIcon;
+    /** The effective room's number where many rooms share its icon. */
+    readonly number?: string;
     /** `pastEnd`: the hidden door belongs to doors past the plan's end. */
     readonly locked?: 'unreached' | 'pastEnd';
   };
@@ -651,6 +646,8 @@ export interface WorkspacePhantomExitInteraction {
     readonly load: () => ContextualPickerModel<string>;
     /** The icon of an offered placeholder room, by game name. */
     readonly roomIcon: (gameName: string) => WorkspaceRoomIcon;
+    /** That room's number where many rooms share its icon. */
+    readonly roomNumber: (gameName: string) => string | undefined;
   };
   readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string>> };
   readonly roomIntent: (
@@ -707,6 +704,8 @@ export type WorkspaceOccurrenceStageOutgoing =
             readonly label: string;
             readonly gameName?: string;
             readonly roomIcon?: WorkspaceRoomIcon;
+            /** The room's number where many rooms share its icon. */
+            readonly roomNumber?: string;
             /** The fixed room's occurrence, opened as the way on. */
             readonly continuation?: { readonly marker: WorkspaceMarker };
           }
@@ -1035,6 +1034,11 @@ export interface StructuredWorkspaceProjection {
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   /** A Timeline row's label, in the projected room holding the owner. */
   readonly roomActionLabel: (owner: SemanticAddress, actionKey: string) => string | undefined;
+  /** An event point named with its phase, in the projected room holding the owner. */
+  readonly roomEventPointName: (
+    owner: SemanticAddress,
+    point: import('@run-planner/engine/authored-project').RoomEventPoint,
+  ) => string | undefined;
   readonly route: WorkspaceRoute;
   readonly status: WorkspaceStatus;
   /** Where the walk stops, with the way there; absent when nothing stops it. */

@@ -66,6 +66,19 @@ function normalizeEncounterSlotBindings(
         definitions.byKey[rivalsEncounterDefinitionKey] === undefined
       )
         fail(`${bindingPath}.rivalsEncounterDefinitionKey`, 'unknown encounter definition');
+      // A reward that can never duplicate is a fact of the room only while its
+      // slot can resolve no other encounter.
+      const flagged = (key: string | undefined) =>
+        key !== undefined && definitions.byKey[key]?.incomingRewardCannotDuplicate === true;
+      for (const [field, key] of [
+        ['shadowEncounterDefinitionKey', shadowEncounterDefinitionKey],
+        ['rivalsEncounterDefinitionKey', rivalsEncounterDefinitionKey],
+      ] as const)
+        if (key !== undefined && (flagged(key) || flagged(encounterDefinitionKey)))
+          fail(
+            `${bindingPath}.${field}`,
+            'only a fixed slot binds its reward that can never duplicate, as its sole encounter',
+          );
       return Object.freeze({
         slotKey,
         kind: 'fixed',

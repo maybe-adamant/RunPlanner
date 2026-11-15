@@ -37,7 +37,13 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  settleTestEdit,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,
@@ -177,7 +183,7 @@ function selectedNaturalChaosFrontier(): {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(goldenFBiome, {
@@ -198,7 +204,7 @@ function selectedNaturalChaosFrontier(): {
     }),
     value: { kind: 'additional', additionalExitKey: 'chaos' },
   });
-  return { project: authorLegalTraitOffers(project), chaosOccurrenceId };
+  return { project: authorTestTraitsAndRequiredItems(project), chaosOccurrenceId };
 }
 
 function roomCandidate(
@@ -314,11 +320,14 @@ describe('F candidate support', () => {
         },
       });
 
-      const replaced = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceStartingReward',
-        reward,
-        value: boon,
-      });
+      // The owner picks up the new opening Boon; its trait screen is still to be authored.
+      const replaced = collectTestRequiredItems(
+        settleTestEdit(project, {
+          kind: 'ReplaceStartingReward',
+          reward,
+          value: boon,
+        }),
+      );
       const trait = createTraitOfferAddress(incoming, 'source');
       expect(simulateProject(catalog, replaced).findings).toContainEqual(
         expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
@@ -554,8 +563,10 @@ describe('F candidate support', () => {
         ?.roomActions.order,
     ).toEqual(
       expect.arrayContaining([
-        { kind: 'interactShopOffer', offerKey: 'Boon' },
-        { kind: 'interactShopOffer', offerKey: 'Minor' },
+        ...withItemContents(ordered, site.owner, [
+          { kind: 'interactShopOffer', offerKey: 'Boon' },
+          { kind: 'interactShopOffer', offerKey: 'Minor' },
+        ]),
       ]),
     );
     const evaluation = simulateProject(catalog, ordered);

@@ -159,6 +159,8 @@ export interface AcquisitionLifecycleBinding {
   readonly levelResolutionEffect?: LevelResolutionEffect;
   /** Producer-local instance override, used by Echo's recreated Last Reward. */
   readonly blocksArtificerConversion?: true;
+  /** The role is granted at its point with no object to interact with, so no room action takes it. */
+  readonly automatic?: true;
 }
 
 export type SourceResolutionPoint =
@@ -222,6 +224,12 @@ export interface ShopOptionEntry {
     readonly healthCost: { readonly min: number; readonly max: number };
     readonly goldPerHealthHundredths: { readonly min: number; readonly max: number };
   };
+  /**
+   * A native offer condition on live hero state the planner does not model
+   * (`missingLastStand`: offered only while the hero is missing a Last Stand).
+   * No automatic stock draw takes the option; a chosen one stays legal.
+   */
+  readonly unmodeledOfferCondition?: 'missingLastStand';
 }
 
 /**

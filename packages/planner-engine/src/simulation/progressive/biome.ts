@@ -1,5 +1,13 @@
+import {
+  isPlacementBlocker,
+  type RoomActionPlacementBlocker,
+} from '../../authored-project/room-actions/order-assessment';
 import type { Catalog } from '../../catalog-schema';
-import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
+import {
+  isRequiredMissingInputFinding,
+  type RoomActionOrderEvidence,
+  type SemanticFinding,
+} from '../model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import {
   createBiomeAddress,
@@ -52,7 +60,6 @@ import { assessmentRepairOwner, findingRegion, type FindingRegionEntry } from '.
 import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
-import type { RerollSurfaceCandidateArtifacts } from '../rewards/biome/reroll-surfaces';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { initialFigLeafState } from '../keepsakes/state';
@@ -126,10 +133,37 @@ export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext
   return context.seed?.rewardFrontier.state.hexProgress.talentDropsClosed === true;
 }
 
+type RequiredActionDeadline = import('../lifecycle/model').RequiredActionDeadline;
+
+/** A placement blocker as finding evidence, in its bound's vocabulary. */
+function orderIssueEvidence(issue: RoomActionPlacementBlocker): RoomActionOrderEvidence {
+  switch (issue.kind) {
+    case 'dependency':
+      return { reason: 'dependency', prerequisite: roomActionKey(issue.dependency.action) };
+    case 'pastDeadline':
+      return {
+        reason: 'pastDeadline',
+        deadline: issue.deadline,
+        precedingAction: roomActionKey(issue.precedingAction),
+      };
+    case 'beforeSpawn':
+    case 'beforeEnabler':
+      return {
+        reason: issue.kind,
+        point: issue.point,
+        ...(issue.requiredAction === undefined
+          ? {}
+          : { requiredAction: roomActionKey(issue.requiredAction) }),
+        ...(issue.unavailable === true ? { unavailable: true } : {}),
+      };
+  }
+}
+
 /** Classify only the exact active action that stopped lifecycle execution. */
 function lifecycleBlockFindings(
   blockedAt: SemanticAddress,
   snapshot: EncounterStructuralSnapshot,
+  deadline: RequiredActionDeadline | undefined,
 ): readonly SemanticFinding[] {
   for (const room of structurallyActiveEncounterRooms(snapshot)) {
     const row = room.roomActionRoster.rows.find((candidate) =>
@@ -140,36 +174,38 @@ function lifecycleBlockFindings(
         : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
     );
     if (row === undefined || row.stale) continue;
+    // A row for a replaced item is not performed, whatever else it lacks.
+    if (row.itemReplaced === true)
+      return Object.freeze([
+        Object.freeze({
+          code: 'roomActionItemReplaced',
+          phase: 'encounterResolution',
+          origin: blockedAt,
+          evidence: Object.freeze({}),
+        }),
+      ]);
     const issues = room.roomActionRoster.issues;
-    // A required action of an earlier window ordered after the row stops the walk at the
-    // row; that crossing is the row's one reason, not also a window issue of the later action.
+    // A required action opening earlier but ordered after the row stops the walk at the
+    // row; that is the row's one reason, not also a crossing of the later action.
     const requiredFirst = issues.some(
-      (issue) => issue.kind === 'requiredFirst' && roomActionKey(issue.reference) === row.key,
+      (issue) =>
+        (issue.kind === 'beforeSpawn' || issue.kind === 'beforeEnabler') &&
+        issue.requiredAction !== undefined &&
+        roomActionKey(issue.reference) === row.key,
     );
-    // Otherwise a window crossing blocks at whichever of its two actions execution reaches first.
+    // Otherwise a crossing blocks at whichever of its two actions execution reaches first.
     const reasons = issues.flatMap((issue): SemanticFinding[] =>
+      isPlacementBlocker(issue) &&
       (roomActionKey(issue.reference) === row.key ||
-        (issue.kind === 'window' &&
+        (issue.kind === 'pastDeadline' &&
           !requiredFirst &&
-          roomActionKey(issue.precedingAction) === row.key)) &&
-      (issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst')
+          roomActionKey(issue.precedingAction) === row.key))
         ? [
             Object.freeze({
               code: 'roomActionOrderUnavailable',
               phase: 'encounterResolution',
               origin: blockedAt,
-              evidence: Object.freeze({
-                reason: issue.kind,
-                detail: issue.detail,
-                ...(issue.kind === 'dependency'
-                  ? {
-                      dependencyKind: issue.dependency.kind,
-                      checkpointUnavailable: issue.checkpointUnavailable === true,
-                    }
-                  : issue.kind === 'requiredFirst'
-                    ? { requiredAction: roomActionKey(issue.requiredAction) }
-                    : {}),
-              }),
+              evidence: Object.freeze(orderIssueEvidence(issue)),
             }),
           ]
         : [],
@@ -182,7 +218,15 @@ function lifecycleBlockFindings(
       code: 'roomActionPlacementRequired',
       phase: 'completeness',
       origin: blockedAt,
-      evidence: Object.freeze({}),
+      evidence: Object.freeze(
+        deadline === undefined
+          ? {}
+          : {
+              deadline: deadline.kind,
+              ...(deadline.kind === 'action' ? { deadlineAction: deadline.actionKey } : {}),
+              ...('phaseKey' in deadline ? { deadlinePhase: deadline.phaseKey } : {}),
+            },
+      ),
     }),
   ]);
 }
@@ -224,7 +268,6 @@ function generation(
   stygianWells: StygianWellCandidateArtifacts,
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   fountainRarity: FountainRarityCandidateArtifacts,
-  rerollSurfaces: RerollSurfaceCandidateArtifacts,
   objectInteractions: import('../commerce/object-interactions').RoomObjectInteractionArtifacts,
   encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
@@ -294,7 +337,6 @@ function generation(
       transcendentEmbryo,
       ordinary.chaos,
       ordinary.zagreusContracts,
-      rerollSurfaces,
       objectInteractions,
     ),
     findingRegions: Object.freeze([
@@ -333,7 +375,7 @@ function products(
   const lifecycleFindings =
     composed.blockedAt === undefined
       ? Object.freeze([])
-      : lifecycleBlockFindings(composed.blockedAt, prefix);
+      : lifecycleBlockFindings(composed.blockedAt, prefix, composed.blockedDeadline);
   const lastSequence = history.events.at(-1)?.sequence;
   const lifecycleStop =
     lastSequence === undefined
@@ -352,6 +394,7 @@ function products(
     context.seed?.rewardFrontier,
     context.resourcePlacements,
     context.resourceFindings,
+    composed.reachedActions,
   );
   const roomGeneration = generation(
     catalog,
@@ -374,7 +417,6 @@ function products(
     rewards.stygianWellArtifacts,
     rewards.transcendentEmbryoArtifacts,
     rewards.fountainRarityArtifacts,
-    rewards.rerollSurfaceArtifacts,
     rewards.objectInteractionArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,

@@ -13,7 +13,7 @@ import { stableHash } from './stable-hash';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 103 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 3;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -66,6 +66,19 @@ export interface AuthoredRewardState {
 }
 
 export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer'>;
+
+/**
+ * A rerolled owner's redraws and the outcomes of its effective item. `results`
+ * holds each press of this owner's reward, by reroll id, from its room or Hub,
+ * null while the owner has not set that press's result; `pressId` names the
+ * press whose item `acquisition` belongs to. The acquisition is absent exactly
+ * when the owner cannot draw that press's reward.
+ */
+export interface RerolledRewardState {
+  readonly results: Readonly<Record<string, ResolvedRewardOffer | null>>;
+  readonly pressId: string;
+  readonly acquisition?: AuthoredStartingRewardAcquisition;
+}
 
 /** The narrow loadout surface consumed by room/reward materialization. */
 export interface RouteWeaponAspectLoadout {
@@ -158,13 +171,27 @@ export interface ShopState {
 export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
 
 /**
- * The Pool's initial sell list; a null slot stays native until a sale needs
- * it. Use follows from the room's actions; each later list is a
- * `rerollPurgingPool` room action.
+ * The Pool's sell lists: the entry list the room generates on entry, the list
+ * the Pool regenerates when the fountain use makes the entry list stale, and
+ * each later list a `rerollPurgingPool` room action draws. A blank slot is
+ * stocked by the edit whose settlement first reaches it. Use follows from the
+ * room's actions.
  */
 export interface PurgingPoolState {
   readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /**
+   * The regenerated list's stocked slots, used only while the fountain use
+   * changes a listed boon's rarity; absent when nothing is stocked.
+   */
+  readonly refreshTraitKeyBySlot?: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>;
+  /**
+   * The stocked slots of each present Pool reroll's list, by its `rerollId`;
+   * absent when nothing is stocked.
+   */
+  readonly rerollTraitKeyBySlot?: Readonly<
+    Record<string, Readonly<Partial<Record<PurgingPoolSlotKey, string>>>>
+  >;
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -229,7 +256,7 @@ export interface HermesShrineState {
   readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, HermesShrineInventoryOffer | null>>;
   /** Retained for repair even when its qualifying Travel Deal prefix changes. */
   readonly travelDealRefill?: HermesShrineTravelDealRefill;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -241,18 +268,29 @@ export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
  */
 export type StygianWellGenerationKey = `${string}:${StygianWellSlotKey}` | 'travelDealRefill';
 /**
- * The Well's initial stock; a null slot stays native until a purchase needs
- * it. Use follows from the room's actions; each later roll is a
- * `rerollStygianWell` room action.
+ * The Well's stock: the initial roll and each later roll a `rerollStygianWell`
+ * room action draws. A blank slot is stocked by the edit whose settlement first
+ * reaches it, with a stable legal draw. Use and purchases follow from the
+ * room's actions.
  */
 export interface StygianWellState {
   readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
-  readonly twistResultKeyBySlot?: Readonly<
-    Partial<Record<StygianWellSlotKey | 'travelDealRefill', string | null>>
+  /**
+   * The stocked slots of each present Well reroll, by its `rerollId`; a slot
+   * bought earlier in the room is not restocked. Absent when nothing is stocked.
+   */
+  readonly rerollOfferKeyBySlot?: Readonly<
+    Record<string, Readonly<Partial<Record<StygianWellSlotKey, string>>>>
   >;
-  readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
+  /**
+   * A bought Fateful Twist's result, by the generation it was bought from; the
+   * game rolls it per bought generation. Absent when none is recorded.
+   */
+  readonly twistResultKeyByGeneration?: Readonly<
+    Partial<Record<StygianWellGenerationKey, string | null>>
+  >;
   readonly travelDealRefillKey?: string | null;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -273,17 +311,25 @@ export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
   /** Each cage's first native draw, the reward its door showed when the doors unlocked. */
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
-  /** A rerolled cage's effective reward and its acquisition; see `rerolledIncomingReward`. */
-  readonly rerolledCages?: Readonly<Record<string, AuthoredRewardState>>;
+  /** A rerolled cage's redraws and outcomes; see `rerolledIncomingReward`. */
+  readonly rerolledCages?: Readonly<Record<string, RerolledRewardState>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly spatial: FieldsSpatialState;
 }
 
 /**
+ * What a pickup, purchase or sale row acts on: the content of its item when
+ * the row was placed (see `roomActionItemContent`). Never part of the row's
+ * key; a row whose item now holds different content no longer applies.
+ */
+export type RoomActionContent = readonly string[];
+
+/**
  * One stable reference to a player-triggered interaction owned by a room
  * occurrence. Payload remains on the referenced semantic owner; this union
- * stores chronology identity only.
+ * stores chronology identity and, for a row acting on an item, that item's
+ * content.
  */
 export type RoomActionReference =
   | { readonly kind: 'collectRequiredReward' }
@@ -292,27 +338,48 @@ export type RoomActionReference =
       readonly kind: 'interactIncomingReward';
       readonly producerPoint: string;
       readonly acquisitionRole: string;
+      readonly content?: RoomActionContent;
     }
   | {
       readonly kind: 'interactLocalReward';
       readonly groupKey: string;
       readonly slotKey: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
-  | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
-  | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
-  | { readonly kind: 'interactInfernalContractPedestal' }
-  | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
+  | {
+      readonly kind: 'interactWheelReward';
+      readonly wheelKey: string;
+      readonly content?: RoomActionContent;
+    }
+  | {
+      readonly kind: 'interactShopOffer';
+      readonly offerKey: string;
+      readonly content?: RoomActionContent;
+    }
+  | { readonly kind: 'interactInfernalContractPedestal'; readonly content?: RoomActionContent }
+  | {
+      readonly kind: 'purchaseStygianWellOffer';
+      readonly generationKey: StygianWellGenerationKey;
+      readonly content?: RoomActionContent;
+    }
   | {
       readonly kind: 'purchaseHermesShrineOffer';
       readonly generationKey: HermesShrineGenerationKey;
-      readonly rushed: boolean;
+      readonly content?: RoomActionContent;
+    }
+  /** Rushing one bought Shrine item: it is delivered in this room, not counted down. */
+  | {
+      readonly kind: 'rushHermesShrineOffer';
+      readonly generationKey: HermesShrineGenerationKey;
+      readonly content?: RoomActionContent;
     }
   | {
       readonly kind: 'sellPurgingPoolTrait';
       readonly slotKey: PurgingPoolSlotKey;
       /** The sold list's reroll id; absent is the initial list. */
       readonly rollKey?: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
@@ -320,8 +387,7 @@ export type RoomActionReference =
       readonly kind: 'interactAcquisitionEntry';
       readonly siteKey: string;
       readonly entryKey: string;
-      /** Exact encounter end at which a cross-occurrence Shrine delivery matured. */
-      readonly encounterPhaseKey?: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' }
@@ -336,64 +402,62 @@ export type RoomActionReference =
 /**
  * Pressing one of the room's locked doors: it starts the door's fight, and
  * once that is fought out the door opens. One per locked exit; the fight's
- * explicit encounter decisions travel with the press, keyed as a room
- * phase's `customizationByPhase` entry.
+ * observed rolls belong to the door, in `customizationByLockedExit`.
  */
 export interface UnlockExitRoomAction {
   readonly kind: 'unlockExit';
   readonly exitKey: string;
-  readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
 }
 
 /**
  * One Well reroll, identified by its persisted `rerollId`. It restocks every
- * slot not bought earlier in the room; a pinned slot names the restocked
- * item, and an unpinned one stays native.
+ * slot not bought earlier in the room; the Well holds what it restocked.
  */
 export interface StygianWellRerollAction {
   readonly kind: 'rerollStygianWell';
   readonly rerollId: string;
-  readonly offerKeyBySlot: Readonly<Partial<Record<StygianWellSlotKey, string>>>;
-  /** A bought Fateful Twist's result, by its slot. */
-  readonly twistResultKeyBySlot?: Readonly<Partial<Record<StygianWellSlotKey, string | null>>>;
 }
 
 /**
  * One Pool reroll, identified by its persisted `rerollId`. It redraws the
- * whole list from the current traits; a pinned slot names its trait, and an
- * unpinned one stays native.
+ * whole list from the current traits; the Pool holds the list it drew.
  */
 export interface PurgingPoolRerollAction {
   readonly kind: 'rerollPurgingPool';
   readonly rerollId: string;
-  readonly traitKeyBySlot: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>;
 }
 
 /**
  * What one door, wheel or cage reroll redraws. A door and a cage name the
- * source room's exit and its target occurrence; a cage also names the cage
- * slot, which the game picks at random. A wheel offer is this room's own.
+ * source room's exit and its target occurrence; the cage slot the game picked
+ * is wherever the target holds the press's result. A wheel offer is this
+ * room's own.
  */
 export type RerollTarget =
   | { readonly kind: 'door'; readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'cage'; readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+
+/** A press's target with the cage slot it redrew, as commands name it and the walk reads it. */
+export type ResolvedRerollTarget =
+  | Exclude<RerollTarget, { readonly kind: 'cage' }>
   | {
       readonly kind: 'cage';
       readonly exitKey: string;
       readonly occurrenceId: OccurrenceId;
       readonly slotKey: string;
-    }
-  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+    };
 
 /**
  * One reroll press, a repeatable action identified by its persisted
- * `rerollId`, never by its position. It carries its target and the reward the
- * redraw produced; the target owner keeps its first native draw.
+ * `rerollId`, never by its position. It names its target; the reward its
+ * redraw produced is the target's observation, and the target owner keeps its
+ * first native draw.
  */
 export interface RerollRoomAction {
   readonly kind: 'reroll';
   readonly rerollId: string;
   readonly target: RerollTarget;
-  readonly reward: ResolvedRewardOffer;
 }
 
 export interface RoomActionState {
@@ -405,8 +469,8 @@ export interface RewardWheelState {
   readonly offerCount: number;
   /** Each offer's first native draw. */
   readonly offers: Readonly<Record<string, AuthoredRewardState | null>>;
-  /** A rerolled offer's effective reward and its acquisition; see `rerolledIncomingReward`. */
-  readonly rerolledOffers?: Readonly<Record<string, AuthoredRewardState>>;
+  /** A rerolled offer's redraws and outcomes; see `rerolledIncomingReward`. */
+  readonly rerolledOffers?: Readonly<Record<string, RerolledRewardState>>;
   readonly pickedOfferIndex: number;
 }
 
@@ -530,6 +594,13 @@ export interface RoomEncounterState {
   readonly customizationByPhase?: Readonly<
     Record<string, Readonly<Record<string, AuthoredEncounterCustomization>>>
   >;
+  /**
+   * Sparse explicit decisions of each locked door's fight, keyed by the door's
+   * exit key and the fight's decision key; only a door in `lockedExits`.
+   */
+  readonly customizationByLockedExit?: Readonly<
+    Record<string, Readonly<Record<string, AuthoredEncounterCustomization>>>
+  >;
 }
 
 export interface EphyraCombatState {
@@ -617,12 +688,10 @@ export interface RoomOccurrence {
   /** Present exactly where the room declares a phantom exit. */
   readonly phantomExit?: PhantomExitState;
   /**
-   * The reward entered after its door's rerolls, with its acquisition. The
-   * state's own reward stays the door's first native draw, inert while this is
-   * present. Its offer should equal the last reroll's; a mismatch is kept for
-   * repair, never rewritten.
+   * The door's redraws and its effective item's outcomes. The state's own
+   * reward stays the door's first native draw, inert while this is present.
    */
-  readonly rerolledIncomingReward?: AuthoredRewardState;
+  readonly rerolledIncomingReward?: RerolledRewardState;
   /** Where the room stands as entered; absent fields leave the game to decide. */
   readonly layout?: RoomLayout;
 }
@@ -673,7 +742,7 @@ export interface AuthoredChallengeSwitch {
    * declaration decision key, as a room phase's `customizationByPhase` entry.
    */
   readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -732,7 +801,7 @@ export interface IxionGeneratedChaosOrigin {
 export interface ChaosAdditionalExit {
   readonly kind: 'chaos';
   readonly key: 'chaos';
-  /** One-based physical SecretPoint index; omission preserves native placement. */
+  /** One-based physical SecretPoint index; absent until stored, the engine publishing its stable draw. */
   readonly spawnPointIndex?: number;
   readonly occurrenceId: OccurrenceId;
   /** Present only when Ixion inserted this gate; omission means authored. */
@@ -762,12 +831,14 @@ export type HubAction =
   | { readonly kind: 'useFountain' }
   | HubRerollAction;
 
-/** One board-door reroll press; its slot's target keeps its first native draw. */
+/**
+ * One board-door reroll press; its result is the slot room's observation, and
+ * that room keeps its first native draw.
+ */
 export interface HubRerollAction {
   readonly kind: 'reroll';
   readonly rerollId: string;
   readonly hubSlotKey: string;
-  readonly reward: ResolvedRewardOffer;
 }
 
 export interface HubDecision {
@@ -881,8 +952,8 @@ export interface AuthoredDraftSpec {
   readonly pursueTartarusGoal?: true;
   /** How early a windowed room is forced; absent is the softened ramp. */
   readonly roomForcing?: DraftRoomForcing;
-  /** Shop god boon purchases paced per planned biome; absent is the default. */
-  readonly purchasesPerBiome?: number;
+  /** How readily a draft buys Shop items against its expected gold; absent is normal. */
+  readonly spending?: DraftSpending;
   /** Further attempts per biome after its first success; absent is the default. */
   readonly retriesPerBiome?: number;
   /** Percent chance a room rolls a resource point; absent is the default. */
@@ -899,6 +970,9 @@ export interface DraftFillerRank {
   readonly kind: DraftFillerKind;
   readonly amount?: number;
 }
+
+/** How readily a draft buys Shop items: never, or against a stricter or looser gold bar. */
+export type DraftSpending = 'none' | 'careful' | 'normal' | 'greedy';
 
 /** When a draft forces a room inside its depth window: only at the deadline, on a softened ramp, or at the game's odds. */
 export type DraftRoomForcing = 'deadline' | 'softened' | 'game';

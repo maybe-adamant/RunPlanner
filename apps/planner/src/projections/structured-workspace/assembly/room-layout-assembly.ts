@@ -139,14 +139,11 @@ export function assembleRoomLayout(input: {
         kind: 'choice',
         ...(value === undefined ? {} : { value }),
         ...(stale ? { stale: held } : {}),
-        choices: Object.freeze([
-          ...(authoring.clear === undefined
-            ? []
-            : [{ key: bind('entry:game', clear()), pair: null }]),
-          ...pairs
+        choices: Object.freeze(
+          pairs
             .filter((pair) => stale || pair !== value)
             .map((pair) => ({ key: bind(pairKey(pair), layoutFor(pair)), pair })),
-        ]),
+        ),
       },
       eligible,
       ...(pointId === undefined ? {} : { entryId: pointId }),

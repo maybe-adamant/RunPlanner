@@ -10,8 +10,7 @@ import {
   type EchoKeepsakeReplayAddress,
   type KeepsakeSelectionAddress,
 } from '../addresses';
-import { assembleRoomActionDomain } from '../room-actions/domain';
-import { resolveRoutePosition } from '../route-context';
+import { roomActionDomainForOccurrence } from '../room-actions/defaults';
 import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTranscendentEmbryoOutcome,
@@ -77,13 +76,14 @@ export function applyKeepsakeCommand(
     }
     const occurrence = requireOccurrence(located.plan, action.occurrenceId, command);
     const expectedActionKey = roomActionKey({ kind: 'useFountain' });
-    const declarationActions = assembleRoomActionDomain({
-      catalog,
-      biome: createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
-      topology: requireTopology(located.plan, command),
-      occurrence,
-      routePosition: resolveRoutePosition(catalog, document.route, command.outcome.biomeKey),
-    }).activeReferences;
+    requireTopology(located.plan, command);
+    const declarationActions =
+      roomActionDomainForOccurrence(
+        document,
+        catalog,
+        createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
+        occurrence.occurrenceId,
+      )?.domain.activeReferences ?? [];
     if (
       action.routeKey !== command.outcome.routeKey ||
       action.biomeKey !== command.outcome.biomeKey ||
@@ -318,11 +318,27 @@ export function applyKeepsakeCommand(
   const keepsakeKey = command.keepsakeKey;
   if (keepsakeKey !== null && catalog.keepsakes.byKey[keepsakeKey] === undefined)
     failCommand(command, `unknown keepsake ${keepsakeKey}`);
-  if (occurrence.keepsakeRack.keepsakeKey === keepsakeKey) return document;
+  const used = occurrence.roomActions.order.some(
+    (reference) => reference.kind === 'interactKeepsakeRack',
+  );
+  if (occurrence.keepsakeRack.keepsakeKey === keepsakeKey && (used || keepsakeKey === null))
+    return document;
   // Each equip result belongs to one keepsake, so a change drops them all; the rank stays.
+  // Choosing a keepsake uses the rack: an unplaced use is appended.
   return updateOccurrence(document, located, {
     ...occurrence,
     keepsakeRack: Object.freeze({ keepsakeKey }),
+    ...(used || keepsakeKey === null
+      ? {}
+      : {
+          roomActions: Object.freeze({
+            ...occurrence.roomActions,
+            order: Object.freeze([
+              ...occurrence.roomActions.order,
+              Object.freeze({ kind: 'interactKeepsakeRack' as const }),
+            ]),
+          }),
+        }),
   });
 }
 

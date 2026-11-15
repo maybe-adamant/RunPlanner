@@ -133,9 +133,8 @@ describe('OccurrenceWorkbench', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Chaos Gate position' }));
     expect(points().length).toBeGreaterThan(1);
-    expect(previewed()).toEqual([]);
-    await view.user.keyboard('{ArrowDown}');
-    expect(previewed()).toEqual(['Chaos gate position 1']);
+    // The highlighted point is previewed.
+    expect(previewed()).toHaveLength(1);
     await view.user.keyboard('{Escape}');
     expect(points()).toEqual([]);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -229,7 +228,7 @@ describe('OccurrenceWorkbench', () => {
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
     // The doors open on the Timeline, after the encounter.
-    expectBefore(standardEnd, within(standardActions).getByLabelText('Doors open'));
+    expectBefore(standardEnd, within(standardActions).getByLabelText('Doors opened'));
   });
 
   it('gives each H Fields slot its own point row on the Overview, with no Layout tab', () => {
@@ -382,23 +381,25 @@ describe('OccurrenceWorkbench', () => {
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)!;
     expect(edited.layout).toMatchObject({ flipped: true });
     expect(edited.layout?.entryStartPointId).toBeDefined();
-    expect(screen.getByRole('button', { name: /^Entry/ }).textContent).toContain('⇋');
+    expect(screen.getByRole('button', { name: /^Entry/ }).textContent).toContain('↔');
   });
 
   it.each([
     ['F', () => createGoldenFGHIProject(), 'Underworld', 'F', goldenFStartId],
     ['N', () => loadSurfaceNProject(), 'Surface', 'N', nOccurrenceIds.opening],
   ] as const)(
-    'renders the %s Opening pickup before its Encounter and Encounter ended banners',
+    'renders the %s Opening pickup between its Encounter and its Combat',
     (_name, project, routeKey, biomeKey, occurrenceId) => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
       const pickup = within(actions).getByRole('button', { name: /^Reorder Collect / });
-      const start = within(actions).getByLabelText('Encounter started');
+      const begun = within(actions).getByLabelText('Encounter started');
+      const combat = within(actions).getByLabelText('Combat started');
       const end = within(actions).getByLabelText('Encounter ended');
-      expectBefore(pickup, start);
-      expectBefore(start, end);
+      expectBefore(begun, pickup);
+      expectBefore(pickup, combat);
+      expectBefore(combat, end);
       expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     },
   );
@@ -443,7 +444,7 @@ describe('OccurrenceWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
     const workspace = workspaceProjection(view.application);
     const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (biome === undefined) throw new Error('O workspace is missing');

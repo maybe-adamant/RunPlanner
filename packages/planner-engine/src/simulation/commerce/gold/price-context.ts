@@ -16,7 +16,8 @@ export type PurchasePriceVenue =
       readonly kind: 'hermesShrine';
       readonly itemKey: string;
       readonly delay: number;
-      readonly rushed: boolean;
+      /** The order pays the delayed price; a later rush pays its impatience surcharge. */
+      readonly stage: 'order' | 'rush';
     }
   | { readonly kind: 'worldShop'; readonly profileKey: string; readonly itemKey: string }
   /** The Contract pedestal item and the Echo duplicate cost nothing. */

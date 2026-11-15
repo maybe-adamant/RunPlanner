@@ -56,7 +56,7 @@ describe('Encounter Timeline banner', () => {
     );
   });
 
-  it('hosts a phase event in its start banner row and routes its finding to that control', () => {
+  it('hosts the Fig Leaf skip where combat starts and routes its finding to that control', () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
@@ -65,11 +65,11 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
     const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
-    expect(skip.closest('li')).toBe(banner('Encounter started'));
+    expect(skip.closest('li')?.getAttribute('data-boundary-kind')).toBe('encounterStarted');
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
   });
 
-  it('hosts how the fight ended on its Encounter outcome, not on its start or end', async () => {
+  it('hosts the Gorgon condition on its encounter and the kill race on its Combat', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -93,16 +93,14 @@ describe('Encounter Timeline banner', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    // Only a Fig Leaf belongs to the start, so this start hosts no choice.
+    // The encounter's marker names it and hosts the Gorgon condition.
     const start = banner('Encounter started');
-    expect(within(start).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
+    expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
-    // The Gorgon condition and the kill race are read as the fight ends, on its outcome.
-    const outcome = within(banner('Encounter outcome')).getByRole('group', {
-      name: / outcome choices$/,
-    });
-    expect(within(outcome).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
-    expect(within(outcome).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
+    // The kill race is observed at its Combat.
+    const combat = banner('Combat started');
+    expect(within(combat).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
+    expect(within(combat).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
     // The end announces what spawns and hosts no choice.
     const ended = screen.queryByLabelText('Encounter ended');
     expect(ended === null || within(ended).queryByRole('group') === null).toBe(true);

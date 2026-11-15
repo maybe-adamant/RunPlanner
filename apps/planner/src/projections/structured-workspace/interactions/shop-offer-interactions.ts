@@ -11,6 +11,8 @@ import type { RewardPickerProjectionService } from '@planner/projections/rewards
 
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceShopOfferInteraction } from '../contracts/commerce';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import { offerConditionProp, selectedCondition } from './unmodeled-offer-conditions';
 
 function selectionKey(selection: ShopOptionSelection | null): string {
   return selection === null ? 'clear' : JSON.stringify(selection);
@@ -36,7 +38,10 @@ function pickerItemLabel(catalog: Catalog, optionLabel: string, selection: ShopO
   return source.label;
 }
 
-/** An invalid current item can be cleared only when no item can replace it. */
+/**
+ * A Shop slot holding an item nothing can replace is one the game leaves empty: its item
+ * can be cleared. A reached slot is otherwise always stocked.
+ */
 function withClearForInvalidSelection(
   model: ContextualPickerModel<ShopOptionSelection>,
 ): ContextualPickerModel<ShopOptionSelection | null> {
@@ -116,9 +121,13 @@ export function bindShopOfferInteractions(input: {
     const optionLabelByKey = new Map(
       control.shopOption.options.map((option) => [option.key, option.label] as const),
     );
+    const conditionFor = (optionKey: string) =>
+      offerConditionProp(
+        control.shopOption?.options.find((option) => option.key === optionKey)?.offerCondition,
+      );
     const summary =
       selected === null
-        ? 'Pick'
+        ? ''
         : selectionLabel(
             input.catalog,
             optionLabelByKey.get(selected.optionKey) ?? selected.optionKey,
@@ -130,29 +139,30 @@ export function bindShopOfferInteractions(input: {
         key,
         owner,
         selected,
+        ...(selected === null ? {} : selectedCondition(conditionFor(selected.optionKey))),
+        // The walk stocks a reached item; one left blank has its finding.
+        contextReached: selected !== null || control.marker.findingCount > 0,
         summary,
-        intentFor: (value: ShopOptionSelection | null) =>
-          Object.freeze({
-            command:
-              owner.kind === 'shopOffer'
-                ? value === null
+        intentFor: (value: ShopOptionSelection | null) => {
+          if (owner.kind === 'shopOffer')
+            return Object.freeze({
+              command:
+                value === null
                   ? Object.freeze({ kind: 'ClearShopOffer' as const, offer: owner })
-                  : Object.freeze({
-                      kind: 'ReplaceShopOfferOption' as const,
-                      offer: owner,
-                      value,
-                    })
-                : value === null
-                  ? Object.freeze({
-                      kind: 'ClearInfernalContractPedestal' as const,
-                      pedestal: owner,
-                    })
-                  : Object.freeze({
-                      kind: 'ReplaceInfernalContractPedestalOption' as const,
-                      pedestal: owner,
-                      value,
-                    }),
-          }),
+                  : Object.freeze({ kind: 'ReplaceShopOfferOption' as const, offer: owner, value }),
+            });
+          if (value === null)
+            throw new StructuredWorkspaceProjectionContractError(
+              'a Contract pedestal item is replaced, never cleared',
+            );
+          return Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceInfernalContractPedestalOption' as const,
+              pedestal: owner,
+              value,
+            }),
+          });
+        },
         load: async () => {
           const candidates = await input.candidates.shopOfferOptions(owner, values);
           const model = input.contextualPicker.project(
@@ -173,7 +183,7 @@ export function bindShopOfferInteractions(input: {
             },
             selectionKey,
           );
-          return withClearForInvalidSelection(model);
+          return owner.kind === 'shopOffer' ? withClearForInvalidSelection(model) : model;
         },
       }),
     );

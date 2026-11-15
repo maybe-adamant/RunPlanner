@@ -1,3 +1,4 @@
+import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
 import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleRoomObjectSlots } from './room-object-slots-assembly';
@@ -11,6 +12,7 @@ import {
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
+  createAdditionalExitAddress,
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
   createIncomingRewardAddress,
@@ -57,6 +59,7 @@ import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSu
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   candidateRoomIcon,
+  candidateRoomNumber,
   occurrenceRoomIcon,
   sharedRoomIconNumber,
 } from '../presentation/room-icon';
@@ -106,8 +109,8 @@ import {
   traitOfferMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
-import { assembleRoomObjectEntries } from './room-object-entry-assembly';
-import { assembleFeatureRollActions } from './feature-roll-assembly';
+import { projectRoomLive } from './occurrence-live-projection';
+import { occurrenceActionLabelParts } from './occurrence-action-label';
 import { workspaceScreenRerollSource } from './screen-reroll-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
 import { assembleWheelRerolls, rerollMovedOnTimeline } from './reroll-assembly';
@@ -337,9 +340,15 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomLayout?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
+  /** Where the room's authored Chaos gate spawns as stored. */
+  readonly chaosGatePosition?: import('../source-index').WorkspaceBiomeSource['chaosGatePosition'];
   /** The loot the room spawns on its own; undefined while unentered. */
   readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
   readonly encounterOutcomes?: import('../source-index').WorkspaceBiomeSource['encounterOutcomes'];
+  /** What is live at each gap of the room's actions; undefined while unreached. */
+  readonly roomLive?: import('../source-index').WorkspaceBiomeSource['roomLive'];
+  /** Reset from here for each entry of the room's lifecycle Timeline. */
+  readonly roomActionResets?: import('../source-index').WorkspaceBiomeSource['roomActionResets'];
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -428,6 +437,13 @@ export function assembleWorkspaceOccurrence(
   );
   const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
   const entered = input.evaluatedRoom?.entered ?? false;
+  const authoredChaosGate = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
+  const chaosGatePosition =
+    authoredChaosGate === undefined
+      ? undefined
+      : input.chaosGatePosition?.(
+          createAdditionalExitAddress(input.biome, occurrence.occurrenceId, authoredChaosGate.key),
+        );
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
   const screenRerollAllowance = input.screenRerollAllowance;
@@ -475,6 +491,7 @@ export function assembleWorkspaceOccurrence(
     {
       biome: input.biome,
       catalog: input.catalog,
+      ...(chaosGatePosition === undefined ? {} : { chaosGatePosition }),
       facts: input.facts,
       ...(input.hermesShrineAssessment === undefined
         ? {}
@@ -494,44 +511,7 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
   );
   const { chaosSpawn, zagreusSpawn } = featureAssembly;
-  // A present Well or Pool appends its next purchase, sale or reroll from its Timeline entry.
-  const featureRollActions: import('../contracts/features').WorkspaceFeatureRollActions[] = [];
-  const featureRollRequirements: Extract<
-    import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
-    { readonly kind: 'featureRollActions' }
-  >[] = [];
   const { features } = featureAssembly;
-  for (const feature of features) {
-    if (feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') continue;
-    if (feature.kind === 'stygianWell' && feature.presence.kind === 'optionalAbsent') continue;
-    const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-    const rolls = assembleFeatureRollActions({
-      catalog: input.catalog,
-      feature: feature.kind,
-      owner,
-      occurrence: input.occurrence,
-      capability:
-        feature.kind === 'stygianWell'
-          ? input.stygianWellAssessment?.(owner)
-          : input.purgingPoolAssessment?.(owner),
-      allowance:
-        input.rerollSpendAllowance ?? (() => Object.freeze({ kind: 'unreached' as const })),
-    });
-    featureRollRequirements.push(rolls.requirement);
-    featureRollActions.push(rolls.actions);
-  }
-  // A present Shop, Shrine or Pedestal appends its next action from its Timeline entry.
-  const objectEntries = assembleRoomObjectEntries({
-    catalog: input.catalog,
-    owner: createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
-    occurrence: input.occurrence,
-    roomLocal,
-    features,
-    encounterPhases,
-    interactions: input.roomObjectInteractions?.(
-      createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
-    ),
-  });
   const spawnedLoot = input.spawnedLoot?.(
     createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
   );
@@ -605,10 +585,27 @@ export function assembleWorkspaceOccurrence(
     authoring: input.roomLayout?.(address),
     marker: (owner) => input.markerDestinations.marker(owner),
   });
-  const roomMap = assembleRoomMap(input.catalog, room, occurrence);
+  const roomMap = assembleRoomMap(
+    input.catalog,
+    room,
+    {
+      chaosGateSpawnPointIndex: chaosGatePosition?.spawnPointIndex,
+      contractExit: input.facts.authoredAdditionalExitKeys.includes('zagreusContract'),
+    },
+    {
+      shopOfferKeys: roomLocal.kind === 'shop' ? roomLocal.offers.map((offer) => offer.key) : [],
+      contractPedestal: features.some((feature) => feature.kind === 'infernalContractPedestal'),
+    },
+  );
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;
+  const unlockEncounters = assembleUnlockExitEncounters(
+    input.catalog,
+    address,
+    occurrence,
+    lockedDoorsProduct,
+  );
   const lockedDoors = !input.facts.detailsActive
     ? undefined
     : assembleLockedDoors({
@@ -618,11 +615,6 @@ export function assembleWorkspaceOccurrence(
         markerDestinations: input.markerDestinations,
         product: lockedDoorsProduct,
       });
-  const unlockEncounters = assembleUnlockExitEncounters(
-    input.catalog,
-    occurrence,
-    lockedDoorsProduct,
-  );
   // The switch's use row carries the fight's outcome control; a door's press, its fight.
   const switchOutcome = challengeSwitch?.outcome;
   const assembledRoomActions =
@@ -648,17 +640,40 @@ export function assembleWorkspaceOccurrence(
             }),
           ),
         });
-  const roomActions =
-    assembledRoomActions === undefined ||
-    (featureRollActions.length === 0 && objectEntries.entries.length === 0)
-      ? assembledRoomActions
-      : Object.freeze({
-          ...assembledRoomActions,
-          ...(featureRollActions.length === 0
-            ? {}
-            : { featureRolls: Object.freeze(featureRollActions) }),
-          ...(objectEntries.entries.length === 0 ? {} : { objectEntries: objectEntries.entries }),
+  const pedestal = features.find(
+    (
+      feature,
+    ): feature is Extract<
+      (typeof features)[number],
+      { readonly kind: 'infernalContractPedestal' }
+    > => feature.kind === 'infernalContractPedestal',
+  );
+  const engineLive = assembledRoomActions === undefined ? undefined : input.roomLive?.(address);
+  const live =
+    engineLive === undefined || assembledRoomActions === undefined
+      ? undefined
+      : projectRoomLive({
+          catalog: input.catalog,
+          owner: address,
+          live: engineLive,
+          resets: input.roomActionResets?.(address) ?? [],
+          rows: assembledRoomActions.rows,
+          labelParts: (reference) =>
+            occurrenceActionLabelParts(
+              input.catalog,
+              reference,
+              roomLocal,
+              encounterPhases,
+              reference.kind === 'interactInfernalContractPedestal'
+                ? pedestal?.rewardControl
+                : undefined,
+              occurrence,
+            ),
         });
+  const roomActions =
+    assembledRoomActions === undefined || live === undefined
+      ? assembledRoomActions
+      : Object.freeze({ ...assembledRoomActions, live });
   const placementRepairs =
     roomActions === undefined
       ? input.structuralPlacementRepairs(
@@ -929,23 +944,20 @@ export function assembleWorkspaceOccurrence(
               `${semanticAddressKey(address)} Anomaly has no replacement provenance`,
             );
           }
-          const remembered = requireRoom(
-            input.catalog,
-            occurrence.anomalyReplacement.replacedRoomGameName,
-          );
           return {
             anomaly: Object.freeze({
               mapChoices: Object.freeze(
                 input.anomalyReplacementRoomGameNames.map((gameName) => {
                   const map = requireRoom(input.catalog, gameName);
+                  const roomNumber = candidateRoomNumber(input.catalog, address.biomeKey, map);
                   return Object.freeze({
                     label: map.label,
                     roomIcon: candidateRoomIcon(input.catalog, address.biomeKey, map),
+                    ...(roomNumber === undefined ? {} : { roomNumber }),
                     value: map.gameName,
                   });
                 }),
               ),
-              rememberedRoomLabel: remembered.label,
               success: occurrence.state.success,
             }),
           };
@@ -1018,6 +1030,30 @@ export function assembleWorkspaceOccurrence(
                         target.biomeKey === input.biome.biomeKey &&
                         target.occurrenceId === occurrence.occurrenceId,
                     ),
+                ...(() => {
+                  if (here) return {};
+                  const atThisRoom = (target: { biomeKey: string; occurrenceId: string }) =>
+                    target.biomeKey === input.biome.biomeKey &&
+                    target.occurrenceId === occurrence.occurrenceId;
+                  if (input.resourceAuthoring!.legalTargetsByFamily[family].some(atThisRoom))
+                    return {};
+                  const refused = input.resourceAuthoring!.refusedTargetsByFamily[family].find(
+                    (target) => atThisRoom(target.placement),
+                  );
+                  return {
+                    lock: Object.freeze(
+                      refused === undefined
+                        ? { reason: 'unreached' as const }
+                        : {
+                            reason: 'refused' as const,
+                            sentences: roomFeatureRefusalSentences(
+                              { resource: family },
+                              refused.refusals,
+                            ),
+                          },
+                    ),
+                  };
+                })(),
                 ...(currentPlacement === undefined ? {} : { currentPlacement }),
               });
             }),
@@ -1203,9 +1239,7 @@ export function assembleWorkspaceOccurrence(
               ].map((item) => [item.actionKey, phase.tab] as const);
             }),
             ...workbench.phases.flatMap((phase) =>
-              [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
-                (row) => [row.key, phase.tab] as const,
-              ),
+              phase.actionRows.map((row) => [row.key, phase.tab] as const),
             ),
             ...workbench.phases.flatMap((phase) =>
               (phase.notReached ?? []).flatMap((entry) =>
@@ -1225,11 +1259,7 @@ export function assembleWorkspaceOccurrence(
       const placementEntry =
         placementCommand === undefined
           ? undefined
-          : input.markerDestinations.marker(
-              'entry' in placementCommand
-                ? placementCommand.entry
-                : createAcquisitionEntryAddress(placementCommand.site, placementCommand.entryKey),
-            );
+          : input.markerDestinations.marker(placementCommand.entry);
       const invalidPlacementEntry =
         row.placementAssessment?.kind === 'invalid' &&
         row.reference.kind === 'interactAcquisitionEntry'
@@ -1282,6 +1312,7 @@ export function assembleWorkspaceOccurrence(
         ...objectPurchaseMarkers,
         ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
         ...(row.featureRoll?.slots.map((slot) => slot.marker) ?? []),
+        ...(row.purgingPoolRefresh?.slots.map((slot) => slot.marker) ?? []),
         ...(invalidPlacementEntry === undefined ? [] : [invalidPlacementEntry]),
         ...supplementalPurchaseMarkers,
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
@@ -1321,7 +1352,10 @@ export function assembleWorkspaceOccurrence(
         rowControlMarks.set(row.stygianWellTwist.marker.focusKey, {
           mark: row.stygianWellTwist.marker,
         });
-      for (const slot of row.featureRoll?.slots ?? [])
+      for (const slot of [
+        ...(row.featureRoll?.slots ?? []),
+        ...(row.purgingPoolRefresh?.slots ?? []),
+      ])
         rowControlMarks.set(slot.marker.focusKey, { mark: slot.marker });
       for (const conversion of row.rewardPayload?.control.conversions ?? [])
         rowControlMarks.set(conversion.marker.focusKey, {
@@ -1369,10 +1403,14 @@ export function assembleWorkspaceOccurrence(
               (workbench.kind === 'ship' &&
               workbench.repairRows.some((repair) => repair.key === row.key)
                 ? 'shipInactiveRepair'
-                : // A Timeline waiting on its Overview shows no row: its first phase says so.
-                  workbench.kind === 'ship' && roomActions.timeline.waitsOn !== undefined
-                  ? workbench.phases[0]?.tab
-                  : undefined))
+                : // An unplaced row is taken from the live row.
+                  workbench.kind === 'ship' && row.rank === null && !row.stale
+                  ? (workbench.phases.find((phase) => phase.holdsLive === true)?.tab ??
+                    workbench.phases[0]?.tab)
+                  : // A Timeline waiting on its Overview shows no row: its first phase says so.
+                    workbench.kind === 'ship' && roomActions.timeline.waitsOn !== undefined
+                    ? workbench.phases[0]?.tab
+                    : undefined))
             : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
@@ -1442,8 +1480,6 @@ export function assembleWorkspaceOccurrence(
     ...occurrenceInteractionRequirements(input.catalog, roomSummary),
     ...(phantomExit === undefined ? [] : [phantomExit.requirement]),
     ...wheelRerollRequirements,
-    ...featureRollRequirements,
-    ...(roomActions?.objectEntries === undefined ? [] : objectEntries.requirements),
     ...(lockedDoors === undefined ? [] : lockedDoors.requirements),
     ...(objectSlots === undefined ? [] : [objectSlots.requirement]),
     ...(roomLayout === undefined ? [] : [roomLayout.requirement]),

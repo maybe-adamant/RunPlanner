@@ -663,31 +663,6 @@ button.hex-column-deal[data-has-findings='true'] {
   }
 }
 
-.route-traits-list {
-  display: grid;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.route-trait-row {
-  align-items: center;
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  padding: 0.75rem;
-}
-
-.route-trait-meta {
-  color: var(--muted, #667085);
-  display: block;
-  font-size: 0.85rem;
-  margin-top: 0.2rem;
-}
-
 .navigation-feedback {
   display: flex;
   width: 19px;
@@ -793,25 +768,6 @@ button.hex-column-deal[data-has-findings='true'] {
 .trait-offer-note p {
   color: var(--muted);
   margin: 0;
-}
-
-.route-trait-row-body {
-  align-items: center;
-  display: flex;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.route-trait-icon {
-  flex: 0 0 auto;
-  width: 2.2rem;
-  height: 2.2rem;
-}
-
-.route-resource-name {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 
 /* One tab per screen of a rerolled single-pick screen; the last is the final screen. */
@@ -1053,4 +1009,21 @@ button.hex-column-deal[data-has-findings='true'] {
   min-width: 1rem;
   padding: 0.15rem 0.25rem;
   text-align: center;
+}
+
+.offer-condition-mark {
+  align-self: center;
+  cursor: default;
+}
+
+.offer-condition-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The line's item keeps its own width so the mark follows it. */
+.offer-condition-line > .row-choice > .shop-family-offer-row {
+  grid-template-columns: auto auto;
 }

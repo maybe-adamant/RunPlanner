@@ -1,5 +1,4 @@
 import {
-  chaosGateSpawnPointIndices,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -10,26 +9,38 @@ import {
   hermesShrineInitialSlotKey,
   routeRoomShop,
   semanticAddressKey,
+  stygianWellPurchasedGenerationKeys,
   type BiomeAddress,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type {
-  HermesShrineCandidateCapability,
-  ChaosCandidateCapability,
-  PurgingPoolCandidateCapability,
-  StygianWellCandidateCapability,
-  ZagreusContractCandidateCapability,
+import {
+  chaosGateHosted,
+  type ChaosGatePositionAuthoring,
+  type HermesShrineCandidateCapability,
+  type ChaosCandidateCapability,
+  type PurgingPoolCandidateCapability,
+  type StygianWellCandidateCapability,
+  type ZagreusContractCandidateCapability,
+  type RoomFeatureRefusal,
 } from '@run-planner/engine/simulation';
-import { type WorkspaceFeatureAssessment, type WorkspaceRoomSummary } from '../contract';
+import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
+import {
+  type WorkspaceFeatureAssessment,
+  type WorkspaceFeaturePresence,
+  type WorkspaceRoomSummary,
+} from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
+import { assemblePurgingPoolSlots } from './feature-roll-assembly';
 
 export interface WorkspaceOccurrenceFeaturesInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
+  /** Where the authored Chaos gate spawns, chosen or default. */
+  readonly chaosGatePosition?: ChaosGatePositionAuthoring;
   readonly facts: {
     readonly authoredAdditionalExitKeys: readonly string[];
     readonly detailsActive: boolean;
@@ -118,7 +129,6 @@ export function assembleOccurrenceFeatures(
   const zagreusSpawn =
     zagreusDeclaration === undefined ||
     input.facts.authoredAdditionalExitKeys.includes(zagreusDeclaration.key) ||
-    input.facts.zagreusContractPlacement?.placementEligible === false ||
     !input.facts.detailsActive ||
     roomLocal.kind !== 'shop' ||
     !roomLocal.materialized
@@ -136,9 +146,10 @@ export function assembleOccurrenceFeatures(
           });
         })();
   const chaosDeclaration = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
+  // A room that never hosts a natural gate offers no toggle.
   const chaosSpawn =
     chaosDeclaration === undefined ||
-    !chaosDeclaration.canSpawn ||
+    !chaosGateHosted(input.catalog, input.biome.biomeKey, room.gameName) ||
     input.facts.authoredAdditionalExitKeys.includes(chaosDeclaration.key) ||
     !input.facts.detailsActive
       ? undefined
@@ -161,6 +172,35 @@ export function assembleOccurrenceFeatures(
   });
 }
 
+/**
+ * An absent Chaos gate's or Contract's presence: enabled where the reached
+ * source admits it, else locked with each rule refusing it.
+ */
+function absentPresence(
+  feature: 'chaosGate' | 'zagreusContract',
+  placement:
+    | {
+        readonly placementEligible: boolean;
+        readonly refusals: readonly RoomFeatureRefusal[];
+      }
+    | undefined,
+): Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }> {
+  if (placement?.placementEligible === true)
+    return Object.freeze({ kind: 'optionalAbsent' as const, enabled: true });
+  return Object.freeze({
+    kind: 'optionalAbsent' as const,
+    enabled: false,
+    lock: Object.freeze(
+      placement === undefined
+        ? { reason: 'unreached' as const }
+        : {
+            reason: 'refused' as const,
+            sentences: roomFeatureRefusalSentences(feature, placement.refusals),
+          },
+    ),
+  });
+}
+
 function roomFeatures(
   input: WorkspaceOccurrenceFeaturesInput,
   room: RoomDeclaration,
@@ -174,12 +214,19 @@ function roomFeatures(
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
   const authoredChaos = input.occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
-  const positionChoices = chaosGateSpawnPointIndices(room);
-  const positionValue = authoredChaos?.spawnPointIndex ?? null;
-  const invalidPosition = positionValue !== null && !positionChoices.includes(positionValue);
+  const gatePosition = authoredChaos === undefined ? undefined : input.chaosGatePosition;
+  const invalidPosition =
+    gatePosition?.spawnPointIndex !== undefined &&
+    !gatePosition.spawnPointIndices.includes(gatePosition.spawnPointIndex);
   const position =
-    authoredChaos !== undefined && (positionChoices.length > 1 || invalidPosition)
-      ? Object.freeze({ value: positionValue, choices: positionChoices, invalid: invalidPosition })
+    gatePosition !== undefined && (gatePosition.spawnPointIndices.length > 1 || invalidPosition)
+      ? Object.freeze({
+          ...(gatePosition.spawnPointIndex === undefined
+            ? {}
+            : { value: gatePosition.spawnPointIndex }),
+          choices: gatePosition.spawnPointIndices,
+          invalid: invalidPosition,
+        })
       : undefined;
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const featureAddress = (
@@ -209,8 +256,6 @@ function roomFeatures(
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
   const declaredWellAllItemKeys = declaredRoomShopAllItemKeys(input.catalog);
   const declaredShrineAllRewardTypes = declaredSurfaceShopAllRewardTypes(input.catalog);
-  const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
-    slotKey === 'left' ? 'Offer 1' : slotKey === 'middle' ? 'Offer 2' : 'Offer 3';
   return Object.freeze([
     ...(routeRoomShop(room, input.biome.routeKey) === undefined &&
     well === undefined &&
@@ -236,7 +281,9 @@ function roomFeatures(
               input.catalog.rewards.shops.byKey.RoomShop?.groups.values
                 .flatMap((group) => group.options.values)
                 .find((option) => option.key === itemKey)?.label ?? itemKey;
-            const purchased = new Set(well?.purchasedGenerationKeys ?? []);
+            const purchased = new Set(
+              stygianWellPurchasedGenerationKeys(input.occurrence.roomActions.order),
+            );
             const initialSlots =
               well === undefined
                 ? []
@@ -273,7 +320,7 @@ function roomFeatures(
                 !purchased.has('travelDealRefill') &&
                 (wellAssessment !== undefined ||
                   (well.travelDealRefillKey === undefined &&
-                    well.twistResultKeyBySlot?.travelDealRefill == null)))
+                    well.twistResultKeyByGeneration?.travelDealRefill == null)))
                 ? undefined
                 : (() => {
                     const generationKey = 'travelDealRefill' as const;
@@ -468,36 +515,15 @@ function roomFeatures(
               kind: 'purgingPool' as const,
               inventoryAddress,
               inventoryMarker: input.markerDestinations.marker(inventoryAddress),
-              slots: Object.freeze(
-                (['left', 'middle', 'right'] as const).map((slotKey) =>
-                  (() => {
-                    const candidateTraitKeys =
-                      poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? declaredPoolTraitKeys;
-                    const traitKey = pool.traitKeyBySlot[slotKey];
-                    const address = featureAddress({ kind: 'purgingPoolOffer', slotKey });
-                    return Object.freeze({
-                      address,
-                      marker: input.markerDestinations.marker(address),
-                      candidateTraitKeys,
-                      candidateTraits: Object.freeze(
-                        candidateTraitKeys.map((key) =>
-                          Object.freeze({
-                            key,
-                            label: input.catalog.traits.byKey[key]?.label ?? key,
-                          }),
-                        ),
-                      ),
-                      interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}:${slotKey}`,
-                      key: slotKey,
-                      label: poolSlotLabel(slotKey),
-                      traitKey,
-                      ...(traitKey === null
-                        ? {}
-                        : { traitLabel: input.catalog.traits.byKey[traitKey]?.label ?? traitKey }),
-                    });
-                  })(),
-                ),
-              ),
+              slots: assemblePurgingPoolSlots({
+                catalog: input.catalog,
+                markerDestinations: input.markerDestinations,
+                owner: poolOwner,
+                list: 'entry',
+                stored: pool.traitKeyBySlot,
+                candidatesBySlot: poolAssessment?.candidateTraitKeysBySlot,
+                declaredTraitKeys: declaredPoolTraitKeys,
+              }),
             });
           })(),
         ]),
@@ -506,10 +532,7 @@ function roomFeatures(
           Object.freeze({
             kind: 'zagreusContract' as const,
             action: 'add' as const,
-            presence: Object.freeze({
-              kind: 'optionalAbsent' as const,
-              enabled: input.facts.zagreusContractPlacement?.placementEligible === true,
-            }),
+            presence: absentPresence('zagreusContract', input.facts.zagreusContractPlacement),
             control: zagreusSpawn,
           }),
         ]
@@ -528,10 +551,7 @@ function roomFeatures(
           Object.freeze({
             kind: 'chaos' as const,
             action: 'add' as const,
-            presence: Object.freeze({
-              kind: 'optionalAbsent' as const,
-              enabled: chaosSpawn.authorable,
-            }),
+            presence: absentPresence('chaosGate', input.facts.chaosPlacement),
             control: chaosSpawn,
           }),
         ]

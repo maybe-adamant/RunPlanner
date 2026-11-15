@@ -6,4 +6,4 @@ export {
   type RoomLifecycleExecutionInput,
   type RoomLifecycleProducerInput,
 } from './model';
-export { roomOverviewOperationCount } from './overview';
+export { ROOM_TIMELINE_STAGE, ROOM_WALK_STAGES } from './overview';

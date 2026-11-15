@@ -1,8 +1,21 @@
+import type {
+  BiomeDepthCeilingRefusal,
+  ChaosGateHostRefusal,
+  ChaosGateRefusal,
+  RequirementUnmetRefusal,
+  RouteExcludedRefusal,
+  ZagreusContractRefusal,
+} from '../room-feature-refusals';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { chaosGateSpawnPointIndices } from '../../authored-project/chaos-gate-position';
-import { evaluateRequirement } from '../../requirements/evaluator';
+import {
+  evaluateRequirement,
+  type RequirementEvaluationContext,
+} from '../../requirements/evaluator';
+import type { RequirementExpression } from '../../requirements/model';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { ProgressiveRoomHistoryViews } from '../history';
+import { priorHostEntryRooms } from '../history/facts';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { CanonicalAdditionalContinuation } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
@@ -31,64 +44,146 @@ interface AdditionalContinuationEntry {
   readonly parentOrigin: RoomHistoryOrigin;
 }
 
+type ChaosExitDeclaration = Extract<
+  RoomDeclaration['additionalExits'][number],
+  { readonly kind: 'chaos' }
+>;
+
+function chaosExitOf(source: RoomDeclaration | undefined): ChaosExitDeclaration | undefined {
+  return source?.additionalExits.find(
+    (candidate): candidate is ChaosExitDeclaration =>
+      candidate.kind === 'chaos' && candidate.key === 'chaos',
+  );
+}
+
 /**
- * Assess one reached Chaos source. Authored continuation validation
- * and the candidate artifact use this same helper so the editor cannot expose
- * a source that the normal target evaluator would immediately reject.
+ * Why a source room never holds a natural Chaos gate, by declarations alone:
+ * it declares no spawnable gate, its map has no `SecretPoint`, or its biome
+ * has no Chaos room (or not `targetGameName`).
+ */
+export function chaosGateHostRefusals(
+  layout: BiomeLayout | undefined,
+  source: RoomDeclaration | undefined,
+  targetGameName?: string,
+): readonly ChaosGateHostRefusal[] {
+  const declaration = chaosExitOf(source);
+  const host = layout?.chaos;
+  const refusals: ChaosGateHostRefusal[] = [];
+  if (declaration === undefined || !declaration.canSpawn || !declaration.canHost)
+    refusals.push(Object.freeze({ reason: 'notHost' as const }));
+  if (
+    host === undefined ||
+    host.roomGameNames.length === 0 ||
+    (targetGameName !== undefined && !host.roomGameNames.includes(targetGameName))
+  )
+    refusals.push(Object.freeze({ reason: 'targetDomain' as const }));
+  if (source?.secretPointAnchorCount !== undefined && source.secretPointAnchorCount <= 0)
+    refusals.push(Object.freeze({ reason: 'physicalCapability' as const }));
+  return Object.freeze(refusals);
+}
+
+/** Whether a room in this biome can ever offer a natural Chaos gate, by its declarations. */
+export function chaosGateHosted(catalog: Catalog, biomeKey: string, gameName: string): boolean {
+  return (
+    chaosGateHostRefusals(catalog.biomeLayouts.byKey[biomeKey], catalog.rooms.byKey[gameName])
+      .length === 0
+  );
+}
+
+/** A requirement that reads nothing but the route. */
+function routeOnlyRequirement(requirement: RequirementExpression): boolean {
+  switch (requirement.kind) {
+    case 'routeKeyEquals':
+      return true;
+    case 'not':
+      return routeOnlyRequirement(requirement.requirement);
+    case 'all':
+    case 'any':
+      return requirement.requirements.every(routeOnlyRequirement);
+    default:
+      return false;
+  }
+}
+
+/**
+ * The rule each failing part of a source's door requirement states: a route
+ * the door never opens on (the planner's stand-in for save progression such
+ * as `ChaosUnlocked`), a biome-depth ceiling, else the requirement by its
+ * game name.
+ */
+function sourceRequirementRefusals(
+  requirement: RequirementExpression,
+  context: RequirementEvaluationContext,
+  named: RequirementUnmetRefusal['requirement'],
+): readonly (RouteExcludedRefusal | BiomeDepthCeilingRefusal | RequirementUnmetRefusal)[] {
+  const parts = requirement.kind === 'all' ? requirement.requirements : [requirement];
+  const refusals = parts
+    .filter((part) => !evaluateRequirement(part, context))
+    .map((part) => {
+      if (routeOnlyRequirement(part)) return { reason: 'routeExcluded' as const };
+      const depth = context.counters.biomeDepthCache;
+      if (
+        part.kind === 'counterRange' &&
+        part.axis === 'biomeDepthCache' &&
+        part.range.max !== undefined &&
+        depth > part.range.max
+      )
+        return {
+          reason: 'biomeDepthCeiling' as const,
+          biomeDepthCache: depth,
+          maximumBiomeDepth: part.range.max,
+        };
+      return { reason: 'requirementUnmet' as const, requirement: named };
+    });
+  return Object.freeze(
+    [...new Map(refusals.map((refusal) => [JSON.stringify(refusal), refusal])).values()].map(
+      (refusal) => Object.freeze(refusal),
+    ),
+  );
+}
+
+/**
+ * Assess one reached source that hosts natural Chaos gates: its declared
+ * requirement and the offer spacing. Authored continuation validation and
+ * the candidate artifact use this same helper so the editor cannot expose a
+ * source that the normal target evaluator would immediately reject.
  */
 export function assessChaosPlacement(
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   parentHistory: ProgressiveRoomHistoryViews | undefined,
-  targetGameName: string | undefined,
   enteredBiomeCount: number,
   rewardFacts?: TargetRewardRequirementFacts,
   initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): ChaosCandidateCapability | undefined {
   if (parentHistory?.entry === undefined) return undefined;
-  const declaration = sourceDeclaration.additionalExits.find(
-    (
-      candidate,
-    ): candidate is Extract<RoomDeclaration['additionalExits'][number], { kind: 'chaos' }> =>
-      candidate.kind === 'chaos' && candidate.key === 'chaos',
-  );
-  const host = layout.chaos;
-  const failedConditions: string[] = [];
-  if (declaration === undefined || !declaration.canSpawn || !declaration.canHost)
-    failedConditions.push('sourceCapability');
-  if (host === undefined || host.roomGameNames.length === 0) failedConditions.push('targetDomain');
-  if (
-    sourceDeclaration.secretPointAnchorCount !== undefined &&
-    sourceDeclaration.secretPointAnchorCount <= 0
-  )
-    failedConditions.push('physicalCapability');
-  if (declaration?.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
-  if (
-    declaration?.requirement !== undefined &&
-    !evaluateRequirement(
-      declaration.requirement,
-      projectRoomGenerationRequirementContext(
-        source,
-        sourceDeclaration,
-        parentHistory.entry,
-        enteredBiomeCount,
-        rewardFacts?.history,
-        rewardFacts?.pendingSpellDrop,
-        rewardFacts?.allSpellInvested,
-        rewardFacts?.rewardLookups ?? initialRewardLookups,
+  const declaration = chaosExitOf(sourceDeclaration);
+  const refusals: ChaosGateRefusal[] = [];
+  if (declaration?.requirement !== undefined) {
+    assertGenerationRequirement(declaration.requirement);
+    refusals.push(
+      ...sourceRequirementRefusals(
+        declaration.requirement,
+        projectRoomGenerationRequirementContext(
+          source,
+          sourceDeclaration,
+          parentHistory.entry,
+          enteredBiomeCount,
+          rewardFacts?.history,
+          rewardFacts?.pendingSpellDrop,
+          rewardFacts?.allSpellInvested,
+          rewardFacts?.rewardLookups ?? initialRewardLookups,
+        ),
+        'SecretDoorRequirements',
       ),
-    )
-  ) {
-    failedConditions.push('sourceRequirement');
+    );
   }
-  const window = host?.offerSpacingWindow;
+  const window = layout.chaos?.offerSpacingWindow;
   if (window !== undefined) {
+    const barred = priorHostEntryRooms(parentHistory.entry.ledgers.roomAppearances, window);
     const recentOrigins = new Set(
-      parentHistory.entry.ledgers.roomAppearances
-        .slice(0, -1)
-        .slice(-window)
-        .map((appearance) => semanticAddressKey(appearance.origin)),
+      barred.map((appearance) => semanticAddressKey(appearance.origin)),
     );
     const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
       (creation) =>
@@ -96,14 +191,12 @@ export function assessChaosPlacement(
         creation.additionalOrigin.additionalExitKey === 'chaos' &&
         recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
     );
-    if (recentOffer !== undefined) failedConditions.push('offerSpacing');
-  }
-  if (targetGameName !== undefined && !host?.roomGameNames.includes(targetGameName)) {
-    if (!failedConditions.includes('targetDomain')) failedConditions.push('targetDomain');
+    if (recentOffer !== undefined)
+      refusals.push(Object.freeze({ reason: 'offerSpacing' as const, rooms: window - 1 }));
   }
   return Object.freeze({
-    placementEligible: failedConditions.length === 0,
-    failedConditions: Object.freeze(failedConditions),
+    placementEligible: refusals.length === 0,
+    refusals: Object.freeze(refusals),
   });
 }
 
@@ -129,11 +222,10 @@ export function assessZagreusContractPlacement(
   const enteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
     (appearance) => appearance.gameName === declaration.targetRoomGameName,
   ).length;
-  const failedConditions: ('enteredContractCap' | 'sourceRequirement')[] = [];
-  if (declaration.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
-  if (
-    declaration.requirement !== undefined &&
-    !evaluateRequirement(
+  const refusals: ZagreusContractRefusal[] = [];
+  if (declaration.requirement !== undefined) {
+    assertGenerationRequirement(declaration.requirement);
+    for (const refusal of sourceRequirementRefusals(
       declaration.requirement,
       projectRoomGenerationRequirementContext(
         source,
@@ -145,14 +237,30 @@ export function assessZagreusContractPlacement(
         rewardFacts?.allSpellInvested,
         rewardFacts?.rewardLookups ?? initialRewardLookups,
       ),
-    )
-  )
-    failedConditions.push('sourceRequirement');
+      'ZagreusContractRequirement',
+    ))
+      // A Contract door has no biome-depth bound; any other part is its named requirement.
+      refusals.push(
+        refusal.reason === 'biomeDepthCeiling'
+          ? Object.freeze({
+              reason: 'requirementUnmet' as const,
+              requirement: 'ZagreusContractRequirement' as const,
+            })
+          : refusal,
+      );
+  }
   if (enteredContractCount > declaration.maxEnteredThisRoute)
-    failedConditions.push('enteredContractCap');
+    refusals.push(
+      Object.freeze({
+        reason: 'capReached' as const,
+        per: 'route' as const,
+        count: enteredContractCount,
+        maximum: declaration.maxEnteredThisRoute,
+      }),
+    );
   return Object.freeze({
-    placementEligible: failedConditions.length === 0,
-    failedConditions: Object.freeze(failedConditions),
+    placementEligible: refusals.length === 0,
+    refusals: Object.freeze(refusals),
     enteredContractCount,
     maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
   });
@@ -215,16 +323,7 @@ export function evaluateAdditionalContinuationEntries(
     if (continuation.key === 'chaos') {
       if (source === undefined || parentHistory?.entry === undefined) continue;
       const forced = forcedChaosOccurrenceKeys.has(semanticAddressKey(parentOrigin));
-      const declaration = sourceDeclaration?.additionalExits.find(
-        (
-          candidate,
-        ): candidate is Extract<
-          (typeof sourceDeclaration.additionalExits)[number],
-          { readonly kind: 'chaos' }
-        > => candidate.kind === 'chaos' && candidate.key === 'chaos',
-      );
-      const host = layout.chaos;
-      const failedConditions: string[] = [];
+      const refusals: (ChaosGateHostRefusal | ChaosGateRefusal)[] = [];
       if (
         continuation.spawnPointIndex !== undefined &&
         (sourceDeclaration === undefined ||
@@ -242,27 +341,35 @@ export function evaluateAdditionalContinuationEntries(
           }),
         );
       }
-      if (declaration === undefined) failedConditions.push('sourceCapability');
-      if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
-        failedConditions.push('targetDomain');
-      }
+      // A forced gate needs only a declared gate leading to a Chaos room of this biome.
+      const hostRefusals = chaosGateHostRefusals(
+        layout,
+        sourceDeclaration,
+        continuation.room.gameName,
+      );
+      refusals.push(
+        ...(forced
+          ? hostRefusals.filter(
+              (refusal) =>
+                refusal.reason === 'targetDomain' ||
+                (refusal.reason === 'notHost' && chaosExitOf(sourceDeclaration) === undefined),
+            )
+          : hostRefusals),
+      );
       if (!forced && sourceDeclaration !== undefined) {
         const capability = assessChaosPlacement(
           layout,
           source,
           sourceDeclaration,
           parentHistory,
-          continuation.room.gameName,
           enteredBiomeCount,
           rewardFactsBySource.get(semanticAddressKey(parentOrigin)),
           initialRewardLookups,
         );
-        for (const condition of capability?.failedConditions ?? []) {
-          if (!failedConditions.includes(condition)) failedConditions.push(condition);
-        }
+        refusals.push(...(capability?.refusals ?? []));
       }
       const window = forced ? undefined : layout.chaos?.offerSpacingWindow;
-      if (failedConditions.length > 0) {
+      if (refusals.length > 0) {
         appendFinding(
           findings,
           findingRegions,
@@ -271,7 +378,7 @@ export function evaluateAdditionalContinuationEntries(
             sourceGameName: source.gameName,
             chaosRoomGameName: continuation.room.gameName,
             offerSpacingWindow: window ?? null,
-            failedConditions: Object.freeze(failedConditions),
+            refusals: Object.freeze(refusals),
           }),
         );
       }
@@ -319,7 +426,7 @@ export function evaluateAdditionalContinuationEntries(
           contractRoomGameName: continuation.room.gameName,
           priorEnteredContractCount,
           maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
-          failedConditions: contractCapability.failedConditions,
+          refusals: contractCapability.refusals,
         }),
       );
     }

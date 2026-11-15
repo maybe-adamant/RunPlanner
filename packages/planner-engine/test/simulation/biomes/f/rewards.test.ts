@@ -14,7 +14,6 @@ import {
   createOccurrenceAddress,
   createRouteAddress,
   createStartingRewardAddress,
-  createRoomActionAddress,
   createProjectDocument,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
@@ -22,7 +21,6 @@ import {
   createTraitOfferAddress,
   createAcquisitionRoleAddress,
   createRouteStartKeepsakeSelectionAddress,
-  roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -40,12 +38,18 @@ import {
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
+import { withFixedTestWellStock } from '../../../support/stygian-well';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestShopOfferActions,
+  replaceTestPlacedItem,
+  scheduleTestRequiredRoomActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 
 import {
@@ -277,27 +281,47 @@ function evaluate(
   authorTraits = true,
   initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
 ) {
-  if (authorTraits) project = authorLegalTraitOffers(project);
-  const snapshot = materializeBiome(
-    catalog,
-    biome,
-    ordinaryPositionFor(catalog, biome),
-    complete(project),
-    traitContext(project),
-  );
-  const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
-  return {
-    snapshot,
-    history,
-    rewards: evaluateBiomeRewards(
+  if (authorTraits) project = authorTestTraitsAndRequiredItems(project);
+  project = withFixedTestWellStock(scheduleTestRequiredRoomActions(project, catalog, biome));
+  const run = (plan: ProjectDocument) => {
+    const snapshot = materializeBiome(
       catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(plan),
+      traitContext(plan),
+    );
+    const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
+    return {
       snapshot,
       history,
-      ordinaryPositionFor(catalog, snapshot),
-      traitContext(project),
-      initialBranches,
-    ),
+      rewards: evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        ordinaryPositionFor(catalog, snapshot),
+        traitContext(plan),
+        initialBranches,
+      ),
+    };
   };
+  // A blank Pool entry list takes the first eligible traits its room assessed on entry.
+  const first = run(project);
+  let stocked = project;
+  for (const { origin, assessment } of first.rewards.purgingPoolAssessments)
+    for (const finding of assessment.findings)
+      if (finding.code === 'purgingPoolTraitMissing') {
+        const traitKey =
+          assessment.eligibleTraitKeys[assessment.offeredSlotKeys.indexOf(finding.slotKey)];
+        if (traitKey !== undefined)
+          stocked = applyProjectCommand(stocked, catalog, {
+            kind: 'ReplacePurgingPoolSlot',
+            occurrence: origin,
+            slotKey: finding.slotKey,
+            traitKey,
+          });
+      }
+  return stocked === project ? first : run(stocked);
 }
 
 function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
@@ -961,23 +985,10 @@ describe('F reward-history simulation', () => {
   });
 
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
-    const start = createOccurrenceId('ratio-start');
-    let project = applyProjectCommand(ratioBoundaryProject(), catalog, {
+    const project = applyProjectCommand(ratioBoundaryProject(), catalog, {
       kind: 'ReplaceStartingReward',
       reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'SpellDrop' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        biome,
-        start,
-        roomActionKey({
-          kind: 'interactIncomingReward',
-          producerPoint: 'roomRewardPickup',
-          acquisitionRole: 'source',
-        }),
-      ),
     });
     const result = evaluate(project).rewards;
 
@@ -1019,8 +1030,8 @@ describe('F reward-history simulation', () => {
   });
 
   it('replays a later forced target store across earlier ordinary peers', () => {
-    let project = authorLegalTraitOffers(ratioBoundaryProject());
-    project = applyProjectCommand(project, catalog, {
+    let project = authorTestTraitsAndRequiredItems(ratioBoundaryProject());
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-mixed-peer')),
       gameName: 'F_Combat01',
@@ -1029,12 +1040,16 @@ describe('F reward-history simulation', () => {
     if (forcedBinding?.kind !== 'countedChoice') {
       throw new Error('F_Combat01 must retain its counted reward binding');
     }
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed-peer'), {
-      rewardType: 'MaxHealthDrop',
-    });
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed'), {
-      rewardType: 'MaxManaDrop',
-    });
+    // Each new reward is a new item, which the owner picks up again.
+    for (const [occurrenceId, rewardType] of [
+      ['ratio-mixed-peer', 'MaxHealthDrop'],
+      ['ratio-mixed', 'MaxManaDrop'],
+    ] as const)
+      project = replaceTestPlacedItem(project, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, createOccurrenceId(occurrenceId)),
+        value: { rewardType },
+      });
 
     const result = evaluate(project, false);
     const batch = result.snapshot.decisions[2];
@@ -1672,6 +1687,7 @@ describe('F reward-history simulation', () => {
       createOccurrenceId('retained-invalid-preboss-shop'),
       createOccurrenceId('retained-invalid-preboss-free'),
     ]);
+    project = collectTestRequiredItems(project);
 
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: reward }),

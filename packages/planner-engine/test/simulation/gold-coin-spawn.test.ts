@@ -10,7 +10,7 @@ import {
   traitGeneratedPickupSiteKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { replaceTestRoomActionOrder, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -40,7 +40,7 @@ const coin = (screen: typeof quickBuckScreen, entryKey: string): Action => ({
 
 /** Golden H with Quick Buck in combat09's first cage and `second` in its other. */
 function withQuickBuck(second: 'buriedTreasure' | 'money'): ProjectDocument {
-  let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+  let project = settleTestEdit(createGoldenFGHProject(), {
     kind: 'ReplaceLocalReward',
     reward: quickBuck,
     value: { rewardType: 'HermesUpgrade' },
@@ -59,12 +59,12 @@ function withQuickBuck(second: 'buriedTreasure' | 'money'): ProjectDocument {
     },
   } as never);
   if (second === 'money')
-    return applyProjectCommand(project, catalog, {
+    return settleTestEdit(project, {
       kind: 'ReplaceLocalReward',
       reward: buriedTreasure,
       value: { rewardType: 'RoomMoneyDrop' },
     });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceLocalReward',
     reward: buriedTreasure,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },

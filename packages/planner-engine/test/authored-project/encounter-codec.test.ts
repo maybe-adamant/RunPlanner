@@ -19,7 +19,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  withItemContent,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   replaceNemesisRandomEventInteraction,
@@ -56,7 +59,7 @@ function arachneStoryProject(): ProjectDocument {
     occurrence,
     gameName: 'F_Story01',
   });
-  return applyProjectCommand(authorLegalTraitOffers(story), catalog, {
+  return applyProjectCommand(authorTestTraitsAndRequiredItems(story), catalog, {
     kind: 'ReplaceTraitSelection',
     trait: phase,
     selectedOptionKey: 'option2',
@@ -190,7 +193,21 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     };
-    const unplaced = contest('failure');
+    const contact = { kind: 'interactEncounter' as const, phaseKey: 'Encounter' };
+    const uncontacted = contest('failure');
+    // The result spawns from the Nemesis contact, so the contact is placed first.
+    const unplaced = applyProjectCommand(uncontacted, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(5, 1),
+        roomActionKey(contact),
+      ),
+      reference: contact,
+      index: uncontacted.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+      )!.roomActions.order.length,
+    });
     const order = unplaced.route.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     )!.roomActions.order;
@@ -225,7 +242,13 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       read.route.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
       )!.roomActions.order,
-    ).toContainEqual(reference);
+    ).toContainEqual(
+      withItemContent(
+        failed,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+        reference,
+      ),
+    );
     expect(simulateProject(catalog, read).findings).toEqual([]);
     // A won contest never held Consolation as its offer.
     const won = encoded(contest('success'));

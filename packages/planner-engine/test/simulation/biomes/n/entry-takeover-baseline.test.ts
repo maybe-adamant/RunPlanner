@@ -23,6 +23,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 import {
   loadSurfaceNCompleteHubFrontierProject,
@@ -67,13 +68,15 @@ function blankNEntryProject() {
       selectedOptionKey: 'option1',
     },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    decision: createExitDecisionAddress(nBiome, {
-      kind: 'occurrence',
-      occurrenceId: nOccurrenceIds.opening,
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.opening,
+      }),
     }),
-  });
+  );
 }
 
 function nBiomeEvaluation(project: ProjectDocument) {

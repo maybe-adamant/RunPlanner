@@ -25,7 +25,7 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CandidateOptionProjection } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
-import type { WorkspaceDoorContract } from './structure';
+import type { WorkspaceDoorContract, WorkspacePlanEndAvailability } from './structure';
 import type { WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceCountedRewardControl, WorkspaceExplicitRewardControl } from './rewards';
 import type { WorkspaceShopOfferDescriptor, WorkspaceShopSupplementalDescriptor } from './commerce';
@@ -33,6 +33,7 @@ import type { WorkspaceRoomMapPoint } from './features';
 import type {
   WorkspaceNativeCandidateInteraction,
   WorkspaceCommandIntent,
+  WorkspaceCommandsIntent,
   WorkspacePickerCandidateInteraction,
   WorkspaceInteractionChoice,
   WorkspaceRoomSummary,
@@ -68,6 +69,10 @@ export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceNativeCand
   readonly intentFor: (
     occurrenceIds: readonly OccurrenceId[],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLocalVisitOrder' }>>;
+  /** Returns to the Hub at this exit and ends the plan in the main room, as one edit. */
+  readonly endPlanIntent: WorkspaceCommandsIntent;
+  /** Whether that edit leaves a plan that can end there; one engine evaluation, on first read. */
+  readonly endPlanAvailability: () => WorkspacePlanEndAvailability;
   readonly owner: LocalVisitOrderAddress;
 }
 
@@ -106,7 +111,7 @@ export interface WorkspaceEncounterCustomizationInteraction {
         readonly kind:
           | 'ReplaceEncounterCustomization'
           | 'ReplaceChallengeSwitchCustomization'
-          | 'ReplaceUnlockExitCustomization';
+          | 'ReplaceLockedExitCustomization';
       }
     >
   >;
@@ -308,6 +313,8 @@ export interface WorkspaceNemesisEventInteraction extends WorkspaceNemesisEventS
   readonly fixedResultRewardType?: string;
   readonly selectedRewardLabel?: string;
   readonly selectedTraitLabel?: string;
+  /** The free item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   /** How the interaction ended its encounter: a trade's answer or the contest's result. */
   readonly outcome?: WorkspaceNemesisEventOutcome;
 }
@@ -393,6 +400,8 @@ export interface WorkspaceGorgonConditionInteraction {
 export interface WorkspaceFieldsCageDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
+  /** The encounter phase its Unlock row starts. */
+  readonly phaseKey: string;
   readonly label: string;
   /** The slot's short mark on its reward chip ("C1", "O3"); `label` names it in full. */
   readonly badge: string;
@@ -415,8 +424,10 @@ export interface WorkspaceFieldsSpatialControl {
   readonly interactionKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** The stored point; null until the walk reaches the room. */
   readonly pointId: number | null;
-  readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
+  /** Each point the slot can take. */
+  readonly pointChoices: readonly { readonly label: string; readonly value: number }[];
 }
 
 export interface WorkspaceFieldsSpatialPointInteraction {
@@ -425,10 +436,10 @@ export interface WorkspaceFieldsSpatialPointInteraction {
   readonly key: string;
   readonly owner: FieldsSpatialAddress;
   readonly selected: number | null;
-  readonly choices: readonly { readonly label: string; readonly value: number | null }[];
-  readonly load: () => readonly CandidateOptionProjection<number | null>[];
+  readonly choices: readonly { readonly label: string; readonly value: number }[];
+  readonly load: () => readonly CandidateOptionProjection<number>[];
   readonly intentFor: (
-    pointId: number | null,
+    pointId: number,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
   >;
@@ -444,11 +455,6 @@ export interface WorkspaceRewardWheelOfferDescriptor {
   /** The offer after its rerolls, where it differs from the first draw. */
   readonly rerolledOffer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
   readonly rerolledSummary?: string;
-  /** A kept rerolled reward that no longer matches its last reroll. */
-  readonly rerolledRewardRepair?: {
-    readonly owner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
-    readonly repair: 'adopt' | 'drop';
-  };
 }
 
 export interface WorkspaceRewardWheelDescriptor {
@@ -516,11 +522,12 @@ export interface WorkspaceEncounterPhase {
   readonly identityLabel: string;
   readonly marker: WorkspaceMarker;
   /**
-   * The Timeline boundary whose banner names this phase's settled identity and
-   * whose row hosts its events; absent when it has neither a start nor an event.
-   * Identity and customization are always authored in the room Overview.
+   * The Timeline line that hosts this phase's events: room entry for a phase settled on
+   * entry, its encounter's markers for a fight, or a Nemesis random event's talk row;
+   * absent when it has none. Identity and customization are always authored in the
+   * room Overview.
    */
-  readonly timelineAnchor?: 'roomEntered' | 'encounterStart';
+  readonly timelineAnchor?: 'roomEntered' | 'encounter' | 'interaction';
   /** The engine settled this phase as skipped with Fig Leaf. */
   readonly skippedByFigLeaf?: true;
   readonly figLeaf?: {
@@ -670,6 +677,8 @@ interface WorkspaceLocalVisitSlotBase {
   readonly physicalDoorId: number;
   /** The side room's kind icon, as room pickers show it. */
   readonly roomIcon: import('./structure').WorkspaceRoomIcon;
+  /** The side room's number, which tells it from rooms sharing its icon. */
+  readonly roomNumber?: string;
 }
 
 /** A generated local target publishes its retained ordinary occurrence workbench. */

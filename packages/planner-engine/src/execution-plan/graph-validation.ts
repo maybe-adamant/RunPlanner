@@ -233,6 +233,12 @@ export function validateExecutionGraph(
     )
       invalid(`selectedOccurrenceIds is disconnected at ${graph.selectedOccurrenceIds[index]}`);
   }
+  // Every entered room, and only one, publishes its layout.
+  for (const occurrence of graph.occurrences)
+    if (selected.has(occurrence.id) !== (occurrence.overview.layout !== undefined))
+      invalid(
+        `${occurrence.id}.overview.layout must be published exactly for a selected occurrence`,
+      );
 
   {
     const resourceOccurrenceIds = graph.resources.occurrences.map((entry) => entry.occurrenceId);

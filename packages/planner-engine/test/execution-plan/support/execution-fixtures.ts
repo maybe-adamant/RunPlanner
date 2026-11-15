@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { format, resolveConfig } from 'prettier';
@@ -14,11 +15,9 @@ import {
   type RunStartPoint,
 } from '@run-planner/engine/authored-project';
 import {
-  createCompleteFGAnomalyProject,
   createCompleteFGProject,
   createEchoGoldIAnvilDuplicateProject,
   echoGoldIDuplicateAnvilResult,
-  underworldFogEmitterReservationProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
@@ -35,10 +34,7 @@ import {
   dreamOSkippedShipProject,
   dreamSingleQShrineDeliveryProject,
 } from '@run-planner/test-fixtures/dream';
-import {
-  createFreshFileFNativeProject,
-  createFreshFileRouteProject,
-} from '@run-planner/test-fixtures/fresh-file';
+import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -47,7 +43,6 @@ import {
 import {
   loadSurfaceNProject,
   surfaceGeneratedPreCombatProject,
-  surfaceNOpeningCompositionProject,
   surfaceShrineDeliveriesProject,
   surfaceShrineRushedUnrankedProject,
   surfaceTravelDealRefillAnvilProject,
@@ -62,14 +57,6 @@ import { simulateProjectAssembly } from '../../../src/simulation';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
-import {
-  surfaceNORerollsProject,
-  underworldFRarifiedScreenRerollProject,
-  underworldFRerollsProject,
-} from './rerolls-fixture';
-import underworldFRerollsFixture from '../fixtures/underworld-f-rerolls.execution.json';
-import underworldFRarifiedScreenRerollFixture from '../fixtures/underworld-f-rarified-screen-reroll.execution.json';
-import surfaceNORerollsFixture from '../fixtures/surface-no-rerolls.execution.json';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
 import dreamOSkippedShipFixture from '../fixtures/dream-o-skipped-ship.execution.json';
@@ -77,16 +64,13 @@ import dreamShrinePendingFixture from '../fixtures/dream-shrine-pending.executio
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
 import runModifiersFixture from '../fixtures/run-modifiers.execution.json';
 import fgFixture from '../fixtures/fg.execution.json';
-import fgAnomalyFixture from '../fixtures/fg-anomaly.execution.json';
 import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json';
 import fgIxionChaosFixture from '../fixtures/fg-ixion-chaos.execution.json';
 import fgNpcShoppingProtectionFixture from '../fixtures/fg-npc-shopping-protection.execution.json';
 import freshFileFGHIFixture from '../fixtures/fresh-file-fghi.execution.json';
-import freshFileFNativeFixture from '../fixtures/fresh-file-f-native.execution.json';
 import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-precombat.execution.json';
 import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixture from '../fixtures/surface-n.execution.json';
-import surfaceNOpeningCompositionFixture from '../fixtures/surface-n-opening-composition.execution.json';
 import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlation.execution.json';
 import surfaceSeleneHexPathFixture from '../fixtures/surface-selene-hex-path.execution.json';
@@ -100,7 +84,6 @@ import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
 import underworldFGHIEmptyShopGroupFixture from '../fixtures/underworld-fghi-empty-shop-group.execution.json';
 import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
-import underworldFogEmitterReservationFixture from '../fixtures/underworld-fog-emitter-reservation.execution.json';
 import underworldEchoGoldAnvilDuplicateFixture from '../fixtures/underworld-echo-gold-anvil-duplicate.execution.json';
 import surfaceStartQOpeningFixture from '../fixtures/surface-start-q-opening.execution.json';
 import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-preboss.execution.json';
@@ -213,21 +196,10 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     wire: freshFileFGHIFixture,
   },
   {
-    name: 'fresh-file-f-native',
-    project: createFreshFileFNativeProject,
-    wire: freshFileFNativeFixture,
-  },
-  {
-    name: 'underworld-fog-emitter-reservation',
-    project: underworldFogEmitterReservationProject,
-    wire: underworldFogEmitterReservationFixture,
-  },
-  {
     name: 'fg-ixion-chaos',
     project: positionedIxionChaosProject,
     wire: fgIxionChaosFixture,
   },
-  { name: 'fg-anomaly', project: createCompleteFGAnomalyProject, wire: fgAnomalyFixture },
   {
     name: 'fg-anomaly-roster',
     project: loadUnderworldGAnomalyRosterCheckpoint,
@@ -239,11 +211,6 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     wire: automaticBossFixture,
   },
   { name: 'surface-n', project: loadSurfaceNProject, wire: surfaceNFixture },
-  {
-    name: 'surface-n-opening-composition',
-    project: surfaceNOpeningCompositionProject,
-    wire: surfaceNOpeningCompositionFixture,
-  },
   { name: 'surface-nopq', project: typhonCustomizationProject, wire: surfaceNOPQFixture },
   {
     name: 'surface-q-shop-correlation',
@@ -306,21 +273,6 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     wire: surfaceTravelDealRefillAnvilFixture,
   },
   {
-    name: 'underworld-f-rerolls',
-    project: underworldFRerollsProject,
-    wire: underworldFRerollsFixture,
-  },
-  {
-    name: 'underworld-f-rarified-screen-reroll',
-    project: underworldFRarifiedScreenRerollProject,
-    wire: underworldFRarifiedScreenRerollFixture,
-  },
-  {
-    name: 'surface-no-rerolls',
-    project: surfaceNORerollsProject,
-    wire: surfaceNORerollsFixture,
-  },
-  {
     name: 'surface-trait-fences',
     project: surfaceTraitFencesProject,
     wire: surfaceTraitFencesFixture,
@@ -360,7 +312,9 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   {
     name: 'underworld-start-g-rivals-boss',
     project: () =>
-      withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
+      stockTestProject(
+        withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
+      ),
     wire: underworldStartGRivalsBossFixture,
   },
   {

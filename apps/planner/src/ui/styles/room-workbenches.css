@@ -40,7 +40,6 @@
 }
 
 .room-overview-panel .room-feature-presence-row,
-.room-overview-panel > .room-contract-pedestal,
 .room-overview-panel > .encounter-phase-control {
   padding: 0;
   border: 0;
@@ -144,12 +143,6 @@
   border-top: 0;
 }
 
-.room-contract-pedestal {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
 .shop-family-offer-row {
   display: grid;
   grid-template-columns: minmax(18rem, 1fr) auto;
@@ -242,6 +235,26 @@
 .icon-toggle[aria-pressed='true'] > .artwork-label-icon {
   opacity: 1;
   filter: none;
+}
+
+/* A door's one-press change, sized as an icon toggle: what the door becomes, badged as an action. */
+.door-change-action {
+  position: relative;
+  display: inline-grid;
+  width: var(--timeline-control-height, 26px);
+  height: var(--timeline-control-height, 26px);
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.door-change-action:hover,
+.door-change-action:focus-visible {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 5%);
 }
 
 /* Aetos is one compact picker: his icon, the wave and the caret. */
@@ -792,12 +805,15 @@
   background: none;
 }
 
-.room-actions-workbench {
-  /* Spine gutter and the inset of a row's first column; headings start there too. */
+.room-actions-workbench,
+.hub-spine {
+  /* Spine gutter, the spine's centre in it, and the inset of a row's first column; headings start there too. */
   --timeline-gutter: 18px;
+  --timeline-spine-x: 9px;
   --timeline-row-start: 6px;
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
-  --timeline-banner-title-width: 8.75rem;
+  /* The spine's centre from a row's edge, where its ticks, nodes and gap controls centre. */
+  --timeline-row-spine-x: calc(var(--timeline-spine-x) - var(--timeline-gutter));
 }
 
 /*
@@ -829,12 +845,13 @@
   /* The Timeline fills its column up to the readable width (see responsive.css). */
   --timeline-working-width: min(60rem, 100%);
   --timeline-columns: 28px minmax(0, 1fr) var(--timeline-money-width) var(--timeline-control-height);
+  --timeline-row-gap: 2px;
   width: var(--timeline-working-width);
   max-width: 100%;
   position: relative;
   display: grid;
   grid-template-columns: var(--timeline-columns);
-  gap: 2px 8px;
+  gap: var(--timeline-row-gap) 8px;
   margin: 0;
   padding: 0 0 0 var(--timeline-gutter);
   list-style: none;
@@ -845,7 +862,7 @@
   position: absolute;
   top: 16px;
   bottom: 16px;
-  left: 8px;
+  left: calc(var(--timeline-spine-x) - 1px);
   width: 2px;
   border-radius: 999px;
   background: var(--timeline-spine);
@@ -854,15 +871,20 @@
 
 /* A single card has nothing to connect, so it draws neither spine nor tick. */
 .room-action-list:has(> :only-child)::before,
-.room-action-list
-  > .timeline-row:only-child:not(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint']
-  )::before {
+.room-action-list > .timeline-row:only-child:not([data-timeline-row-kind='boundary'])::before {
   display: none;
 }
 
 .timeline-row {
+  /* Space above the row, past the list's row gap. */
+  --timeline-row-lead: 0px;
+  --timeline-row-stripe: var(--timeline-stripe);
+  /* A dashed stripe, for the rows that paint it as their background image. */
+  --timeline-dashed-stripe: repeating-linear-gradient(
+    to bottom,
+    var(--timeline-row-stripe) 0 6px,
+    transparent 6px 10px
+  );
   position: relative;
   z-index: 1;
   display: grid;
@@ -870,25 +892,26 @@
   align-items: center;
   gap: 4px 8px;
   min-width: 0;
-  padding: 3px 8px 3px var(--timeline-row-start);
+  margin-top: var(--timeline-row-lead);
+  padding: 3px 8px 3px calc(3px + var(--timeline-row-start));
   border: 0;
-  border-left: 3px solid var(--timeline-stripe);
   border-radius: 0 4px 4px 0;
-  background: transparent;
+  /* The stripe is painted, not a border, so the row's edge stays where the spine measures it. */
+  box-shadow: inset 3px 0 0 var(--timeline-row-stripe);
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 3px 100%;
   scroll-margin-block: 24px;
 }
 
 /* Rows are plain lines; hover and focus lift them slightly. */
-.timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):is(
-    :hover,
-    :focus-within
-  ) {
-  background: rgb(255 255 255 / 3.5%);
+.timeline-row:not([data-timeline-row-kind='boundary']):is(:hover, :focus-within) {
+  background-color: rgb(255 255 255 / 3.5%);
 }
 
 /* The row the room map shows, like a Hub segment's pressed label. */
 .room-action-list > .timeline-row[data-map-shown] {
-  background: rgb(245 211 134 / 7%);
+  background-color: rgb(245 211 134 / 7%);
 }
 
 .room-action-list > .timeline-row[data-map-shown] [data-timeline-cell='label'] {
@@ -899,8 +922,8 @@
 .timeline-row::before {
   position: absolute;
   top: calc(50% - 1px);
-  left: -12px;
-  width: 9px;
+  left: var(--timeline-row-spine-x);
+  width: calc(-1 * var(--timeline-row-spine-x));
   height: 2px;
   background: var(--timeline-spine);
   content: '';
@@ -928,47 +951,41 @@
   min-height: 32px;
 }
 
-/* A banner's title starts at the handle column; its gold keeps the money column. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='sentence'] {
-  grid-column: 1 / 3;
+/*
+ * A marker's name starts at the action indent, its icon where an action has its handle;
+ * its gold keeps the money column.
+ */
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
+  grid-column: 2 / 3;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+.timeline-row[data-timeline-row-kind='boundary']
   > :is([data-timeline-cell='handle'], [data-timeline-cell='actions']) {
   display: none;
 }
 
-/* A banner without gold runs its sentence to the row's end. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):has(
-    > [data-timeline-cell='money']:empty
-  )
+/* A marker without gold runs its sentence to the row's end. */
+.timeline-row[data-timeline-row-kind='boundary']:has(> [data-timeline-cell='money']:empty)
   > [data-timeline-cell='sentence'] {
-  grid-column: 1 / -1;
+  grid-column: 2 / -1;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='money']:empty {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='money']:empty {
   display: none;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='money'] {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='money'] {
   align-self: center;
   min-height: 0;
 }
 
 /*
- * A banner is one sentence: its title, then its controls. The identity is the
+ * A marker is one sentence: its name, then its controls. The identity is the
  * one part that gives way, ending in an ellipsis.
- */
-/*
- * Every banner's controls start in one column after its title, wide enough for
- * the longest lifecycle title; a longer title pushes them on.
  */
 .timeline-banner-title {
   display: inline-flex;
-  min-width: min(var(--timeline-banner-title-width, 0px), 100%);
+  min-width: 0;
   max-width: 100%;
   flex: 0 1 auto;
   align-items: center;
@@ -1012,15 +1029,6 @@
 /* A control whose retained value has no effect here stays readable but quiet. */
 [data-inapplicable] {
   opacity: 0.6;
-}
-
-/* Object and feature entries start where the Optional actions heading does. */
-.timeline-row.room-action-feature-roll > [data-timeline-cell='handle'] {
-  display: none;
-}
-
-.timeline-row.room-action-feature-roll > [data-timeline-cell='sentence'] {
-  grid-column: 1 / 3;
 }
 
 /* Narrow lists keep their columns; a narrower money column leaves the sentence more room. */
@@ -1173,7 +1181,8 @@
 
 .timeline-cell-label
   :is(.room-action-inline-reward, .contextual-picker[data-trigger-size='content'])
-  .contextual-picker-trigger:not(.timeline-chip) {
+  .contextual-picker-trigger:not(.timeline-chip),
+.timeline-cell-label .contextual-picker-trigger.room-action-verb {
   width: auto;
   min-height: var(--timeline-control-height);
   padding: 2px 7px;
@@ -1203,21 +1212,16 @@
   text-underline-offset: 3px;
 }
 
-/*
- * A notice tells what the game did (spawned, unlocked, delivered, restocked): an action's stripe
- * drawn dashed, and a dot where an action has its handle.
- */
+/* A notice tells what the game did (spawned, unlocked, delivered, restocked): a muted line, no spine mark. */
 .timeline-row.timeline-row-notice {
-  border-left-style: dashed;
-  border-left-color: var(--timeline-notice-line);
-  background: transparent;
+  --timeline-row-stripe: transparent;
+  min-height: 0;
+  padding-block: 1px;
+  box-shadow: none;
 }
 
-.timeline-notice-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--muted);
+.timeline-row.timeline-row-notice::before {
+  content: none;
 }
 
 .timeline-row-notice [data-timeline-cell='label'] {
@@ -1225,6 +1229,8 @@
 }
 
 .timeline-row-notice [data-timeline-cell='label'] strong {
+  color: var(--timeline-marker-text);
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -1312,6 +1318,11 @@
 }
 
 /* Trait-family chips in the timeline fit their name up to a cap, then end in an ellipsis. */
+/* Marks a row's outcome control for opening once the row is placed; lays out nothing. */
+.row-choice {
+  display: contents;
+}
+
 .timeline-cell-editors .trait-offer-launcher {
   width: auto;
   max-width: min(16rem, 100%);
@@ -1339,44 +1350,195 @@
   gap: 6px 12px;
 }
 
-/* Row kinds differ only in border, background and type. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
-  min-height: 30px;
-  margin-top: 4px;
-  padding-block: 1px;
-  border-left-color: transparent;
-  border-top: 1px solid var(--timeline-band-divider);
-  border-radius: 0;
-  background: transparent;
-  color: #cfcad6;
+/*
+ * Action rows are the spine's nodes: one dot each, in their kind's colour, hollow when
+ * optional. Room events between them are quiet dividers with no dot.
+ */
+.room-action-list > .timeline-row[data-timeline-row-kind='action']::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid var(--timeline-row-stripe);
+  border-radius: 50%;
+  background: var(--timeline-row-stripe);
 }
 
-/* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
-.timeline-row:is(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint']
+.room-action-list
+  > .timeline-row[data-timeline-row-kind='action']:not([data-action-accent])::before {
+  border-color: var(--timeline-node);
+  background: var(--timeline-node);
+}
+
+.room-action-list > .timeline-row[data-action-accent='optional']::before {
+  background: var(--timeline-divider-mask);
+}
+
+.timeline-row[data-timeline-row-kind='action']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong,
+.timeline-row[data-timeline-row-kind='action'] .timeline-banner-title strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* A room event: its icon, its name, and a hairline on to its gold or the row's end. */
+.timeline-row[data-timeline-row-kind='boundary'] {
+  --timeline-row-lead: 4px;
+  min-height: 24px;
+  padding-block: 1px;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+  color: var(--muted);
+}
+
+/* The spine breaks briefly at each room event. */
+.room-action-list > .timeline-row[data-timeline-row-kind='boundary']::before {
+  top: calc(50% - 7px);
+  left: calc(var(--timeline-row-spine-x) - 2px);
+  width: 4px;
+  height: 14px;
+  background: var(--timeline-divider-mask);
+}
+
+.timeline-row[data-timeline-row-kind='boundary']:not(.timeline-leave-row)
+  > [data-timeline-cell='sentence']::after {
+  height: 1px;
+  flex: 1 1 24px;
+  align-self: center;
+  margin-inline-start: 4px;
+  background: rgb(255 255 255 / 10%);
+  content: '';
+}
+
+.timeline-row[data-timeline-row-kind='boundary']:not(.timeline-leave-row)
+  .timeline-banner-title
+  strong {
+  color: var(--timeline-marker-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.timeline-event-node {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  place-items: center;
+  justify-self: center;
+  color: #aaa5b3;
+  pointer-events: none;
+}
+
+.timeline-event-node > .timeline-event-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.4;
+}
+
+/* A marker of one phase of several names its phase in a small chip. */
+.timeline-phase-chip {
+  display: inline-flex;
+  height: 1.1rem;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 7px;
+  border: 1px solid #4b4c58;
+  border-radius: 999px;
+  color: var(--timeline-marker-text);
+  font-size: 0.68rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Leaving ends the spine: an action's weight and a square node. */
+.room-action-list > .timeline-row.timeline-leave-row[data-timeline-row-kind='boundary']::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #cfcad6;
+}
+
+/* A side visit's way out reads as its step; only the last way out is square. */
+.room-action-list
+  > .timeline-row.timeline-leave-row[data-timeline-row-kind='boundary']:has(
+    ~ .timeline-leave-row[data-timeline-row-kind='boundary']
   )::before {
-  top: calc(50% - 4px);
-  left: -16px;
-  width: 8px;
-  height: 8px;
   border-radius: 50%;
   background: var(--timeline-node);
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > .timeline-cell-handle {
-  min-block-size: 0;
+.timeline-leave-row .timeline-banner-title strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
+/*
+ * A row with a cause hangs under it with a hook, one line each: an action's spawn under the
+ * action, a room event's spawn, unlock or settled outcome under its marker.
+ */
+.timeline-row[data-timeline-hook] {
+  --timeline-row-lead: -2px;
+}
+
+.timeline-row[data-timeline-hook] > [data-timeline-cell='sentence'] {
+  padding-left: 18px;
+}
+
+.timeline-row[data-timeline-hook] > [data-timeline-cell='sentence']::before {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  color: #7d7888;
+  content: '↳';
+  transform: translateY(-55%);
+}
+
+.room-action-list > .timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook]::before,
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook]
+  > [data-timeline-cell='sentence']::after {
+  content: none;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook] > .timeline-event-node {
+  display: none;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook] {
+  min-height: 0;
+}
+
+/* A settled outcome reads with its marker: no spine mark, a quiet name, its controls inline. */
 .timeline-row[data-timeline-row-kind='effect'] {
-  border-color: transparent;
-  border-left-color: var(--timeline-stripe);
+  --timeline-row-stripe: transparent;
+}
+
+.timeline-row[data-timeline-row-kind='effect'][data-action-accent] {
+  --timeline-row-stripe: var(--timeline-accent);
+}
+
+.room-action-list > .timeline-row[data-timeline-row-kind='effect']::before {
+  content: none;
+}
+
+.timeline-row[data-timeline-row-kind='effect']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong {
+  color: #b4afbd;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .timeline-row[data-timeline-row-kind='insertion'] {
-  border-color: transparent;
-  background: transparent;
+  --timeline-row-stripe: transparent;
+  background-color: transparent;
 }
 
 .timeline-row[data-timeline-row-kind='insertion']::before {
@@ -1384,7 +1546,21 @@
 }
 
 .timeline-row[data-action-accent] {
-  border-left-color: var(--timeline-accent);
+  --timeline-row-stripe: var(--timeline-accent);
+}
+
+/* Optional rows paint their stripe dashed, automatic ones dotted; required stays solid. */
+.timeline-row:is([data-action-accent='optional'], [data-action-accent='automatic']) {
+  box-shadow: none;
+  background-image: var(--timeline-dashed-stripe);
+}
+
+.timeline-row[data-action-accent='automatic'] {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--timeline-row-stripe) 0 3px,
+    transparent 3px 6px
+  );
 }
 
 .room-action-placement-picker .contextual-picker > label {
@@ -1430,7 +1606,7 @@
   gap: 8px;
 }
 
-.room-action-drag-header > span {
+.room-action-drag-header > .text-glyph {
   color: var(--selection-accent);
   flex: 0 0 auto;
 }
@@ -1480,7 +1656,12 @@
 [data-reorder-lifted] {
   outline: 2px solid var(--selection-accent);
   outline-offset: 1px;
-  background: color-mix(in srgb, var(--selection-accent) 10%, var(--timeline-card, transparent));
+  /* Only the colour: a dashed or dotted stripe is a background image sized to the edge. */
+  background-color: color-mix(
+    in srgb,
+    var(--selection-accent) 10%,
+    var(--timeline-card, transparent)
+  );
 }
 
 [data-reorder-lifted='pointer'] {
@@ -1580,35 +1761,37 @@
   list-style: none;
 }
 
-/* Timeline palette: neutral rows and bands; category hue only on stripes and the legend. */
+/*
+ * Timeline palette: neutral rows and markers; a row's kind shows only on its stripe,
+ * its live-row bracket and the legend, by hue and by line style.
+ */
 :root {
-  --timeline-optional: #6fa8ec;
-  --timeline-required-now: #a98bf0;
-  --timeline-before-leaving: #8fcf5a;
-  --timeline-automatic: #3fb8a4;
+  --legend-required: #a98bf0;
+  --legend-optional: #6fa8ec;
+  --legend-automatic: #3fb8a4;
   --timeline-card: #191a20;
   --timeline-card-border: #34353e;
   --timeline-stripe: #4b4c58;
   --timeline-spine: #4b4c58;
   --timeline-node: #8e8b97;
-  --timeline-band: rgb(255 255 255 / 7%);
-  --timeline-band-divider: rgb(255 255 255 / 10%);
+  --timeline-marker-text: #b8b3c1;
+  /* The workbench's own colour, which masks the spine where a node stands. */
+  --timeline-divider-mask: #15171d;
+}
+
+[data-action-accent='required'] {
+  --timeline-accent: var(--legend-required);
+  --timeline-accent-style: solid;
 }
 
 [data-action-accent='optional'] {
-  --timeline-accent: var(--timeline-optional);
-}
-
-[data-action-accent='phase'] {
-  --timeline-accent: var(--timeline-required-now);
-}
-
-[data-action-accent='room'] {
-  --timeline-accent: var(--timeline-before-leaving);
+  --timeline-accent: var(--legend-optional);
+  --timeline-accent-style: dashed;
 }
 
 [data-action-accent='automatic'] {
-  --timeline-accent: var(--timeline-automatic);
+  --timeline-accent: var(--legend-automatic);
+  --timeline-accent-style: dotted;
 }
 
 .room-timeline-legend > li {
@@ -1618,11 +1801,10 @@
 }
 
 .room-timeline-legend > li::before {
-  width: 4px;
+  width: 0;
   flex-shrink: 0;
   height: 1.1rem;
-  border-radius: 2px;
-  background: var(--timeline-accent);
+  border-left: 3px var(--timeline-accent-style) var(--timeline-accent);
   content: '';
 }
 
@@ -1634,7 +1816,6 @@
    * with its badges fills a row's height inside the row's padding.
    */
   --timeline-icon-size: 23px;
-  --timeline-notice-line: rgb(255 255 255 / 22%);
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
   --badge-size: calc(var(--timeline-icon-size) * 2 / 3);
   --badge-small: calc(var(--timeline-icon-size) * 13 / 21);
@@ -1790,7 +1971,6 @@
 }
 
 /* Pools are grouped by a light heading, not another box. */
-.room-action-optional-pool,
 .room-action-repairs,
 .room-action-not-reached {
   display: grid;
@@ -1807,28 +1987,11 @@
   display: none;
 }
 
-/* Unplaced pools sit outside the chronology, so their lists draw no spine or ticks. */
-.room-action-optional-pool > .room-action-list::before,
-.room-action-optional-pool > .room-action-list > .timeline-row::before {
-  display: none;
-}
-
-:is(
-    .room-action-optional-pool,
-    .room-action-repairs,
-    .room-action-not-reached,
-    .ship-action-repairs
-  )
-  > .local-reward-heading {
+:is(.room-action-repairs, .room-action-not-reached, .ship-action-repairs) > .local-reward-heading {
   padding-inline: var(--timeline-title-x) 0;
 }
 
-:is(
-    .room-action-optional-pool,
-    .room-action-repairs,
-    .room-action-not-reached,
-    .ship-action-repairs
-  )
+:is(.room-action-repairs, .room-action-not-reached, .ship-action-repairs)
   > .local-reward-heading
   :is(h4, h5) {
   color: #aaa7af;
@@ -1836,25 +1999,6 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/*
- * The map fills its frame, so overlays pinned to the frame sit on the image.
- * Its width is capped so its height fits the window under the header and room
- * heading: extra width never makes the room scroll.
- */
-.hub-map-overview > .room-map-viewport > .room-map-canvas {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  max-width: max(24rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
-  margin-inline: auto;
-}
-
-.hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-  min-height: 0;
 }
 
 .frontier-actions {
@@ -1971,7 +2115,6 @@
  * Sub-rows sit under their section or object header. Their label column gives
  * up the indent, so every picker and secondary keeps the same x.
  */
-.room-overview-workbench .shop-family-offer-list > .shop-family-offer-row,
 .room-overview-workbench
   :is(.room-structure-workbench, .fields-room-editor)
   > .room-overview-panel
@@ -2004,9 +2147,7 @@
   background: none;
 }
 
-.room-overview-workbench .encounter-phase-control,
-.room-overview-workbench .room-contract-pedestal,
-.room-overview-workbench .shop-family-offer-list {
+.room-overview-workbench .encounter-phase-control {
   gap: 6px;
 }
 
@@ -2100,95 +2241,9 @@
   grid-template-columns: var(--overview-secondary-width);
 }
 
-/* The room's one Add… menu: Places open their flows, Actions add in one click. */
-.room-add {
-  margin-top: 8px;
-  padding-left: var(--timeline-gutter);
-}
-
-/* The Add area: a line of room objects and a line of action sources. */
-.room-add {
-  display: grid;
-  gap: 6px;
-}
-
-.room-add-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-
-.room-add-line-label {
-  min-width: 4.5rem;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.room-add .room-add-entries {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.room-add .room-add-entries::before {
-  display: none;
-}
-
-.room-add .room-add-entries > .timeline-row {
-  display: flex;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.room-add .room-add-entries > .timeline-row::before,
-.room-add
-  .room-add-entries
-  > .timeline-row
-  > :is(
-    [data-timeline-cell='handle'],
-    [data-timeline-cell='money'],
-    [data-timeline-cell='actions']
-  ) {
-  display: none;
-}
-
-/* An encounter phase reads as one light group: its rows share a tint. */
-.timeline-row[data-phase] {
-  background: rgb(255 255 255 / 2%);
-}
-
-/* Every banner shares one band: start, end and lifecycle banners alike. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
-  border-top-color: rgb(255 255 255 / 16%);
-  background: rgb(255 255 255 / 4.5%);
-  color: var(--text);
-}
-
-/* A phase starts with a little space above its first banner. */
-.timeline-row[data-phase-start] {
-  margin-top: 8px;
-}
-
-/* The first phase needs no space above it. */
-.room-action-list > .timeline-row[data-phase-start]:first-child {
-  margin-top: 0;
-}
-
-/* The Add area and Timeline repairs share the timeline's width and its content edge. */
-.room-actions-workbench > .room-add,
+/* Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench .room-action-repairs,
-.room-actions-workbench .room-action-not-reached,
-.ship-phase > .room-add {
+.room-actions-workbench .room-action-not-reached {
   width: var(--timeline-working-width, min(60rem, 100%));
   padding-left: var(--timeline-title-x);
 }
@@ -2203,30 +2258,19 @@
   padding-left: var(--timeline-title-x);
 }
 
-/* The Objects line is a row of entries, not a timeline-wide list. */
-.room-add .room-add-entries {
-  width: auto;
-  min-width: 0;
-}
-
-/*
- * Every banner keeps its title, separators, tags and inline items on one centre
- * line, with symmetric padding; the spine dot sits at the band's centre.
- */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+/* Every marker keeps its name, chips and inline items on one centre line. */
+.timeline-row[data-timeline-row-kind='boundary'] {
   align-items: center;
-  padding-block: 4px;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='sentence'] {
-  /* A title line is as tall as one control, so every banner title sits alike. */
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
+  /* A name line is as tall as one control, so every marker sits alike. */
   min-height: var(--timeline-control-height, 26px);
-  gap: 4px 14px;
+  gap: 4px 10px;
   line-height: 1.25;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+.timeline-row[data-timeline-row-kind='boundary']
   > [data-timeline-cell='sentence']
   > [data-timeline-cell='label']
   > * {
@@ -2276,29 +2320,33 @@
   line-height: 1;
 }
 
+/* A Trial god's boon: a whole heart for the chosen god, a broken one for the spurned. */
+.row-reward-devotion {
+  display: grid;
+  width: var(--badge-small);
+  height: var(--badge-small);
+  place-items: center;
+  border-radius: 50%;
+  background: var(--finding);
+}
+
+.row-reward-devotion svg {
+  display: block;
+  width: 72%;
+  height: 72%;
+  fill: #1b1c22;
+}
+
+.row-reward-devotion .row-reward-devotion-crack {
+  fill: none;
+  stroke: var(--finding);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .row-reward-arrow {
   color: var(--muted);
-}
-
-/* Below the timeline the Add area has no title and hides when there is nothing to add. */
-.room-add-title {
-  display: none;
-  margin: 0;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.room-add[data-empty] {
-  display: none;
-}
-
-.room-add-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
 }
 
 .room-workbench-panel {
@@ -2308,60 +2356,6 @@
 /* The room's readable width: the Timeline and Overview stop growing here (see responsive.css). */
 .room-overview-workbench {
   max-width: 60rem;
-}
-
-/*
- * The medium and wide bands: the optional actions beside the Timeline, always
- * present so the Timeline keeps its place, in view while a tall Timeline
- * scrolls. The Timeline grows to 60rem; the side column takes what is left.
- */
-@container room-panel (min-width: 63.5rem) {
-  :is(.room-actions-workbench, .ship-phase):has(> .room-add) {
-    grid-template-columns: minmax(46rem, 60rem) minmax(16rem, 1fr);
-    justify-content: start;
-    align-items: start;
-    column-gap: 1.5rem;
-  }
-
-  :is(.room-actions-workbench, .ship-phase):has(> .room-add) > * {
-    grid-column: 1;
-  }
-
-  /*
-   * One row: the timeline column beside the Add area, so the panel is only as tall
-   * as the taller of the two and the column sticks while the timeline scrolls.
-   */
-  :is(.room-actions-workbench, .ship-phase) > .room-add,
-  :is(.room-actions-workbench, .ship-phase) > .room-add[data-empty] {
-    position: sticky;
-    top: 52px;
-    display: grid;
-    grid-row: 1;
-    grid-column: 2;
-    align-content: start;
-    align-self: start;
-    gap: 12px;
-    width: auto;
-    max-height: calc(100 * var(--app-vh, 1vh) - 72px);
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-  }
-
-  .room-add-title {
-    display: block;
-  }
-
-  .room-add .room-add-line {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .room-add .room-add-entries {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 .hub-timeline-map-marker[data-plan-end='pastEnd'] {
@@ -2375,12 +2369,6 @@
 }
 
 /* Doors on the Timeline: the Doors open row's door chips, its editor and the room's last row. */
-
-.timeline-doors-open-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
 
 .timeline-door-chips {
   display: inline-flex;
@@ -2407,6 +2395,76 @@
 
 .timeline-door-chip[data-unavailable] {
   opacity: 0.5;
+}
+
+/*
+ * The Doors open moment: its name and chips are one button, lit together as one
+ * selection while hovered, focused or open.
+ */
+.timeline-banner-title:has(> .doors-moment-trigger) {
+  max-width: none;
+  align-self: stretch;
+}
+
+.doors-moment-trigger {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin-inline: -6px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.doors-moment-trigger:hover,
+.doors-moment-trigger:focus-visible,
+.doors-moment-trigger[data-state='open'] {
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 10%, transparent);
+}
+
+.doors-moment-trigger:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 2px;
+}
+
+button.doors-moment-trigger[data-has-findings] {
+  box-shadow: inset 0 0 0 2px var(--finding);
+}
+
+.doors-moment-trigger .timeline-door-chip[data-missing] {
+  border-color: color-mix(in srgb, var(--attention) 60%, transparent);
+  background: color-mix(in srgb, var(--attention) 9%, transparent);
+}
+
+.doors-moment-trigger .timeline-door-chip[data-missing] .timeline-door-chip-blank {
+  color: var(--attention);
+  font-weight: 700;
+}
+
+.doors-moment-popover {
+  z-index: 50;
+  /* As wide as its widest row, within the viewport. */
+  width: max-content;
+  max-width: calc(100 * var(--app-vw) - 24px);
+  max-height: var(--radix-popover-content-available-height);
+  overflow: auto;
+  padding: 8px 10px 10px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+}
+
+/* The popover takes focus as it opens; its controls show focus, the popover itself does not. */
+.doors-moment-popover:focus {
+  outline: none;
 }
 
 /* A door chip to pick: the picked one lit, the others dim until hovered. */
@@ -2448,7 +2506,7 @@ button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
   box-shadow: inset 0 -2px 0 var(--selection-accent);
 }
 
-/* Ending the plan as a way out: a lavender square holding a stop glyph. */
+/* Ending the plan as a way out: an ivory square holding a flag. */
 .plan-end-chip {
   display: inline-flex;
   flex: 0 0 auto;
@@ -2462,10 +2520,10 @@ button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
 }
 
 .plan-end-chip-glyph {
-  width: 8px;
-  height: 8px;
-  border-radius: 1px;
+  width: 10px;
+  height: 11px;
   background: var(--plan-end);
+  clip-path: polygon(0 0, 100% 28%, 22% 56%, 22% 100%, 0 100%);
 }
 
 .timeline-leave-text {
@@ -2730,15 +2788,15 @@ button.timeline-chip {
   text-align: center;
 }
 
-.timeline-doors-detail-row {
-  padding: 4px 8px 10px calc(var(--timeline-row-start) + 3px);
-  border-radius: 0 0 6px 6px;
-  background: rgb(255 255 255 / 2.5%);
-}
-
-.timeline-doors-detail-row > .timeline-doors-detail {
+/* A marker's bigger content sits under it at the action indent, unbordered. */
+.doors-moment-popover > .timeline-doors-detail {
   display: grid;
   gap: 8px;
+}
+
+/* No size containment here: the popover takes its width from these rows. */
+.doors-moment-popover > .door-workbench {
+  container-type: normal;
 }
 
 /* The side room a Returned row comes back from: its chip and short name together. */
@@ -2804,38 +2862,6 @@ button.timeline-chip {
   padding-left: 12px;
 }
 
-/* A banner title that shows or hides its editor fills the line up to the banner's controls. */
-.timeline-banner-title:has(> .timeline-banner-toggle) {
-  max-width: none;
-  align-self: stretch;
-}
-
-.timeline-banner-toggle {
-  display: inline-flex;
-  flex: 1 1 auto;
-  align-items: center;
-  align-self: stretch;
-  gap: 6px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.timeline-banner-toggle:focus-visible {
-  outline: 2px solid var(--selection-accent);
-  outline-offset: 2px;
-}
-
-.timeline-banner-toggle-caret {
-  width: 0.8rem;
-  color: var(--muted);
-}
-
 /* A press row: the door, its reward before, the new reward, then every door as it leaves them. */
 .timeline-row[data-door-press] > [data-timeline-cell='money'] {
   display: none;
@@ -2884,33 +2910,6 @@ button.timeline-chip {
   color: #f2ede5;
 }
 
-/* Hub Overview and Timeline: the list beside the map, the map on top when narrow. */
-.hub-overview-layout {
-  display: grid;
-  /* One compact list width on both tabs, so switching tabs never moves the map. */
-  grid-template-columns: 24rem minmax(0, 1fr);
-  gap: 12px;
-  min-width: 0;
-  margin-top: 12px;
-}
-
-.hub-overview-layout > .hub-board-map {
-  position: sticky;
-  top: 12px;
-  align-self: start;
-}
-
-@container (max-width: 44rem) {
-  .hub-overview-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hub-overview-layout > .hub-board-map {
-    position: static;
-    order: -1;
-  }
-}
-
 .hub-overview-rewards,
 .hub-timeline-column {
   display: grid;
@@ -2942,19 +2941,6 @@ button.timeline-chip {
   letter-spacing: inherit;
 }
 
-.hub-door-order-note {
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hub-board-map > .room-map-viewport > .room-map-canvas {
-  max-width: max(16rem, calc(var(--hub-map-height-cap, 100 * var(--app-vh) - 18rem) * 16 / 9));
-}
-
 .hub-board-status-line {
   margin: 0;
   padding: 5px 10px;
@@ -2975,10 +2961,35 @@ span.hub-board-status-line {
   display: none;
 }
 
+/* The Hub's list column keeps one compact width on both tabs, so switching tabs never moves the map. */
+.hub-map-columns.room-map-columns {
+  grid-template-columns: 22rem minmax(26rem, 1fr);
+}
+
+@container room-map-workbench (max-width: 56rem) {
+  .hub-map-columns.room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-map-columns > .room-map-controls-column > * {
+    max-width: 30rem;
+  }
+}
+
+@media (orientation: portrait) {
+  .hub-map-columns.room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-map-columns > .room-map-controls-column > * {
+    max-width: 30rem;
+  }
+}
+
 .hub-door-rows,
 .hub-segments {
   display: grid;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2987,9 +2998,10 @@ span.hub-board-status-line {
 .hub-door-rows {
   grid-template-columns: auto auto minmax(0, 1fr);
   column-gap: 12px;
+  row-gap: 0;
 }
 
-/* Rows share one grid, so the room column fits the longest room name. */
+/* Rows share one grid, so the room column fits the longest room name; alternate rows are shaded. */
 .hub-door-row {
   display: grid;
   grid-column: 1 / -1;
@@ -2998,16 +3010,16 @@ span.hub-board-status-line {
   column-gap: 12px;
   min-width: 0;
   padding: 2px 8px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 160ms ease;
+}
+
+.hub-door-row:nth-child(odd) {
+  background: rgb(255 255 255 / 2.5%);
 }
 
 .hub-door-row[data-linked='true'] {
-  border-color: #f5d386;
   background: rgb(245 211 134 / 8%);
 }
 
@@ -3017,7 +3029,6 @@ span.hub-board-status-line {
 
 @keyframes hub-door-row-recent {
   from {
-    border-color: #f5d386;
     background: rgb(245 211 134 / 28%);
   }
 }
@@ -3025,7 +3036,7 @@ span.hub-board-status-line {
 @media (prefers-reduced-motion: reduce) {
   .hub-door-row[data-recent='true'] {
     animation: none;
-    border-color: #f5d386;
+    background: rgb(245 211 134 / 8%);
   }
 }
 
@@ -3044,20 +3055,71 @@ span.hub-board-status-line {
   white-space: nowrap;
 }
 
+/*
+ * The Hub Timeline on one spine like a room's: each stay, the unused fountain and the
+ * leave are nodes on it, measured from the room Timeline's spine variables.
+ */
+.hub-spine {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding-left: var(--timeline-gutter);
+}
+
+.hub-spine::before {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: calc(var(--timeline-spine-x) - 1px);
+  width: 2px;
+  border-radius: 999px;
+  background: var(--timeline-spine);
+  content: '';
+}
+
+.hub-spine :is(.hub-segment, .hub-timeline-row) {
+  --hub-stripe: transparent;
+  position: relative;
+  border: 0;
+  border-radius: 0 6px 6px 0;
+  box-shadow: inset 3px 0 0 var(--hub-stripe);
+  background: transparent;
+}
+
+/* A node on the spine, level with the item's first line. */
+.hub-spine :is(.hub-segment, .hub-timeline-row)::before {
+  position: absolute;
+  top: 11px;
+  left: calc(var(--timeline-row-spine-x) - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--timeline-node);
+  content: '';
+}
+
+.hub-spine > .hub-timeline-row::before {
+  top: calc(50% - 4px);
+}
+
 /* Each Timeline segment: its stay's header, then its rerolls and fountain. */
 .hub-segment {
   display: grid;
   gap: 2px;
   min-width: 0;
-  padding: 2px 6px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
+  padding: 2px 6px 2px 9px;
 }
 
-.hub-segment[data-selected='true'] {
-  border-color: #f5d386;
-  background: rgb(245 211 134 / 6%);
+.hub-spine .hub-segment[data-selected='true'] {
+  --hub-stripe: #f5d386;
+  background: rgb(245 211 134 / 5%);
+}
+
+/* A stay's rerolls hang under its header, along a dashed guide. */
+.hub-segment .room-rerolls-list:not(:empty) {
+  margin-left: 10px;
+  padding-left: 8px;
+  border-left: 1px dashed rgb(255 255 255 / 14%);
 }
 
 .hub-segment[data-plan-end='pastEnd'] {
@@ -3165,6 +3227,11 @@ span.hub-board-status-line {
   min-height: 30px;
 }
 
+/* Room options keep a numbered room's overhang on every room, so their names align. */
+.room-option-icon > .biome-rail-icons-room-slot {
+  margin-inline-end: calc(var(--badge-overhang) * var(--badge-size));
+}
+
 .hub-segment-head .contextual-picker {
   flex: 0 1 auto;
   min-width: 0;
@@ -3199,9 +3266,8 @@ span.hub-board-status-line {
   color: #f5d386;
 }
 
-.hub-timeline-column > .hub-timeline-row {
-  border: 1px solid #34353e;
-  border-radius: 8px;
+.hub-spine > .hub-timeline-row {
+  padding-left: 9px;
 }
 
 /* Slot chips on one line, each with its order or slot number underneath. */
@@ -3243,15 +3309,6 @@ span.hub-board-status-line {
   line-height: 1;
 }
 
-/* A room object's inventory reads as one line: the object, then its slots. */
-.room-inventory-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 14px;
-  min-width: 0;
-}
-
 /* A Shrine slot's delivery delay follows its chip as a compact number on the chip's center line. */
 .hermes-shrine-delay {
   display: inline-flex;
@@ -3268,76 +3325,18 @@ span.hub-board-status-line {
   line-height: 1;
 }
 
-/* A Fields cage's slot is subscripted on its encounter's name. */
-.fields-cage-slot {
-  font-size: 0.7em;
-  vertical-align: sub;
-  line-height: 0;
-}
-
-/*
- * The Combat order header: one Timeline row's height, its label where row titles
- * start, its chips where banner decisions start, and no more gap than between rows.
- */
-.fields-cage-order {
-  display: flex;
-  min-height: 35px;
-  align-items: center;
-  column-gap: 14px;
-  margin-bottom: -8px;
-  padding-left: var(--timeline-title-x);
-}
-
-.fields-cage-order-label {
-  min-width: var(--timeline-banner-title-width);
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.fields-cage-order-chips {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Header chips take the Timeline's control height, the cage's number a smaller badge. */
-.fields-cage-order-chips .contextual-picker-trigger.timeline-chip {
-  width: var(--timeline-control-height);
-  min-width: var(--timeline-control-height);
-  height: var(--timeline-control-height);
-  min-height: var(--timeline-control-height);
-}
-
-.fields-cage-order-chips .timeline-chip-badge {
-  min-width: 0;
-  padding: 0 2px;
-  border-radius: 4px;
-  font-size: 0.56rem;
-  line-height: 11px;
-}
-
 /* Slot chips keep their own width; the Overview's label-column layout does not apply. */
 .numbered-slot > .field-control-inline,
 .numbered-slot-chip > .field-control-inline,
 .numbered-slot-chip > .reward-value-editor,
 .room-overview-workbench .numbered-slots .field-control-inline,
 .room-overview-workbench .numbered-slots .reward-value-editor,
-.room-overview-workbench .room-inventory-line > :is(.field-control-inline, .reward-value-editor) {
+.room-object-inventory > :is(.field-control-inline, .reward-value-editor) {
   display: inline-flex;
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
   max-width: none;
-}
-
-.room-overview-workbench .room-inventory-line {
-  display: flex;
-  flex-wrap: wrap;
 }
 
 /* A toggle that cannot change is gray and locked, apart from a dim off toggle. */
@@ -3390,21 +3389,11 @@ span.hub-board-status-line {
   padding-left: 0;
 }
 
-/* Each object keeps its own line: its toggle, then its slots and choices when on. */
-.room-overview-workbench .room-overview-panel .room-contract-pedestal {
-  padding-left: var(--overview-subrow-indent);
-}
-
 .room-object-fixed {
   display: inline-grid;
   width: var(--timeline-control-height, 26px);
   height: var(--timeline-control-height, 26px);
   place-items: center;
-}
-
-/* An object's toggle centers on the 30px row its slot chips and the presence rows share. */
-.room-inventory-line > :is(.icon-toggle, .icon-toggle-disabled, .room-object-fixed) {
-  margin-block: 2px;
 }
 
 .room-object-inventory {
@@ -3535,7 +3524,7 @@ span.hub-board-status-line {
 
 /* A Timeline row holding the control whose map point is under the pointer takes the map row's tint. */
 .room-action-list > .timeline-row:has([data-map-pointed]) {
-  background: rgb(245 211 134 / 7%);
+  background-color: rgb(245 211 134 / 7%);
 }
 
 /* A point under the pointer rings like a previewed one. */
@@ -3548,11 +3537,16 @@ span.hub-board-status-line {
 }
 
 /* The control whose map point is under the pointer, in the map preview's dashed ring. */
-[data-map-pointed]:not(.room-layout-row),
-.room-layout-row[data-map-pointed] > :not(.room-layout-label) {
+[data-map-pointed] {
   border-radius: 7px;
   outline: 2px dashed #fff4c7;
   outline-offset: 2px;
+}
+
+/* A chip on the Doors open line rings inside itself, which the line's title would clip outside. */
+.doors-moment-trigger .timeline-door-chip[data-map-pointed] {
+  border-radius: 6px;
+  outline-offset: -2px;
 }
 
 .room-map-column > .room-map-viewport > .room-map-canvas {
@@ -3625,6 +3619,11 @@ span.hub-board-status-line {
   cursor: pointer;
 }
 
+.room-action-not-reached-caret {
+  width: 0.8rem;
+  color: var(--muted);
+}
+
 .room-action-not-reached-count {
   color: var(--muted);
   font-weight: 400;
@@ -3662,4 +3661,211 @@ span.hub-board-status-line {
 .room-action-not-reached > .room-action-list[inert] {
   block-size: 0;
   overflow: hidden;
+}
+
+/* A live thing's verb list wraps its chip without a box of its own. */
+.live-action-menu {
+  display: contents;
+}
+
+/* A thing standing for a row off the Timeline holds that row's finding anchor. */
+.live-chip-anchor {
+  display: inline-flex;
+}
+
+/*
+ * The live row: what can be done next, in its groups. A dashed ivory card with a faint hatch,
+ * not yet authored; its chips stay dim until the row is hovered or focused.
+ */
+.timeline-row.timeline-live-row {
+  --timeline-row-lead: 10px;
+  --timeline-row-stripe: transparent;
+  border-radius: 4px;
+  outline: 1.5px dashed #a59f8f;
+  outline-offset: -1.5px;
+  box-shadow: none;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(232 226 210 / 5%) 0 1.5px,
+    transparent 1.5px 7px
+  );
+  background-repeat: repeat;
+  background-size: auto;
+}
+
+.timeline-row.timeline-live-row:is(:hover, :focus-within) {
+  outline-color: #cfc8b6;
+}
+
+/* The live row has no gold or trash: its groups run to the row's end. */
+.timeline-row.timeline-live-row > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+.timeline-row.timeline-live-row
+  > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
+  display: none;
+}
+
+/* The live row is the spine's last slot: a hollow dashed dot. */
+.room-action-list > .timeline-row.timeline-live-row::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--timeline-node);
+  border-radius: 50%;
+  background: var(--timeline-divider-mask);
+  content: '';
+}
+
+/* "Next" stands where an action row has its verb. */
+.live-row-lead {
+  flex: 0 0 auto;
+  color: #c9c3b4;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* The groups wrap beside "Next", never under it. */
+.timeline-live-row .live-row-groups {
+  min-width: 0;
+  flex: 1 1 0;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.timeline-live-row:is(:hover, :focus-within) .live-row-groups {
+  opacity: 1;
+}
+
+.live-row-groups {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.live-row-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--badged-chip-gap, 6px);
+}
+
+/* A required or optional group stands in a bracket of its live row colour; objects stand bare. */
+.live-row-group:is([data-live-group='required'], [data-live-group='optional']) {
+  position: relative;
+  padding-inline: 7px;
+}
+
+.live-row-group[data-live-group='required'] {
+  --live-group-colour: var(--legend-required);
+  --live-group-style: solid;
+}
+
+.live-row-group[data-live-group='optional'] {
+  --live-group-colour: var(--legend-optional);
+  --live-group-style: dashed;
+}
+
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::before,
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::after {
+  position: absolute;
+  inset-block: -2px;
+  width: 4px;
+  border: 1.5px var(--live-group-style) var(--live-group-colour);
+  content: '';
+  pointer-events: none;
+}
+
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::before {
+  inset-inline-start: 0;
+  border-inline-end: 0;
+}
+
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::after {
+  inset-inline-end: 0;
+  border-inline-start: 0;
+}
+
+.timeline-chip.live-chip[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
+.timeline-chip.live-chip.live-chip-text-face {
+  width: auto;
+  height: auto;
+  padding: 3px 8px;
+  color: var(--text);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* A gap's `+` centres on the spine, midway between its row and the one above. */
+.timeline-gap-control {
+  position: absolute;
+  top: calc(-0.5 * (var(--timeline-row-gap) + var(--timeline-row-lead)) - 9px);
+  left: calc(var(--timeline-row-spine-x) - 9px);
+  z-index: 3;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--timeline-spine);
+  border-radius: 50%;
+  background: #1b1c22;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.timeline-row:hover > .timeline-gap-control,
+.timeline-gap-control:is(:focus-visible, :hover, [data-state='open']) {
+  opacity: 1;
+}
+
+.timeline-gap-control:is(:hover, :focus-visible, [data-state='open']) {
+  border-color: var(--selection-accent);
+  color: var(--selection-accent);
+}
+
+/* A gap's menu: what can be inserted there, then Reset from here. */
+.timeline-gap-menu {
+  z-index: 50;
+  display: grid;
+  gap: 8px;
+  max-width: min(32rem, calc(100 * var(--app-vw) - 24px));
+  padding: 8px 10px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  color: var(--text);
+}
+
+.timeline-gap-menu > .live-row-groups + .timeline-gap-reset {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.timeline-gap-reset {
+  display: flex;
+  align-items: center;
+  justify-self: stretch;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.timeline-gap-reset:is(:hover, :focus-visible) {
+  background: rgb(255 255 255 / 6%);
 }

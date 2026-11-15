@@ -1,0 +1,3931 @@
+{
+  "F/golden-f-start F_Opening01": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-cut-end-rerolls",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFConversionFrontierProject(GiftDrop)",
+        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
+        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
+    }
+  ],
+  "F/golden-f-b1-e1 F_Combat02": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-cut-end-rerolls",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFConversionFrontierProject(GiftDrop)",
+        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
+        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b2-e1 F_Combat03": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/underworld-f-cut-end-rerolls", "underworld/underworldFRerollsProject"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat",
+        "#2 reroll:r1": "postOutgoing"
+      }
+    }
+  ],
+  "F/golden-f-b3-e1 F_Combat04": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b4-e1 F_Combat05": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b5-e1 F_Combat06": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/underworld-f-switches"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactChallengeSwitch": "postOutgoing",
+        "#3 interactAcquisitionEntry:challengeSwitch:reward": "postOutgoing",
+        "#4 interactAcquisitionEntry:challengeSwitch:nectar": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["execution/underworld-f-switches-failed-left"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactChallengeSwitch": "postOutgoing",
+        "#3 interactAcquisitionEntry:challengeSwitch:reward": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/nemesis-f-trait-trade"],
+      "rows": {
+        "#1 interactEncounter:Encounter": "standard afterCombat",
+        "#2 interactAcquisitionEntry:nemesisGenerated:Encounter:result": "standard afterCombat"
+      }
+    },
+    {
+      "entries": ["checkpoint/nemesis-f-pom-sea-star"],
+      "rows": {
+        "#1 interactEncounter:Encounter": "standard afterCombat",
+        "#2 interactAcquisitionEntry:nemesisGenerated:Encounter:result": "standard afterCombat",
+        "#3 interactAcquisitionEntry:seaStarDuplicate:[acquisitionEntry,Underworld,F,[acquisitionSite,Underworld,F,[occurrence,Underworld,F,golden-f-b5-e1],nemesisGenerated:Encounter],result]:self:seaStarDuplicate": "standard afterCombat"
+      }
+    }
+  ],
+  "F/golden-f-b6-e1 F_MiniBoss01": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b7-e1 F_Combat11": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b8-e1 F_Combat12": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/underworld-f-switches"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactChallengeSwitch": "postOutgoing",
+        "#3 interactAcquisitionEntry:challengeSwitch:reward": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["execution/underworld-f-switches-failed-left"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactChallengeSwitch": "postOutgoing"
+      }
+    }
+  ],
+  "F/golden-f-b9-e1 F_Combat14": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-b10-e1 F_Combat15": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-preboss-shop:boss F_Boss01": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
+        "fresh-file/createFreshFileGeneratedComposition"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-preboss-shop:postboss F_PostBoss01": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing",
+        "#4 purchaseStygianWellOffer:initial:secondRight": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/underworld-ixion-chaos"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
+      }
+    },
+    {
+      "entries": [
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-f-stygian-well",
+        "underworld/fWellDuplicateRefill"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing",
+        "#4 purchaseStygianWellOffer:initial:secondRight": "postOutgoing",
+        "#5 purchaseStygianWellOffer:travelDealRefill": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/underworld-f-pool", "underworld/fPoolSaleCleared"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 sellPurgingPoolTrait:left": "postOutgoing",
+        "#3 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["underworld/underworldFRerollsProject"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing",
+        "#4 purchaseStygianWellOffer:initial:secondRight": "postOutgoing",
+        "#5 purchaseStygianWellOffer:travelDealRefill": "postOutgoing",
+        "#6 rerollStygianWell:r1": "postOutgoing",
+        "#7 purchaseStygianWellOffer:r1:healing": "postOutgoing",
+        "#8 rerollPurgingPool:r1": "postOutgoing",
+        "#9 sellPurgingPoolTrait:middle:r1": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["fresh-file/createFreshFileGeneratedComposition"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b1-e1 G_Combat01": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/underworld-g-locked-doors"],
+      "rows": {
+        "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#3 unlockExit:exit2": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactGorgon:Encounter": "standard afterCombat"
+      }
+    }
+  ],
+  "G/golden-g-b2-e1 G_Combat02": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b3-e1 G_Story01": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer"
+      ],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b4-e1 G_Combat10": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b6-e1 G_MiniBoss01": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b7-e1 G_Combat12": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    },
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-preboss-shop:boss G_Boss01": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-preboss-shop:postboss G_PostBoss01": [
+    {
+      "entries": [
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "H/golden-h-combat02 H_Combat02": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": {
+        "#1 completeFieldsCage:Cage02": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#3 completeFieldsCage:Cage01": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage1": "encounterEnd Cage01"
+      }
+    }
+  ],
+  "H/golden-h-combat09 H_Combat09": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": {
+        "#1 completeFieldsCage:Cage02": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#3 completeFieldsCage:Cage01": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage1": "encounterEnd Cage01"
+      }
+    },
+    {
+      "entries": ["underworld/echoReplayUnresolvedHammer"],
+      "rows": {
+        "#1 completeFieldsCage:Cage02": "standard afterCombat",
+        "#2 completeFieldsCage:Cage01": "standard afterCombat",
+        "#3 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02"
+      }
+    }
+  ],
+  "H/golden-h-miniboss01 H_MiniBoss01": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "H/golden-h-combat05 H_Combat05": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "underworld/hammerBridgeRoute"
+      ],
+      "rows": {
+        "#1 completeFieldsCage:Cage03": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage3": "encounterEnd Cage03",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#5 completeFieldsCage:Cage01": "standard afterCombat",
+        "#6 interactLocalReward:cages:cage1": "encounterEnd Cage01"
+      }
+    },
+    {
+      "entries": ["checkpoint/nemesis-h-fields"],
+      "rows": {
+        "#1 interactEncounter:Passive": "encounterEnd Passive",
+        "#2 completeFieldsCage:Cage03": "standard afterCombat",
+        "#3 interactAcquisitionEntry:nemesisGenerated:Passive:result": "encounterEnd Passive",
+        "#4 interactLocalReward:cages:cage3": "encounterEnd Cage03",
+        "#5 completeFieldsCage:Cage02": "standard afterCombat",
+        "#6 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#7 completeFieldsCage:Cage01": "standard afterCombat",
+        "#8 interactLocalReward:cages:cage1": "encounterEnd Cage01"
+      }
+    }
+  ],
+  "H/golden-h-preboss-shop:boss H_Boss01": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "H/golden-h-preboss-shop:postboss H_PostBoss01": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/echoReplayUnresolvedHammer"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "I/golden-i-preboss I_PreBoss02": [
+    {
+      "entries": ["execution/underworld-fghi-empty-shop-group"],
+      "rows": { "#1 interactShopOffer:PremiumProgress": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/underworld-echo-gold-anvil-duplicate"],
+      "rows": {
+        "#1 interactShopOffer:PremiumProgress": "standard afterCombat",
+        "#2 interactAcquisitionEntry:roomExit:echoDoubleShopReward": "standard afterCombat"
+      }
+    }
+  ],
+  "I/golden-i-preboss:boss I_Boss01": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "underworld/echoHammerReplayMissing",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-0-0 F_Combat01": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/01",
+        "fresh-file/frontier/02",
+        "fresh-file/frontier/03",
+        "fresh-file/frontier/04",
+        "fresh-file/frontier/05",
+        "fresh-file/frontier/06",
+        "fresh-file/frontier/07",
+        "fresh-file/frontier/08",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-1-0 F_Combat02": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/04",
+        "fresh-file/frontier/05",
+        "fresh-file/frontier/06",
+        "fresh-file/frontier/07",
+        "fresh-file/frontier/08",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-2-0 F_Combat09": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/04",
+        "fresh-file/frontier/05",
+        "fresh-file/frontier/06",
+        "fresh-file/frontier/07",
+        "fresh-file/frontier/08",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-3-0 F_Combat07": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/04",
+        "fresh-file/frontier/05",
+        "fresh-file/frontier/06",
+        "fresh-file/frontier/07",
+        "fresh-file/frontier/08",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-4-0 F_Combat19": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-6-0 F_Combat11": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-7-0 F_Combat13": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-8-0 F_Combat15": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/09",
+        "fresh-file/frontier/10",
+        "fresh-file/frontier/11",
+        "fresh-file/frontier/12",
+        "fresh-file/frontier/13",
+        "fresh-file/frontier/14",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-9-0 F_Combat17": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-preboss-shop:boss F_Boss01": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/withRetainedFreshFilePostboss(all)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-preboss-shop:postboss F_PostBoss01": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/createFreshFileFProject",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    },
+    {
+      "entries": ["fresh-file/withRetainedFreshFilePostboss(all)"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 sellPurgingPoolTrait:left": "postOutgoing"
+      }
+    }
+  ],
+  "G/golden-g-intro G_Intro": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": {
+        "#1 interactEris": "standard afterCombat",
+        "#2 interactAcquisitionEntry:erisGift:gift": "standard afterCombat"
+      }
+    }
+  ],
+  "G/golden-g-b3-e1 G_Combat04": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla",
+        "fresh-file/withNewHFieldsRoom(min)",
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03",
+        "fresh-file/frontier/15",
+        "fresh-file/frontier/16",
+        "fresh-file/frontier/17",
+        "fresh-file/frontier/18",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "H/golden-h-combat05 H_MiniBoss02": [
+    {
+      "entries": [
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "underworld/echoHammerReplayMissing",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-opening N_Opening01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-n-partial-hub",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-entry-frontier-resolved",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
+    },
+    {
+      "entries": ["checkpoint/surface-n-quick-buck"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard beforeCombat",
+        "#2 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-opening],self]:option1:quickBuckGold": "standard beforeCombat"
+      }
+    }
+  ],
+  "N/surface-n-prehub N_PreHub01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-n-partial-hub",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-entry-frontier-resolved",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    },
+    {
+      "entries": ["checkpoint/surface-n-buried-treasure"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat",
+        "#2 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:smallGold": "standard afterCombat",
+        "#3 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:tinyGold1": "standard afterCombat",
+        "#4 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:tinyGold2": "standard afterCombat",
+        "#5 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:minorHeal1": "standard afterCombat",
+        "#6 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:minorHeal2": "standard afterCombat",
+        "#7 interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-prehub],source]:option1:bones": "standard afterCombat"
+      }
+    }
+  ],
+  "N/surface-n-combat02 N_Combat02": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/dream-start-n-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/dream-mixed-handoff",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat05 N_Combat05": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/dream-start-n-opening",
+        "execution/surface-n-partial-hub",
+        "execution/surface-p-elite-switch",
+        "checkpoint/dream-mixed-handoff",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": [
+        "execution/surface-travel-deal-refill-anvil",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-n-natural-selection-frontier"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat09 N_Combat09": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["checkpoint/surface-n-quick-buck"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat11 N_Combat11": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/dream-start-n-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/dream-mixed-handoff",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat23 N_Combat23": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/dream-start-n-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/dream-mixed-handoff",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-miniBoss01 N_MiniBoss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/dream-start-n-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/dream-mixed-handoff",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat05-sideDoor2 N_Sub07": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-n-partial-hub",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat05-sideDoor1 N_Sub02": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-n-partial-hub",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat02-sideDoor1 N_Sub01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-partial-hub",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat11-sideDoor1 N_Sub01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-complete-hub-frontier",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": [
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-start-q-opening"
+      ],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:secondRight": "postOutgoing"
+      }
+    },
+    {
+      "entries": [
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint"
+      ],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 purchaseHermesShrineOffer:initial:secondRight": "postOutgoing"
+      }
+    }
+  ],
+  "N/surface-n-preboss:boss N_Boss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    },
+    {
+      "entries": ["surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint"],
+      "rows": {
+        "#1 collectRequiredReward": "standard afterCombat",
+        "#2 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]": "encounterEnd Encounter"
+      }
+    }
+  ],
+  "N/surface-n-preboss:postboss N_PostBoss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-n",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-n-phial-intermediate-fountain",
+        "checkpoint/surface-n-natural-selection-frontier",
+        "checkpoint/surface-n-quick-buck",
+        "checkpoint/surface-n-buried-treasure",
+        "checkpoint/surface-n-resources",
+        "checkpoint/surface-n-shrine-side-room-delivery",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "checkpoint/surface-n-story-board",
+        "checkpoint/surface-n-ten-open-invalid",
+        "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
+        "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-shrine-travel-deal"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:travelDealRefill": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "postOutgoing"
+      }
+    }
+  ],
+  "O/surface-o-combat04 O_Combat04": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    },
+    {
+      "entries": [
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-start-q-opening"
+      ],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft]": "encounterEnd Combat1"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-shrine-travel-deal"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "encounterEnd Combat1"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "encounterEnd Combat1"
+      }
+    },
+    {
+      "entries": ["surface/surfaceNORerollsProject"],
+      "rows": {
+        "#1 reroll:r1": "shipPreCombat wheel1",
+        "#2 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#3 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/surface-o-combat07 O_Combat07": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-no",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject"
+      ],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    },
+    {
+      "entries": ["execution/surface-shrine-deliveries", "execution/surface-start-q-opening"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:travelDealRefill": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["execution/surface-shrine-rushed-unranked"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:travelDealRefill": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-no-hermes-shrine-delivery"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["surface/oShipWheelPickupBeforeDeferredEndEffects"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 chooseRewardWheel:wheel2": "shipPreCombat wheel2",
+        "#4 interactWheelReward:wheel2": "shipPostCombat wheel2"
+      }
+    }
+  ],
+  "O/surface-o-combat01 O_Combat01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    },
+    {
+      "entries": [
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-start-q-opening"
+      ],
+      "rows": {
+        "#1 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]": "encounterEnd Intro",
+        "#2 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#3 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#4 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]": "encounterEnd Combat1"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactEncounter:Combat1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/surface-o-devotion O_Devotion01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-no",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
+        "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-no-hermes-shrine-delivery"],
+      "rows": {
+        "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
+        "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat",
+        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:secondLeft]": "encounterEnd Encounter"
+      }
+    }
+  ],
+  "O/surface-o-story O_Story01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "O/surface-o-combat02 O_Combat02": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/surface-o-preboss:boss O_Boss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-trait-fences",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "O/surface-o-preboss:postboss O_PostBoss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-no",
+        "checkpoint/surface-no-hermes-shrine-delivery",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject",
+        "surface/surfaceNORerollsProject",
+        "surface/oShipWheelPickupBeforeDeferredEndEffects"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["execution/surface-trait-fences"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#5 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:first]": "postOutgoing"
+      }
+    }
+  ],
+  "P/surface-p-1-1-p_combat03 P_Combat03": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "encounterEnd Combat",
+        "#3 interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "encounterEnd Combat"
+      }
+    }
+  ],
+  "P/surface-p-2-1-p_combat02 P_Combat02": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-3-1-p_combat04 P_Combat04": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-4-1-p_combat07 P_Combat07": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-5-1-p_miniboss01 P_MiniBoss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-6-1-p_combat10 P_Combat10": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    },
+    {
+      "entries": ["execution/surface-p-elite-switch"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactChallengeSwitch": "postOutgoing",
+        "#3 interactAcquisitionEntry:challengeSwitch:reward": "postOutgoing"
+      }
+    }
+  ],
+  "P/surface-p-7-1-p_story01 P_Story01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "execution/surface-p-elite-switch",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-8-1-p_combat12 P_Combat12": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-preboss-shop:boss P_Boss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-preboss-shop:postboss P_PostBoss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-generated-precombat",
+        "execution/surface-travel-deal-refill-anvil",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nop",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    },
+    {
+      "entries": [
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-start-q-opening"
+      ],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:secondRight": "postOutgoing"
+      }
+    }
+  ],
+  "Q/surface-q-first-miniboss-1 Q_MiniBoss02": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "Q/surface-q-second-miniboss-1 Q_MiniBoss03": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "Q/surface-q-preboss:boss Q_Boss01": [
+    {
+      "entries": [
+        "execution/surface-nopq",
+        "execution/surface-q-shop-correlation",
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-travel-deal-refill-anvil",
+        "execution/surface-start-q-opening",
+        "checkpoint/surface-encounter-showcase",
+        "checkpoint/surface-anvil",
+        "checkpoint/surface-ordinary-hex-path",
+        "checkpoint/surface-selene-hex-path",
+        "checkpoint/surface-scheduled-lifecycle",
+        "checkpoint/surface-nopq",
+        "surface/createRepresentativeNOPQShopTraitProject"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "Q/surface-q-preboss Q_PreBoss01": [
+    {
+      "entries": ["execution/surface-q-shop-correlation"],
+      "rows": {
+        "#1 interactShopOffer:MixedProgress1": "standard afterCombat",
+        "#2 interactShopOffer:MixedProgress2": "standard afterCombat"
+      }
+    },
+    {
+      "entries": [
+        "execution/surface-shrine-deliveries",
+        "execution/surface-shrine-rushed-unranked",
+        "execution/surface-start-q-opening"
+      ],
+      "rows": {
+        "#1 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,P,surface-p-preboss-shop:postboss,initial:secondRight]": "standard afterCombat"
+      }
+    },
+    {
+      "entries": ["execution/surface-travel-deal-refill-anvil"],
+      "rows": {
+        "#1 interactShopOffer:PremiumProgress": "standard afterCombat",
+        "#2 interactAcquisitionEntry:roomExit:travelDealRefill": "standard afterCombat"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-anvil"],
+      "rows": { "#1 interactShopOffer:PremiumProgress": "standard afterCombat" }
+    }
+  ],
+  "Q/Q:start Q_Intro": [
+    {
+      "entries": [
+        "execution/dream-shrine-pending",
+        "execution/dream-start-n-opening",
+        "checkpoint/dream-mixed-handoff"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "Q/dream-q-first-miniboss Q_MiniBoss02": [
+    {
+      "entries": [
+        "execution/dream-shrine-pending",
+        "execution/dream-start-n-opening",
+        "checkpoint/dream-mixed-handoff"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "Q/dream-q-ordinary Q_Combat01": [
+    {
+      "entries": ["execution/dream-shrine-pending"],
+      "rows": { "#1 purchaseHermesShrineOffer:initial:first": "postOutgoing" }
+    }
+  ],
+  "Q/dream-q-second-miniboss Q_MiniBoss03": [
+    {
+      "entries": [
+        "execution/dream-shrine-pending",
+        "execution/dream-start-n-opening",
+        "checkpoint/dream-mixed-handoff"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "Q/dream-q-preboss:boss Q_Boss01": [
+    {
+      "entries": [
+        "execution/dream-shrine-pending",
+        "execution/dream-start-n-opening",
+        "checkpoint/dream-mixed-handoff"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "H/golden-h-bridge01 H_Bridge01": [
+    {
+      "entries": [
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute"
+      ],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    },
+    {
+      "entries": ["underworld/echoReplayUnresolvedHammer"],
+      "rows": {
+        "#1 interactEncounter:Encounter": "standard afterCombat",
+        "#2 interactAcquisitionEntry:roomExit:echoLastReward:Encounter:Story_Echo_01:option1": "standard afterCombat"
+      }
+    }
+  ],
+  "O/surface-o-devotion O_Reprieve01": [
+    {
+      "entries": ["execution/surface-trait-fences"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat",
+        "#2 useFountain": "standard afterCombat"
+      }
+    }
+  ],
+  "O/O:start O_Intro": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "O/dream-o-first-ship O_Combat04": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/dream-o-second-ship O_Combat07": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/dream-o-miniboss O_MiniBoss02": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "O/dream-o-contract C_Boss01": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "O/dream-o-return-ship O_Combat01": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/dream-o-preboss:boss O_Boss01": [
+    {
+      "entries": ["execution/dream-o-skipped-ship"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "Q/dream-q-preboss:postboss Dream_PostBoss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-1-1 F_Combat02": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-2-1 F_Combat03": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-3-1 F_Combat04": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-4-1 F_Combat07": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-5-1 F_MiniBoss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-6-1 F_Combat06": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-7-2 F_Combat11": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-8-1 F_Combat12": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-9-1 F_Combat14": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-10-1 F_Combat13": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free F_PreBoss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free:boss F_Boss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free:postboss Dream_PostBoss02": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-prehub N_PreHub01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat01 N_Combat01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-preboss:boss N_Boss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-preboss:postboss Dream_PostBoss03": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-preboss-shop:boss F_Boss02": [
+    {
+      "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-intro:chaos Chaos_01": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b4-e1 G_Combat06": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/ixion-chaos-g-preboss-shop:boss G_Boss02": [
+    {
+      "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/ixion-chaos-g-preboss-shop:postboss G_PostBoss01": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "H/H:start H_Intro": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "H/a6b19a5f-d499-48d1-ae59-30aed524f968 H_Combat03": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": {
+        "#1 completeFieldsCage:Cage01": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#5 completeFieldsCage:Cage03": "standard afterCombat",
+        "#6 interactLocalReward:cages:cage3": "encounterEnd Cage03",
+        "#7 interactLocalReward:optionalRewards:optional1": "standard afterCombat",
+        "#8 interactLocalReward:optionalRewards:optional2": "standard afterCombat",
+        "#9 interactLocalReward:optionalRewards:optional3": "standard afterCombat",
+        "#10 interactAcquisitionEntry:[acquisitionSite,Dream,H,[occurrence,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968],artificerSource:[localReward,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968,optionalRewards,optional2]]:artificer:[localReward,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968,optionalRewards,optional2]:self": "standard afterCombat",
+        "#11 interactAcquisitionEntry:[acquisitionSite,Dream,H,[occurrence,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968],artificerSource:[localReward,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968,optionalRewards,optional1]]:artificer:[localReward,Dream,H,a6b19a5f-d499-48d1-ae59-30aed524f968,optionalRewards,optional1]:self": "standard afterCombat"
+      }
+    }
+  ],
+  "H/be377b53-889a-4f0a-9efd-2f1445a8a456 H_Combat15": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": {
+        "#1 completeFieldsCage:Cage01": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02"
+      }
+    }
+  ],
+  "H/78369aea-a352-409f-9ab6-0694e96e0339 H_Bridge01": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": {
+        "#1 interactEncounter:Encounter": "standard afterCombat",
+        "#2 interactAcquisitionEntry:roomExit:echoLastReward:Encounter:Story_Echo_01:option1": "standard afterCombat"
+      }
+    }
+  ],
+  "H/dream-user-h-combat05 H_Combat05": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": {
+        "#1 completeFieldsCage:Cage01": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#5 completeFieldsCage:Cage03": "standard afterCombat",
+        "#6 interactLocalReward:cages:cage3": "encounterEnd Cage03"
+      }
+    }
+  ],
+  "H/dream-user-h-preboss:boss H_Boss01": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "H/dream-user-h-preboss:postboss Dream_PostBoss01": [
+    {
+      "entries": ["checkpoint/dream-h-artificer-echo"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    }
+  ],
+  "G/ixion-chaos-g-preboss-shop:boss G_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-ixion-chaos"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b3-e2 B_Combat01": [
+    {
+      "entries": ["checkpoint/underworld-g-anomaly-roster"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/zagreus-contract-showcase C_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-zagreus-contract"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/zagreus-contract-return G_MiniBoss03": [
+    {
+      "entries": ["checkpoint/underworld-zagreus-contract"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "G/zagreus-contract-preboss-shop G_PreBoss01": [
+    {
+      "entries": ["checkpoint/underworld-zagreus-contract"],
+      "rows": { "#1 interactInfernalContractPedestal": "standard afterCombat" }
+    }
+  ],
+  "G/zagreus-contract-preboss-shop:boss G_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-zagreus-contract"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/zagreus-contract-preboss-shop:postboss G_PostBoss01": [
+    {
+      "entries": ["checkpoint/underworld-zagreus-contract"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "F/golden-f-preboss-shop F_PreBoss01": [
+    {
+      "entries": ["checkpoint/underworld-world-shop-travel-deal"],
+      "rows": {
+        "#1 interactShopOffer:MajorNonBoon": "standard afterCombat",
+        "#2 interactAcquisitionEntry:roomExit:travelDealRefill": "standard afterCombat"
+      }
+    }
+  ],
+  "F/midshop-pom-start F_Opening01": [
+    {
+      "entries": [
+        "checkpoint/underworld-f-midshop-pom-frontier",
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
+    }
+  ],
+  "F/midshop-pom-b1-e1 F_Combat02": [
+    {
+      "entries": [
+        "checkpoint/underworld-f-midshop-pom-frontier",
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/midshop-pom-b2-e1 F_Combat03": [
+    {
+      "entries": [
+        "checkpoint/underworld-f-midshop-pom-frontier",
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/midshop-pom-b3-e1 F_Combat04": [
+    {
+      "entries": [
+        "checkpoint/underworld-f-midshop-pom-frontier",
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/midshop-pom-b4-e1 F_Combat05": [
+    {
+      "entries": [
+        "checkpoint/underworld-f-midshop-pom-frontier",
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/midshop-pom-b5-e1 F_Shop01": [
+    {
+      "entries": ["checkpoint/underworld-f-midshop-pom-frontier"],
+      "rows": { "#1 interactShopOffer:Minor": "postOutgoing" }
+    },
+    {
+      "entries": ["underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"],
+      "rows": { "#1 interactShopOffer:Boon": "postOutgoing" }
+    }
+  ],
+  "F/c6f79692-8463-41bd-97cd-59c2e7fc96b2 F_Opening02": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard beforeCombat" }
+    }
+  ],
+  "F/e9c1775e-a04b-4ed2-b749-7ef344614cbe F_Combat02": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe],artificerSource:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]]:artificer:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]:self": "standard afterCombat"
+      }
+    }
+  ],
+  "F/230689a9-dea8-42c6-b04f-8ec9102223fd F_Combat03": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/8bf76f54-d35c-44dc-a243-4e3d1f37300c F_Combat08": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat",
+        "#2 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
+      }
+    }
+  ],
+  "F/62f19ad0-cfb9-4126-92b6-f810aa586612 F_Combat16": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactEncounter:Encounter": "standard afterCombat"
+      }
+    }
+  ],
+  "F/38689388-fd7d-4262-bc0c-c0951542cc3e F_MiniBoss01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/f4adb787-5267-4ce6-8712-e53744e505ff F_Reprieve01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#3 interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff],artificerSource:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]]:artificer:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]:self": "standard afterCombat"
+      }
+    }
+  ],
+  "F/c8e56805-e89c-407a-b916-ae40eaf9d710 F_Shop01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactShopOffer:Boon": "postOutgoing",
+        "#2 interactAcquisitionEntry:roomExit:travelDealRefill": "postOutgoing"
+      }
+    }
+  ],
+  "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/d476f7b4-5302-4e1a-9876-7f0dcbd17654 F_Combat06": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
+        "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat",
+        "#3 purchaseStygianWellOffer:initial:secondRight": "postOutgoing",
+        "#4 purchaseStygianWellOffer:travelDealRefill": "postOutgoing",
+        "#5 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
+      }
+    }
+  ],
+  "F/e157e3cb-37ae-40d9-92b0-f22621b672c3 F_PreBoss01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 interactInfernalContractPedestal": "standard afterCombat",
+        "#2 interactShopOffer:Boon": "standard afterCombat",
+        "#3 interactAcquisitionEntry:roomExit:travelDealRefill": "standard afterCombat"
+      }
+    }
+  ],
+  "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:boss F_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:postboss F_PostBoss01": [
+    {
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    }
+  ],
+  "P/surface-p-4-1-p_combat07 P_Combat11": [
+    {
+      "entries": ["checkpoint/surface-ordinary-hex-path", "checkpoint/surface-selene-hex-path"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat03 N_Combat03": [
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/256b5530-90c0-4d46-8591-e1a3ba51a32c N_Opening01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
+    }
+  ],
+  "N/9a3a7623-5793-4d4a-b705-a4e8701f9f01 N_PreHub01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/6d4b5657-716a-47c4-a567-dcd2987c5553 N_Combat10": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/85baccf3-5890-4e8a-ac02-9d7ebb688880 N_Combat11": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/ec57aeed-e302-4235-83ca-633a7286e0fa N_Combat14": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/93011544-e88e-44c9-b40b-fe26217b555d N_Combat15": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "N/60cef574-5328-42e6-b3de-0d6d50afc1ae N_Combat23": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 interactEncounter:Encounter": "standard afterCombat"
+      }
+    }
+  ],
+  "N/ec2e5036-c615-4467-bc77-30239bad62a2 N_Story01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "N/9f47fd20-4ed8-4e12-a0a5-e98f488a039f N_Sub03": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/4799357e-0c49-4f63-8027-4aa8c20b3329 N_PreBoss01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 interactShopOffer:MajorNonBoon": "standard afterCombat",
+        "#2 interactShopOffer:Boon": "standard afterCombat"
+      }
+    }
+  ],
+  "N/4799357e-0c49-4f63-8027-4aa8c20b3329:boss N_Boss02": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "N/4799357e-0c49-4f63-8027-4aa8c20b3329:postboss N_PostBoss01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    }
+  ],
+  "O/e2f90be5-7502-486c-9070-33274cc472d7 O_Combat04": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
+      }
+    }
+  ],
+  "O/b46a067c-07c0-4c4e-bb83-940a87b0c9b6 O_Devotion01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
+        "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat"
+      }
+    }
+  ],
+  "O/e4162a2e-23bb-4b61-bede-9a3c21ea7d01 O_Reprieve01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
+        "#2 useFountain": "standard afterCombat",
+        "#3 interactAcquisitionEntry:[acquisitionSite,Surface,O,[occurrence,Surface,O,e4162a2e-23bb-4b61-bede-9a3c21ea7d01],artificerSource:[incomingReward,Surface,O,e4162a2e-23bb-4b61-bede-9a3c21ea7d01]]:artificer:[incomingReward,Surface,O,e4162a2e-23bb-4b61-bede-9a3c21ea7d01]:self": "standard afterCombat"
+      }
+    }
+  ],
+  "O/052399e3-429f-4f4b-aa50-c6a25fac0f60 O_MiniBoss02": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "O/0a37274e-542a-40de-a121-a8d4bdd65041 O_Story01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "O/f5cd94da-1e74-40a0-8161-fc0c58c3f384 O_Combat10": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 chooseRewardWheel:wheel2": "shipPreCombat wheel2",
+        "#4 interactWheelReward:wheel2": "shipPostCombat wheel2"
+      }
+    }
+  ],
+  "O/85c1be67-d8b3-45d9-9ba1-679718f781c3 O_PreBoss01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactShopOffer:Boon": "standard afterCombat" }
+    }
+  ],
+  "O/85c1be67-d8b3-45d9-9ba1-679718f781c3:boss O_Boss02": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "O/85c1be67-d8b3-45d9-9ba1-679718f781c3:postboss O_PostBoss01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing"
+      }
+    }
+  ],
+  "P/59213773-32f1-4ccc-87a4-4eaf95e43b54 P_Combat16": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/b5108a85-1adf-42b3-9d55-dabf2a721156 Chaos_01": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "P/c34604d0-c4e3-4c26-8539-54a82158716f P_Combat07": [
+    {
+      "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/N:preboss:boss N_Boss01": [
+    {
+      "entries": ["checkpoint/surface-n-complete-hub-frontier"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "N/N:preboss:postboss N_PostBoss01": [
+    {
+      "entries": ["checkpoint/surface-n-complete-hub-frontier"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing"
+      }
+    }
+  ],
+  "N/surface-n-story N_Story01": [
+    {
+      "entries": ["checkpoint/surface-n-story-board"],
+      "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
+    }
+  ],
+  "P/surface-p-preboss-shop P_PreBoss01": [
+    {
+      "entries": ["surface/createRepresentativeNOPQShopTraitProject"],
+      "rows": { "#1 interactShopOffer:MajorNonBoon": "standard afterCombat" }
+    }
+  ],
+  "F/fresh-intro F_Combat01": [
+    {
+      "entries": [
+        "fresh-file/createFreshFileFirstSequence",
+        "fresh-file/createFreshFileGeneratedComposition",
+        "fresh-file/withRetainedFreshFileIntroCustomization"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/mature-start F_Opening01": [
+    {
+      "entries": ["fresh-file/createMatureCombat01Sequence"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
+    }
+  ],
+  "F/mature-combat01 F_Combat01": [
+    {
+      "entries": ["fresh-file/createMatureCombat01Sequence"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "H/new-h-combat04 H_Combat04": [
+    {
+      "entries": ["fresh-file/withNewHFieldsRoom(min)"],
+      "rows": {
+        "#1 completeFieldsCage:Cage01": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02"
+      }
+    },
+    {
+      "entries": [
+        "fresh-file/hFieldsIssues/00",
+        "fresh-file/hFieldsIssues/01",
+        "fresh-file/hFieldsIssues/02",
+        "fresh-file/hFieldsIssues/03"
+      ],
+      "rows": {
+        "#1 completeFieldsCage:Cage01": "standard afterCombat",
+        "#2 interactLocalReward:cages:cage1": "encounterEnd Cage01",
+        "#3 completeFieldsCage:Cage02": "standard afterCombat",
+        "#4 interactLocalReward:cages:cage2": "encounterEnd Cage02",
+        "#5 completeFieldsCage:Cage03": "standard afterCombat",
+        "#6 interactLocalReward:cages:cage3": "encounterEnd Cage03"
+      }
+    }
+  ]
+}

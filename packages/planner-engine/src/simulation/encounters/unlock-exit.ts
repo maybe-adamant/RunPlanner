@@ -6,7 +6,11 @@ import {
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { UnlockExitRoomAction } from '../../authored-project/model';
-import { unlockExitEncounterKey } from '../../authored-project/locked-exits';
+import {
+  UNLOCK_EXIT_ENVELOPE_KEY,
+  unlockExitEncounterKey,
+  unlockExitPhaseKey,
+} from '../../authored-project/locked-exits';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import type { EncounterEntryVowRanks } from '../arcana-fear';
@@ -19,16 +23,6 @@ import {
 import type { EncounterCustomizationUnsupportedReason, ResolvedEncounterPhase } from './model';
 import { encounterAdmissionAt } from './preparation';
 import { resolvedEncounterPhaseForDefinition } from './resolve';
-
-/**
- * A locked door's fight is a phase of its room outside the room's envelope,
- * one per door: these keys name it in history, never a declared slot.
- */
-export const UNLOCK_EXIT_ENVELOPE_KEY = 'unlockExit';
-
-export function unlockExitPhaseKey(exitKey: string): string {
-  return `unlockExit:${exitKey}`;
-}
 
 export function unlockExitPhaseAddress(
   room: OccurrenceAddress,
@@ -49,8 +43,8 @@ export interface UnlockExitCustomizationIssue {
 
 /**
  * A locked door's fight as `AttemptUseDoor` generates it at the press: the
- * host's lock encounter, its composition assessed against the state the
- * press reaches.
+ * host's lock encounter with the door's observed decisions, its composition
+ * assessed against the state the press reaches.
  */
 export interface PreparedUnlockExitEncounter {
   readonly origin: EncounterPhaseAddress;
@@ -79,15 +73,14 @@ export function prepareUnlockExitEncounter(
   if (encounterKey === undefined || rawDeclaration === undefined)
     throw new Error(`${room.gameName} lost its locked door's fight`);
   const origin = unlockExitPhaseAddress(room.origin, action.exitKey);
+  const customization = room.encounters.customizationByLockedExit?.[action.exitKey];
   const resolved = resolvedEncounterPhaseForDefinition(
     catalog,
     {
       slotKey: unlockExitPhaseKey(action.exitKey),
       envelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
       figLeafSkip: false,
-      ...(action.customization === undefined
-        ? {}
-        : { customizationByDecision: action.customization }),
+      ...(customization === undefined ? {} : { customizationByDecision: customization }),
     },
     encounterKey,
   );

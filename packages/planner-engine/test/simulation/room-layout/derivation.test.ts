@@ -84,7 +84,7 @@ describe('room layout derivation', () => {
   it('lets an entry of a rolled room name the flip it needs', () => {
     const fields = room('H_Combat05');
     const derived = derive(fields, door('Left'), undefined);
-    expect(derived.flip).toMatchObject({ kind: 'roll', chance: 0.5, default: true });
+    expect(derived.flip).toMatchObject({ kind: 'roll', chance: 0.5 });
     if (derived.entry.kind !== 'choice') throw new Error('H_Combat05 offers no entry choice');
     const needed = derived.entry.eligible.filter((option) => option.flipped !== undefined);
     expect(needed.length).toBeGreaterThan(0);
@@ -180,18 +180,18 @@ describe('room layout derivation', () => {
   });
 });
 
-describe('room layout defaults', () => {
+describe('room layout draws', () => {
   const fields = room('H_Combat05');
   const keys = Array.from({ length: 24 }, (_, index) => `route:biome:room${index}`);
 
-  it('gives an unauthored rolled flip and entry a stable default per occurrence', () => {
+  it('gives an unauthored rolled flip and entry a stable draw per occurrence', () => {
     for (const key of keys) {
       const layout = derive(fields, door(), undefined, key);
       expect(layout).toEqual(derive(fields, door(), undefined, key));
-      expect(layout.flip).toMatchObject({ kind: 'roll', default: true });
-      expect(layout.entry).toMatchObject({ kind: 'choice', default: true });
+      expect(layout.flip).toMatchObject({ kind: 'roll' });
+      expect(layout.entry).toMatchObject({ kind: 'choice' });
     }
-    // Defaults spread across both flips and several entries.
+    // Draws spread across both flips and several entries.
     const layouts = keys.map((key) => derive(fields, door(), undefined, key));
     expect(new Set(layouts.map((layout) => layout.flip.value)).size).toBe(2);
     expect(
@@ -203,7 +203,7 @@ describe('room layout defaults', () => {
     ).toBeGreaterThan(1);
   });
 
-  it('defaults the entry among those the flip allows, without narrowing the choice', () => {
+  it('draws the entry among those the flip allows, without narrowing the choice', () => {
     for (const key of keys) {
       const layout = derive(fields, door('Left'), undefined, key);
       if (layout.entry.kind !== 'choice') throw new Error('H_Combat05 offers no entry choice');
@@ -219,18 +219,18 @@ describe('room layout defaults', () => {
     }
   });
 
-  it('keeps an authored flip and defaults only the entry', () => {
+  it('keeps an authored flip and draws only the entry', () => {
     for (const key of keys) {
       const layout = derive(fields, door(), { flipped: true }, key);
       expect(layout.flip).toEqual({ kind: 'roll', chance: 0.5, value: true });
-      expect(layout.entry).toMatchObject({ kind: 'choice', default: true });
+      expect(layout.entry).toMatchObject({ kind: 'choice' });
     }
   });
 
-  it('defaults the entry of a room whose flip is not a roll', () => {
+  it('draws the entry of a room whose flip is not a roll', () => {
     const layout = derive(room('F_MiniBoss03'), door('Right'), undefined);
     expect(layout.flip).toEqual({ kind: 'derived', value: false });
-    expect(layout.entry).toMatchObject({ kind: 'choice', default: true });
+    expect(layout.entry).toMatchObject({ kind: 'choice' });
   });
 });
 

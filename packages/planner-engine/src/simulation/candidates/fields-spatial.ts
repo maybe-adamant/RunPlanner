@@ -22,20 +22,18 @@ import { assessFieldsSpatialPoint } from '../fields/spatial';
 export interface FieldsSpatialPointCandidateQuery {
   readonly kind: 'fieldsSpatialPoint';
   readonly spatial: FieldsSpatialAddress;
-  readonly pointId: number | null;
+  readonly pointId: number;
 }
 
 export interface FieldsSpatialPointCandidateSupport {
   readonly spatial: FieldsSpatialAddress;
   readonly target: FieldsSpatialTarget;
-  readonly pointId: number | null;
+  readonly pointId: number;
   /** Legal placement domain; occupied points remain assignable for explicit repair. */
   readonly assignable: boolean;
   /** Declaration points still available after active sibling assignments. */
   readonly supportPointIds: readonly number[];
   readonly selectedPossible: boolean;
-  /** The point the target stands on by default while it has no stored point. */
-  readonly defaultPointId?: number;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -104,9 +102,6 @@ export function evaluateFieldsSpatialPointCandidate(
       assignable: assessment.assignable,
       supportPointIds: assessment.supportPointIds,
       selectedPossible: assessment.selectedPossible,
-      ...(assessment.defaultPointId === undefined
-        ? {}
-        : { defaultPointId: assessment.defaultPointId }),
       findings: assessment.findings,
     }),
   });

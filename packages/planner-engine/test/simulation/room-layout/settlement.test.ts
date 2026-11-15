@@ -142,7 +142,7 @@ describe('room layout settlement', () => {
     }
   });
 
-  it('publishes only fixed or authored flips and entries on the wire', () => {
+  it('publishes every flip and entry on the wire, naming those the arrival door derives', () => {
     const steered = (project: ProjectDocument) => {
       const plan = compileExecutionPlan({
         product: assembleExecutionProduct({
@@ -159,14 +159,15 @@ describe('room layout settlement', () => {
     const project = createGoldenFGHIProject();
     const published = steered(project);
     for (const { layout, wire } of published) {
-      expect(wire?.flipped).toBe(layout.flip.kind === 'derived' ? undefined : layout.flip.value);
-      expect(wire?.entry).toEqual(
-        layout.entry.kind === 'fixed' || layout.entry.kind === 'choice'
-          ? layout.entry.point
-          : undefined,
-      );
+      expect(wire?.flipped).toBe(layout.flip.value);
+      expect(wire?.entry).toEqual(layout.entry.kind === 'unknown' ? undefined : layout.entry.point);
+      const derived = [
+        ...(layout.flip.kind === 'derived' ? ['flipped'] : []),
+        ...(layout.entry.kind === 'derived' ? ['entry'] : []),
+      ];
+      expect(wire?.derived).toEqual(derived.length === 0 ? undefined : derived);
     }
-    // A derived flip or entry is the game's own result and is never steered.
+    // A derived flip or entry is the game's own result: published to check, never steered.
     expect(published.some(({ layout }) => layout.flip.kind === 'derived')).toBe(true);
     expect(published.some(({ layout }) => layout.entry.kind === 'derived')).toBe(true);
     // An authored entry of a rolled room steers the entry and the flip it needs.
@@ -279,7 +280,7 @@ describe('room object anchors', () => {
     );
     const pool = slots.objects.find((object) => object.kind === 'purgingPool')!;
     expect(pool.anchorId).toBe(free);
-    expect(pool.anchorChoices?.map((choice) => choice.anchorId)).toEqual([null, free]);
+    expect(pool.anchorChoices?.map((choice) => choice.anchorId)).toEqual([free]);
     const plan = compileExecutionPlan({
       product: assembleExecutionProduct({ assembly, catalog }),
     });

@@ -33,14 +33,18 @@ export function requiredFirstTitle(actionLabel: string | undefined): string {
   return `${actionLabel ?? 'A required action'} must come first`;
 }
 
-/** An edit's removals in another room, before that room's link. */
-export function removedActionsLead(actions: number, doors = 0): string {
+/** An edit's removals and item resets in another room, before that room's link. */
+export function removedActionsLead(actions: number, doors = 0, items = 0): string {
   const counted = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
-  const parts = [
-    ...(actions > 0 || doors === 0 ? [counted(actions, 'action')] : []),
+  const removed = [
+    ...(actions > 0 || (doors === 0 && items === 0) ? [counted(actions, 'action')] : []),
     ...(doors > 0 ? [counted(doors, 'door')] : []),
   ];
-  return `${parts.join(' and ')} removed at`;
+  const parts = [
+    ...(removed.length === 0 ? [] : [`${removed.join(' and ')} removed`]),
+    ...(items > 0 ? [`${counted(items, 'item')} reset`] : []),
+  ];
+  return `${parts.join(removed.length > 1 ? ', ' : ' and ')} at`;
 }
 
 /** Restores what the announced edit removed, as the app's Undo does. */

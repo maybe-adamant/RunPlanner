@@ -114,7 +114,9 @@ describe('Encounter banners', () => {
     );
     openRoomTab('Room Timeline');
     const skip = () =>
-      within(within(timeline()).getByLabelText('Encounter started')).getByRole('button', {
+      within(
+        timeline().querySelector<HTMLElement>('[data-boundary-kind="encounterStarted"]')!,
+      ).getByRole('button', {
         name: 'Fig Leaf skip',
       });
     const authored = () =>
@@ -151,7 +153,8 @@ describe('Encounter banners', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(skipped));
     openRoomTab('Room Timeline');
-    const events = within(within(timeline()).getByLabelText('Encounter outcome')).getByRole(
+    // A fight with no gate shows as one marker, which hosts the encounter's condition.
+    const events = within(within(timeline()).getByLabelText('Encounter started')).getByRole(
       'group',
       {
         name: 'Encounter outcome choices',

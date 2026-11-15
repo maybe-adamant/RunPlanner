@@ -27,24 +27,30 @@ import {
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   hubVisitActions,
+  placeTestRushedShrinePickup,
+  authorTestTraitsAndRequiredItems,
   replaceTestShopOfferActions,
   supportedTraitOffer,
   purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
+  settleTestEdit,
+  stockTestProject,
 } from '../shared';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
-  loadSurfaceNQueensRansomCheckpoint,
-  loadSurfaceNSteadyGrowthFrontierCheckpoint,
   loadSurfaceNCompleteHubFrontierCheckpoint,
   loadSurfaceNEntryFrontierCheckpoint,
   loadSurfaceNEntryFrontierResolvedCheckpoint,
@@ -56,6 +62,11 @@ import {
   loadSurfaceNOPCheckpoint,
   loadSurfaceNOPQCheckpoint,
 } from '../checkpoints/surface';
+import {
+  createSurfaceNNaturalSelectionCheckpoint,
+  createSurfaceNQueensRansomCheckpoint,
+  createSurfaceNSteadyGrowthFrontier,
+} from './run-impacting-traits';
 
 export const nBiome = createBiomeAddress('Surface', 'N');
 export const oBiome = createBiomeAddress('Surface', 'O');
@@ -220,6 +231,7 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
     delay: 2,
     rushed: true,
   });
+  project = placeTestRushedShrinePickup(project, shrine, 'initial:first');
   project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:secondLeft', {
     delay: 3,
     rushed: false,
@@ -232,7 +244,6 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
       createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
     ),
-    encounterPhaseKey: 'Encounter',
   });
 }
 
@@ -264,11 +275,12 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
     hermesShrineDeliveryEntryKey(combatSource, 'initial:secondLeft'),
   );
   let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-  for (const [occurrence, delay, entry, encounterPhaseKey, source] of [
-    [introSource, 5, introEntry, 'Intro', 'ApolloUpgrade'],
-    [combatSource, 2, combatEntry, 'Combat1', 'HeraUpgrade'],
+  for (const [occurrence, delay, entry, source] of [
+    [introSource, 5, introEntry, 'ApolloUpgrade'],
+    [combatSource, 2, combatEntry, 'HeraUpgrade'],
   ] as const) {
-    project = applyProjectCommand(project, catalog, {
+    // Another item in the slot: its earlier purchase goes, and it is bought again.
+    project = settleTestEdit(project, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
       slotKey: 'secondLeft',
@@ -278,11 +290,13 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
       delay,
       rushed: false,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
       entry,
-      encounterPhaseKey,
-    });
+    );
+    if (placement === undefined) throw new Error(`${entry.entryKey} is not live`);
+    project = applyProjectCommand(project, catalog, placement);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry,
@@ -301,13 +315,12 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
  * first, so Combat05 repeats Combat11's Ares only after four distinct board gods.
  */
 export function withFourthBoardGodBeforeCombat05(project: ProjectDocument): ProjectDocument {
-  return applyProjectCommand(
-    applyProjectCommand(project, catalog, {
+  return replaceTestPlacedItem(
+    replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
     }),
-    catalog,
     {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
@@ -324,12 +337,12 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
   const shrine = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
   let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: travelDealSource,
     value: { rewardType: 'HermesUpgrade' },
@@ -361,7 +374,12 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
     delay: 2,
     rushed: false,
   });
-  return authorLegalTraitOffers(
+  project = placeTestRushedShrinePickup(
+    authorTestTraitsAndRequiredItems(project),
+    shrine,
+    'initial:first',
+  );
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry: createAcquisitionEntryAddress(
@@ -371,7 +389,6 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
         ),
         hermesShrineDeliveryEntryKey(shrine, 'travelDealRefill'),
       ),
-      encounterPhaseKey: 'Combat1',
     }),
   );
 }
@@ -428,13 +445,13 @@ export function placeDueHermesShrineDeliveries(project: ProjectDocument): Projec
     );
     if (contact === undefined || contact.kind !== 'hermesShrineDelivery')
       throw new Error(`Shrine delivery ${origin.entryKey} has no derived due contact`);
-    next = applyProjectCommand(next, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
-      entry: contact.address,
-      ...(contact.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: contact.encounterPhaseKey }),
-    });
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      contact.address,
+    );
+    if (placement === undefined) throw new Error(`cannot place ${origin.entryKey}`);
+    next = applyProjectCommand(next, catalog, placement);
   }
   throw new Error('Shrine delivery placement exceeded its bound');
 }
@@ -489,7 +506,12 @@ export function surfaceShrineDeliveriesProject(): ProjectDocument {
     delay: 8,
     rushed: false,
   });
-  return placeDueHermesShrineDeliveries(project);
+  project = placeTestRushedShrinePickup(
+    collectTestRequiredItems(project),
+    oShrine,
+    'initial:first',
+  );
+  return collectTestRequiredItems(project);
 }
 
 /**
@@ -579,7 +601,6 @@ export function createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(): ProjectD
       createAcquisitionSiteAddress(boss, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
     ),
-    encounterPhaseKey: 'Encounter',
   });
 }
 
@@ -587,12 +608,16 @@ export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
   return loadSurfaceNNaturalSelectionFrontierCheckpoint();
 }
 
-export function loadSurfaceNQueensRansomProject(): ProjectDocument {
-  return loadSurfaceNQueensRansomCheckpoint();
+export function surfaceNNaturalSelectionProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNNaturalSelectionCheckpoint());
 }
 
-export function loadSurfaceNSteadyGrowthFrontierProject(): ProjectDocument {
-  return loadSurfaceNSteadyGrowthFrontierCheckpoint();
+export function surfaceNQueensRansomProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNQueensRansomCheckpoint());
+}
+
+export function surfaceNSteadyGrowthFrontierProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNSteadyGrowthFrontier());
 }
 
 export function loadSurfaceNResourcesProject(): ProjectDocument {
@@ -806,7 +831,7 @@ export function authorSurfaceWorldShop(
 
 export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
   let project = loadSurfaceNOPQProject();
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -839,16 +864,12 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
   const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
   const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
-  let project = applyProjectCommand(
-    withFourthBoardGodBeforeCombat05(loadSurfaceNOPQProject()),
-    catalog,
-    {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-    },
-  );
-  project = applyProjectCommand(project, catalog, {
+  let project = replaceTestPlacedItem(withFourthBoardGodBeforeCombat05(loadSurfaceNOPQProject()), {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: travelDealSource,
     value: { rewardType: 'HermesUpgrade' },
@@ -894,7 +915,7 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
     reference,
     index: 1,
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 /** The Path screen a reward's `self` role opens. */
@@ -918,7 +939,7 @@ export function reachedPOutdoorIcarusFixture() {
       gameName: replacement,
     });
   }
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(pBiome, occurrenceId),
     value: { rewardType: 'TalentDrop' },
@@ -991,7 +1012,6 @@ export function createStaleSurfaceHermesDeliveryPlacement() {
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       entryKey,
     ),
-    encounterPhaseKey: 'Encounter',
   });
   const placedHost = project.route.biomes
     .find((plan) => plan.biomeKey === host.biomeKey)
@@ -1051,7 +1071,6 @@ export function createTwoStaleSurfaceHermesDeliveryPlacements() {
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       secondEntryKey,
     ),
-    encounterPhaseKey: 'Encounter',
   });
   // Retain both production-built placements to represent a loaded snapshot.
   const loaded = {
@@ -1128,6 +1147,22 @@ export function surfaceTraitFencesProject(): ProjectDocument {
     reward: reprieveReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
+  // The Reprieve's boon is taken before its Fountain.
+  const reprieveActions: readonly RoomActionReference[] = [
+    {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    },
+    { kind: 'useFountain' },
+  ];
+  for (const [index, reference] of reprieveActions.entries())
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(oBiome, oOccurrenceIds.devotion, roomActionKey(reference)),
+      reference,
+      index,
+    });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
     selection: createPostbossKeepsakeSelectionAddress(postboss),
@@ -1149,5 +1184,10 @@ export function surfaceTraitFencesProject(): ProjectDocument {
     delay: 2,
     rushed: true,
   });
-  return authorLegalTraitOffers(placeDueHermesShrineDeliveries(authorLegalTraitOffers(project)));
+  project = placeTestRushedShrinePickup(
+    authorTestTraitsAndRequiredItems(project),
+    postboss,
+    'initial:secondLeft',
+  );
+  return authorTestTraitsAndRequiredItems(project);
 }

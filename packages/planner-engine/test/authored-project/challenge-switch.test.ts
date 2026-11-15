@@ -17,6 +17,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { withItemContents } from '@run-planner/test-fixtures/shared';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- encoded JSON edited before strict decoding
 type RawJson = any;
@@ -48,6 +49,21 @@ function insertInteraction(project: ProjectDocument) {
     kind: 'InsertRoomAction',
     action: createRoomActionAddress(fBiome, hostId, roomActionKey(interaction)),
     reference: interaction,
+    index: occurrenceOf(project).roomActions.order.length,
+  });
+}
+
+/** Picks up one of the switch's claims at the end of the room. */
+function insertClaim(project: ProjectDocument, entryKey: 'reward' | 'nectar') {
+  const claim: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'challengeSwitch',
+    entryKey,
+  };
+  return applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(fBiome, hostId, roomActionKey(claim)),
+    reference: claim,
     index: occurrenceOf(project).roomActions.order.length,
   });
 }
@@ -135,13 +151,17 @@ describe('challenge switch observation', () => {
     ).toBe('left');
   });
 
-  it('takes the claim pickups with the interaction and follows the outcome', () => {
-    const used = insertInteraction(observe(golden(), 'PerfectClearChallengeSwitch_Pom'));
+  it('places no claim pickup with the interaction; placed claims follow the outcome', () => {
+    const interacted = insertInteraction(observe(golden(), 'PerfectClearChallengeSwitch_Pom'));
+    expect(occurrenceOf(interacted).roomActions.order.at(-1)).toEqual(interaction);
+    const used = insertClaim(interacted, 'reward');
     const order = occurrenceOf(used).roomActions.order;
-    expect(order.slice(-2)).toEqual([
-      interaction,
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
-    ]);
+    expect(order.slice(-2)).toEqual(
+      withItemContents(used, host, [
+        interaction,
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
+      ]),
+    );
     const hit = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
@@ -152,17 +172,21 @@ describe('challenge switch observation', () => {
       occurrenceOf(hit).acquisitionSites?.challengeSwitch?.pickupEntries?.reward?.offer.rewardType,
     ).toBe('RoomRewardConsolationPrize');
     expect(occurrenceOf(hit).roomActions.order).toEqual(order);
-    const nectar = applyProjectCommand(used, catalog, {
+    const nectarDropped = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
       outcome: 'hitless',
       nectarDropped: true,
     });
-    expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual([
-      interaction,
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
-    ]);
+    expect(occurrenceOf(nectarDropped).roomActions.order).toEqual(order);
+    const nectar = insertClaim(nectarDropped, 'nectar');
+    expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual(
+      withItemContents(nectar, host, [
+        interaction,
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
+      ]),
+    );
     expect(
       occurrenceOf(nectar).acquisitionSites?.challengeSwitch?.pickupEntries?.nectar?.offer
         .rewardType,

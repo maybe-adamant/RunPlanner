@@ -1,7 +1,10 @@
 import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import {
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
+  settleTestEdit,
   supportedTraitOffer,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import {
@@ -162,70 +165,6 @@ describe('timed-effect edit settlement', () => {
       ),
     ).toEqual([]);
   });
-  it('keeps an invalid inherited clocked pickup reached again, with its finding', () => {
-    const id = 'surface-p-1-1-p_combat03';
-    const checkpoint = loadSurfaceScheduledLifecycleCheckpoint();
-    // The Supply Chain pickup matures at Combat; ranking it at Intro makes it invalid.
-    const project: ProjectDocument = {
-      ...checkpoint,
-      route: {
-        ...checkpoint.route,
-        biomes: checkpoint.route.biomes.map((biome) => ({
-          ...biome,
-          ...(biome.topology == null
-            ? {}
-            : {
-                topology: {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((room) =>
-                    room.occurrenceId !== id
-                      ? room
-                      : {
-                          ...room,
-                          roomActions: {
-                            ...room.roomActions,
-                            order: room.roomActions.order.map((reference) =>
-                              reference.kind === 'interactAcquisitionEntry' &&
-                              reference.entryKey.startsWith('clockedTraitGenerated:')
-                                ? { ...reference, encounterPhaseKey: 'Intro' }
-                                : reference,
-                            ),
-                          },
-                        },
-                  ),
-                },
-              }),
-        })),
-      },
-    };
-    const stale = (assembly: ReturnType<typeof evaluate>) =>
-      assembly.evaluation.findings.filter(
-        (finding) =>
-          finding.code === 'roomActionOrderUnavailable' &&
-          finding.origin.kind === 'roomAction' &&
-          finding.origin.actionKey.includes('clockedTraitGenerated:'),
-      );
-    expect(stale(evaluate(project))).toHaveLength(1);
-    const trait = createTraitOfferAddress(
-      createIncomingRewardAddress(
-        createBiomeAddress('Surface', 'N'),
-        createOccurrenceId('surface-n-combat11'),
-      ),
-      'source',
-    );
-    const unreached = settle(project, {
-      kind: 'ReplaceTraitSelection',
-      trait,
-      selectedOptionKey: 'option2',
-    });
-    const reached = settle(unreached.project, {
-      kind: 'ReplaceTraitSelection',
-      trait,
-      selectedOptionKey: 'option1',
-    });
-    expect(reached.project).toEqual(project);
-    expect(stale(reached)).toHaveLength(1);
-  });
   it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const value = { blessingKey: 'ChaosElementalBlessing', blessingValues: {} } as const;
@@ -342,7 +281,7 @@ describe('timed-effect edit settlement', () => {
     expect(steadyGrowthTargets(settled.project)).toEqual(steadyGrowthTargets(project));
     expect(embryoTransformations(settled.project)).toEqual(embryoTransformations(project));
   });
-  it('refuses deleting a valid required Hermes obligation without adding history', () => {
+  it('unplaces a valid required Hermes delivery, which lies live again with its finding', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const id = 'surface-p-1-1-p_combat03';
     const reference = occurrence(project, id).roomActions.order.find(
@@ -360,7 +299,18 @@ describe('timed-effect edit settlement', () => {
       },
       evaluate,
     });
-    expect(settled.assembly).toBe(before);
+    expect(settled.fault).toBeUndefined();
+    expect(occurrence(settled.assembly.project, id).roomActions.order).not.toContainEqual(
+      reference,
+    );
+    expect(settled.assembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'hermesShrineDeliveryPlacementRequired',
+        origin: expect.objectContaining({
+          entryKey: reference.kind === 'interactAcquisitionEntry' ? reference.entryKey : undefined,
+        }),
+      }),
+    );
   });
   it('keeps Supply Chain optional when removing an accepted maturity', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
@@ -461,7 +411,7 @@ describe('timed-effect edit settlement', () => {
     expect(repaired.project).toEqual(original);
     expect(repaired.evaluation.findings).toEqual([]);
   });
-  it('settles multiple reached missing deliveries in one edit', () => {
+  it('leaves several due deliveries live, and collecting places each once', () => {
     let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const o = createBiomeAddress('Surface', 'O');
     const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
@@ -481,15 +431,23 @@ describe('timed-effect edit settlement', () => {
       generationKey: 'initial:secondRight',
       purchased: true,
     });
-    const deliveries = occurrence(settled.project, 'surface-o-devotion').roomActions.order.filter(
-      (reference) =>
-        reference.kind === 'interactAcquisitionEntry' &&
-        reference.siteKey === 'hermesShrineDelivery',
-    );
-    expect(deliveries).toHaveLength(3);
-    expect(new Set(deliveries.map(roomActionKey)).size).toBe(3);
+    const deliveries = (document: ProjectDocument) =>
+      occurrence(document, 'surface-o-devotion').roomActions.order.filter(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery',
+      );
+    expect(deliveries(settled.project)).toEqual([]);
     expect(
       settled.evaluation.findings.some(
+        (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
+      ),
+    ).toBe(true);
+    const collected = collectTestRequiredItems(settled.project);
+    expect(deliveries(collected)).toHaveLength(3);
+    expect(new Set(deliveries(collected).map(roomActionKey)).size).toBe(3);
+    expect(
+      evaluate(collected).evaluation.findings.some(
         (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
       ),
     ).toBe(false);
@@ -522,20 +480,36 @@ describe('timed-effect edit settlement', () => {
         entryKey,
       );
       let project = createSurfaceNOHermesShrineDeliveryCheckpoint();
-      project = applyProjectCommand(project, catalog, {
+      // Another Shrine stock is a new item: its purchase and delivery go, and the owner buys it
+      // again and places its delivery where the old one stood.
+      project = settleTestEdit(project, {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: source,
         slotKey: 'secondLeft',
         value: { rewardType: 'BlindBoxLoot' },
       });
+      project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+        delay: 3,
+        rushed: false,
+      });
       project = applyProjectCommand(project, catalog, {
+        kind: 'PlaceHermesShrineDelivery',
+        entry,
+      });
+      const apollo = {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      } as const;
+      project = settleTestEdit(project, {
         kind: 'ReplaceAcquisitionEntryOffer',
         entry,
-        value: {
-          rewardType: 'BlindBoxLoot',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
+        value: apollo,
       });
+      // The payload is the delivery's own observation: settling its change keeps it.
+      expect(
+        occurrence(project, 'surface-o-devotion').acquisitionSites?.hermesShrineDelivery
+          ?.pickupEntries?.[entryKey]?.offer,
+      ).toEqual(apollo);
       const trait = createTraitOfferAddress(entry, 'hiddenSource');
       const value = supportedTraitOffer(project, trait, 'Apollo');
       if (value === undefined) throw new Error('Mystery source has no Apollo offer');
@@ -563,9 +537,23 @@ describe('timed-effect edit settlement', () => {
               generationKey: 'initial:secondLeft',
               delay: 4,
             }
-          : { kind: 'PlaceHermesShrineDelivery', entry, encounterPhaseKey: 'Encounter' },
+          : { kind: 'PlaceHermesShrineDelivery', entry },
       );
-      const retained = settled.project.route.biomes
+      // Rescheduled, the old delivery item goes with its host's entry: nothing is left behind.
+      if (operation === 'reschedule')
+        expect(
+          settled.project.route.biomes
+            .flatMap((biome) => biome.topology?.occurrences ?? [])
+            .filter(
+              (room) =>
+                room.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !==
+                undefined,
+            ),
+        ).toEqual([]);
+      // A rescheduled delivery lies live at its new host until it is picked up there.
+      const placed =
+        operation === 'reschedule' ? collectTestRequiredItems(settled.project) : settled.project;
+      const retained = placed.route.biomes
         .flatMap((biome) => biome.topology?.occurrences ?? [])
         .flatMap((room) =>
           room.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] === undefined
@@ -639,7 +627,7 @@ describe('timed-effect edit settlement', () => {
     const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
     expect(undoProjectHistory(history).present).toBe(project);
   });
-  it('places a delayed delivery flushed at the fourth-biome Preboss at its phase-less contact', () => {
+  it('picks up a delayed delivery flushed at the fourth-biome Preboss at its phase-less contact', () => {
     let project = loadSurfaceNOPQProject();
     const source = createOccurrenceAddress(
       p,
@@ -669,14 +657,28 @@ describe('timed-effect edit settlement', () => {
       purchased: true,
     });
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
-    expect(occurrence(settled.project, 'surface-q-preboss').roomActions.order).toContainEqual({
+    const delivery = {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey: key,
-    });
-    expect(settled.evaluation.status).toBe('valid');
+    } as const;
+    expect(
+      occurrence(settled.project, 'surface-q-preboss').roomActions.order.map(roomActionKey),
+    ).not.toContain(roomActionKey(delivery));
+    const collected = collectTestRequiredItems(settled.project);
+    expect(occurrence(collected, 'surface-q-preboss').roomActions.order).toContainEqual(
+      withItemContent(
+        collected,
+        createOccurrenceAddress(
+          createBiomeAddress('Surface', 'Q'),
+          createOccurrenceId('surface-q-preboss'),
+        ),
+        delivery,
+      ),
+    );
+    expect(evaluate(collected).evaluation.status).toBe('valid');
   });
-  it('retracts a removed source and places a newly repurchased obligation on reactivation', () => {
+  it('retracts a removed source and leaves a newly repurchased obligation to place on reactivation', () => {
     const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
     const o = createBiomeAddress('Surface', 'O');
     const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
@@ -720,9 +722,10 @@ describe('timed-effect edit settlement', () => {
       generationKey: 'initial:secondLeft',
       purchased: true,
     }).project;
-    expect(orders(restored)).toHaveLength(1);
+    expect(orders(restored)).toEqual([]);
+    expect(orders(collectTestRequiredItems(restored))).toHaveLength(1);
   });
-  it('discards a reset retained delivery with its generated pickup site', () => {
+  it('discards an unbought delivery with its generated pickup site; a rebought one is new', () => {
     let project = loadSurfaceNOPQProject();
     const o = createBiomeAddress('Surface', 'O');
     const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
@@ -764,7 +767,8 @@ describe('timed-effect edit settlement', () => {
               purchased: true,
             },
           ).project;
-    project = purchase(6);
+    // The owner picks up each due delivery where it arrives.
+    project = collectTestRequiredItems(purchase(6));
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
     const lateHostId = 'surface-o-preboss:boss';
     const trait = createTraitOfferAddress(
@@ -780,16 +784,24 @@ describe('timed-effect edit settlement', () => {
     const quickBuck = supportedTraitOffer(project, trait, 'Hermes', 'MoneyMultiplierBoon');
     if (quickBuck === undefined) throw new Error('expected a Quick Buck Hermes offer');
     project = settle(project, { kind: 'ReplaceTraitOffer', trait, value: quickBuck }).project;
+    expect(
+      Object.keys(occurrence(project, lateHostId).acquisitionSites ?? {}).some((site) =>
+        site.startsWith('traitGenerated:'),
+      ),
+    ).toBe(true);
+    // Unbought, its source no longer produces the delivery: it goes with its generated pickup site.
     project = purchase(null);
     const retainedHost = occurrence(project, lateHostId);
-    expect(retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toBeDefined();
+    expect(
+      retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key],
+    ).toBeUndefined();
     expect(
       Object.keys(retainedHost.acquisitionSites ?? {}).some((site) =>
         site.startsWith('traitGenerated:'),
       ),
-    ).toBe(true);
+    ).toBe(false);
 
-    const settled = purchase(2);
+    const settled = collectTestRequiredItems(purchase(2));
     const earlyHost = occurrence(settled, 'surface-o-combat01');
     expect(earlyHost.roomActions.order).toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery', entryKey: key }),

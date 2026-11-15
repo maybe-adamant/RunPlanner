@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 3,
   "projectId": "surface-1",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -314,7 +314,11 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -674,7 +678,11 @@
           { "slotKey": "Encounter", "encounterKey": "PreHubGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        },
         "hub": {
           "room": { "gameName": "N_Hub" },
           "slots": [
@@ -2406,7 +2414,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -2669,6 +2681,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 566341, "endPointId": 566339 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -2801,6 +2818,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -2939,6 +2961,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 560715, "endPointId": 560714 },
+          "derived": ["flipped", "entry"]
+        },
         "localSlots": []
       },
       "timeline": {
@@ -3093,7 +3120,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 558115, "endPointId": 558117 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3264,6 +3295,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub02",
           "reward": { "rewardType": "MaxHealthDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -3395,7 +3431,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": true },
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 558115, "endPointId": 558117 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3652,6 +3692,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub02",
           "reward": { "rewardType": "MaxManaDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -3804,7 +3849,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 755708, "endPointId": 755707 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 755971, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 755184, "generation": "notGenerated" },
@@ -3950,7 +3999,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 566392, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 566536, "generation": "notGenerated" },
@@ -4167,7 +4220,11 @@
             }
           ]
         },
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4223,7 +4280,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossPolyphemus01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -4304,6 +4365,11 @@
             }
           ],
           "anchorId": 616862
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -4488,5 +4554,5 @@
       }
     }
   ],
-  "planFingerprint": "b5ed90b0"
+  "planFingerprint": "b7fb408a"
 }

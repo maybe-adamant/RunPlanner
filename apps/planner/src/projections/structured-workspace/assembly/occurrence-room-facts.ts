@@ -54,6 +54,14 @@ export interface WorkspaceOccurrenceRoomInput extends WorkspaceOccurrenceRewardA
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
 }
 
+/** A Clockwork door's derived reward on its room: the forced Goal, or a counted reward. */
+export function clockworkRewardFacet(
+  room: Pick<CanonicalAuthoredRoom, 'forcedRewardType' | 'countsTowardClockworkGoal'> | undefined,
+): { readonly clockworkReward?: 'goal' | 'nonGoal' } {
+  if (room?.forcedRewardType === 'ClockworkGoal') return { clockworkReward: 'goal' };
+  return room?.countsTowardClockworkGoal === true ? { clockworkReward: 'nonGoal' } : {};
+}
+
 export interface WorkspaceOccurrenceRewardLocalAssembly {
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly roomLocal: WorkspaceRoomLocal;
@@ -66,7 +74,7 @@ function encounterResolutionFacts(
 ) {
   if (input.evaluatedRoom !== undefined) return input.evaluatedRoom;
   if (roomLocal.kind === 'incomingReward' && roomLocal.clockworkReward === 'goal')
-    return Object.freeze({ clockworkReward: 'goal' as const });
+    return Object.freeze({ forcedRewardType: 'ClockworkGoal' });
   const offer =
     roomLocal.kind === 'incomingReward'
       ? roomLocal.control.offer
@@ -187,7 +195,7 @@ export function assembleOccurrenceRewardLocal(
                   )
                     return [];
                 }
-                // A rushed delivery's control is its Shrine purchase's own, below.
+                // A rushed delivery's control is its Shrine rush's own, below.
                 if (isSameRoomHermesShrineDeliveryEntry(createAcquisitionEntryAddress(site, key)))
                   return [];
                 if (
@@ -319,12 +327,12 @@ export function assembleOccurrenceRewardLocal(
   // Same-room rushed deliveries are active before the lifecycle has published
   // a derived host capability. Their source-owned entry remains the one
   // acquisition control; delayed host entries above consume the exact derived
-  // capability instead of looking back to a purchase row.
+  // capability instead of looking back to a rush row.
   const rushedShrineRewardControls = Object.freeze(
     input.occurrence.hermesShrine === undefined
       ? []
       : input.occurrence.roomActions.order.flatMap((reference) => {
-          if (reference.kind !== 'purchaseHermesShrineOffer' || !reference.rushed) return [];
+          if (reference.kind !== 'rushHermesShrineOffer') return [];
           const generationKey = reference.generationKey;
           const slotKey = hermesShrineInitialSlotKey(generationKey);
           const inventoryOffer =
@@ -410,9 +418,7 @@ function roomLocalForOccurrence(
           control.offer === null
             ? 'Choose reward'
             : summarizeRewardOffer(input.catalog, control.offer),
-        ...(input.evaluatedRoom?.clockworkReward === undefined
-          ? {}
-          : { clockworkReward: input.evaluatedRoom.clockworkReward }),
+        ...clockworkRewardFacet(input.evaluatedRoom),
       });
     }
     case 'ephyraCombat': {
@@ -434,6 +440,7 @@ function roomLocalForOccurrence(
           `${room.gameName} Fields state has no bounded cage declaration`,
         );
       }
+      const cageEnvelope = requireEncounterEnvelope(input.catalog, room);
       const cages = group.slotKeys
         .slice(0, fieldsFacts?.doorCageRewardCount ?? 0)
         .map((slotKey, index) => {
@@ -443,9 +450,20 @@ function roomLocalForOccurrence(
             group.key,
             slotKey,
           );
+          const phase = cageEnvelope.slots.find(
+            (slot) =>
+              slot.rewardAttachment?.kind === 'localReward' &&
+              slot.rewardAttachment.slotKey === slotKey,
+          );
+          if (phase === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${slotKey} has no Fields cage encounter slot`,
+            );
+          }
           return Object.freeze({
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
+            phaseKey: phase.key,
             label: `Cage ${index + 1}`,
             badge: `C${index + 1}`,
             summary: (() => {
@@ -491,13 +509,12 @@ function roomLocalForOccurrence(
         );
       }
       const spatialState = occurrence.state.spatial;
-      const pointChoices = (target: FieldsSpatialTarget, pointIds: readonly number[]) =>
-        Object.freeze([
-          Object.freeze({ label: '?', value: null }),
-          ...pointIds.map((pointId, index) =>
+      const pointChoices = (pointIds: readonly number[]) =>
+        Object.freeze(
+          pointIds.map((pointId, index) =>
             Object.freeze({ label: `${index + 1}`, value: pointId }),
           ),
-        ]);
+        );
       const spatialControl = (
         target: FieldsSpatialTarget,
         label: string,
@@ -513,7 +530,7 @@ function roomLocalForOccurrence(
           interactionKey: semanticAddressKey(spatialAddress),
           label,
           marker: input.markerDestinations.marker(spatialAddress),
-          pointChoices: pointChoices(target, pointIds),
+          pointChoices: pointChoices(pointIds),
           pointId,
           target,
         });
@@ -717,6 +734,7 @@ function roomLocalForOccurrence(
           purchase: Object.freeze({
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
+            purchased: selectedActionKeys.includes(slot.key),
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });

@@ -1,4 +1,3 @@
-import { clockworkRoomLifecycleProfiles } from './clockwork';
 import { ephyraRoomLifecycleProfiles } from './ephyra';
 import { fieldsRoomLifecycleProfiles } from './fields';
 import { prebossCompletionRoomLifecycleProfiles } from './preboss-completion';
@@ -9,7 +8,6 @@ import { specializedRewardRoomLifecycleProfiles, standardRoomLifecycleProfiles }
 export const roomLifecycleProfiles = [
   ...standardRoomLifecycleProfiles,
   ...ephyraRoomLifecycleProfiles,
-  ...clockworkRoomLifecycleProfiles,
   ...specializedRewardRoomLifecycleProfiles,
   ...fieldsRoomLifecycleProfiles,
   ...shipRoomLifecycleProfiles,

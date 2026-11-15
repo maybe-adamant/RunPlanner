@@ -15,6 +15,7 @@ import {
   simulateProjectAssembly,
   unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -63,13 +64,15 @@ function pressedSwitch(
   });
   if (outcome === undefined) return next;
   const current = occurrenceOf(next, biomeKey, occurrenceId).challengeSwitch!;
-  return applyProjectCommand(next, catalog, {
+  next = applyProjectCommand(next, catalog, {
     kind: 'ReplaceChallengeSwitchOutcome',
     occurrence,
     outcome: current.outcome,
     nectarDropped: false,
     ...outcome,
   } as ProjectCommand);
+  // The switch's claim is picked up after the press.
+  return placeTestLivePickupsAtSite(next, occurrence, 'challengeSwitch');
 }
 
 /** The switch's generated composition, initialized from the engine's entry capability. */
@@ -206,8 +209,12 @@ function composedUnlock(
   );
   if (capability === undefined) throw new Error(`${occurrenceId} has no composable fight`);
   return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceUnlockExitCustomization',
-    action,
+    kind: 'ReplaceLockedExitCustomization',
+    occurrence: createOccurrenceAddress(
+      createBiomeAddress(project.route.routeKey, biomeKey),
+      createOccurrenceId(occurrenceId),
+    ),
+    exitKey,
     decisionKey: capability.decisionKey,
     value: capability.initialize() as never,
   });

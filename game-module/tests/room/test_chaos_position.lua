@@ -79,10 +79,9 @@ function TestChaosPosition.testManualAndPublishedIxionUseSortedPointsAndNativeFl
     end
 end
 
-function TestChaosPosition.testDefaultUnsynchronizedAndUnrelatedSpawnsPassThrough()
-    for _, mode in ipairs({ "default", "unsynchronized", "absent" }) do
-        local gate = mode == "default" and {} or { spawnPointIndex = 2 }
-        local callbacks, state = harness(mode ~= "absent" and gate or nil)
+function TestChaosPosition.testUnsynchronizedAndUnrelatedSpawnsPassThrough()
+    for _, mode in ipairs({ "unsynchronized", "absent" }) do
+        local callbacks, state = harness(mode ~= "absent" and { spawnPointIndex = 2 } or nil)
         if mode == "unsynchronized" then state.state = "desynchronized" end
         _G.GetIdsByType = function() error("native point lookup must remain untouched") end
         callbacks.HandleSecretSpawns(nil, {}, function()

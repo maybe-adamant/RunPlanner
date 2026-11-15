@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
-import { roomMapAssets } from '@planner/ui/room-maps/roomMapAssets';
+import { roomMapAssets, roomMapShopAssets } from '@planner/ui/room-maps/roomMapAssets';
 
 describe('room map assets', () => {
   it('covers every declared room with one resolvable static image', () => {
@@ -59,6 +59,15 @@ describe('room map assets', () => {
         (gameName) => roomMapCalibrations[gameName] === undefined,
       ),
     ).toEqual([]);
+    for (const asset of roomMapShopAssets) {
+      const room = catalog.rooms.byKey[asset.gameName];
+      expect(
+        room?.kind === 'Preboss' ||
+          (room?.routeOverlays?.some((overlay) => overlay.kind === 'Shop') ?? false),
+        asset.imageName,
+      ).toBe(true);
+      expect(roomMapCalibrations[asset.imageName], asset.imageName).toBeDefined();
+    }
   });
 
   it('places the wheel and its two offer spots inside the map of every room with wheel offers', () => {

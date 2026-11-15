@@ -1,6 +1,5 @@
 import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel/model';
 import type {
-  AcquisitionSiteAddress,
   AcquisitionEntryAddress,
   AdditionalExitAddress,
   BatchRewardStoreAddress,
@@ -309,11 +308,6 @@ export type RoomReplacementCommand = {
 export type RoomActionCommand =
   | { readonly kind: 'UnplaceGeneratedDelivery'; readonly action: RoomActionSemanticAddress }
   | {
-      readonly kind: 'ReplaceFieldsCageOrder';
-      readonly occurrence: OccurrenceAddress;
-      readonly phaseKeys: readonly string[];
-    }
-  | {
       readonly kind: 'InsertRoomAction';
       readonly action: RoomActionSemanticAddress;
       readonly reference: RoomActionReference;
@@ -334,13 +328,9 @@ export type RoomActionCommand =
       readonly index?: number;
     }
   | {
-      /**
-       * Buys the Shop's Travel Deal item at the end of the room's actions;
-       * `value` first stocks a blank one.
-       */
+      /** Buys the Shop's Travel Deal item at the end of the room's actions. */
       readonly kind: 'PurchaseShopTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
-      readonly value?: ShopOptionSelection;
       /** Where the purchase enters the room's actions: any structurally legal index; absent, the end. */
       readonly index?: number;
     }
@@ -548,16 +538,16 @@ export type InfernalContractPedestalCommand =
     };
 /**
  * Door, cage, wheel and Hub board rerolls. The engine allocates each new
- * reroll's identity; room rerolls are removed and moved as room actions.
- * Rerolled-reward repairs are explicit: drop the effective reward, or adopt
- * an unresolved one for the current effective offer.
+ * reroll's identity and stores its reward on the target, unset until the
+ * owner sets it; room rerolls are removed and moved as room actions. A cage
+ * press names the slot it redrew.
  */
 export type RerollCommand =
   | {
       readonly kind: 'InsertReroll';
       readonly occurrence: OccurrenceAddress;
-      readonly target: import('../model').RerollTarget;
-      readonly reward: ResolvedRewardOffer;
+      readonly target: import('../model').ResolvedRerollTarget;
+      readonly reward?: ResolvedRewardOffer;
       readonly index: number;
     }
   | {
@@ -569,7 +559,7 @@ export type RerollCommand =
       readonly kind: 'InsertHubReroll';
       readonly hub: HubDecisionAddress;
       readonly hubSlotKey: string;
-      readonly reward: ResolvedRewardOffer;
+      readonly reward?: ResolvedRewardOffer;
       readonly index: number;
     }
   | {
@@ -577,15 +567,7 @@ export type RerollCommand =
       readonly reroll: import('../addresses').HubRerollAddress;
       readonly reward: ResolvedRewardOffer;
     }
-  | { readonly kind: 'RemoveHubReroll'; readonly reroll: import('../addresses').HubRerollAddress }
-  | {
-      readonly kind: 'DropRerolledReward';
-      readonly owner: import('../rerolls').RerolledRewardOwner;
-    }
-  | {
-      readonly kind: 'AdoptRerolledReward';
-      readonly owner: import('../rerolls').RerolledRewardOwner;
-    };
+  | { readonly kind: 'RemoveHubReroll'; readonly reroll: import('../addresses').HubRerollAddress };
 
 /** An Ephyra room's hidden return door: null fields are settled by the simulation. */
 export type PhantomExitCommand = {
@@ -595,10 +577,12 @@ export type PhantomExitCommand = {
 };
 export type PurgingPoolCommand =
   | {
+      /** Stocks or, with null, clears one slot of the entry list or, with `refresh`, the regenerated one. */
       readonly kind: 'ReplacePurgingPoolSlot';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
+      readonly list?: 'refresh';
     }
   | {
       /** Inserts an unpinned Pool reroll; the engine allocates its id. */
@@ -612,19 +596,6 @@ export type PurgingPoolCommand =
       readonly action: RoomActionSemanticAddress;
       readonly slotKey: import('../model').PurgingPoolSlotKey;
       readonly traitKey: string | null;
-    }
-  | {
-      /**
-       * Pins one slot of a Pool list, the initial one or a reroll's, and
-       * inserts its sale in one edit.
-       */
-      readonly kind: 'SellPurgingPoolRollSlot';
-      readonly occurrence: OccurrenceAddress;
-      /** The sold list: `initial` or a Pool reroll's id. */
-      readonly rollKey: string;
-      readonly slotKey: import('../model').PurgingPoolSlotKey;
-      readonly traitKey: string;
-      readonly index: number;
     };
 
 /** Records or clears the observation that Eris stood in a declared host room. */
@@ -672,7 +643,7 @@ export type ChallengeSwitchCommand =
 /** Edits the doors a lock host observed locked and the fights that open them. */
 export type ExtraExitLockCommand =
   | {
-      /** Locks or opens one door; opening it also drops its press. */
+      /** Locks or opens one door; opening it also drops its press and its fight. */
       readonly kind: 'ReplaceLockedExit';
       readonly occurrence: OccurrenceAddress;
       readonly exitKey: string;
@@ -680,11 +651,12 @@ export type ExtraExitLockCommand =
     }
   | {
       /**
-       * One decision of a pressed locked door's fight, as
+       * One decision of a locked door's fight, pressed or not, as
        * `ReplaceEncounterCustomization` for a room phase; null restores native.
        */
-      readonly kind: 'ReplaceUnlockExitCustomization';
-      readonly action: RoomActionSemanticAddress;
+      readonly kind: 'ReplaceLockedExitCustomization';
+      readonly occurrence: OccurrenceAddress;
+      readonly exitKey: string;
       readonly decisionKey: string;
       readonly value: import('../model').AuthoredEncounterCustomization | null;
     };
@@ -710,7 +682,7 @@ export type HermesShrineCommand =
       readonly delay: import('../model').HermesShrineDelay;
     }
   | {
-      /** A new purchase starts unrushed at its canonical timeline position. */
+      /** A new purchase enters at its canonical timeline position. */
       readonly kind: 'SetHermesShrinePurchase';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
@@ -719,25 +691,24 @@ export type HermesShrineCommand =
       readonly index?: number;
     }
   | {
-      /** Rushing delivers the item in the Shrine room and offers its optional pickup. */
-      readonly kind: 'SetHermesShrinePurchaseRush';
-      readonly action: RoomActionSemanticAddress;
-      readonly rushed: boolean;
-    }
-  | {
       /**
-       * Buys or rushes one unbought generation at the end of the room's
-       * actions; `rewardType` first stocks a blank Travel Deal refill.
+       * Rushes or un-rushes one bought item: a rush delivers it in the Shrine
+       * room and makes its optional pickup live; a new rush follows its purchase,
+       * by default directly.
        */
-      readonly kind: 'PurchaseHermesShrineOffer';
+      readonly kind: 'SetHermesShrineRush';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
       readonly rushed: boolean;
-      readonly rewardType?: string;
-      /**
-       * Where the purchase enters instead of the end: any structurally legal
-       * index; a rushed item's pickup then follows it directly.
-       */
+      /** Where a new rush enters instead: any structurally legal index after its purchase. */
+      readonly index?: number;
+    }
+  | {
+      /** Buys one unbought generation at the end of the room's actions. */
+      readonly kind: 'PurchaseHermesShrineOffer';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').HermesShrineGenerationKey;
+      /** Where the purchase enters instead of the end: any structurally legal index. */
       readonly index?: number;
     }
   | {
@@ -774,8 +745,6 @@ export type StygianWellCommand =
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').StygianWellGenerationKey;
       readonly purchased: boolean;
-      /** The bought slot's item, pinned in the same edit as its purchase. */
-      readonly itemKey?: string;
       /** Where a new purchase enters instead of its default: any structurally legal index. */
       readonly index?: number;
     }
@@ -796,11 +765,10 @@ export type AcquisitionSiteCommand =
       /** Atomically materializes and ranks one due Shrine delivery entry. */
       readonly kind: 'PlaceHermesShrineDelivery';
       readonly entry: AcquisitionEntryAddress;
-      /** Exact encounter end that made this delivery due; the fourth-biome Preboss flush is phase-less. */
-      readonly encounterPhaseKey?: string;
       /**
        * Where a newly placed delivery enters the host's actions: any structurally
-       * legal index; absent, its canonical one.
+       * legal index; absent, its canonical one. The live product names the
+       * indexes after its due spawn.
        */
       readonly index?: number;
     }
@@ -808,7 +776,6 @@ export type AcquisitionSiteCommand =
       /** Accepts one simulator-attested optional pickup at its maturity checkpoint. */
       readonly kind: 'PlaceClockedTraitPickup';
       readonly entry: AcquisitionEntryAddress;
-      readonly encounterPhaseKey: string;
       readonly producerLifecycleKey: string;
       readonly rewardType: string;
       /**
@@ -824,10 +791,9 @@ export type AcquisitionSiteCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      /** Places Echo's free duplicate with unresolved acquisition details. */
+      /** Places Echo's free duplicate of a World Shop purchase with unresolved acquisition details. */
       readonly kind: 'PlaceEchoGoldPickup';
-      readonly site: AcquisitionSiteAddress;
-      readonly entryKey: 'echoDoubleShopReward';
+      readonly entry: AcquisitionEntryAddress;
       readonly sourceOfferKey: string;
       /**
        * Where a newly placed pickup enters the room's actions: any structurally
@@ -835,6 +801,12 @@ export type AcquisitionSiteCommand =
        */
       readonly index?: number;
     };
+
+/** Places a derived pickup's entry: a due delivery, a matured clocked drop or Echo's Gold duplicate. */
+export type DerivedPickupPlacementCommand = Extract<
+  AcquisitionSiteCommand,
+  { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' | 'PlaceEchoGoldPickup' }
+>;
 
 export type EncounterOccurrenceCommand =
   | {

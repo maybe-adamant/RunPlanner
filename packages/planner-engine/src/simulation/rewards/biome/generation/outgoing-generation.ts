@@ -158,7 +158,7 @@ export function applyOutgoingGenerationTransition(
           (row) =>
             row.reference.kind === 'interactAcquisitionEntry' &&
             row.reference.siteKey === siteKey &&
-            row.window.kind === 'postOutgoing',
+            row.bounds.enabler?.kind === 'doorsOpened',
         )
       )
         settleSite({ onlyEntry: { siteKey, entryKey: '' } });

@@ -27,6 +27,7 @@ function knownTakeoverSourceWidths(
   layout: BiomeLayout,
   rooms: CatalogCollection<RoomDeclaration>,
   preboss: RoomDeclaration,
+  specializedLifecycleRooms: ReadonlySet<string>,
 ): readonly number[] | undefined {
   if (
     layout.progression.kind === 'hub' &&
@@ -52,7 +53,7 @@ function knownTakeoverSourceWidths(
     layout.progression.anomalyReplacement === undefined &&
     sources.every(
       (room) =>
-        room.lifecycleProfileKey === undefined &&
+        !specializedLifecycleRooms.has(room.gameName) &&
         room.additionalExits.length === 0 &&
         room.exits.every((exit) => exit.behavior.kind === 'playerSelected'),
     );
@@ -86,6 +87,7 @@ function validatePrebossBatchPolicies(
   layouts: CatalogCollection<BiomeLayout>,
   rooms: CatalogCollection<RoomDeclaration>,
   exitPolicies: CatalogCollection<ExitCompatibilityPolicy>,
+  specializedLifecycleRooms: ReadonlySet<string>,
 ): void {
   for (const preboss of rooms.values) {
     if (preboss.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') continue;
@@ -128,7 +130,7 @@ function validatePrebossBatchPolicies(
         );
       }
     }
-    const widths = knownTakeoverSourceWidths(layout, rooms, preboss);
+    const widths = knownTakeoverSourceWidths(layout, rooms, preboss, specializedLifecycleRooms);
     if (widths === undefined) continue;
     const maximumSupportedWidth = Math.max(...widths);
     if (preboss.prebossBatchPolicy.remainingOffers.kind === 'none' && maximumSupportedWidth > 1) {
@@ -284,15 +286,19 @@ function validateRouteAvailabilityOwnership(
   });
 }
 
-/** Closes room-layout relationships that require both immutable collections. */
+/**
+ * Closes room-layout relationships that require both immutable collections.
+ * `specializedLifecycleRooms` names the rooms that declare their own lifecycle.
+ */
 export function validateRoomLayoutClosure(
   rooms: CatalogCollection<RoomDeclaration>,
   layouts: CatalogCollection<BiomeLayout>,
   exitPolicies: CatalogCollection<ExitCompatibilityPolicy>,
   routes: CatalogCollection<RouteDeclaration>,
   shops: CatalogCollection<ShopProfileDeclaration>,
+  specializedLifecycleRooms: ReadonlySet<string>,
 ): void {
-  validatePrebossBatchPolicies(layouts, rooms, exitPolicies);
+  validatePrebossBatchPolicies(layouts, rooms, exitPolicies, specializedLifecycleRooms);
   validateDerivedRoomOwnership(rooms, layouts);
   validateRewardLookupOwnership(rooms, layouts, shops);
   validateRouteAvailabilityOwnership(rooms, layouts, routes);

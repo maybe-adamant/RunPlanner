@@ -11,12 +11,11 @@ import { candidateWaitingHint, candidateWaits } from '@planner/ui/feedback/candi
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { hintProps } from '@planner/ui/controls/hint';
-import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
-import { roomKindIcon } from '../roomIcon';
-import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
+import { RoomNumberIcon } from '../RoomNumberIcon';
+import { DoorRewardEditor, DoorRewardHiddenTag } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
 import { DoorRows } from '../DoorRows';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from '../room-map/RoomMapPoints';
@@ -76,11 +75,6 @@ function OpenControl({
   );
 }
 
-/** The doors table names a side room by its number alone, as SR 10. */
-function sideRoomShortLabel(label: string): string {
-  return label.replace(/^Side Room /, 'SR ');
-}
-
 function SideDoorRow({
   interactions,
   slot,
@@ -124,26 +118,17 @@ function SideDoorRow({
       }
       room={
         <>
-          <span aria-hidden="true">
-            <FixedValueChip
-              icon={roomKindIcon(slot.roomIcon)}
-              label={sideRoomShortLabel(slot.label)}
+          <span aria-hidden="true" className="fixed-value-chip">
+            <RoomNumberIcon
+              iconClassName="fixed-value-chip-icon"
+              number={slot.roomNumber}
+              room={slot.roomIcon}
             />
           </span>
           <span className="visually-hidden">{slot.label}</span>
         </>
       }
-      secondary={
-        generated ? (
-          <>
-            <RerolledRewardRepairs
-              rewards={slot.door.offerRewardSurface.rewards}
-              target={slot.label}
-            />
-            <DoorRewardHiddenTag door={slot.door} />
-          </>
-        ) : null
-      }
+      secondary={generated ? <DoorRewardHiddenTag door={slot.door} /> : null}
       selection={<OpenControl interactions={interactions} slot={slot} />}
       state={{ available: generated, picked: slot.entered }}
     />

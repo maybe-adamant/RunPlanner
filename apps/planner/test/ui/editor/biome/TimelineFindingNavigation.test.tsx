@@ -25,7 +25,7 @@ import {
   pOccurrenceId,
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
@@ -116,6 +116,7 @@ it.each([
       </Provider>,
     );
     await view.user.click(findings.container.querySelector('button')!);
+    // A Ship delivery due as the Intro ends waits on the Intro's tab, before Combat 1's wheel.
     expect(
       screen
         .getByRole('tab', { name: kind === 'ship' ? 'Intro Timeline' : 'Room Timeline' })
@@ -131,14 +132,6 @@ it.each([
       'true',
     );
     await view.user.click(findings.container.querySelector('button')!);
-    const repair = screen.getByRole('button', {
-      name:
-        kind === 'delivery' || kind === 'ship'
-          ? 'Restore delivery'
-          : kind === 'artificer'
-            ? 'Artificer item'
-            : 'Phial target',
-    });
     const selected = view.application.store.getState().editorSession.selectedFinding!;
     const target = document.getElementById(
       semanticOwnerControlElementId(
@@ -147,12 +140,21 @@ it.each([
     );
     expect(target).not.toBeNull();
     expect(target?.getAttribute('data-selected-finding')).toBe('true');
+    // A delivery off the Timeline is taken from its live chip.
+    const repair =
+      kind === 'delivery' || kind === 'ship'
+        ? within(target!).getByRole('button')
+        : screen.getByRole('button', {
+            name: kind === 'artificer' ? 'Artificer item' : 'Phial target',
+          });
     expect(target?.contains(repair)).toBe(true);
     if (kind === 'delivery' || kind === 'ship') {
       expect(repair.dataset.hasFindings).toBe('true');
       expect(target?.hasAttribute('data-has-findings')).toBe(false);
       await view.user.click(repair);
-      expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
+      await view.user.click(await screen.findByRole('option', { name: 'Pick up' }));
+      await waitFor(() => expect(target?.isConnected).toBe(false));
+      // The placed delivery is due as the Intro ends, before its wheel's choice.
       expect(
         screen
           .getByRole('tab', {

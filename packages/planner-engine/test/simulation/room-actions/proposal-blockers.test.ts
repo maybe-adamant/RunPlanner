@@ -5,12 +5,11 @@ import type {
   RoomActionContribution,
   RoomActionDependency,
 } from '../../../src/authored-project/room-actions/domain';
-import type {
-  RoomActionWindow,
-  RoomLifecycleStructure,
-} from '../../../src/authored-project/room-actions/lifecycle-structure';
+import type { RoomEventGraph } from '../../../src/authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../../src/authored-project/room-actions/state';
 import { assembleRoomActionRoster } from '../../../src/simulation/room-actions/assemble';
+import { gateFreeGraphEvents } from '../../support/event-graph';
+import { boundsForPlacement, type TestRowPlacement } from '../../support/room-action-bounds';
 
 const owner = {
   kind: 'occurrence' as const,
@@ -21,50 +20,57 @@ const owner = {
 const first: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'first' };
 const second: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'second' };
 const other: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'other' };
-const before: RoomActionWindow = { kind: 'standard', phase: 'beforeCombat' };
-const after: RoomActionWindow = { kind: 'standard', phase: 'afterCombat' };
-const structure: RoomLifecycleStructure = {
+const before: TestRowPlacement = { kind: 'beforeCombat' as const };
+const after: TestRowPlacement = { kind: 'afterCombat' as const };
+const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['first'],
   phases: [{ phaseKey: 'first' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'start', phaseKey: 'first' },
-    { kind: 'encounterEnd', key: 'end', phaseKey: 'first' },
-    { kind: 'cleanup', key: 'cleanup' },
-  ],
+  pressFights: [],
+  events: gateFreeGraphEvents(['first'], false),
 };
 function action(
   reference: RoomActionReference,
   dependencies: readonly RoomActionDependency[] = [],
-  window = after,
+  placement = after,
 ): RoomActionContribution {
-  return { kind: 'action', reference, owner, participation: 'optional', window, dependencies };
+  return {
+    reference,
+    owner,
+    participation: 'optional',
+    bounds: boundsForPlacement(placement, structure),
+    dependencies,
+  };
 }
 describe('room action proposal blockers', () => {
-  it('distinguishes unavailable checkpoint evidence', () => {
+  it('distinguishes a spawn the room never reaches', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [],
-      contributions: [action(first, [{ kind: 'afterCheckpoint', checkpointKey: 'missing' }])],
+      contributions: [
+        {
+          ...action(first),
+          bounds: {
+            spawn: { kind: 'encounterEnd', phaseKey: 'missing' },
+            deadline: { kind: 'doorsOpened' },
+          },
+        },
+      ],
     });
     expect(roster.proposals[0]?.blockers).toEqual([
       expect.objectContaining({
-        checkpointUnavailable: true,
-        dependency: { kind: 'afterCheckpoint', checkpointKey: 'missing' },
+        kind: 'beforeSpawn',
+        unavailable: true,
+        point: { kind: 'encounterEnd', phaseKey: 'missing' },
       }),
     ]);
   });
   it('retains the prefix dependency pair for an unrelated insertion or move after it, and none before it', () => {
-    const contributions = [
-      action(first),
-      action(second, [{ kind: 'afterAction', action: first }]),
-      action(other),
-    ];
+    const contributions = [action(first), action(second, [{ action: first }]), action(other)];
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [second, first],
       contributions,
     });
@@ -74,7 +80,7 @@ describe('room action proposal blockers', () => {
       expect.objectContaining({
         kind: 'dependency',
         reference: second,
-        dependency: { kind: 'afterAction', action: first },
+        dependency: { action: first },
       }),
     ]);
     // Before the invalid row the walk has not reached it yet.
@@ -84,7 +90,7 @@ describe('room action proposal blockers', () => {
     });
     const moves = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [second, first, other],
       contributions,
     }).proposals.filter((p) => p.kind === 'move' && p.fromIndex === 2);
@@ -99,31 +105,10 @@ describe('room action proposal blockers', () => {
         .every((p) => p.blockers.length === 0),
     ).toBe(true);
   });
-  it.each(['beforeCheckpoint', 'afterCheckpoint'] as const)('retains %s evidence', (kind) => {
-    const dependency = { kind, checkpointKey: 'combat' };
-    const roster = assembleRoomActionRoster({
-      owner,
-      lifecycleStructure: structure,
-      order: [],
-      contributions: [
-        action(first, [dependency], kind === 'beforeCheckpoint' ? after : before),
-        {
-          kind: 'checkpoint',
-          checkpointKey: 'combat',
-          label: 'Combat',
-          window: kind === 'beforeCheckpoint' ? before : after,
-        },
-      ],
-    });
-    expect(roster.proposals[0]).toMatchObject({
-      structurallyAuthorable: false,
-      blockers: [{ kind: 'dependency', reference: first, dependency }],
-    });
-  });
   it('anchors each move at the current-order index it lands in front of', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second, other],
       contributions: [action(first), action(second), action(other)],
     });
@@ -140,26 +125,22 @@ describe('room action proposal blockers', () => {
   it('retains all dependency and timing evidence, and no evidence for a legal move', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second],
-      contributions: [
-        action(first, [], before),
-        action(second, [{ kind: 'afterAction', action: first }], after),
-      ],
+      contributions: [action(first, [], before), action(second, [{ action: first }], after)],
     });
     expect(roster.proposals.find((p) => p.kind === 'move' && p.fromIndex === 0)?.blockers).toEqual([
       expect.objectContaining({ kind: 'dependency', reference: second }),
       expect.objectContaining({
-        kind: 'window',
+        kind: 'pastDeadline',
         reference: first,
-        window: before,
         precedingAction: second,
-        precedingWindow: after,
+        deadline: { kind: 'encounterStarted', phaseKey: 'first' },
       }),
     ]);
     const legal = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second],
       contributions: [action(first), action(second)],
     });
@@ -176,11 +157,10 @@ describe('room action proposal blockers', () => {
     const staleShrine: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
-      rushed: false,
     };
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [well, staleShrine],
       contributions: [action(well)],
     });
@@ -190,12 +170,15 @@ describe('room action proposal blockers', () => {
   it('lists every index of a missing required action, its canonical one marked and authorable', () => {
     const required = (
       reference: RoomActionReference,
-      window: RoomActionWindow,
-    ): RoomActionContribution => ({ ...action(reference, [], window), participation: 'required' });
+      placement: TestRowPlacement,
+    ): RoomActionContribution => ({
+      ...action(reference, [], placement),
+      participation: 'required',
+    });
     const extra: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'extra' };
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       // The retained before-combat row follows an after-combat one: its own window issue.
       order: [other, first, extra],
       contributions: [
@@ -225,14 +208,14 @@ describe('room action proposal blockers', () => {
       [3, true, true],
     ]);
     expect(inserts[0]?.blockers).toEqual([
-      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
+      expect.objectContaining({ kind: 'beforeSpawn', reference: second, requiredAction: first }),
     ]);
     expect(inserts[1]?.blockers).toEqual([
-      expect.objectContaining({ kind: 'requiredFirst', reference: other, requiredAction: first }),
-      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
+      expect.objectContaining({ kind: 'beforeSpawn', reference: other, requiredAction: first }),
+      expect.objectContaining({ kind: 'beforeSpawn', reference: second, requiredAction: first }),
     ]);
     expect(inserts[2]?.blockers).toEqual([
-      expect.objectContaining({ kind: 'window', reference: first }),
+      expect.objectContaining({ kind: 'pastDeadline', reference: first }),
     ]);
     expect(inserts[3]?.blockers).toEqual([]);
   });

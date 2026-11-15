@@ -22,3 +22,10 @@ export function minibossIcon(definitionKey: string): string | undefined {
 export function encounterIcon(definitionKey: string): string | undefined {
   return encounterArtwork[definitionKey] ?? undefined;
 }
+
+/** A fought contact's icon: its encounter's own, else its miniboss's. */
+export function foughtEncounterIcon(definitionKey: string | undefined): string | undefined {
+  return definitionKey === undefined
+    ? undefined
+    : (encounterIcon(definitionKey) ?? minibossIcon(definitionKey));
+}

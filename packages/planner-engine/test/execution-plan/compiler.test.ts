@@ -21,7 +21,13 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  replaceTestPlacedItem,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
@@ -72,7 +78,7 @@ import { fingerprint } from '../../src/execution-plan/fingerprint';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixtureFile from './fixtures/f-opening.execution.json';
 import fgFixtureFile from './fixtures/fg.execution.json';
-import fgAnomalyFixtureFile from './fixtures/fg-anomaly.execution.json';
+import fgAnomalyRosterFixtureFile from './fixtures/fg-anomaly-roster.execution.json';
 import fgIxionChaosFixtureFile from './fixtures/fg-ixion-chaos.execution.json';
 import underworldFGHFixtureFile from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixtureFile from './fixtures/underworld-fghi.execution.json';
@@ -97,7 +103,7 @@ import { landedSteadyGrowthOutcome } from '../support/timed-outcomes';
 
 const fOpeningFixture = currentSchemaWire(fOpeningFixtureFile);
 const fgFixture = currentSchemaWire(fgFixtureFile);
-const fgAnomalyFixture = currentSchemaWire(fgAnomalyFixtureFile);
+const fgAnomalyRosterFixture = currentSchemaWire(fgAnomalyRosterFixtureFile);
 const fgIxionChaosFixture = currentSchemaWire(fgIxionChaosFixtureFile);
 const underworldFGHFixture = currentSchemaWire(underworldFGHFixtureFile);
 const underworldFGHIFixture = currentSchemaWire(underworldFGHIFixtureFile);
@@ -649,7 +655,7 @@ describe('execution-plan compiler and codec', () => {
       2,
     );
     const rarityAt = (blessingKey: string, blessingValues: Readonly<Record<string, number>>) => {
-      let authored = authorLegalTraitOffers(
+      let authored = authorTestTraitsAndRequiredItems(
         applyProjectCommand(project, catalog, {
           kind: 'ReplaceTranscendentEmbryoTransformation',
           outcome,
@@ -671,7 +677,7 @@ describe('execution-plan compiler and codec', () => {
           candidate.result.eligibleTargetKeys[0] === undefined
         )
           throw new Error('missing shifted Steady target');
-        authored = authorLegalTraitOffers(
+        authored = authorTestTraitsAndRequiredItems(
           applyProjectCommand(authored, catalog, {
             kind: 'ReplaceSteadyGrowthTarget',
             outcome: missing.origin,
@@ -717,8 +723,9 @@ describe('execution-plan compiler and codec', () => {
       createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
       'Combat1',
     );
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
+    // The Boon is a new wheel item: its pickup is placed again with its screen.
+    project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(project, {
         kind: 'ReplaceRewardWheelOffer',
         offer,
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
@@ -758,7 +765,7 @@ describe('execution-plan compiler and codec', () => {
       }),
     );
 
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer,
       value: { rewardType: 'RoomMoneyDrop' },
@@ -2058,7 +2065,8 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('compiles a command-authored Dream Q/F/N/H itinerary as a configured Q prefix', () => {
-    const project = dreamMixedPrefixProject();
+    // The owner collects each room's required items.
+    const project = collectTestRequiredItems(dreamMixedPrefixProject());
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.status, JSON.stringify(assembly.evaluation.findings)).toBe('valid');
     const { plan } = planFor(project);
@@ -2199,18 +2207,20 @@ describe('execution-plan compiler and codec', () => {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
       rewardType: 'MaxHealthDrop',
-      rushed: true,
     };
-    associated.description = { ...shrinePurchase };
-    refreshWireFingerprint(wire);
-    expect(() => decodeExecutionPlan(wire)).not.toThrow();
-    // A real occurrence transaction owner is still refused on a Shrine row.
-    expect(associatedOwner).toBeDefined();
-    associated.transactionOwner = associatedOwner!;
-    refreshWireFingerprint(wire);
-    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
-    delete associated.transactionOwner;
-    for (const invalid of [{ rushed: 'yes' }, { generationKey: 'initial:healing' }]) {
+    for (const kind of ['purchaseHermesShrineOffer', 'rushHermesShrineOffer']) {
+      associated.description = { ...shrinePurchase, kind };
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).not.toThrow();
+      // A real occurrence transaction owner is still refused on a Shrine row.
+      expect(associatedOwner).toBeDefined();
+      associated.transactionOwner = associatedOwner!;
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+      delete associated.transactionOwner;
+    }
+    // The rush is its own row; a purchase no longer carries it.
+    for (const invalid of [{ rushed: true }, { generationKey: 'initial:healing' }]) {
       associated.description = { ...shrinePurchase, ...invalid };
       refreshWireFingerprint(wire);
       expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
@@ -3042,7 +3052,7 @@ describe('execution-plan compiler and codec', () => {
   it('rejects the G-only Anomaly payload on an F occurrence', () => {
     const malformed = JSON.parse(JSON.stringify(fOpeningFixture)) as Record<string, unknown>;
     const occurrences = malformed.occurrences as Array<Record<string, unknown>>;
-    const anomalyOccurrence = fgAnomalyFixture.occurrences.find(
+    const anomalyOccurrence = fgAnomalyRosterFixture.occurrences.find(
       (occurrence) => occurrence.anomaly !== undefined,
     );
     if (anomalyOccurrence?.anomaly === undefined) throw new Error('fixture lacks Anomaly payload');
@@ -3052,7 +3062,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('rejects unknown fields in the strict Anomaly payload union', () => {
-    const malformed = JSON.parse(JSON.stringify(fgAnomalyFixture)) as {
+    const malformed = JSON.parse(JSON.stringify(fgAnomalyRosterFixture)) as {
       occurrences: Array<{ anomaly?: Record<string, unknown> }>;
     };
     const occurrence = malformed.occurrences.find((entry) => entry.anomaly !== undefined);
@@ -3218,10 +3228,14 @@ describe('execution-plan compiler and codec', () => {
     )
       throw new Error('fixture lacks an obligated transaction occurrence to clone');
     const unselectedOwner = 'unselected-occurrence-owner';
+    // An unselected room is never entered, so it publishes no layout.
+    const unenteredOverview = { ...sourceForUnselected.overview };
+    delete unenteredOverview.layout;
     const unselected = Object.freeze({
       ...sourceForUnselected,
       id: 'unselected-occurrence',
       owner: unselectedOwner,
+      overview: Object.freeze(unenteredOverview),
       roomGuide: Object.freeze(
         sourceForUnselected.roomGuide.map((row) => {
           if (row.transactionOwner === sourceTransaction.owner)

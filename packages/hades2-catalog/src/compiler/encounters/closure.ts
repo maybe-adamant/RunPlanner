@@ -138,6 +138,12 @@ export function validateEncounterDefinitionClosure(input: {
         `${path}.nemesisRandomEvent.damageTrade[${variantIndex}].rewardType`,
       ),
     );
+    for (const traitKey of event.damageTrade.unavailableWhileHeldTraitKeys)
+      if (input.traits.traits.byKey[traitKey] === undefined)
+        fail(
+          `${path}.nemesisRandomEvent.damageTrade.unavailableWhileHeldTraitKeys`,
+          `unknown trait ${traitKey}`,
+        );
     event.freeItem.resultRewardTypes.forEach((rewardType) =>
       assertRewardType(rewardType, `${path}.nemesisRandomEvent.freeItem.resultRewardTypes`),
     );
@@ -165,6 +171,12 @@ export function validateEncounterSetClosure(
         fail(
           `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
           `unknown encounter definition ${definitionKey}`,
+        );
+      // A room reward that cannot duplicate stays a fact of its room's fixed binding.
+      if (definitions.byKey[definitionKey]?.incomingRewardCannotDuplicate === true)
+        fail(
+          `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
+          `${definitionKey}: only a fixed slot binds its reward that can never duplicate, as its sole encounter`,
         );
     });
     set.authoringProfiles.forEach((profile, profileIndex) => {

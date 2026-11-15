@@ -17,25 +17,41 @@ import { rewardFinding } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { LifecycleFinding } from './types';
+import type { NemesisRandomEventCandidateSupport } from '../../model';
+import { nemesisRandomEventFamilySupport } from '../encounter-acquisition/nemesis-random-event';
 
 export interface RoomPreparedTransition {
   readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
+  /** Each Nemesis event's family support, read from the state she spawns in. */
+  readonly nemesisCandidates: readonly NemesisRandomEventCandidateSupport[];
 }
 
-/** A Nemesis random event's family is fixed when Nemesis spawns on room entry. */
-function nemesisFamilyMissingFindings(
+/**
+ * A Nemesis random event's family is fixed when Nemesis spawns on room entry:
+ * its support reads the held traits there, and a family left unset, or one
+ * that state cannot queue, is the event's own finding.
+ */
+function nemesisEventsOnEntry(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-): readonly SemanticFinding[] {
-  if (catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent === undefined)
-    return [];
+  branch: RewardBranchState | undefined,
+): {
+  readonly findings: readonly SemanticFinding[];
+  readonly candidates: readonly NemesisRandomEventCandidateSupport[];
+} {
+  const findings: SemanticFinding[] = [];
+  const candidates: NemesisRandomEventCandidateSupport[] = [];
   const declaration = routeRoomDeclaration(
     catalog.rooms.byKey[room.gameName],
     room.origin.routeKey,
   );
-  if (declaration === undefined) return [];
-  return room.encounterPhases.flatMap((phase) => {
+  if (
+    catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent === undefined ||
+    declaration === undefined
+  )
+    return { findings, candidates };
+  for (const phase of room.encounterPhases) {
     if (
       room.encounters.encounterKeyByPhase[phase.slotKey] === undefined ||
       directEncounterDefinitionKeyForSlot(
@@ -44,10 +60,9 @@ function nemesisFamilyMissingFindings(
         room.encounters,
         phase.slotKey,
         room.gameName,
-      ) !== 'NemesisRandomEvent' ||
-      (room.encounters.nemesisRandomEventByPhase?.[phase.slotKey] ?? null) !== null
+      ) !== 'NemesisRandomEvent'
     )
-      return [];
+      continue;
     const owner = createNemesisRandomEventAddress(
       createEncounterPhaseAddress(
         createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
@@ -55,13 +70,33 @@ function nemesisFamilyMissingFindings(
         phase.slotKey,
       ),
     );
-    return [rewardFinding('nemesisOutcomeMissing', owner, {})];
-  });
+    const support =
+      branch === undefined
+        ? undefined
+        : nemesisRandomEventFamilySupport(catalog, owner, branch.state.traitHistory.equippedTraits);
+    if (support !== undefined) candidates.push(support);
+    const family = room.encounters.nemesisRandomEventByPhase?.[phase.slotKey]?.kind;
+    if (family === undefined) {
+      findings.push(rewardFinding('nemesisOutcomeMissing', owner, {}));
+      continue;
+    }
+    const refusal = support?.unavailableFamilies[family];
+    if (refusal !== undefined)
+      findings.push(
+        rewardFinding('nemesisEventUnavailable', owner, {
+          kind: family,
+          reason: refusal.kind,
+          ...(refusal.kind === 'heldTrait' ? { traitKey: refusal.traitKey } : {}),
+        }),
+      );
+  }
+  return { findings, candidates };
 }
 
 /**
  * Room preparation opens the room's reward lifecycle and checks the Overview
  * facts it fixes: Fields optional reward counts and Nemesis event families.
+ * It reads the branch before the room begins, the state Nemesis spawns in.
  */
 export function applyRoomPreparedTransition(
   catalog: Catalog,
@@ -71,6 +106,7 @@ export function applyRoomPreparedTransition(
   branch: RewardBranchState | undefined,
 ): RoomPreparedTransition {
   const findings: LifecycleFinding[] = [];
+  const nemesis = room === undefined ? undefined : nemesisEventsOnEntry(catalog, room, branch);
   if (room !== undefined) {
     const chronology = rewardFindingChronologyForRoom(
       snapshot,
@@ -80,11 +116,12 @@ export function applyRoomPreparedTransition(
     );
     for (const finding of fieldsOptionalRewardCountFindings(catalog, room))
       findings.push(Object.freeze({ finding, region: ownerRegion(room.origin), chronology }));
-    for (const finding of nemesisFamilyMissingFindings(catalog, room))
+    for (const finding of nemesis?.findings ?? [])
       findings.push(Object.freeze({ finding, region: ownerRegion(finding.origin), chronology }));
   }
   return Object.freeze({
     branch: beginRewardRoom(branch, event.sequence),
     findings: Object.freeze(findings),
+    nemesisCandidates: Object.freeze([...(nemesis?.candidates ?? [])]),
   });
 }

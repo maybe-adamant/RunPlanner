@@ -21,7 +21,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../../../support/route-position';
 
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, withItemContent } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNOPProject,
   pBiome,
@@ -256,6 +256,11 @@ describe('P core loop', () => {
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
         )?.roomActions.order,
-    ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
+    ).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop), {
+        kind: 'interactShopOffer',
+        offerKey: 'Boon',
+      }),
+    );
   });
 });

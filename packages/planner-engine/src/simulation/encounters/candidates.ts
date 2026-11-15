@@ -49,7 +49,10 @@ export interface EncounterCandidateArtifacts {
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
   readonly gorgonAt: (origin: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
-  /** Exact branch-correlated Nemesis event capability at its interaction owner. */
+  /**
+   * A Nemesis event's family support from the state she spawns in on room
+   * entry; its assessment once her interaction is reached.
+   */
   readonly nemesisAt: (
     origin: NemesisRandomEventAddress,
   ) => NemesisRandomEventCandidateSupport | undefined;
@@ -64,6 +67,23 @@ export interface EncounterCandidateArtifacts {
    * preparation. Its candidate context reads nothing later.
    */
   readonly preparedAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
+}
+
+/**
+ * A room's phases its walk plays: its active slots less a suffix preparation
+ * left dormant behind a terminating encounter (a valid Heracles in a P Intro).
+ */
+export function playedEncounterPhaseKeys(
+  statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
+  room: OccurrenceAddress,
+  activeSlotKeys: readonly string[],
+): readonly string[] {
+  const biome = createBiomeAddress(room.routeKey, room.biomeKey);
+  const owner = { kind: 'occurrence' as const, occurrenceId: room.occurrenceId };
+  return activeSlotKeys.filter(
+    (phaseKey) =>
+      statusAt(createEncounterPhaseAddress(biome, owner, phaseKey))?.kind !== 'dormantSuffix',
+  );
 }
 
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {

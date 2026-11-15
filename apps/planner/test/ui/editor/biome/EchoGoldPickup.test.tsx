@@ -18,6 +18,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import { slotRow } from '@planner-test/support/timeline-rows';
+import { liveChip, takeLive } from '@planner-test/support/live-row';
 import {
   createEchoGoldHPrebossProject,
   createEchoGoldIAnvilDuplicateProject,
@@ -31,7 +32,6 @@ import {
 } from '@planner-test/support/biome-workbench';
 import {
   occurrenceById,
-  openNotReached,
   openRoomTab,
   pickRoomObjectAction,
 } from '@planner-test/support/occurrence-workbench';
@@ -78,8 +78,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'Minor',
   });
   project = applyProjectCommand(project, catalog, {
@@ -103,7 +102,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   ).toBe(false);
 });
 
-it('adds required Gold with the purchase and restores both through one Undo and Redo', async () => {
+it('buys the Gold Gold Gold source without placing its Gold, through one Undo and Redo', async () => {
   const project = createEchoGoldHPrebossProject();
   const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
   openRoomTab('Room Timeline');
@@ -111,15 +110,13 @@ it('adds required Gold with the purchase and restores both through one Undo and 
   await pickRoomObjectAction(view.user, 'World Shop', 'Buy Apollo');
   const history = view.application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
-  // The walk stops at the purchase, so the Gold waits past it.
-  openNotReached();
-  expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
-  expect(
-    (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)
-      .disabled,
-  ).toBe(true);
-  // A waiting row is not reordered until the walk reaches it.
-  expect(goldRow().queryByRole('button', { name: /^Reorder / })).toBeNull();
+  // The Gold arrives on the ground; picking it up is the owner's own row.
+  const shopOrder = history.present.route.biomes
+    .find((candidate) => candidate.biomeKey === 'H')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+    ?.roomActions.order.map(roomActionKey);
+  expect(shopOrder).toContain(roomActionKey({ kind: 'interactShopOffer', offerKey: 'Boon' }));
+  expect(shopOrder).not.toContain(goldActionKey);
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
   expect(view.application.store.getState().projectWorkspace.history!.present).toBe(project);
   act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
@@ -151,8 +148,8 @@ it('restores an imported missing duplicated Boon and exposes its fresh trait edi
   ).toBe(false);
   expect(screen.queryByText(/^Gold Gold Gold duplicate of/)).toBeNull();
   openRoomTab('Room Timeline');
-  expect(goldRow().queryByRole('button', { name: 'Reward' })).toBeNull();
-  await view.user.click(goldRow().getByRole('button', { name: 'Restore pickup' }));
+  expect(queryGoldRow()).toBeNull();
+  await takeLive(view.user, /^Gold Gold Gold duplicate/, 'Pick up');
   expect(findings().some((finding) => finding.code === 'echoGoldPickupPlacementRequired')).toBe(
     false,
   );
@@ -227,13 +224,9 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
       semanticAddressKey(finding.origin).includes('echoDoubleShopReward'),
     ),
   ).toBe(false);
-  // The optional Gold pickup waits as a chip under its purchase, with no reward editor, until taken.
+  // The optional Gold pickup waits on the live row, with no reward editor, until taken.
   expect(queryGoldRow()).toBeNull();
-  const spawnedGold = () =>
-    within(document.querySelector<HTMLElement>('[data-spawned-loot="action"]')!).getByRole(
-      'button',
-    );
-  await view.user.click(spawnedGold());
+  await takeLive(view.user, /^Gold Gold Gold duplicate/, 'Pick up');
   await selectGod(goldRow());
   settleTrait('echoDoubleShopReward');
   expect(
@@ -242,9 +235,9 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     ),
   ).toBe(false);
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  // Removed, its chip waits again and its reward editor leaves with the row.
+  // Removed, it waits on the live row again and its reward editor leaves with the row.
   expect(queryGoldRow()).toBeNull();
-  expect(spawnedGold().hasAttribute('data-spawn-placed')).toBe(false);
+  expect(liveChip(/^Gold Gold Gold duplicate/)).toBeTruthy();
   expect(
     workspaceProjection(view.application).interactions.traitOffers.has(
       semanticAddressKey(createTraitOfferAddress(gold, 'hiddenSource')),
@@ -279,8 +272,7 @@ it('repairs a retained consumable when its Gold source changes to a Mystery Boon
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'Minor',
   });
   project = applyProjectCommand(project, catalog, {

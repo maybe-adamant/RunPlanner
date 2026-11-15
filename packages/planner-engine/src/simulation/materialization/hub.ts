@@ -1,4 +1,4 @@
-import { hubRerolledOwners } from '../../authored-project/rerolls';
+import { hubRerolledOwners, hubRerollOwner, rerollResult } from '../../authored-project/rerolls';
 import type { Catalog, HubDecisionDescriptor, RoomDeclaration } from '../../catalog-schema';
 import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounter-envelope';
 import { alwaysActiveEncounterSlotKeys, materializeEncounterPhases } from '../encounters/resolve';
@@ -18,6 +18,7 @@ import {
 import type {
   BiomeTopology,
   HubDecision,
+  HubRerollAction,
   LocalVisitDecision,
   OccurrenceId,
   RoomOccurrence,
@@ -32,10 +33,10 @@ import type {
   CanonicalHubTarget,
   CanonicalHubVisit,
   CanonicalLocalVisitRoom,
-  CanonicalResolvedIncomingReward,
   CanonicalRoomReference,
 } from './model';
 import { materializeAuthoredRoom } from './rooms/assemble';
+import { roomLifecycleProfileKey } from '../../authored-project/room-actions/lifecycle-profile';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   firstRepeatedVisitIndex,
@@ -83,7 +84,6 @@ function requireLifecycle(
   catalog: Catalog,
   room: RoomDeclaration,
   lifecycleProfileKey: string,
-  incomingReward: CanonicalResolvedIncomingReward | undefined,
 ): void {
   const lifecycle = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   if (
@@ -91,16 +91,6 @@ function requireLifecycle(
     !lifecycle.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey)
   ) {
     fail(`${room.gameName} cannot use lifecycle ${lifecycleProfileKey}`);
-  }
-  if (incomingReward === undefined) {
-    if (lifecycle.producer.kind !== 'none') fail(`${room.gameName} lifecycle requires a producer`);
-    return;
-  }
-  if (
-    lifecycle.producer.kind !== 'required' ||
-    !lifecycle.producer.lifecycleProfileKeys.includes(incomingReward.producerLifecycleKey)
-  ) {
-    fail(`${room.gameName} producer is incompatible with ${lifecycleProfileKey}`);
   }
 }
 
@@ -117,7 +107,8 @@ function materializeHubRoom(
   ) {
     fail(`${room.gameName} is not a derived, reward-free Hub room`);
   }
-  requireLifecycle(catalog, room, 'EphyraHubRoom', undefined);
+  const lifecycleProfileKey = roomLifecycleProfileKey(room, 'ordinary');
+  requireLifecycle(catalog, room, lifecycleProfileKey);
   return Object.freeze({
     kind: 'hub',
     origin: createHubRoomAddress(biome, descriptor.hubKey),
@@ -127,7 +118,8 @@ function materializeHubRoom(
     ...(room.unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
-    lifecycleProfileKey: 'EphyraHubRoom',
+    lifecycleProfileKey,
+    runsProducer: false,
     counterEffects: room.counters,
     entered: true,
   });
@@ -199,7 +191,7 @@ function materializeLocalSlots(
         occurrence: authored,
         role: 'ordinary',
         entered: enteredOrdinal >= 0,
-        lifecycleProfileKey: 'EphyraSideRoom',
+        lifecycleRole: 'localVisit',
         loadout,
       });
       return Object.freeze({
@@ -235,7 +227,7 @@ function materializeBoard(
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(hubVisitSlotKeys(decision));
-  const rerolledOwners = hubRerolledOwners(biome, decision);
+  const rerolledOwners = hubRerolledOwners(biome, topology, decision);
   return Object.freeze({
     origin: createHubOpenSetAddress(biome, descriptor.hubKey),
     room,
@@ -260,7 +252,7 @@ function materializeBoard(
               occurrence,
               role: 'ordinary',
               entered: visited.has(slot.slotKey),
-              lifecycleProfileKey: 'EphyraMainRoom',
+              lifecycleRole: 'hubTarget',
               ...(loadout === undefined ? {} : { loadout }),
               rerolledOwners,
             }),
@@ -412,6 +404,10 @@ export function materializeHubDecision(
     loadout,
   );
   const precedingVisitCount = hubFountainPrecedingVisitCount(decision);
+  const withResult = (action: HubRerollAction) => {
+    const reward = rerollResult(topology, hubRerollOwner(biome, decision, action), action.rerollId);
+    return reward === undefined ? {} : { reward };
+  };
   const rerolls = Object.freeze(
     decision.actions.flatMap((action, index) => {
       if (action.kind !== 'reroll') return [];
@@ -423,7 +419,7 @@ export function materializeHubDecision(
         Object.freeze({
           origin: createHubRerollAddress(biome, descriptor.hubKey, action.rerollId),
           hubSlotKey: action.hubSlotKey,
-          reward: action.reward,
+          ...withResult(action),
           precedingVisitCount: visited.length,
           afterFountain: before.some((earlier) => earlier.kind === 'useFountain'),
           slotEntered: visited.includes(action.hubSlotKey),

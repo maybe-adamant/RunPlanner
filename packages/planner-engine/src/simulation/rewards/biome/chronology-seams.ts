@@ -1,6 +1,8 @@
+import { roomOpensRewardWheels } from '../../encounters/model';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
+  createRoomActionAddress,
   createEncounterPhaseAddress,
   createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
@@ -12,7 +14,17 @@ import { resolveCompletionBoss } from '../../../authored-project/completion-boss
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
+import {
+  roomActionOpeningPoint,
+  roomEventPlaces,
+  type RoomEventGraph,
+} from '../../../authored-project/room-actions/event-graph';
+import { requiredObjectDeadline } from '../../../authored-project/room-actions/required-object-gate';
+import type { RoomActionRow } from '../../room-actions';
 import type { HistoryEvent } from '../../history';
+import { HERMES_SHRINE_DELIVERY_SITE_KEY } from '../../../authored-project/hermes-shrine-delivery';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
 import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { forGeneration } from '../../materialization';
@@ -23,7 +35,11 @@ import {
   publishOfferedRewardTypes,
 } from '../../state/offered-rewards';
 import { reachSimulationHistory } from '../../state/transitions';
-import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
+import {
+  attestDerivedAcquisitionEntryCandidateCapability,
+  timedPickupReference,
+} from '../acquisition/artifacts';
+import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
 import { advanceRewardBranch } from '../branch-lifecycle';
 import { mapReached, type RewardBranchState } from '../branch-primitives';
 import type { MidBiomeStartPoint } from '../model';
@@ -54,12 +70,16 @@ import {
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import { applyGorgonOutcomeTransition } from './encounter-acquisition/gorgon-outcome';
-import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
+import {
+  applyHermesShrinePurchaseReachedTransition,
+  applyHermesShrineRushReachedTransition,
+} from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { withPoolSaleGold } from './gold-event-seams';
 import {
   withAcquisitionPointPrice,
   withHermesShrinePurchasePrice,
+  withHermesShrineRushPrice,
   withWellPurchasePrice,
 } from './purchase-price-seams';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
@@ -87,8 +107,13 @@ import {
   resolveRoomTarget,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
-import { captureRoomActionEnd } from './object-interaction-seams';
+import { captureRoomActionPoints } from './object-interaction-seams';
 import { featureRerolled, purgingPoolSale, wellPurchaseRoll } from './feature-roll-seams';
+import {
+  doorRewardSpawns,
+  forfeitPeeks,
+  type RewardSpawn,
+} from './offer-lifecycle/spawned-trait-offers';
 import { parsePurgingPoolSalePoint } from '../../commerce/feature-rolls';
 import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
@@ -96,6 +121,7 @@ import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlemen
 import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
 import { createBiomeRewardFacts } from '../facts';
 import { prepareUnlockExitEncounter } from '../../encounters/unlock-exit';
+import { pressFightOf } from '../../../authored-project/room-actions/event-graph';
 import { extraExitLockHost } from '../../../authored-project/locked-exits';
 import { rerollKindEnabled } from '../../arcana-fear';
 import {
@@ -135,6 +161,163 @@ function authoredRoom(
 ): CanonicalAuthoredRoom | undefined {
   const room = context.rooms.get(semanticAddressKey(origin));
   return room?.kind === 'authored' ? room : undefined;
+}
+
+/**
+ * Where an item spawned at a sequence falls due: before the room's first later reached row
+ * `due` picks, else before its doors opening or its commit. Undefined while the walk does not
+ * reach that point.
+ */
+function placementDeadline(
+  context: ChronologyWalkContext,
+  origin: SemanticAddress,
+  sequence: number,
+  /** The index of the deadline among the room's later reached rows, in walk order. */
+  due: (graph: RoomEventGraph, rows: readonly RoomActionRow[]) => number | undefined,
+): { readonly sequence: number; readonly deadline: Readonly<Record<string, string>> } | undefined {
+  const roomKey = semanticAddressKey(origin);
+  const room = authoredRoom(context, origin);
+  const closingEvent = context.history.events.find(
+    (event) =>
+      event.sequence > sequence &&
+      semanticAddressKey(event.origin) === roomKey &&
+      (event.kind === 'outgoingGenerationCheckpoint' || event.kind === 'roomCommitted'),
+  );
+  const closing =
+    closingEvent === undefined
+      ? undefined
+      : {
+          sequence: closingEvent.sequence,
+          deadline: Object.freeze({
+            deadline: closingEvent.kind === 'roomCommitted' ? 'leave' : 'doorsOpened',
+          }),
+        };
+  if (room === undefined) return closing;
+  const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
+  const last = context.history.events.at(-1)?.sequence ?? 0;
+  const reached = context.reachedActions.filter(
+    (action) =>
+      semanticAddressKey(action.room) === roomKey &&
+      action.sequence > sequence &&
+      action.sequence <= last &&
+      rows.has(action.actionKey) &&
+      (closing === undefined || action.sequence < closing.sequence),
+  );
+  const index = due(
+    room.roomActionRoster.eventGraph,
+    reached.map((action) => rows.get(action.actionKey)!),
+  );
+  const later = index === undefined ? undefined : reached[index];
+  return later === undefined
+    ? closing
+    : {
+        sequence: later.sequence,
+        deadline: Object.freeze({ deadline: 'action', deadlineAction: later.actionKey }),
+      };
+}
+
+/** The walk's deadline stop, the earliest of the one it has and a new one. */
+function haltingBefore(
+  state: ChronologyWalkState,
+  haltBefore: number | undefined,
+): { readonly haltBefore?: number } {
+  const earliest = Math.min(
+    state.haltBefore ?? Number.POSITIVE_INFINITY,
+    haltBefore ?? Number.POSITIVE_INFINITY,
+  );
+  return Number.isFinite(earliest) ? { haltBefore: earliest } : {};
+}
+
+/**
+ * A required item the walk spawns lies on the ground until its pickup row; the room's next row
+ * that waits for required objects (`requiredObjectDeadline`), or else the doors, is its
+ * deadline, and the walk stops there. Left unplaced, its placement finding stands at that
+ * deadline; placed after it, the waiting row's order finding names it as the action to take
+ * first. Both are withheld while the walk does not reach the deadline.
+ */
+function deliveryPlacementAtDeadline(
+  context: ChronologyWalkContext,
+  origin: SemanticAddress,
+  sequence: number,
+  findings: readonly LifecycleFinding[],
+  frontiers: readonly DerivedAcquisitionEntryFrontier[],
+): { readonly findings: readonly LifecycleFinding[]; readonly haltBefore?: number } {
+  const placement = (entry: LifecycleFinding) =>
+    entry.finding.code === 'hermesShrineDeliveryPlacementRequired';
+  const room = authoredRoom(context, origin);
+  // A placed required item the walk has not reached by `before`.
+  const late = (frontier: DerivedAcquisitionEntryFrontier, before: number) => {
+    const key = roomActionKey(timedPickupReference(frontier.address));
+    return (
+      room?.roomActionRoster.rows.some(
+        (row) => row.key === key && row.rank !== null && row.participation === 'required',
+      ) === true &&
+      !context.reachedActions.some(
+        (action) =>
+          action.actionKey === key &&
+          semanticAddressKey(action.room) === semanticAddressKey(origin) &&
+          action.sequence < before,
+      )
+    );
+  };
+  if (!findings.some(placement) && !frontiers.some((frontier) => late(frontier, sequence)))
+    return { findings };
+  const due = placementDeadline(context, origin, sequence, (graph, rows) =>
+    requiredObjectDeadline(graph, rows),
+  );
+  if (due === undefined) return { findings: findings.filter((entry) => !placement(entry)) };
+  const chronology = Object.freeze({
+    kind: 'history' as const,
+    sequence: due.sequence,
+    boundary: 'before' as const,
+  });
+  const gated = room?.roomActionRoster.rows.find((row) => row.key === due.deadline.deadlineAction);
+  const gate =
+    gated === undefined || room?.origin.kind !== 'occurrence'
+      ? undefined
+      : createRoomActionAddress(
+          createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+          room.origin.occurrenceId,
+          gated.key,
+        );
+  const lateFindings = frontiers.flatMap((frontier) =>
+    gate === undefined || !late(frontier, due.sequence)
+      ? []
+      : [
+          Object.freeze({
+            finding: Object.freeze({
+              code: 'roomActionOrderUnavailable' as const,
+              phase: 'encounterResolution' as const,
+              origin: gate,
+              evidence: Object.freeze({
+                reason: 'beforeEnabler',
+                point: roomActionOpeningPoint(gated!.bounds),
+                requiredAction: roomActionKey(timedPickupReference(frontier.address)),
+              }),
+            }),
+            region: ownerRegion(gate),
+            chronology,
+          }),
+        ],
+  );
+  return {
+    findings: [
+      ...findings.map((entry) =>
+        !placement(entry)
+          ? entry
+          : Object.freeze({
+              ...entry,
+              finding: Object.freeze({
+                ...entry.finding,
+                evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
+              }),
+              chronology,
+            }),
+      ),
+      ...lateFindings,
+    ],
+    ...(findings.some(placement) || lateFindings.length > 0 ? { haltBefore: due.sequence } : {}),
+  };
 }
 
 /**
@@ -335,17 +518,21 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
   )?.reference;
   if (source === undefined || reroll?.kind !== 'reroll')
     throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its reroll`);
-  const target = resolveRoomTarget(
-    context.catalog,
-    source,
-    context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
-    reroll.target,
-    state.peers,
-  );
+  const press = source.rerollPresses?.get(reroll.rerollId);
+  const target =
+    press === undefined
+      ? undefined
+      : resolveRoomTarget(
+          context.catalog,
+          source,
+          context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
+          press.target,
+          state.peers,
+        );
   const transition = applyRewardRerolledTransition({
     catalog: context.catalog,
     owner: event.owner,
-    reward: reroll.reward,
+    reward: press?.result,
     target: target === 'cageNotPlayed' ? undefined : target,
     ...(target === 'cageNotPlayed' ? { refused: target } : {}),
     flagged:
@@ -372,9 +559,56 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       ...(transition.settlement === undefined
         ? []
         : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          press?.result === undefined || transition.branch === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                transition.branch.state,
+                rerolledRewardSpawns(context, source, press),
+                event.sequence,
+              ),
+      },
     ],
   };
 };
+
+/** The reward a reroll press put in its target's place, as its preview shows it. */
+function rerolledRewardSpawns(
+  context: ChronologyWalkContext,
+  source: CanonicalAuthoredRoom,
+  press: import('../../../authored-project/rerolls').ResolvedRerollPress,
+): readonly RewardSpawn[] {
+  const { target, result } = press;
+  if (result === undefined) return [];
+  if (target.kind === 'wheelOffer') {
+    const wheel = source.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
+    const offer = wheel?.offers.find((candidate) => candidate.offerKey === target.offerKey);
+    return wheel === undefined || offer === undefined
+      ? []
+      : [
+          {
+            origin: offer.origin,
+            offer: result,
+            producerLifecycleKey: wheel.producerLifecycleKey,
+            forfeitEligible: true,
+          },
+        ];
+  }
+  const rewards = context.prepared.batchesByParent
+    .get(semanticAddressKey(source.origin))
+    ?.targets.find((candidate) => candidate.room.occurrenceId === target.occurrenceId)?.room;
+  const spawns = rewards === undefined ? [] : doorRewardSpawns(rewards);
+  const owner =
+    target.kind === 'door'
+      ? spawns.find((spawn) => spawn.origin.kind === 'incomingReward')
+      : spawns.find(
+          (spawn) => spawn.origin.kind === 'localReward' && spawn.origin.slotKey === target.slotKey,
+        );
+  return owner === undefined ? [] : [{ ...owner, offer: result }];
+}
 
 /**
  * One Hub board reroll in the stay it is authored in. Its slot must still be
@@ -439,6 +673,17 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
           ...settled,
           state: updateLookup(settled.state, progression.rewardLookup.key, boardTypes),
         });
+  // The rerolled board door shows its new reward's Onion preview (AttemptRerollDoor).
+  const slotRoom = hub.board.targets.find(
+    (target) => target.hubSlotKey === reroll.hubSlotKey,
+  )?.room;
+  const { reward } = reroll;
+  const rerolledSpawns =
+    reward === undefined || slotRoom === undefined || reroll.slotEntered
+      ? []
+      : doorRewardSpawns(slotRoom)
+          .filter((spawn) => spawn.origin.kind === 'incomingReward')
+          .map((spawn) => ({ ...spawn, offer: reward }));
   return {
     state: Object.freeze({ ...state, branch, rerolledOffers: transition.rerolledOffers }),
     emissions: [
@@ -447,6 +692,13 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
       ...(transition.settlement === undefined
         ? []
         : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          settled === undefined
+            ? []
+            : forfeitPeeks(context.catalog, settled.state, rerolledSpawns, event.sequence),
+      },
     ],
   };
 };
@@ -459,6 +711,21 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
   if (event.after.kind !== 'hubVisit')
     throw new BiomeRewardSimulationContractError('a Hub restore follows no Hub visit');
   const { visitIndex } = event.after;
+  // Its open doors rebuild their Onion previews from the current Forfeit state
+  // (DoUnlockRoomExits -> CreateDoorRewardPreview); entered doors stay closed.
+  const entered = new Set(
+    hub?.visits.flatMap((visit) =>
+      visit.visitIndex <= visitIndex ? [visit.target.hubSlotKey] : [],
+    ),
+  );
+  const openSpawns = (hub?.board.targets ?? []).flatMap((target) =>
+    entered.has(target.hubSlotKey)
+      ? []
+      : doorRewardSpawns(target.room).map((spawn) => ({
+          ...spawn,
+          offer: advanced.rerolledOffers.get(semanticAddressKey(spawn.origin)) ?? spawn.offer,
+        })),
+  );
   return {
     state:
       hub === undefined
@@ -476,7 +743,15 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
               assigned: advanced.rerolledOffers,
             }),
           }),
-    emissions: [],
+    emissions: [
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          advanced.branch === undefined
+            ? []
+            : forfeitPeeks(context.catalog, advanced.branch.state, openSpawns, event.sequence),
+      },
+    ],
   };
 };
 
@@ -560,7 +835,7 @@ const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, eve
   };
 };
 
-/** A Hermes Shrine delivery that still needs a placement halts the walk here. */
+/** A Hermes Shrine delivery that still needs a placement halts the walk at its deadline. */
 const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsApplied'> = (
   context,
   state,
@@ -572,11 +847,18 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     authoredRoom(context, event.origin),
     state.branch,
   );
+  const due = deliveryPlacementAtDeadline(
+    context,
+    event.origin,
+    event.sequence,
+    transition.findings,
+    transition.derivedAcquisitionEntryFrontiers,
+  );
   return {
     state: Object.freeze({
       ...state,
       branch: transition.branch,
-      halted: transition.hermesShrineDeliveryPlacementRequired,
+      ...haltingBefore(state, due.haltBefore),
     }),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },
@@ -595,7 +877,7 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
         checkpoints: transition.traitChildSettlements,
         occurrenceOwner: event.origin,
       },
-      lifecycleFindings(transition.findings),
+      lifecycleFindings(due.findings),
     ],
   };
 };
@@ -716,9 +998,29 @@ const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseRe
   event,
 ) => {
   const state = withHermesShrinePurchasePrice(context, received, event);
+  const transition = applyHermesShrinePurchaseReachedTransition({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    event,
+    room: authoredRoom(context, event.origin),
+    branch: state.branch,
+    realized: state.hermesShrineTravelDealRefills.get(semanticAddressKey(event.origin)),
+  });
+  return {
+    state: withBranch(state, transition.branch),
+    emissions: [settledFindings(transition.findings)],
+  };
+};
+
+const hermesShrineRushReached: ChronologySeamHandler<'hermesShrineRushReached'> = (
+  context,
+  received,
+  event,
+) => {
+  const state = withHermesShrineRushPrice(context, received, event);
   const room = authoredRoom(context, event.origin);
   const key = semanticAddressKey(event.origin);
-  const transition = applyHermesShrinePurchaseReachedTransition({
+  const transition = applyHermesShrineRushReachedTransition({
     catalog: context.catalog,
     snapshot: context.snapshot,
     event,
@@ -815,25 +1117,121 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     sourceBranch: reachedBranch(state),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
+    // A delivery or clocked drop is timed against its room's walk.
+    ...(event.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY ||
+    (event.entryKey !== undefined &&
+      parseClockedTraitGeneratedPickupEntryKey(event.entryKey) !== undefined)
+      ? {
+          roomEvents: context.history.events.filter(
+            (candidate) =>
+              'origin' in candidate &&
+              semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
+          ),
+        }
+      : {}),
     ...(derivedCapability === undefined
       ? {}
       : { derivedAcquisitionEntryCapability: derivedCapability }),
   });
   emissions.push(...acquisitionEmissions(transition, room));
-  if (transition.authoredSiteSettlement !== undefined && room !== undefined)
-    emissions.push(...siteSettlementEmissions(transition.authoredSiteSettlement, room.origin));
+  let haltBefore: number | undefined;
+  if (transition.authoredSiteSettlement !== undefined && room !== undefined) {
+    const site = echoDuplicateAtDeadline(
+      context,
+      room,
+      event.sequence,
+      siteSettlementEmissions(transition.authoredSiteSettlement, room.origin),
+    );
+    emissions.push(...site.emissions);
+    haltBefore = site.haltBefore;
+  }
   return {
-    state: withBranch(state, transition.branch),
+    state: Object.freeze({
+      ...withBranch(state, transition.branch),
+      ...haltingBefore(state, haltBefore),
+    }),
     emissions,
   };
 };
+
+/**
+ * Gold Gold Gold's duplicate left unplaced lies in the Shop from the purchase that spawns it,
+ * whether or not an earlier placement left its entry, and is collected in that purchase's
+ * window; its placement finding stands at its deadline, where the walk stops, and is withheld
+ * while the walk does not reach it.
+ */
+function echoDuplicateAtDeadline(
+  context: ChronologyWalkContext,
+  room: CanonicalAuthoredRoom,
+  sequence: number,
+  emissions: readonly ChronologyEmission[],
+): { readonly emissions: readonly ChronologyEmission[]; readonly haltBefore?: number } {
+  const placement = (finding: { readonly code: string }) =>
+    finding.code === 'echoGoldPickupPlacementRequired';
+  const purchase = room.roomActionRoster.rows.find(
+    (candidate) =>
+      !candidate.stale &&
+      candidate.rank !== null &&
+      (candidate.reference.kind === 'interactShopOffer' ||
+        (candidate.reference.kind === 'interactAcquisitionEntry' &&
+          candidate.reference.siteKey === 'roomExit' &&
+          candidate.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)),
+  );
+  if (
+    purchase === undefined ||
+    !emissions.some(
+      (emission) =>
+        emission.kind === 'findings' && emission.entries.some((entry) => placement(entry.finding)),
+    )
+  )
+    return { emissions };
+  const due = placementDeadline(context, room.origin, sequence, (graph, rows) => {
+    // Rows opening later than the purchase close the pickup.
+    const place = roomEventPlaces(graph);
+    const opening = place(roomActionOpeningPoint(purchase.bounds));
+    const index = rows.findIndex(
+      (row) => !row.stale && place(roomActionOpeningPoint(row.bounds)) > opening,
+    );
+    return index < 0 ? undefined : index;
+  });
+  return {
+    emissions: emissions.map((emission) =>
+      emission.kind !== 'findings' || emission.rule !== 'add'
+        ? emission
+        : {
+            ...emission,
+            entries: emission.entries.flatMap((entry) =>
+              !placement(entry.finding)
+                ? [entry]
+                : due === undefined
+                  ? []
+                  : [
+                      {
+                        ...entry,
+                        finding: Object.freeze({
+                          ...entry.finding,
+                          evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
+                        }),
+                        chronology: Object.freeze({
+                          kind: 'history' as const,
+                          sequence: due.sequence,
+                          boundary: 'before' as const,
+                        }),
+                      },
+                    ],
+            ),
+          },
+    ),
+    ...(due === undefined ? {} : { haltBefore: due.sequence }),
+  };
+}
 
 /** A Ship room captures its Run State before each encounter starts. */
 const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, state, event) => {
   const sourceRoom = context.rooms.get(semanticAddressKey(event.origin));
   const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
   let runStateCheckpoint: ChronologySeamStep['runStateCheckpoint'];
-  if (room !== undefined && room.lifecycleProfileKey === 'ShipCombatRoom') {
+  if (room !== undefined && roomOpensRewardWheels(room)) {
     const view = context.views
       .get(semanticAddressKey(event.origin))
       ?.encounterStarts.find((candidate) => candidate.phaseKey === event.phaseKey)?.before;
@@ -1003,13 +1401,13 @@ const encounterSettled: ChronologySeamHandler<
               }),
             },
           ]),
-      ...(transition.nemesisCandidate === undefined
+      ...(transition.nemesisAssessment === undefined
         ? []
         : [
             {
-              kind: 'nemesisRandomEventCandidate' as const,
-              key: transition.nemesisCandidate.key,
-              candidate: transition.nemesisCandidate.value,
+              kind: 'nemesisRandomEventAssessment' as const,
+              key: transition.nemesisAssessment.key,
+              assessment: transition.nemesisAssessment.value,
             },
           ]),
       { kind: 'bossArcanaOutcomes', outcomes: transition.bossArcanaOutcomes ?? [] },
@@ -1111,6 +1509,7 @@ const phantomExitCreated: ChronologySeamHandler<'phantomExitCreated'> = (context
 function flushPendingHubBoard(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
+  sequence: number,
 ): { readonly state: ChronologyWalkState; readonly emissions: readonly ChronologyEmission[] } {
   const { pendingHubBoard } = state;
   const flushed = flushHubBoard(context.catalog, pendingHubBoard);
@@ -1151,6 +1550,19 @@ function flushPendingHubBoard(
     emissions: [
       generationFindings(flushed.findings),
       { kind: 'producerFrontiers', frontiers: flushed.producerFrontiers },
+      // The board's doors show their rewards' Onion previews, as any door does.
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          branch === undefined || hub === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                branch.state,
+                hub.board.targets.flatMap((target) => doorRewardSpawns(target.room)),
+                sequence,
+              ),
+      },
     ],
   };
 }
@@ -1163,7 +1575,7 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
   const flushed =
     event.origin.kind === 'hubSlot' &&
     state.pendingHubBoard?.participants.length === context.prepared.hubTargetByOrigin.size
-      ? flushPendingHubBoard(context, state)
+      ? flushPendingHubBoard(context, state, event.sequence)
       : { state, emissions: [] };
   const current = flushed.state;
   const batch = current.batchTargetGeneration;
@@ -1289,6 +1701,20 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
     emissions: [
       { kind: 'storeSupport', entries: transition.storeSupportEntries },
       generationFindings(transition.findings),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          transition.branch === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                transition.branch.state,
+                (prepared.batchesByParent.get(ownerKey)?.targets ?? []).flatMap((target) =>
+                  doorRewardSpawns(target.room),
+                ),
+                event.sequence,
+              ),
+      },
     ],
   };
 };
@@ -1307,7 +1733,7 @@ function hubEntryCheckpoint(
   return { owner: createHubRunStateCheckpointAddress(event.origin), room, view };
 }
 
-/** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
+/** Room entry captures its Run State after its features; a flushed delivery is due at its deadline. */
 const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
   const room = authoredRoom(context, event.origin);
   const roomView = context.views.get(semanticAddressKey(event.origin));
@@ -1382,6 +1808,14 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     }),
   );
   const enteredBranch = entered.branch;
+  // A flushed delivery is a required object that gates the exit.
+  const flushed = deliveryPlacementAtDeadline(
+    context,
+    event.origin,
+    event.sequence,
+    entered.findings,
+    entered.derivedAcquisitionEntryFrontiers,
+  );
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;
   const checkpoint = entered.runStateCheckpoint ?? hubEntryCheckpoint(context, event);
@@ -1395,19 +1829,18 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
       mergedFindings(resourcePlacementFindingRegions(event, context.resourceFindings)),
       generationFindings(pedestal.findings),
       { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
-      lifecycleFindings(entered.findings),
+      lifecycleFindings(flushed.findings),
       { kind: 'generatedPickupPlacements', placements: entered.generatedPickupPlacements },
       {
         kind: 'derivedAcquisitionEntryFrontiers',
         frontiers: entered.derivedAcquisitionEntryFrontiers,
       },
-      { kind: 'fixedAcquisitionRealizations', realizations: entered.fixedAcquisitionRealizations },
     ],
     state: Object.freeze({
       ...state,
       roomDepartures,
       branch: enteredBranch,
-      halted: entered.hermesShrineDeliveryPlacementRequired,
+      ...haltingBefore(state, flushed.haltBefore),
       encounterEntryVowRanks:
         room === undefined || enteredBranch === undefined
           ? state.encounterEntryVowRanks
@@ -1443,6 +1876,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
           : new Map(state.stygianWellAssessments).set(
               semanticAddressKey(well.origin),
               Object.freeze({ ...well, actions: Object.freeze([]) }),
+            ),
+      purgingPoolAssessments:
+        entered.purgingPoolAssessment === undefined
+          ? state.purgingPoolAssessments
+          : new Map(state.purgingPoolAssessments).set(
+              semanticAddressKey(entered.purgingPoolAssessment.origin),
+              entered.purgingPoolAssessment,
             ),
     }),
     ...(checkpoint?.view === undefined
@@ -1517,7 +1957,14 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
       branch,
       overviewEntry: Object.freeze({ roomKey: semanticAddressKey(event.origin), branch }),
     }),
-    emissions: [lifecycleFindings(transition.findings)],
+    emissions: [
+      lifecycleFindings(transition.findings),
+      ...transition.nemesisCandidates.map((candidate) => ({
+        kind: 'nemesisRandomEventCandidate' as const,
+        key: semanticAddressKey(candidate.origin),
+        candidate,
+      })),
+    ],
   };
 };
 
@@ -1535,16 +1982,28 @@ const fountainUsed: ChronologySeamHandler<'fountainUsed'> = (context, state, eve
       : room?.fountainRarityResult,
     state.branch,
     room,
+    room === undefined
+      ? undefined
+      : state.purgingPoolAssessments.get(semanticAddressKey(room.origin)),
   );
-  const pool = transition.purgingPoolAssessment;
+  const pool = transition.purgingPoolRefresh;
+  const entry = pool === undefined ? undefined : state.purgingPoolAssessments.get(pool.key);
   return {
     state: Object.freeze({
       ...state,
       branch: transition.branch,
       purgingPoolAssessments:
-        pool === undefined
+        pool === undefined || entry === undefined
           ? state.purgingPoolAssessments
-          : withKeyed(state.purgingPoolAssessments, pool.key, pool.value),
+          : withKeyed(
+              state.purgingPoolAssessments,
+              pool.key,
+              Object.freeze({
+                ...entry,
+                fountainJudged: true,
+                ...(pool.refresh === undefined ? {} : { refresh: pool.refresh }),
+              }),
+            ),
     }),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },
@@ -1597,10 +2056,7 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
     emissions: [
       generationFindings(transition.findings),
       { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-      {
-        kind: 'fixedAcquisitionRealizations',
-        realizations: transition.fixedAcquisitionRealizations,
-      },
+      { kind: 'forfeitPeeks', peeks: transition.forfeitPeeks },
     ],
   };
 };
@@ -1641,6 +2097,23 @@ const advanceOnly: ChronologySeamHandler<HistoryEvent['kind']> = (_context, stat
   emissions: [],
 });
 
+/**
+ * A press fight's start and end settle nothing of the room's: no reward
+ * spawns, no Fig Leaf, no outcome; the press row settles what it does.
+ */
+function unlessPressFight<K extends HistoryEvent['kind']>(
+  handler: ChronologySeamHandler<K>,
+): ChronologySeamHandler<K> {
+  return (context, state, event) => {
+    const room = authoredRoom(context, event.origin);
+    return room !== undefined &&
+      'phaseKey' in event &&
+      pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey) !== undefined
+      ? advanceOnly(context, state, event)
+      : handler(context, state, event);
+  };
+}
+
 /** A seam's handler for events of kind `K`. */
 interface ChronologySeam<K extends HistoryEvent['kind']> {
   step(
@@ -1679,9 +2152,9 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },
     encounterRecorded: { step: advanceOnly },
-    encounterStarted: { step: encounterStarted },
+    encounterStarted: { step: unlessPressFight(encounterStarted) },
     encounterDepthAdvanced: { step: advanceOnly },
-    encounterCompleted: { step: encounterSettled },
+    encounterCompleted: { step: unlessPressFight(encounterSettled) },
     encounterEndEffectsApplied: { step: encounterEndEffectsApplied },
     bossDefeated: { step: encounterSettled },
     encounterInteractionReached: { step: encounterSettled },
@@ -1691,6 +2164,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     outgoingGenerationCheckpoint: { step: outgoingGenerationCheckpoint },
     hermesShrineDeliveriesScheduled: { step: hermesShrineDeliveriesScheduled },
     hermesShrinePurchaseReached: { step: hermesShrinePurchaseReached },
+    hermesShrineRushReached: { step: hermesShrineRushReached },
     acquisitionPointReached: { step: acquisitionPointReached },
     wellPurchase: { step: wellPurchase },
     featureRerolled: { step: featureRerolled },
@@ -1754,8 +2228,9 @@ export function walkHistoryEvent(
   // The table pairs each kind with its own handler; the union call is sound.
   const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
   const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
-  const reached = captureRoomActionEnd(
+  const reached = captureRoomActionPoints(
     context,
+    state,
     reachHistorySequence(context, next, event.sequence),
     event,
   );

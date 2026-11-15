@@ -16,6 +16,7 @@ import {
   authoringReadinessAt,
   settleProjectEdit,
   type ProjectEvaluationAssembly,
+  type RemovedHubRerolls,
   type RemovedStaleRoomActions,
   type SettlementFault,
 } from '@run-planner/engine/simulation';
@@ -30,6 +31,8 @@ export interface OpenProjectWorkspaceState {
   readonly settlementFault?: SettlementFault;
   /** Rows the last edit removed in rooms it did not address; cleared by the next publication. */
   readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+  /** Hub presses the last edit removed with their slot's door; cleared by the next publication. */
+  readonly removedHubRerolls?: readonly RemovedHubRerolls[];
 }
 export interface NoProjectWorkspaceState {
   readonly kind: 'noProject';
@@ -38,6 +41,7 @@ export interface NoProjectWorkspaceState {
   readonly history?: never;
   readonly settlementFault?: never;
   readonly removedStaleActions?: never;
+  readonly removedHubRerolls?: never;
 }
 export type ProjectWorkspaceState = OpenProjectWorkspaceState | NoProjectWorkspaceState;
 
@@ -91,6 +95,7 @@ function publishPreparedWorkspace(
   prepared: PreparedProjectWorkspace,
   settlementFault?: SettlementFault,
   removedStaleActions?: readonly RemovedStaleRoomActions[],
+  removedHubRerolls?: readonly RemovedHubRerolls[],
 ): ProjectWorkspaceState {
   assertProjectEvaluationAssembly(prepared.assembly);
   if (prepared.project !== history.present || prepared.assembly.project !== history.present) {
@@ -102,6 +107,7 @@ function publishPreparedWorkspace(
     history,
     ...(settlementFault === undefined ? {} : { settlementFault }),
     ...(removedStaleActions === undefined ? {} : { removedStaleActions }),
+    ...(removedHubRerolls === undefined ? {} : { removedHubRerolls }),
   });
 }
 
@@ -129,6 +135,26 @@ function mergeRemovedStaleActions(
     );
   }
   return Object.freeze([...byRoom.values()]);
+}
+
+/** Each Hub's removed presses across a batch of commands, in first-removal order. */
+function mergeRemovedHubRerolls(
+  batches: readonly (readonly RemovedHubRerolls[])[],
+): readonly RemovedHubRerolls[] | undefined {
+  if (batches.length === 0) return undefined;
+  if (batches.length === 1) return batches[0];
+  const byHub = new Map<string, RemovedHubRerolls>();
+  for (const removed of batches.flat()) {
+    const key = semanticAddressKey(removed.hub);
+    const earlier = byHub.get(key);
+    byHub.set(
+      key,
+      earlier === undefined
+        ? removed
+        : { hub: removed.hub, rerolls: [...earlier.rerolls, ...removed.rerolls] },
+    );
+  }
+  return Object.freeze([...byHub.values()]);
 }
 
 /** Warns once per recorded settlement fault; a fault signals an engine contract defect. */
@@ -160,6 +186,7 @@ export function createProjectWorkspaceReducer(
     let assembly = state.assembly;
     let fault: SettlementFault | undefined;
     const removed: (readonly RemovedStaleRoomActions[])[] = [];
+    const removedHub: (readonly RemovedHubRerolls[])[] = [];
     for (const command of commands) {
       if (
         projectCommandAuthoringAddresses(command, assembly.project).some(
@@ -178,6 +205,7 @@ export function createProjectWorkspaceReducer(
       // The first unfinished repair is the one reported.
       fault ??= settled.fault;
       if (settled.removedStaleActions !== undefined) removed.push(settled.removedStaleActions);
+      if (settled.removedHubRerolls !== undefined) removedHub.push(settled.removedHubRerolls);
     }
     if (assembly.project === state.history.present) return state;
     const history = publishProjectHistoryEdit(state.history, assembly.project);
@@ -186,6 +214,7 @@ export function createProjectWorkspaceReducer(
       { project: assembly.project, assembly },
       fault,
       mergeRemovedStaleActions(removed),
+      mergeRemovedHubRerolls(removedHub),
     );
   };
 
@@ -217,7 +246,11 @@ export function createProjectWorkspaceReducer(
     }
     if (authoredProjectClosed.match(action)) return initialState;
     if (removedActionsAnnouncementDismissed.match(action)) {
-      if (state.kind === 'noProject' || state.removedStaleActions === undefined) return state;
+      if (
+        state.kind === 'noProject' ||
+        (state.removedStaleActions === undefined && state.removedHubRerolls === undefined)
+      )
+        return state;
       return Object.freeze({
         kind: 'openProject' as const,
         assembly: state.assembly,

@@ -69,6 +69,8 @@ export interface GeneratedPickupPlacement {
   readonly address: AcquisitionEntryAddress;
   readonly assessment: import('../../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;
   readonly contact: { readonly owner: SemanticAddress; readonly sequence: number };
+  /** Where the row meets its room at its due spawn, when the walk names it there. */
+  readonly dueContact?: import('../../room-actions').TimedPickupDueContact;
 }
 
 export interface DerivedAcquisitionEntryFrontier {
@@ -97,6 +99,8 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly traitKey?: string;
   /** Exact encounter end that matured a cross-occurrence Shrine delivery. */
   readonly encounterPhaseKey?: string;
+  /** Where a due delivery or clocked drop meets its room, from its due spawn. */
+  readonly dueContact?: import('../../room-actions').TimedPickupDueContact;
   readonly participation?: 'required' | 'optional';
   /** The retained authored identity disagrees with this exact derived source. */
   readonly retainedSourceMismatch?: boolean;
@@ -112,16 +116,6 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly evaluateShopOption?: (
     selection: import('../../../reward-kernel').ShopOptionSelection,
   ) => import('../producer-frontiers').RewardProducerCandidateResult;
-}
-
-/**
- * A role's realized acquisition fixed by a `rewardForfeited` event before its
- * pickup contact, such as a Fields cage forfeited on room entry.
- */
-export interface FixedAcquisitionRealization {
-  readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
-  readonly realizedAcquisition: ConcreteAcquisitionEvent;
-  readonly historySequence: number;
 }
 
 export interface AcquisitionRoleFrontier {

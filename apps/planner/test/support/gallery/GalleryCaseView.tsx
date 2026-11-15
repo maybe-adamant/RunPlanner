@@ -211,7 +211,7 @@ function OpenedCase({
     if (view !== 'timeline' || entry.doorsExpanded !== true) return;
     frame.current
       ?.querySelector<HTMLButtonElement>(
-        '.timeline-banner-toggle[aria-controls$="-doors-detail"][aria-expanded="false"]',
+        '.doors-moment-trigger[aria-label="Edit doors"][aria-expanded="false"]',
       )
       ?.click();
   }, [entry, view]);
@@ -232,18 +232,69 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, view]);
-  // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
+  // A case showing a live thing's verbs, or a Leave row's picker, opens its list, then a verb's values, as a user would.
   const pickerOpened = useRef(false);
   useEffect(() => {
     if (view !== 'timeline' || pickersClosed || entry.openPicker === undefined) return;
     const name = entry.openPicker;
+    const verb = entry.openVerb;
+    let verbOpened = verb === undefined;
     const timer = window.setInterval(() => {
-      const trigger = frame.current?.querySelector<HTMLButtonElement>(
-        `.room-add button[aria-label="${CSS.escape(name)}"]`,
-      );
-      if (pickerOpened.current || trigger === null || trigger === undefined || trigger.disabled)
+      if (!pickerOpened.current) {
+        const trigger = frame.current?.querySelector<HTMLButtonElement>(
+          `:is(.timeline-live-row, .timeline-leave-row, .hub-segment) button[aria-label="${CSS.escape(name)}"]`,
+        );
+        if (trigger === null || trigger === undefined) return;
+        pickerOpened.current = true;
+        trigger.click();
+        if (verbOpened) window.clearInterval(timer);
         return;
-      pickerOpened.current = true;
+      }
+      const item = [...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((candidate) =>
+        candidate.textContent?.startsWith(verb ?? ''),
+      );
+      if (verbOpened || item === undefined) return;
+      verbOpened = true;
+      window.clearInterval(timer);
+      item.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, pickersClosed, view]);
+  // A case showing a gap's `+` focuses it, then opens its menu, as a user would.
+  const gapShown = useRef(false);
+  useEffect(() => {
+    if (view !== 'timeline' || pickersClosed || entry.gap === undefined) return;
+    const gap = entry.gap;
+    const timer = window.setInterval(() => {
+      const control = [
+        ...(frame.current?.querySelectorAll<HTMLButtonElement>(
+          gap.index === undefined
+            ? '.timeline-gap-control'
+            : `.timeline-gap-control[data-live-gap="${gap.index}"]`,
+        ) ?? []),
+      ].at(-1);
+      if (gapShown.current || control === undefined) return;
+      gapShown.current = true;
+      window.clearInterval(timer);
+      control.focus();
+      if (gap.open) control.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, pickersClosed, view]);
+  // A case showing the Timeline legend opens it as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || pickersClosed || entry.legendOpen !== true) return;
+    const timer = window.setInterval(() => {
+      const trigger = frame.current?.querySelector<HTMLButtonElement>('.timeline-legend-trigger');
+      if (trigger === null || trigger === undefined) return;
       window.clearInterval(timer);
       trigger.click();
     }, 50);
@@ -253,6 +304,24 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, pickersClosed, view]);
+  // A case showing its map at a Timeline row focuses that row as working on it does.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.mapRow === undefined) return;
+    const index = entry.mapRow;
+    const timer = window.setInterval(() => {
+      const row = frame.current?.querySelectorAll<HTMLElement>(
+        '.room-action-list > li[data-room-action-key]',
+      )[index];
+      if (row === undefined) return;
+      window.clearInterval(timer);
+      row.focus();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, view]);
   // A case showing an Overview list opens that picker once the Overview shows it.
   const overviewPickerOpened = useRef(false);
   useEffect(() => {

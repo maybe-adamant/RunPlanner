@@ -26,11 +26,15 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createShopOfferAddress,
+  createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTargetAddress,
   createOccurrenceId,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
   projectCommandAuthoringAddresses,
+  type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
@@ -45,8 +49,13 @@ import {
   nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
-import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceScheduledLifecycleCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -57,7 +66,13 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  hubVisitActions,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
 import { firstSupportedReroll, withArcana } from '../support/rerolls';
 
@@ -146,10 +161,12 @@ describe('chronological authoring horizon', () => {
       }),
       value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
     });
-    const project = applyProjectCommand(selected, catalog, {
-      kind: 'RemoveExitDecision',
-      decision,
-    });
+    const project = collectTestRequiredItems(
+      applyProjectCommand(selected, catalog, {
+        kind: 'RemoveExitDecision',
+        decision,
+      }),
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.issue?.owner).toEqual(
       createBatchRewardStoreAddress(goldenGBiome, decision.source),
@@ -491,7 +508,6 @@ describe('chronological authoring horizon', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry: finding.origin,
-      encounterPhaseKey,
     });
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
@@ -789,6 +805,56 @@ describe('chronological authoring horizon', () => {
     }
   });
 
+  it('keeps every settled visit editable while the unused fountain is the Hub frontier', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const fountain = createHubFountainAddress(nBiome, 'hub');
+    const room = (slot: string) => createOccurrenceAddress(nBiome, nOccurrenceId(slot));
+    const ordered = (slots: readonly string[], fountainAfterVisits: number | null) =>
+      simulateProjectAssembly(
+        catalog,
+        applyProjectCommand(loadSurfaceNProject(), catalog, {
+          kind: 'ReplaceHubActionOrder',
+          hub,
+          actions: hubVisitActions(slots, fountainAfterVisits),
+        }),
+      );
+
+    const unused = ordered(nVisitSlotKeys, null);
+    expect(
+      unused.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N')?.requiredInput,
+    ).toEqual(fountain);
+    for (const owner of [
+      hub,
+      fountain,
+      ...nVisitSlotKeys.flatMap((slot, index) => [
+        createHubVisitAddress(nBiome, 'hub', index + 1),
+        room(slot),
+      ]),
+      createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor1')),
+    ]) {
+      expect(authoringReadinessAt(unused, owner), JSON.stringify(owner)).toBe('editable');
+    }
+    for (const owner of [
+      createHubVisitAddress(nBiome, 'hub', nVisitSlotKeys.length + 1),
+      room('combat12'),
+      createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+    ]) {
+      expect(authoringReadinessAt(unused, owner), JSON.stringify(owner)).toBe('locked');
+    }
+
+    // A fountain used mid-order leaves the next visit as the frontier.
+    const midOrder = ordered(nVisitSlotKeys.slice(0, 3), 2);
+    expect(
+      midOrder.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N')?.requiredInput,
+    ).toEqual(createHubVisitAddress(nBiome, 'hub', 4));
+    expect(authoringReadinessAt(midOrder, fountain)).toBe('editable');
+    expect(authoringReadinessAt(midOrder, room(nVisitSlotKeys[2]))).toBe('editable');
+    expect(authoringReadinessAt(midOrder, createHubVisitAddress(nBiome, 'hub', 5))).toBe('locked');
+    expect(authoringReadinessAt(midOrder, room(nVisitSlotKeys[3]))).toBe('locked');
+  });
+
   it('keeps a blocking main Hub room repairable while locking side generation', () => {
     const original = loadSurfaceNProject();
     const occurrenceId = nOccurrenceId('combat05');
@@ -915,5 +981,82 @@ describe('chronological authoring horizon', () => {
         createOccurrenceAddress(oBiome, createOccurrenceId(`${oOccurrenceIds.preboss}:postboss`)),
       ),
     ).toBe('locked');
+  });
+
+  it('opens a timed outcome where its cycle lands and waits on a cycle not landed yet', () => {
+    // Steady Growth picked in P lands its first cycle at P's Boss, which it blocks untargeted.
+    const growthReward = createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1));
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
+      kind: 'ReplaceIncomingReward',
+      reward: growthReward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    project = settleTestEdit(project, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = settleTestEdit(project, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(growthReward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'BoonGrowthBoon', rarity: 'Epic' },
+          { traitKey: 'DemeterManaBoon', rarity: 'Rare' },
+          { traitKey: 'PlantHealthBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(project, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    const source = createTraitOfferAddress(growthReward, 'source');
+    expect(assembly.evaluation.authoringHorizon).toEqual({
+      kind: 'incomplete',
+      blockedAfter: createOccurrenceAddress(
+        pBiome,
+        createOccurrenceId('surface-p-preboss-shop:boss'),
+      ),
+    });
+    expect(authoringReadinessAt(assembly, createSteadyGrowthOutcomeAddress(source, 1))).toBe(
+      'editable',
+    );
+    expect(authoringReadinessAt(assembly, createSteadyGrowthOutcomeAddress(source, 2))).toBe(
+      'locked',
+    );
+  });
+
+  it('follows each timed cycle to its landing room across biomes', () => {
+    // N's Steady Growth lands cycle 4 at P 3-1 and cycle 5 at P 8-1; the route-start
+    // Embryo lands cycle 2 in O and cycle 3 at P 4-1, past the cleared cycle 4.
+    const growth = createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat23')),
+      'source',
+    );
+    const embryo = createRouteStartKeepsakeSelectionAddress('Surface');
+    const project = settleTestEdit(loadSurfaceScheduledLifecycleCheckpoint(), {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome: createSteadyGrowthOutcomeAddress(growth, 4),
+      targetTraitKey: null,
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.authoringHorizon).toEqual({
+      kind: 'incomplete',
+      blockedAfter: createOccurrenceAddress(pBiome, createOccurrenceId('surface-p-3-1-p_combat04')),
+    });
+    const readiness = (outcome: SemanticAddress) => authoringReadinessAt(assembly, outcome);
+    expect(readiness(createSteadyGrowthOutcomeAddress(growth, 2))).toBe('editable');
+    expect(readiness(createSteadyGrowthOutcomeAddress(growth, 4))).toBe('editable');
+    expect(readiness(createSteadyGrowthOutcomeAddress(growth, 5))).toBe('locked');
+    expect(readiness(createTranscendentEmbryoOutcomeAddress(embryo, 2))).toBe('editable');
+    expect(readiness(createTranscendentEmbryoOutcomeAddress(embryo, 3))).toBe('locked');
   });
 });

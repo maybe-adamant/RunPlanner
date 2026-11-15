@@ -13,6 +13,8 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  chaosCandidateForProjectEvaluationAssembly,
+  chaosGateHosted,
   simulateProject,
   simulateProjectAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
@@ -67,14 +69,14 @@ describe('Fresh File retained content', () => {
     );
     expect(capability).toMatchObject({
       placementEligible: false,
-      failedConditions: ['sourceRequirement'],
+      refusals: [{ reason: 'routeExcluded' }],
     });
     expect(simulateProject(catalog, withDoor).findings).toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
         evidence: expect.objectContaining({
           kind: 'zagreusContract',
-          failedConditions: ['sourceRequirement'],
+          refusals: [{ reason: 'routeExcluded' }],
         }),
       }),
     );
@@ -89,12 +91,31 @@ describe('Fresh File retained content', () => {
         simulateProjectAssembly(catalog, mature),
         matureShop,
       ),
-    ).toMatchObject({ placementEligible: true, failedConditions: [] });
+    ).toMatchObject({ placementEligible: true, refusals: [] });
     expect(
       simulateProject(catalog, mature).findings.filter(
         (finding) => finding.evidence.kind === 'zagreusContract',
       ),
     ).toEqual([]);
+  });
+
+  it('refuses a Chaos gate on the Fresh route at a host room, and offers none where the room never hosts one', () => {
+    const project = freshFProject();
+    const start = project.route.biomes[0]!.topology!.startOccurrenceId;
+    expect(
+      chaosCandidateForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        createOccurrenceAddress(biome, start),
+      ),
+    ).toEqual({ placementEligible: false, refusals: [{ reason: 'routeExcluded' }] });
+    expect(chaosGateHosted(catalog, 'F', 'F_Combat01')).toBe(true);
+    expect(chaosGateHosted(catalog, 'F', 'F_PreBoss01')).toBe(false);
+    expect(
+      chaosCandidateForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        createOccurrenceAddress(biome, postboss),
+      ),
+    ).toBeUndefined();
   });
 
   it('reports a retained Postboss Well and Pool on Fresh File and lets each be removed', () => {

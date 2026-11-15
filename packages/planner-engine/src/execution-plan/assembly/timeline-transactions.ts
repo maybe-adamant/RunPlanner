@@ -29,7 +29,8 @@ import {
 } from '../../simulation/room-actions';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
-import { assembleLifecycleWindow } from './lifecycle';
+import { wireWindow } from './lifecycle';
+import { rowDueContact } from '../../simulation/room-actions';
 import {
   executionKeepsakeEquipResults,
   executionRewardFromOffer,
@@ -462,7 +463,11 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `${room.gameName} has a transaction without an active roster owner ${transactionOwner}`,
       );
-    return assembleLifecycleWindow(row.window);
+    return wireWindow(
+      room.origin.kind === 'occurrence'
+        ? rowDueContact(room.origin, row, biome.rewards.generatedPickupPlacements ?? [])
+        : row.contact,
+    );
   };
   const add = (transaction: ExecutionTimelineTransaction): void => {
     if (transactions.some((candidate) => candidate.owner === transaction.owner))
@@ -518,7 +523,13 @@ export function executionTimelineTransactions(
     if (timeline.kind === 'boundary') {
       const boundary = timeline.boundary;
       if (boundary.kind === 'roomEntered') continue;
-      if (boundary.kind === 'encounterStart') {
+      // A press fight runs at its row's press.
+      if (
+        boundary.kind === 'encounterStarted' &&
+        !room.roomLifecycleTimeline.graph.pressFights.some(
+          (fight) => fight.phaseKey === boundary.phaseKey,
+        )
+      ) {
         const phase = room.encounterPhases.find(
           (candidate) => candidate.slotKey === boundary.phaseKey,
         );
@@ -715,6 +726,7 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind === 'unlockExit' ||
       // Shrine purchases, rush included, publish through the room Overview.
       timeline.action.reference.kind === 'purchaseHermesShrineOffer' ||
+      timeline.action.reference.kind === 'rushHermesShrineOffer' ||
       // Fields cage completion is represented by the ordered encounter phases;
       // native ChooseEncounter is the only steering contact.  The room action
       // itself has no separate executable callback or transaction.
@@ -789,11 +801,12 @@ export function executionTimelineTransactions(
         generationKey,
       );
       const wellOwner = semanticAddressKey(timeline.action.owner);
-      if (
-        offerKey === 'RandomStoreItem' &&
-        twistResultKey !== undefined &&
-        twistResultKey !== null
-      ) {
+      if (offerKey === 'RandomStoreItem') {
+        if (twistResultKey === undefined || twistResultKey === null)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} lacks Fateful Twist result for ${generationKey}`,
+          );
         add({
           kind: 'transformation',
           owner: wellOwner,

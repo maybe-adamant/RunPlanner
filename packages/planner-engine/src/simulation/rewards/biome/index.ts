@@ -7,6 +7,7 @@ import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contr
 import { evaluateBiomeRewardChronology } from './chronology';
 import type { BiomeRewardEvaluationAssembly } from './publication';
 import type { SemanticFinding } from '../../model';
+import type { ReachedHistoryRoomAction } from '../../history/model';
 
 export type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
 export { BiomeRewardSimulationContractError } from './biome-contract';
@@ -21,6 +22,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   seedFrontier: RewardBranch | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly SemanticFinding[] = [],
+  reachedActions: readonly ReachedHistoryRoomAction[] = [],
 ): BiomeRewardEvaluationAssembly {
   return evaluateBiomeRewardChronology(
     catalog,
@@ -31,6 +33,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     seedFrontier,
     resourcePlacements,
     resourceFindings,
+    reachedActions,
   );
 }
 

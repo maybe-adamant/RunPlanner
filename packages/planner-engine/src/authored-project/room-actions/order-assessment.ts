@@ -1,102 +1,107 @@
 import type { RoomActionReference, RoomOccurrence } from '../model';
 import { CHALLENGE_SWITCH_ACTION } from '../acquisition/challenge-switch';
-import type {
-  RoomActionCheckpointContribution,
-  RoomActionContribution,
-  RoomActionDependency,
-  RoomActionDomain,
-  RoomActionDomainContribution,
-} from './domain';
+import type { RoomActionContribution, RoomActionDependency, RoomActionDomain } from './domain';
 import {
-  roomLifecycleWindowOrdinal,
-  roomLifecycleWindowResolves,
-  type RoomActionWindow,
-  type RoomLifecycleStructure,
-} from './lifecycle-structure';
+  roomActionOpeningPoint,
+  roomEventPlaces,
+  roomEventPointPasses,
+  roomEventPointKey,
+  roomEventPointResolves,
+  type RoomEventGraph,
+  type RoomEventPoint,
+} from './event-graph';
 import { roomActionKey } from './state';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
 }
 
-export type RoomActionOrderIssue =
-  | { readonly kind: 'stale'; readonly reference: RoomActionReference }
-  | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
+/**
+ * Why a row cannot stand where it is placed, in its bounds: it stands before
+ * its spawn or enabler can happen (a required action ordered after it must
+ * come first, or the point never happens in this room), or past its deadline
+ * (an action ordered before it opens at or after that point).
+ */
+export type RoomActionBoundBlocker =
+  | {
+      readonly kind: 'beforeSpawn' | 'beforeEnabler';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      /** The row's spawn or enabler it stands before. */
+      readonly point: RoomEventPoint;
+      /** A required action ordered after the row whose deadline passes before the point. */
+      readonly requiredAction?: RoomActionReference;
+      /** The point never happens in this room. */
+      readonly unavailable?: true;
+      /** The required action opens a gate the row waits behind and is not placed yet. */
+      readonly unplacedGate?: true;
+    }
+  | {
+      readonly kind: 'pastDeadline';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      /** The row's deadline, which the walk passes before it reaches the row. */
+      readonly deadline: RoomEventPoint;
+      /** The nearest action ordered before the row whose opening passes it. */
+      readonly precedingAction: RoomActionReference;
+    };
+
+/** A placement's blockers: the prefix's dependency and bound issues. */
+export type RoomActionPlacementBlocker =
   | {
       readonly kind: 'dependency';
       readonly reference: RoomActionReference;
       readonly detail: string;
       readonly dependency: RoomActionDependency;
-      readonly checkpointUnavailable?: true;
     }
-  | {
-      readonly kind: 'window';
-      readonly reference: RoomActionReference;
-      readonly detail: string;
-      readonly window: RoomActionWindow;
-      readonly precedingAction: RoomActionReference;
-      readonly precedingWindow: RoomActionWindow;
-    }
-  /**
-   * A row ordered before a ranked required action of an earlier window: that
-   * action's deadline passes before the row's window opens, so the walk stops here.
-   */
-  | {
-      readonly kind: 'requiredFirst';
-      readonly reference: RoomActionReference;
-      readonly detail: string;
-      readonly window: RoomActionWindow;
-      readonly requiredAction: RoomActionReference;
-      readonly requiredWindow: RoomActionWindow;
-    };
+  | RoomActionBoundBlocker;
 
-/** A placement's blockers: the prefix's dependency, window and required-first issues. */
-export type RoomActionPlacementBlocker = Extract<
-  RoomActionOrderIssue,
-  { kind: 'dependency' | 'window' | 'requiredFirst' }
->;
+export type RoomActionOrderIssue =
+  | { readonly kind: 'stale'; readonly reference: RoomActionReference }
+  | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
+  | RoomActionPlacementBlocker;
+
+/** Whether a placement waits behind a gate whose required action is not placed yet. */
+export function waitsOnUnplacedGate(blockers: readonly RoomActionPlacementBlocker[]): boolean {
+  return blockers.some((blocker) => 'unplacedGate' in blocker && blocker.unplacedGate === true);
+}
+
+/** Whether an order issue blocks a placement: every issue but a stale or unranked row. */
+export function isPlacementBlocker(
+  issue: RoomActionOrderIssue,
+): issue is RoomActionPlacementBlocker {
+  return issue.kind !== 'stale' && issue.kind !== 'unrankedRequired';
+}
 
 /** The structural facts one occurrence's action order is judged against. */
 export interface RoomActionOrderContext {
   readonly active: ReadonlyMap<string, RoomActionContribution>;
-  readonly checkpoints: ReadonlyMap<string, RoomActionCheckpointContribution>;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
-  /** Each active action's window ordinal, which no order changes. */
-  readonly windowOrdinals: ReadonlyMap<string, number>;
+  /** Where a point stands in the room's graph. */
+  readonly place: (point: RoomEventPoint) => number;
   /** Active required action keys. */
   readonly requiredKeys: readonly string[];
 }
 
 export function roomActionOrderContext(options: {
-  readonly contributions: readonly RoomActionDomainContribution[];
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly contributions: readonly RoomActionContribution[];
+  readonly eventGraph: RoomEventGraph;
   readonly terminalActionKey?: string;
 }): RoomActionOrderContext {
   const active = new Map(
-    options.contributions.flatMap((entry) =>
-      entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
-    ),
+    options.contributions.map((entry) => [roomActionKey(entry.reference), entry] as const),
   );
   const required = [...active].filter(([, entry]) => entry.participation === 'required');
+  const place = roomEventPlaces(options.eventGraph);
   return frozen({
     active,
-    checkpoints: new Map(
-      options.contributions.flatMap((entry) =>
-        entry.kind === 'checkpoint' ? [[entry.checkpointKey, entry] as const] : [],
-      ),
-    ),
-    lifecycleStructure: options.lifecycleStructure,
+    eventGraph: options.eventGraph,
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
-    windowOrdinals: new Map(
-      [...active].map(([key, entry]) => [
-        key,
-        roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window),
-      ]),
-    ),
+    place,
     requiredKeys: frozen(required.map(([key]) => key)),
   });
 }
@@ -123,33 +128,38 @@ export function terminalRoomActionKey(
 }
 
 /**
- * The stale, dependency and window issues of the rows at or before `through`,
- * row issues first: a row is judged by the rows before it and by where the
- * order places the actions its checkpoints wait on.
+ * The Keepsake Rack is not a required room object: it stands wherever it is
+ * placed, so no bound of its own or of another row is judged against it.
  */
-function rowAndWindowIssues(
+function standsAnywhere(entry: RoomActionContribution): boolean {
+  return entry.reference.kind === 'interactKeepsakeRack';
+}
+
+/**
+ * The bound a row's opening place belongs to: an enabler when it has one.
+ */
+function openingKind(entry: RoomActionContribution): 'beforeSpawn' | 'beforeEnabler' {
+  return entry.bounds.enabler === undefined ? 'beforeSpawn' : 'beforeEnabler';
+}
+
+/**
+ * The stale, dependency and bound issues of the rows at or before `through`,
+ * row issues first: a row is judged by the rows before it, by whether its
+ * spawn happens in the room, and a locked door's press by the required rows
+ * its exits wait on.
+ */
+function rowAndBoundIssues(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
   through: number,
-): { readonly rows: RoomActionOrderIssue[]; readonly windows: RoomActionOrderIssue[] } {
-  const { active, checkpoints, lifecycleStructure, windowOrdinals } = context;
+): { readonly rows: RoomActionOrderIssue[]; readonly crossings: RoomActionOrderIssue[] } {
+  const { active, eventGraph } = context;
   const rows: RoomActionOrderIssue[] = [];
-  const windows: RoomActionOrderIssue[] = [];
+  const crossings: RoomActionOrderIssue[] = [];
   const keys = order.map(keyOf);
   const indexes = new Map(keys.map((key, index) => [key, index]));
-  const latestIndex = (requiredKeys: readonly string[]) =>
-    requiredKeys.reduce((rank, key) => Math.max(rank, indexes.get(key) ?? -1), -1);
-  const afterIndexes = new Map<string, number>();
-  const checkpointAfterIndex = (checkpointKey: string): number => {
-    let index = afterIndexes.get(checkpointKey);
-    if (index !== undefined) return index;
-    // The exit is usable once every required action is done.
-    index = checkpointKey === 'exitUsable' ? latestIndex(context.requiredKeys) : -1;
-    afterIndexes.set(checkpointKey, index);
-    return index;
-  };
-  let left: RoomActionContribution | undefined;
-  let leftOrdinal = 0;
+  let exitsReadyIndex: number | undefined;
+  const reached: RoomActionContribution[] = [];
   for (let ownIndex = 0; ownIndex <= through && ownIndex < order.length; ownIndex += 1) {
     const reference = order[ownIndex]!;
     const entry = active.get(keys[ownIndex]!);
@@ -158,153 +168,158 @@ function rowAndWindowIssues(
       continue;
     }
     for (const dependency of entry.dependencies) {
-      if (dependency.kind === 'afterAction') {
-        const dependencyKey = keyOf(dependency.action);
-        const dependencyIndex = indexes.get(dependencyKey);
-        if (dependencyIndex !== undefined && ownIndex > dependencyIndex) continue;
-        rows.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `must follow ${dependencyKey}`,
-            dependency,
-          }),
-        );
-        continue;
-      }
-      const checkpoint = checkpoints.get(dependency.checkpointKey);
-      if (checkpoint === undefined) {
-        rows.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `has unknown checkpoint ${dependency.checkpointKey}`,
-            dependency,
-            checkpointUnavailable: true,
-          }),
-        );
-        continue;
-      }
-      const ownRank = windowOrdinals.get(keys[ownIndex]!)!;
-      const checkpointWindowRank = roomLifecycleWindowOrdinal(
-        lifecycleStructure,
-        checkpoint.window,
-      );
-      const valid =
-        dependency.kind === 'afterCheckpoint'
-          ? ownRank >= checkpointWindowRank &&
-            ownIndex >= checkpointAfterIndex(dependency.checkpointKey)
-          : ownRank <= checkpointWindowRank;
-      if (!valid) {
-        rows.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `${dependency.kind} ${dependency.checkpointKey}`,
-            dependency,
-          }),
-        );
-      }
-    }
-    if (entry.windowFollowsOrder === true) continue;
-    const ordinal = windowOrdinals.get(keys[ownIndex]!)!;
-    if (left !== undefined && leftOrdinal > ordinal) {
-      windows.push(
+      const dependencyKey = keyOf(dependency.action);
+      const dependencyIndex = indexes.get(dependencyKey);
+      if (dependencyIndex !== undefined && ownIndex > dependencyIndex) continue;
+      rows.push(
         frozen({
-          kind: 'window',
-          reference: entry.reference,
-          detail: 'crosses a fixed lifecycle window',
-          window: entry.window,
-          precedingAction: left.reference,
-          precedingWindow: left.window,
+          kind: 'dependency',
+          reference,
+          detail: `must follow ${dependencyKey}`,
+          dependency,
         }),
       );
     }
-    left = entry;
-    leftOrdinal = ordinal;
+    const { spawn, enabler } = entry.bounds;
+    if (spawn.kind === 'encounterEnd' && !roomEventPointResolves(eventGraph, spawn))
+      rows.push(
+        frozen({
+          kind: 'beforeSpawn',
+          reference,
+          detail: `waits on ${roomEventPointKey(spawn)}, which the room never reaches`,
+          point: spawn,
+          unavailable: true as const,
+        }),
+      );
+    if (enabler?.kind === 'exitsReady') {
+      // The exits are ready once every required action is done.
+      exitsReadyIndex ??= context.requiredKeys.reduce(
+        (index, key) => Math.max(index, indexes.get(key) ?? -1),
+        -1,
+      );
+      if (ownIndex < exitsReadyIndex)
+        rows.push(
+          frozen({
+            kind: 'beforeEnabler',
+            reference,
+            detail: 'must follow the last required action',
+            point: enabler,
+          }),
+        );
+    }
+    if (standsAnywhere(entry)) continue;
+    const passedAt = judgedDeadline(entry, context)
+      ? reached.findLast((before) => passes(before, entry, context))
+      : undefined;
+    if (passedAt !== undefined)
+      crossings.push(
+        frozen({
+          kind: 'pastDeadline',
+          reference: entry.reference,
+          detail: `must stand before ${roomEventPointKey(entry.bounds.deadline)}, which ${keyOf(passedAt.reference)} passes`,
+          deadline: entry.bounds.deadline,
+          precedingAction: passedAt.reference,
+        }),
+      );
+    reached.push(entry);
   }
-  return { rows, windows };
+  return { rows, crossings };
 }
 
 /**
  * Every structural issue of one authored order: stale, missing required,
- * dependency, window and required-first.
+ * dependency, past its deadline and before its opening.
  */
 export function assessRoomActionOrder(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
 ): readonly RoomActionOrderIssue[] {
-  const { rows, windows } = rowAndWindowIssues(order, context, order.length - 1);
+  const { rows, crossings } = rowAndBoundIssues(order, context, order.length - 1);
   const ranked = new Set(order.map(keyOf));
   const unranked = context.requiredKeys
     .filter((key) => !ranked.has(key))
     .map((key) =>
       frozen({ kind: 'unrankedRequired' as const, reference: context.active.get(key)!.reference }),
     );
-  const deadlines = requiredDeadlinesAfter(order, context);
   const requiredFirst = order.flatMap((reference, index) => {
-    const issue = requiredFirstIssue(reference, deadlines[index], context);
+    const issue = requiredFirstIssue(reference, requiredAfter(order, index, context), context);
     return issue === undefined ? [] : [issue];
   });
-  return frozen([...rows, ...unranked, ...windows, ...requiredFirst]);
+  return frozen([...rows, ...unranked, ...crossings, ...requiredFirst]);
 }
 
-interface RequiredDeadline {
-  readonly entry: RoomActionContribution;
-  readonly ordinal: number;
-}
-
-/**
- * For each row, the ranked required action ordered after it whose window
- * closes first (the earliest such row on a tie). An action whose window names
- * a phase the room does not play has no deadline here; its placement is its
- * own finding.
- */
-function requiredDeadlinesAfter(
-  order: readonly RoomActionReference[],
+/** Whether the walk, reaching `before` where it opens, has passed `entry`'s deadline. */
+function passes(
+  before: RoomActionContribution,
+  entry: RoomActionContribution,
   context: RoomActionOrderContext,
-): readonly (RequiredDeadline | undefined)[] {
-  const deadlines: (RequiredDeadline | undefined)[] = new Array(order.length);
-  let earliest: RequiredDeadline | undefined;
-  for (let index = order.length - 1; index >= 0; index -= 1) {
-    deadlines[index] = earliest;
-    const key = keyOf(order[index]!);
-    const entry = context.active.get(key);
-    if (
-      entry?.participation !== 'required' ||
-      entry.windowFollowsOrder === true ||
-      !roomLifecycleWindowResolves(context.lifecycleStructure, entry.window)
-    )
-      continue;
-    const ordinal = context.windowOrdinals.get(key)!;
-    if (earliest === undefined || ordinal <= earliest.ordinal) earliest = { entry, ordinal };
-  }
-  return deadlines;
+): boolean {
+  return roomEventPointPasses(
+    context.place,
+    roomActionOpeningPoint(before.bounds),
+    entry.bounds.deadline,
+  );
 }
 
 /**
- * A ranked required action's window closes at its deadline, so a row whose
- * window is later than that of a required action ordered after it is not
- * reached: the required action must come first.
+ * Whether a row's deadline is judged here: an action whose bounds name a
+ * phase or wheel the room does not play has none; its placement is its own
+ * finding.
+ */
+function judgedDeadline(entry: RoomActionContribution, context: RoomActionOrderContext): boolean {
+  const { eventGraph } = context;
+  return (
+    roomEventPointResolves(eventGraph, entry.bounds.deadline) &&
+    roomEventPointResolves(eventGraph, roomActionOpeningPoint(entry.bounds)) &&
+    roomEventPointResolves(eventGraph, entry.bounds.spawn)
+  );
+}
+
+/** The ranked required actions ordered after `index` whose deadlines are judged. */
+function requiredAfter(
+  order: readonly RoomActionReference[],
+  index: number,
+  context: RoomActionOrderContext,
+): readonly RoomActionContribution[] {
+  return order.slice(index + 1).flatMap((reference) => {
+    const entry = context.active.get(keyOf(reference));
+    return entry?.participation === 'required' &&
+      !standsAnywhere(entry) &&
+      judgedDeadline(entry, context)
+      ? [entry]
+      : [];
+  });
+}
+
+/**
+ * A ranked required action is taken by its deadline: a row ordered before it
+ * whose opening passes that deadline would pass it first, so the required
+ * action must come first. The one named is the earliest deadline it passes.
  */
 function requiredFirstIssue(
   reference: RoomActionReference,
-  deadline: RequiredDeadline | undefined,
+  required: readonly RoomActionContribution[],
   context: RoomActionOrderContext,
-): Extract<RoomActionOrderIssue, { kind: 'requiredFirst' }> | undefined {
-  const key = keyOf(reference);
-  const entry = context.active.get(key);
-  if (entry === undefined || deadline === undefined || entry.windowFollowsOrder === true)
-    return undefined;
-  if (context.windowOrdinals.get(key)! <= deadline.ordinal) return undefined;
-  const required = deadline.entry;
+): RoomActionBoundBlocker | undefined {
+  const entry = context.active.get(keyOf(reference));
+  if (entry === undefined || standsAnywhere(entry)) return undefined;
+  const first = required
+    .filter((candidate) => passes(entry, candidate, context))
+    .reduce<RoomActionContribution | undefined>(
+      (earliest, candidate) =>
+        earliest === undefined ||
+        context.place(candidate.bounds.deadline) < context.place(earliest.bounds.deadline)
+          ? candidate
+          : earliest,
+      undefined,
+    );
+  if (first === undefined) return undefined;
   return frozen({
-    kind: 'requiredFirst',
+    kind: openingKind(entry),
     reference: entry.reference,
-    detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
-    window: entry.window,
-    requiredAction: required.reference,
-    requiredWindow: required.window,
+    detail: `must follow ${keyOf(first.reference)}, a required action whose deadline passes first`,
+    point: roomActionOpeningPoint(entry.bounds),
+    requiredAction: first.reference,
   });
 }
 
@@ -314,18 +329,65 @@ function requiredFirstBlockers(
   lastIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementBlocker[] {
-  const deadline = requiredDeadlinesAfter(order, context)[lastIndex];
-  if (deadline === undefined) return [];
+  const required = requiredAfter(order, lastIndex, context);
+  if (required.length === 0) return [];
   return order.slice(0, lastIndex + 1).flatMap((reference) => {
-    const issue = requiredFirstIssue(reference, deadline, context);
+    const issue = requiredFirstIssue(reference, required, context);
     return issue === undefined ? [] : [issue];
+  });
+}
+
+/**
+ * Each row at or before `lastIndex` that opens past a gate whose row is not
+ * placed: the phase's combat starts only once that row is used, so nothing
+ * after it can be reached first.
+ */
+function unplacedGateBlockers(
+  order: readonly RoomActionReference[],
+  lastIndex: number,
+  context: RoomActionOrderContext,
+): RoomActionPlacementBlocker[] {
+  const placed = new Set(order.map(keyOf));
+  const gates = context.eventGraph.events.flatMap((event) =>
+    event.kind === 'encounterStarted' &&
+    event.trigger.kind === 'action' &&
+    context.active.has(keyOf(event.trigger.action)) &&
+    !placed.has(keyOf(event.trigger.action))
+      ? [
+          {
+            point: frozen({ kind: 'gate' as const, phaseKey: event.phaseKey }),
+            action: event.trigger.action,
+          },
+        ]
+      : [],
+  );
+  if (gates.length === 0) return [];
+  return order.slice(0, lastIndex + 1).flatMap((reference) => {
+    const entry = context.active.get(keyOf(reference));
+    if (entry === undefined || standsAnywhere(entry)) return [];
+    const opening = roomActionOpeningPoint(entry.bounds);
+    const gate = gates.find((candidate) =>
+      roomEventPointPasses(context.place, opening, candidate.point),
+    );
+    return gate === undefined
+      ? []
+      : [
+          frozen({
+            kind: openingKind(entry),
+            reference,
+            detail: `waits on ${roomEventPointKey(gate.point)}, which ${keyOf(gate.action)} must open first`,
+            point: opening,
+            requiredAction: gate.action,
+            unplacedGate: true as const,
+          }),
+        ];
   });
 }
 
 /** A proposed order, judged as the walk reaches its last placed action. */
 export interface RoomActionPlacementAssessment {
   readonly order: readonly RoomActionReference[];
-  /** Dependency and window issues of the placed actions and every row before them. */
+  /** Dependency and bound issues of the placed actions and every row before them. */
   readonly blockers: readonly RoomActionPlacementBlocker[];
   /** A left switch press at or before a placed action ends the room before an action after it. */
   readonly followsTerminal: boolean;
@@ -340,8 +402,8 @@ export interface RoomActionInsertionAssessment extends RoomActionPlacementAssess
 /**
  * Judges actions placed through `order[lastIndex]` by their prefix, as the
  * walk reaches them: each placed action and every row before it must keep its
- * window, dependencies and checkpoints, follow every ranked required action of
- * an earlier window, and none may follow a left switch press. Other rows after
+ * bounds and dependencies, follow every ranked required action that opens
+ * earlier, and none may follow a left switch press. Other rows after
  * the placed actions take no part; an issue the placement gives them is theirs
  * when the walk reaches them.
  */
@@ -350,13 +412,11 @@ export function assessRoomActionPlacement(
   lastIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementAssessment {
-  const { rows, windows } = rowAndWindowIssues(order, context, lastIndex);
+  const { rows, crossings } = rowAndBoundIssues(order, context, lastIndex);
   const blockers: readonly RoomActionPlacementBlocker[] = frozen([
-    ...[...rows, ...windows].filter(
-      (issue): issue is Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }> =>
-        issue.kind === 'dependency' || issue.kind === 'window',
-    ),
+    ...[...rows, ...crossings].filter(isPlacementBlocker),
     ...requiredFirstBlockers(order, lastIndex, context),
+    ...unplacedGateBlockers(order, lastIndex, context),
   ]);
   const terminalIndex =
     context.terminalActionKey === undefined
@@ -383,17 +443,30 @@ export function assessRoomActionInsertion(
   return frozen({ toIndex, ...assessRoomActionPlacement(next, toIndex, context) });
 }
 
-/** One move and the order it yields, judged like an insertion at `toIndex`. */
+/** The order a move yields: the row lands at `toIndex`. */
+export function movedRoomActionOrder(
+  order: readonly RoomActionReference[],
+  fromIndex: number,
+  toIndex: number,
+): readonly RoomActionReference[] {
+  const next = [...order];
+  const [reference] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, reference!);
+  return frozen(next);
+}
+
+/** One move and the order it yields, judged like an insertion at its landing. */
 export function assessRoomActionMove(
   order: readonly RoomActionReference[],
   fromIndex: number,
   toIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementAssessment {
-  const next = [...order];
-  const [reference] = next.splice(fromIndex, 1);
-  next.splice(toIndex, 0, reference!);
-  return assessRoomActionPlacement(next, toIndex, context);
+  return assessRoomActionPlacement(
+    movedRoomActionOrder(order, fromIndex, toIndex),
+    toIndex,
+    context,
+  );
 }
 
 /** The contract error for an index whose placement is not structurally authorable. */
@@ -432,13 +505,13 @@ export function roomActionInsertionRefusal(
 
 /** The order context a command judges an occurrence's insertion against. */
 export function roomActionOrderContextForOccurrence(
-  domain: Pick<RoomActionDomain, 'contributions' | 'lifecycleStructure'>,
+  domain: Pick<RoomActionDomain, 'contributions' | 'eventGraph'>,
   occurrence: Pick<RoomOccurrence, 'challengeSwitch'>,
 ): RoomActionOrderContext {
   const terminalActionKey = terminalRoomActionKey(occurrence);
   return roomActionOrderContext({
     contributions: domain.contributions,
-    lifecycleStructure: domain.lifecycleStructure,
+    eventGraph: domain.eventGraph,
     ...(terminalActionKey === undefined ? {} : { terminalActionKey }),
   });
 }

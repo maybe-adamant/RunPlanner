@@ -14,15 +14,17 @@ import {
   undoProjectHistory,
 } from '../../../src/authored-project';
 import { simulateProjectAssembly } from '../../../src/simulation';
-import {
-  loadUnderworldGorgonAthenaCheckpoint,
-  loadUnderworldPersephoneCallingCardCheckpoint,
-} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadUnderworldGorgonAthenaCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceOrdinaryHexPathCheckpoint,
   loadSurfaceSeleneHexPathCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { goldenFBiome, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+import {
+  goldenFBiome,
+  goldenGBiome,
+  underworldPersephoneCallingCardProject,
+} from '@run-planner/test-fixtures/underworld';
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { compileEligibleProject, reloadProject } from '../support/authored-checkpoints';
 
@@ -117,7 +119,7 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
 });
 
 it('exports Aspect of Persephone and Calling Card’s positive Apollo effects and reloads its exact edit', () => {
-  const saved = loadUnderworldPersephoneCallingCardCheckpoint();
+  const saved = stockTestProject(underworldPersephoneCallingCardProject());
   const opening = createTraitOfferAddress(
     createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start')),
     'source',

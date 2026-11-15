@@ -16,10 +16,12 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import {
+  expandDoors,
   leaveOptionNames,
   openLeavePicker,
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(() => cleanup());
 
@@ -42,8 +44,7 @@ function openHost(application: PlannerApplication) {
 
 async function openDoorRows(user: ReturnType<typeof renderWorkspace>['user']) {
   await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-  const disclosure = screen.getByRole('button', { name: 'Door details' });
-  if (disclosure.getAttribute('aria-expanded') !== 'true') await user.click(disclosure);
+  expandDoors();
 }
 
 describe('locked doors', () => {
@@ -60,9 +61,14 @@ describe('locked doors', () => {
     await user.click(lock());
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
     expect(lock().getAttribute('aria-pressed')).toBe('true');
-
-    const summary = () => screen.getByRole('list', { name: 'Door summary' });
-    expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
+    // Its fight is customized on its press row only, never among the doors.
+    const customize = () =>
+      screen.queryAllByRole('button', { name: /Customize locked door fight/ });
+    expect(customize()).toHaveLength(0);
+    // The Doors opened line shows the door locked.
+    expect(
+      within(screen.getByRole('button', { name: 'Edit doors' })).getByAltText('Locked'),
+    ).toBeTruthy();
     // A door still locked is not offered for leaving.
     const exitNames = async () => {
       const names = leaveOptionNames(await openLeavePicker(user));
@@ -71,13 +77,13 @@ describe('locked doors', () => {
     };
     expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(false);
 
-    await user.click(screen.getByRole('button', { name: 'Doors' }));
-    await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
+    await takeLive(user, 'Locked doors', 'Unlock Door 2');
     expect(hostRoom(application).roomActions.order.at(-1)).toEqual({
       kind: 'unlockExit',
       exitKey: 'exit2',
     });
-    expect(screen.getByRole('button', { name: /Customize locked door fight/ })).toBeTruthy();
+    expect(customize()).toHaveLength(1);
+    expect(customize()[0]!.closest('[role="dialog"]')).toBeNull();
 
     expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(true);
   });
@@ -100,13 +106,12 @@ describe('locked doors', () => {
     expect(lock().getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('opens the door editor when the room is left through a door still locked', async () => {
+  it('marks the shut doors when the room is left through a door still locked', async () => {
     const { application, user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'G');
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const disclosure = () => screen.getByRole('button', { name: 'Door details' });
-    if (disclosure().getAttribute('aria-expanded') === 'true') await user.click(disclosure());
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    const trigger = () => screen.getByRole('button', { name: 'Edit doors' });
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
 
     act(() => {
       application.store.dispatch(
@@ -119,7 +124,7 @@ describe('locked doors', () => {
       );
     });
     // A lock alone needs nothing of the doors.
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    expect(trigger().hasAttribute('data-has-findings')).toBe(false);
     act(() => {
       application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -132,6 +137,7 @@ describe('locked doors', () => {
         }),
       );
     });
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    expect(trigger().hasAttribute('data-has-findings')).toBe(true);
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
   });
 });

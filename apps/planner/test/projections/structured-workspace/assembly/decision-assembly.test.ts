@@ -326,9 +326,15 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.fields).toMatchObject({
       cageOutcome: 'min',
       cageTargetCount: 1,
-      doorCageRewardCount: 2,
     });
     expect(assembly.batch.notes).toEqual([
+      {
+        target: 'doorRoll',
+        text: [
+          '• Cages per combat room: Minimum 2, Maximum 3 (2 if the room only holds 2).',
+          '• Rolled even when no room has cages.',
+        ].join('\n'),
+      },
       { target: 'rewardColumn', text: 'Cage rewards appear bottom to top on the door' },
     ]);
     expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.key)).toEqual([
@@ -722,7 +728,6 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.fields).toMatchObject({
       cageOutcome: 'max',
       cageTargetCount: 1,
-      doorCageRewardCount: 3,
     });
     const fieldsWorkbench = assembly.workbenches.find(
       (workbench) => workbench.room.roomLocal.kind === 'fields',

@@ -1,7 +1,7 @@
 import type { Catalog } from '../../../catalog-schema';
 import { routeErisHost, routeRoomShop } from '../../route-profile';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
-import type { ProjectDocument } from '../../model';
+import type { ProjectDocument, RoomEncounterState } from '../../model';
 
 import type { LocatedBiome } from '../contract';
 import { applyEncounterOccurrenceCommand } from './encounter';
@@ -12,11 +12,13 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
-import { applyFeatureRollCommand, pinRollSlot, roomShopItemKeys } from './feature-rolls';
+import { applyFeatureRollCommand, withoutStygianWellTwistResults } from './feature-rolls';
 import {
   INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
   stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
 } from '../../feature-rolls';
 import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
@@ -47,16 +49,16 @@ import {
 } from '../../model';
 import {
   defaultHermesShrineDeliveryReward,
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrineDeliveryEntryKey,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
   offerFor,
   unplaceHermesShrineDelivery,
 } from '../../hermes-shrine-delivery';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
-  createRoomActionAddress,
   type OccurrenceAddress,
 } from '../../addresses';
 import { roomActionKey } from '../../room-actions/key';
@@ -95,8 +97,8 @@ function withRushedHermesDelivery(
 }
 
 /**
- * Keeps the refill purchase, and its rushed pickup, after the first rushed
- * initial purchase when an edit changes it.
+ * Keeps the refill purchase, its rush and its rushed pickup after the first
+ * initial rush when an edit changes it.
  */
 function followRefillTrigger(
   document: ProjectDocument,
@@ -108,11 +110,14 @@ function followRefillTrigger(
   const host = roomActionDomainForOccurrence(document, catalog, biome, source.occurrenceId);
   if (host === undefined) return document;
   const order = host.occurrence.roomActions.order;
-  const trigger = firstRushedInitialPurchase(order);
+  const trigger = firstInitialRush(order);
   const refillKey = roomActionKey({
     kind: 'purchaseHermesShrineOffer',
     generationKey: 'travelDealRefill',
-    rushed: false,
+  });
+  const refillRushKey = roomActionKey({
+    kind: 'rushHermesShrineOffer',
+    generationKey: 'travelDealRefill',
   });
   const pickupKey = roomActionKey({
     kind: 'interactAcquisitionEntry',
@@ -123,7 +128,9 @@ function followRefillTrigger(
   if (trigger === undefined || refillIndex < 0 || refillIndex > order.indexOf(trigger))
     return document;
   const moved = new Set(
-    order.map(roomActionKey).filter((key) => key === refillKey || key === pickupKey),
+    order
+      .map(roomActionKey)
+      .filter((key) => key === refillKey || key === refillRushKey || key === pickupKey),
   );
   const scheduled = scheduleRequiredRoomActions({
     catalog,
@@ -140,6 +147,31 @@ function followRefillTrigger(
       roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
     }),
   );
+}
+
+/**
+ * After a generation's rush or purchase leaves: the refill follows the first
+ * initial rush still made, and with none left its rushed pickup is retracted.
+ */
+function afterRushChange(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  source: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+): ProjectDocument {
+  if (generationKey === 'travelDealRefill')
+    return followRefillTrigger(document, catalog, located, source);
+  const order =
+    document.route.biomes[located.biomeIndex]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === source.occurrenceId,
+    )?.roomActions.order ?? [];
+  return firstInitialRush(order) === undefined
+    ? unplaceHermesShrineDelivery(
+        document,
+        hermesShrineDeliveryEntryKey(source, 'travelDealRefill'),
+      )
+    : followRefillTrigger(document, catalog, located, source);
 }
 
 /** A restocked item keeps its rolled delay; a newly stocked one takes its identity's default. */
@@ -204,7 +236,9 @@ export function applyOccurrenceCommand(
               ...occurrence.roomActions,
               order: Object.freeze(
                 occurrence.roomActions.order.filter(
-                  (reference) => reference.kind !== 'purchaseHermesShrineOffer',
+                  (reference) =>
+                    reference.kind !== 'purchaseHermesShrineOffer' &&
+                    reference.kind !== 'rushHermesShrineOffer',
                 ),
               ),
             }),
@@ -254,8 +288,8 @@ export function applyOccurrenceCommand(
       return updateOccurrence(
         document,
         located,
-        hermesShrinePurchaseAction(occurrence.roomActions.order, `initial:${command.slotKey}`)
-          ?.rushed === true
+        hermesShrineRushAction(occurrence.roomActions.order, `initial:${command.slotKey}`) !==
+          undefined
           ? withRushedHermesDelivery(
               nextOccurrence,
               command.occurrence,
@@ -294,11 +328,9 @@ export function applyOccurrenceCommand(
         }),
       );
       // The delay only retimes a delayed delivery; a rush ignores it.
-      const action = hermesShrinePurchaseAction(
-        occurrence.roomActions.order,
-        command.generationKey,
-      );
-      return action === undefined || action.rushed
+      const order = occurrence.roomActions.order;
+      return hermesShrinePurchaseAction(order, command.generationKey) === undefined ||
+        hermesShrineRushAction(order, command.generationKey) !== undefined
         ? updated
         : unplaceHermesShrineDelivery(
             updated,
@@ -321,9 +353,10 @@ export function applyOccurrenceCommand(
       if (!command.purchased) {
         if (command.index !== undefined)
           failCommand(command, 'an index places only a new purchase');
-        const nextOrder = order.filter((reference) => reference !== existing);
-        // Clearing retracts the purchase's pickup and every placed delivery;
-        // authored delivery payload remains for repair.
+        const rush = hermesShrineRushAction(order, command.generationKey);
+        const nextOrder = order.filter((reference) => reference !== existing && reference !== rush);
+        // Clearing retracts the purchase's rush, its pickup and every placed
+        // delivery; authored delivery payload remains for repair.
         const updated = unplaceHermesShrineDelivery(
           updateOccurrence(
             document,
@@ -338,13 +371,13 @@ export function applyOccurrenceCommand(
           ),
           deliveryEntryKey,
         );
-        return command.generationKey !== 'travelDealRefill' &&
-          firstRushedInitialPurchase(nextOrder) === undefined
-          ? unplaceHermesShrineDelivery(
-              updated,
-              hermesShrineDeliveryEntryKey(command.occurrence, 'travelDealRefill'),
-            )
-          : followRefillTrigger(updated, catalog, located, command.occurrence);
+        return afterRushChange(
+          updated,
+          catalog,
+          located,
+          command.occurrence,
+          command.generationKey,
+        );
       }
       if (existing !== undefined) {
         if (command.index !== undefined)
@@ -355,11 +388,10 @@ export function applyOccurrenceCommand(
       const selectedOffer = offerFor(occurrence.hermesShrine, command.generationKey);
       if (selectedOffer === undefined || selectedOffer === null)
         failCommand(command, 'Shrine offer is unresolved');
-      // A new purchase starts unrushed at its canonical timeline position.
+      // A new purchase enters at its canonical timeline position.
       const reference = Object.freeze({
         kind: 'purchaseHermesShrineOffer' as const,
         generationKey: command.generationKey,
-        rushed: false,
       });
       const appended = updateOccurrence(
         document,
@@ -405,125 +437,91 @@ export function applyOccurrenceCommand(
         command,
       );
     }
-    case 'SetHermesShrinePurchaseRush': {
-      const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
+    case 'SetHermesShrineRush': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (occurrence.hermesShrine === undefined)
+        failCommand(command, 'occurrence has no Hermes Shrine');
+      requireShrineGeneration(command, command.generationKey);
       if (typeof command.rushed !== 'boolean')
-        failCommand(command, 'Shrine purchase rushed must be boolean');
+        failCommand(command, 'Shrine rushed must be boolean');
       const order = occurrence.roomActions.order;
-      const index = order.findIndex(
-        (reference) => roomActionKey(reference) === command.action.actionKey,
-      );
-      const action = order[index];
-      if (action?.kind !== 'purchaseHermesShrineOffer')
-        failCommand(command, 'action is not a Shrine purchase');
-      if (action.rushed === command.rushed) return document;
-      const offer = offerFor(occurrence.hermesShrine, action.generationKey);
-      if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
+      const existing = hermesShrineRushAction(order, command.generationKey);
       const source = createOccurrenceAddress(
-        createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+        createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
         occurrence.occurrenceId,
       );
-      const nextOrder = Object.freeze(
-        order.map((reference, position) =>
-          position === index ? Object.freeze({ ...action, rushed: command.rushed }) : reference,
-        ),
-      );
-      const withOrder = Object.freeze({
-        ...occurrence,
-        roomActions: Object.freeze({ ...occurrence.roomActions, order: nextOrder }),
+      const deliveryEntryKey = hermesShrineDeliveryEntryKey(source, command.generationKey);
+      if (!command.rushed) {
+        if (command.index !== undefined) failCommand(command, 'an index places only a new rush');
+        if (existing === undefined) return document;
+        // Un-rushing retracts the same-room pickup; its payload remains for repair.
+        const updated = unplaceHermesShrineDelivery(
+          updateOccurrence(
+            document,
+            located,
+            Object.freeze({
+              ...occurrence,
+              roomActions: Object.freeze({
+                ...occurrence.roomActions,
+                order: Object.freeze(order.filter((reference) => reference !== existing)),
+              }),
+            }),
+          ),
+          deliveryEntryKey,
+        );
+        return afterRushChange(updated, catalog, located, source, command.generationKey);
+      }
+      if (existing !== undefined) {
+        if (command.index !== undefined) failCommand(command, 'an index places only a new rush');
+        return document;
+      }
+      const purchase = hermesShrinePurchaseAction(order, command.generationKey);
+      if (purchase === undefined) failCommand(command, 'only a bought Shrine item can be rushed');
+      const offer = offerFor(occurrence.hermesShrine, command.generationKey);
+      if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
+      // A new rush enters right after its purchase unless an index places it
+      // later; a rushed item is optional loot the owner picks up, so nothing ranks its pickup.
+      const purchaseIndex = order.indexOf(purchase);
+      const rush = Object.freeze({
+        kind: 'rushHermesShrineOffer' as const,
+        generationKey: command.generationKey,
       });
-      const deliveryEntryKey = hermesShrineDeliveryEntryKey(source, action.generationKey);
-      const updated = unplaceHermesShrineDelivery(
+      const rushed = unplaceHermesShrineDelivery(
         updateOccurrence(
           document,
           located,
-          command.rushed
-            ? withRushedHermesDelivery(
-                withOrder,
-                source,
-                catalog,
-                action.generationKey,
-                offer.rewardType,
-              )
-            : withOrder,
+          withRushedHermesDelivery(
+            Object.freeze({
+              ...occurrence,
+              roomActions: Object.freeze({
+                ...occurrence.roomActions,
+                order: Object.freeze([
+                  ...order.slice(0, purchaseIndex + 1),
+                  rush,
+                  ...order.slice(purchaseIndex + 1),
+                ]),
+              }),
+            }),
+            source,
+            catalog,
+            command.generationKey,
+            offer.rewardType,
+          ),
         ),
         deliveryEntryKey,
-        command.rushed ? source : undefined,
-      );
-      if (!command.rushed)
-        return action.generationKey !== 'travelDealRefill' &&
-          firstRushedInitialPurchase(nextOrder) === undefined
-          ? unplaceHermesShrineDelivery(
-              updated,
-              hermesShrineDeliveryEntryKey(source, 'travelDealRefill'),
-            )
-          : followRefillTrigger(updated, catalog, located, source);
-      // A rushed item is optional loot; rank it once at its canonical position
-      // so the author starts from the pickup and may remove it.
-      const host = roomActionDomainForOccurrence(
-        updated,
-        catalog,
-        createBiomeAddress(source.routeKey, source.biomeKey),
-        source.occurrenceId,
-      );
-      if (host === undefined) failCommand(command, 'rushed Shrine host has no room-action domain');
-      const scheduled = scheduleRequiredRoomActions({
-        catalog,
-        domain: host.domain,
-        order: host.occurrence.roomActions.order,
-        requiredKeys: new Set([
-          roomActionKey({
-            kind: 'interactAcquisitionEntry',
-            siteKey: 'hermesShrineDelivery',
-            entryKey: deliveryEntryKey,
-          }),
-        ]),
-        participation: 'any',
-      });
-      return followRefillTrigger(
-        scheduled === host.occurrence.roomActions.order
-          ? updated
-          : updateOccurrence(
-              updated,
-              { ...located, plan: updated.route.biomes[located.biomeIndex]! },
-              Object.freeze({
-                ...host.occurrence,
-                roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
-              }),
-            ),
-        catalog,
-        located,
         source,
+      );
+      return withChosenIndex(
+        followRefillTrigger(rushed, catalog, located, source),
+        catalog,
+        command,
       );
     }
     case 'PurchaseHermesShrineOffer': {
-      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      const shrine = authored.hermesShrine;
-      if (shrine === undefined) failCommand(command, 'occurrence has no Hermes Shrine');
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (occurrence.hermesShrine === undefined)
+        failCommand(command, 'occurrence has no Hermes Shrine');
       requireShrineGeneration(command, command.generationKey);
-      if (typeof command.rushed !== 'boolean')
-        failCommand(command, 'Shrine purchase rushed must be boolean');
-      if (command.rewardType !== undefined && command.generationKey !== 'travelDealRefill')
-        failCommand(command, 'only the Travel Deal refill is stocked with its purchase');
-      if (command.rewardType !== undefined)
-        requireSurfaceShopReward(catalog, command, command.rewardType);
-      const occurrence =
-        command.rewardType === undefined
-          ? authored
-          : Object.freeze({
-              ...authored,
-              hermesShrine: Object.freeze({
-                ...shrine,
-                travelDealRefill: Object.freeze({
-                  offer: stockedOffer(
-                    shrine.travelDealRefill?.offer,
-                    command.rewardType,
-                    authored.occurrenceId,
-                    'travelDealRefill',
-                  ),
-                }),
-              }),
-            });
       const offer = offerFor(occurrence.hermesShrine, command.generationKey);
       if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
       const order = occurrence.roomActions.order;
@@ -533,7 +531,6 @@ export function applyOccurrenceCommand(
       const reference = Object.freeze({
         kind: 'purchaseHermesShrineOffer' as const,
         generationKey: command.generationKey,
-        rushed: false,
       });
       const bought = unplaceHermesShrineDelivery(
         updateOccurrence(
@@ -549,26 +546,7 @@ export function applyOccurrenceCommand(
         ),
         hermesShrineDeliveryEntryKey(command.occurrence, command.generationKey),
       );
-      const purchaseKey = roomActionKey(reference);
-      if (!command.rushed) return withChosenIndex(bought, catalog, command);
-      return withChosenIndex(
-        applyOccurrenceCommand(
-          bought,
-          catalog,
-          { ...located, plan: bought.route.biomes[located.biomeIndex]! },
-          {
-            kind: 'SetHermesShrinePurchaseRush',
-            action: createRoomActionAddress(
-              createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
-              command.occurrence.occurrenceId,
-              purchaseKey,
-            ),
-            rushed: true,
-          },
-        ),
-        catalog,
-        command,
-      );
+      return withChosenIndex(bought, catalog, command);
     }
     case 'ReplaceHermesShrineTravelDealRefill': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
@@ -710,6 +688,10 @@ export function applyOccurrenceCommand(
         : occurrence.roomActions.order.filter(
             (reference) => reference.kind !== 'unlockExit' || reference.exitKey !== command.exitKey,
           );
+      // An opened door is no longer an item: its press and its fight go with it.
+      const encounters = command.locked
+        ? occurrence.encounters
+        : withLockedExitCustomization(occurrence.encounters, command.exitKey, undefined);
       return updateOccurrence(
         document,
         located,
@@ -718,18 +700,15 @@ export function applyOccurrenceCommand(
           ...(exitKeys.length === 0
             ? {}
             : { lockedExits: orderedLockedExits(catalog, occurrence.gameName, exitKeys) }),
+          encounters,
           roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
         }),
       );
     }
-    case 'ReplaceUnlockExitCustomization': {
-      const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
-      const index = occurrence.roomActions.order.findIndex(
-        (reference) => roomActionKey(reference) === command.action.actionKey,
-      );
-      const current = occurrence.roomActions.order[index];
-      if (current?.kind !== 'unlockExit')
-        failCommand(command, 'action does not press a locked door');
+    case 'ReplaceLockedExitCustomization': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (!(occurrence.lockedExits ?? []).includes(command.exitKey))
+        failCommand(command, `${command.exitKey} is not locked`);
       if (command.value !== null) {
         const issue = unlockExitCustomizationIssue(
           catalog,
@@ -739,29 +718,25 @@ export function applyOccurrenceCommand(
         );
         if (issue !== undefined) failCommand(command, issue);
       }
-      const decisions: Record<string, AuthoredEncounterCustomization> = {
-        ...(current.customization ?? {}),
-      };
+      const current = occurrence.encounters.customizationByLockedExit?.[command.exitKey];
+      const decisions: Record<string, AuthoredEncounterCustomization> = { ...(current ?? {}) };
       if (command.value === null) delete decisions[command.decisionKey];
       else
         decisions[command.decisionKey] = decodeGeneratedEncounterCustomization(
           command.value,
           command.decisionKey,
         );
-      if (JSON.stringify(decisions) === JSON.stringify(current.customization ?? {}))
-        return document;
-      const order = [...occurrence.roomActions.order];
-      order[index] = Object.freeze({
-        kind: 'unlockExit' as const,
-        exitKey: current.exitKey,
-        ...(Object.keys(decisions).length === 0 ? {} : { customization: Object.freeze(decisions) }),
-      });
+      if (JSON.stringify(decisions) === JSON.stringify(current ?? {})) return document;
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+          encounters: withLockedExitCustomization(
+            occurrence.encounters,
+            command.exitKey,
+            Object.keys(decisions).length === 0 ? undefined : Object.freeze(decisions),
+          ),
         }),
       );
     }
@@ -862,6 +837,26 @@ export function applyOccurrenceCommand(
         failCommand(command, `unknown Purging Pool slot ${String(command.slotKey)}`);
       if (command.traitKey !== null && catalog.traits.byKey[command.traitKey] === undefined)
         failCommand(command, 'unknown trait');
+      if (command.list === 'refresh') {
+        const { refreshTraitKeyBySlot: previous, ...pool } = occurrence.purgingPool;
+        const { [command.slotKey]: _replaced, ...kept } = previous ?? {};
+        void _replaced;
+        const refresh =
+          command.traitKey === null ? kept : { ...kept, [command.slotKey]: command.traitKey };
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...occurrence,
+            purgingPool: Object.freeze({
+              ...pool,
+              ...(Object.keys(refresh).length === 0
+                ? {}
+                : { refreshTraitKeyBySlot: Object.freeze(refresh) }),
+            }),
+          }),
+        );
+      }
       return updateOccurrence(
         document,
         located,
@@ -928,7 +923,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellRollOffer':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
-    case 'SellPurgingPoolRollSlot':
       return applyFeatureRollCommand(document, catalog, located, command);
     case 'ReplaceStygianWellOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
@@ -944,31 +938,23 @@ export function applyOccurrenceCommand(
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
       const previousItemKey = well.offerKeyBySlot[command.slotKey];
+      const restocked = Object.freeze({
+        ...well,
+        offerKeyBySlot: Object.freeze({
+          ...well.offerKeyBySlot,
+          [command.slotKey]: command.itemKey,
+        }),
+      });
+      const generation = stygianWellGenerationKey(INITIAL_ROLL_KEY, command.slotKey);
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          stygianWell: Object.freeze({
-            ...well,
-            offerKeyBySlot: Object.freeze({
-              ...well.offerKeyBySlot,
-              [command.slotKey]: command.itemKey,
-            }),
-            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
-              ? {}
-              : well.twistResultKeyBySlot === undefined
-                ? {}
-                : {
-                    twistResultKeyBySlot: Object.freeze(
-                      Object.fromEntries(
-                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
-                          ([slotKey]) => slotKey !== command.slotKey,
-                        ),
-                      ),
-                    ),
-                  }),
-          }),
+          stygianWell:
+            previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? restocked
+              : withoutStygianWellTwistResults(restocked, (key) => key === generation),
         }),
       );
     }
@@ -984,56 +970,21 @@ export function applyOccurrenceCommand(
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
       const previousItemKey = well.travelDealRefillKey;
+      const restocked = Object.freeze({ ...well, travelDealRefillKey: command.itemKey });
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          stygianWell: Object.freeze({
-            ...well,
-            travelDealRefillKey: command.itemKey,
-            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
-              ? {}
-              : well.twistResultKeyBySlot === undefined
-                ? {}
-                : {
-                    twistResultKeyBySlot: Object.freeze(
-                      Object.fromEntries(
-                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
-                          ([slotKey]) => slotKey !== 'travelDealRefill',
-                        ),
-                      ),
-                    ),
-                  }),
-          }),
+          stygianWell:
+            previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? restocked
+              : withoutStygianWellTwistResults(restocked, (key) => key === 'travelDealRefill'),
         }),
       );
     }
     case 'SetStygianWellPurchase': {
-      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (authored.stygianWell === undefined)
-        failCommand(command, 'occurrence has no present Stygian Well');
-      const roll = parseStygianWellGenerationKey(command.generationKey);
-      if (command.itemKey !== undefined && !command.purchased)
-        failCommand(command, 'a slot is pinned only with its purchase');
-      if (command.itemKey !== undefined && !roomShopItemKeys(catalog).has(command.itemKey))
-        failCommand(command, 'unknown RoomShop item');
-      const occurrence =
-        command.itemKey === undefined
-          ? authored
-          : roll === undefined
-            ? withStygianWellInitialItem(authored, 'travelDealRefill', command.itemKey)
-            : roll.rollKey === INITIAL_ROLL_KEY
-              ? withStygianWellInitialItem(authored, roll.slotKey, command.itemKey)
-              : pinRollSlot(
-                  catalog,
-                  command,
-                  authored,
-                  'stygianWell',
-                  roll.rollKey,
-                  roll.slotKey,
-                  command.itemKey,
-                );
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
       if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       const generation = command.generationKey;
@@ -1048,9 +999,6 @@ export function applyOccurrenceCommand(
       );
       if (command.index !== undefined && (!command.purchased || alreadyOrdered))
         failCommand(command, 'an index places only a new purchase');
-      const purchased = new Set(well.purchasedGenerationKeys ?? []);
-      if (command.purchased) purchased.add(generation);
-      else purchased.delete(generation);
       const order = command.purchased
         ? occurrence.roomActions.order.some(
             (r) => r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation,
@@ -1085,10 +1033,6 @@ export function applyOccurrenceCommand(
           Object.freeze({
             ...occurrence,
             roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
-            stygianWell: Object.freeze({
-              ...well,
-              purchasedGenerationKeys: Object.freeze([...purchased]),
-            }),
           }),
         ),
         catalog,
@@ -1106,7 +1050,9 @@ export function applyOccurrenceCommand(
       if (
         command.itemKey !== null &&
         (parentItemKey !== 'RandomStoreItem' ||
-          !(well.purchasedGenerationKeys ?? []).includes(command.generationKey))
+          !stygianWellPurchasedGenerationKeys(occurrence.roomActions.order).includes(
+            command.generationKey,
+          ))
       )
         failCommand(command, 'Twist result requires a purchased RandomStoreItem generation');
       const twistGrant = catalog.rewards.shops.byKey.RoomShop?.groups.values
@@ -1115,36 +1061,12 @@ export function applyOccurrenceCommand(
       const twistResultItemKeys = new Set(twistGrant?.kind === 'twist' ? twistGrant.pool : []);
       if (command.itemKey !== null && !twistResultItemKeys.has(command.itemKey))
         failCommand(command, 'item is not in the closed Twist result pool');
-      if (parsed !== undefined && parsed.rollKey !== INITIAL_ROLL_KEY) {
-        const order = occurrence.roomActions.order;
-        const index = order.findIndex(
-          (reference) =>
-            reference.kind === 'rerollStygianWell' && reference.rerollId === parsed.rollKey,
-        );
-        const reroll = order[index];
-        if (reroll?.kind !== 'rerollStygianWell')
-          failCommand(command, 'unknown Stygian Well generation');
-        const nextOrder = [...order];
-        nextOrder[index] = Object.freeze({
-          ...reroll,
-          twistResultKeyBySlot: Object.freeze({
-            ...reroll.twistResultKeyBySlot,
-            [parsed.slotKey]: command.itemKey,
-          }),
-        });
-        return updateOccurrence(
-          document,
-          located,
-          Object.freeze({
-            ...occurrence,
-            roomActions: Object.freeze({
-              ...occurrence.roomActions,
-              order: Object.freeze(nextOrder),
-            }),
-          }),
-        );
-      }
-      const childKey = parsed === undefined ? 'travelDealRefill' : parsed.slotKey;
+      if (
+        parsed !== undefined &&
+        parsed.rollKey !== INITIAL_ROLL_KEY &&
+        parentItemKey === undefined
+      )
+        failCommand(command, 'unknown Stygian Well generation');
       return updateOccurrence(
         document,
         located,
@@ -1152,9 +1074,9 @@ export function applyOccurrenceCommand(
           ...occurrence,
           stygianWell: Object.freeze({
             ...well,
-            twistResultKeyBySlot: Object.freeze({
-              ...well.twistResultKeyBySlot,
-              [childKey]: command.itemKey,
+            twistResultKeyByGeneration: Object.freeze({
+              ...well.twistResultKeyByGeneration,
+              [command.generationKey]: command.itemKey,
             }),
           }),
         }),
@@ -1197,32 +1119,19 @@ export function applyOccurrenceCommand(
   }
 }
 
-/**
- * Pins an initial slot's or the Travel Deal restock's item; a changed item
- * drops the Twist result it resolved.
- */
-function withStygianWellInitialItem(
-  occurrence: import('../../model').RoomOccurrence,
-  slotKey: import('../../model').StygianWellSlotKey | 'travelDealRefill',
-  itemKey: string,
-): import('../../model').RoomOccurrence {
-  const well = occurrence.stygianWell!;
-  const previous =
-    slotKey === 'travelDealRefill' ? well.travelDealRefillKey : well.offerKeyBySlot[slotKey];
-  if (previous === itemKey) return occurrence;
-  const twists = Object.fromEntries(
-    Object.entries(well.twistResultKeyBySlot ?? {}).filter(([key]) => key !== slotKey),
-  );
-  const { twistResultKeyBySlot: _previousTwists, ...rest } = well;
-  void _previousTwists;
+/** The room's encounters with one locked door's fight decisions replaced, or dropped when undefined. */
+function withLockedExitCustomization(
+  encounters: RoomEncounterState,
+  exitKey: string,
+  decisions: Readonly<Record<string, AuthoredEncounterCustomization>> | undefined,
+): RoomEncounterState {
+  const { customizationByLockedExit: previous, ...rest } = encounters;
+  if (decisions === undefined && previous?.[exitKey] === undefined) return encounters;
+  const doors = { ...(previous ?? {}) };
+  if (decisions === undefined) delete doors[exitKey];
+  else doors[exitKey] = decisions;
   return Object.freeze({
-    ...occurrence,
-    stygianWell: Object.freeze({
-      ...rest,
-      ...(slotKey === 'travelDealRefill'
-        ? { travelDealRefillKey: itemKey }
-        : { offerKeyBySlot: Object.freeze({ ...well.offerKeyBySlot, [slotKey]: itemKey }) }),
-      ...(Object.keys(twists).length === 0 ? {} : { twistResultKeyBySlot: Object.freeze(twists) }),
-    }),
+    ...rest,
+    ...(Object.keys(doors).length === 0 ? {} : { customizationByLockedExit: Object.freeze(doors) }),
   });
 }

@@ -1,33 +1,44 @@
 # Room layout steering live acceptance
 
 Requires a current planner and an installed game module of the same schema
-pair, and a complete-valid plan sent and set to play next that sets, in its
-rooms' Overview Layout section, a non-default entry and a flipped room, an
-anchor for at least one Well, Pool, Shrine or challenge switch, and Fields
-cage and optional reward points in a Mourning Fields (H) room. Layout
-differences are diagnostics, never mismatches: the run stays synchronized
-either way. The owner confirms or waives each check.
+pair, and a complete-valid plan sent and set to play next. Every positioned
+item the game would place at random has a stored position, filled when its
+room was first reached or chosen, and the module steers each one. Use two
+plans, or one plan with both kinds of room: one where no position is chosen
+(every room as the planner filled it, as Draft or the run import leaves it),
+and one that changes, in its rooms' Overview Layout section, an entry, a flip,
+an anchor, Fields points and a Chaos gate point. Before each run, note the planner's Layout values for the rooms below.
+Layout differences are diagnostics, never mismatches: the run stays
+synchronized either way. The owner confirms or waives each check.
 
-## Entry and flip
+## Entry and flip (any combat room with a rolled flip or a choice of entries)
 
-- [ ] Each room with a planned entry and flip is entered at that door and
-      flipped as planned; no `room-entry` or `room-flip` diagnostic. A
+- [ ] Each such room is entered at the entry its Layout shows and flipped as
+      shown, filled or chosen; no `room-entry` or `room-flip` diagnostic. A
       door-decided entry raises at most `room-entry-forced`.
+- [ ] A room whose entry or flip its arrival door decides is entered and
+      flipped as its Layout shows; a `room-entry` or `room-flip` diagnostic
+      there means the planner's door rule differs from the game's.
+- [ ] Replaying the unchanged plan enters each room the same way again.
 
-## Object anchors
+## Object anchors (rooms with a Well, Pool, Shrine or challenge switch)
 
-- [ ] Each planned object stands at its planned anchor, the room's other
-      objects included; no `room-anchor` or `room-anchor-unavailable`
+- [ ] Each object stands on the anchor its Layout shows, filled or chosen;
+      no `room-anchor` or `room-anchor-unavailable` diagnostic.
+- [ ] A room with two or more objects puts each on its own shown anchor; a
+      Meta Reward Stand, when one spawns, takes a remaining anchor.
+- [ ] A Well on its room's pin stands there; no `room-anchor` diagnostic.
+
+## Fields points (Mourning Fields H combat rooms)
+
+- [ ] Every cage and optional reward spawns at the point its Layout shows,
+      filled or chosen; no `fields-point` or `fields-placement` diagnostic.
+      A diagnostic naming every item at once means the game's loot or bonus
+      reward point lists came back empty.
+- [ ] A Nemesis event appears at its shown point; no `fields-nemesis-point`
       diagnostic.
-- [ ] A room with two anchored objects puts each at its own anchor, never the
-      other's: the draw each anchor reserves is the object's own.
 
-## Fields points
+## Chaos gate (a room hosting a Chaos gate with several gate points)
 
-- [ ] In each H room with planned points, every cage and optional reward
-      spawns at its planned point; no `fields-point` or `fields-placement`
-      diagnostic. A diagnostic naming every item at once means the game's
-      loot or bonus reward point lists came back empty and steering fell back
-      to native placement.
-- [ ] A room with only some points planned places those and leaves the rest
-      to the game.
+- [ ] The gate spawns at the point its Layout shows, filled or chosen; no
+      `chaos-position-unavailable` diagnostic.

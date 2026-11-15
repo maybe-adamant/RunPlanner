@@ -171,7 +171,7 @@ variant or second composition model.
 
 Natural Chaos is supported from the declared P source maps as an optional
 additional exit beside normal doors. Its source-local biome-depth ceiling and
-the host-wide preceding-ten offer spacing remain engine-evaluated; selected
+the host-wide previous-nine offer spacing remain engine-evaluated; selected
 Chaos returns through a fresh ordinary P continuation without changing
 normal-door force or Preboss takeover ownership.
 

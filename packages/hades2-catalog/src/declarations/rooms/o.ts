@@ -608,8 +608,10 @@ export const oRooms = [
   {
     gameName: 'O_Story01',
     noReroll: true,
+    // RoomDataO.lua:2767,2794: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
+      unspacedFamilies: ['Pickaxe', 'Shovel'],
     }),
     label: 'Circe',
     roomSetKey: 'O',

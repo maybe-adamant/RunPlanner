@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 3,
   "projectId": "surface-1",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -214,7 +214,11 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -572,7 +576,11 @@
           { "slotKey": "Encounter", "encounterKey": "PreHubGeneratedN", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        },
         "hub": {
           "room": { "gameName": "N_Hub" },
           "slots": [
@@ -1023,7 +1031,11 @@
         ],
         "requiredObjects": ["SoulPylon"],
         "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -1286,6 +1298,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 566341, "endPointId": 566339 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -1418,6 +1435,11 @@
         "phantomExit": {
           "placeholderRoomGameName": "N_Sub01",
           "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
+        },
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
         }
       },
       "timeline": {
@@ -1759,5 +1781,5 @@
       }
     }
   ],
-  "planFingerprint": "b8a81f87"
+  "planFingerprint": "05a90e09"
 }

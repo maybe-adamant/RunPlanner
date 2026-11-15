@@ -224,16 +224,18 @@ function purchasePrice(
       if (delayFactor === undefined)
         throw new GoldLedgerContractError(`Shrine delay ${venue.delay} has no price factor`);
       const values = multipliers(catalog, context);
-      const first = multiplier(values);
-      // The first purchase reprices the Shrine without Travel Deal before a rush is paid.
-      const after = multiplier(values, false);
       return {
         itemKey: venue.itemKey,
         price: priceAmount(baseCostSupport(option.cost!), (base) =>
-          venue.rushed
-            ? shrineOrderPrice(base, first, delayFactor) +
-              shrineRushPrice(base, after, delayFactor, pricing.rushPriceMultiplier)
-            : shrineOrderPrice(base, first, delayFactor),
+          venue.stage === 'rush'
+            ? // The first purchase repriced the Shrine without Travel Deal before a rush is paid.
+              shrineRushPrice(
+                base,
+                multiplier(values, false),
+                delayFactor,
+                pricing.rushPriceMultiplier,
+              )
+            : shrineOrderPrice(base, multiplier(values), delayFactor),
         ),
       };
     }

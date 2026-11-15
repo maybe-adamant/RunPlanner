@@ -15,7 +15,6 @@ const reroll = (rerollId: string): HubAction => ({
   kind: 'reroll',
   rerollId,
   hubSlotKey: 'combat03',
-  reward: { rewardType: 'MaxHealthDropBig' },
 });
 const fountain: HubAction = { kind: 'useFountain' };
 

@@ -11,6 +11,7 @@ import { enemyGoldDrops } from './encounters/generated/enemy-gold-drops';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
+import { derivedRoomLifecycle, roomTemplateLifecycles } from './lifecycles/room-templates';
 import { anomalyRooms } from './rooms/anomaly';
 import { cRooms } from './rooms/c';
 import { chaosRooms } from './rooms/chaos';
@@ -79,6 +80,8 @@ export const declarations = {
   enemyGoldDrops,
   fieldNpcEncounterKeys,
   roomLifecycleProfiles,
+  roomTemplateLifecycles,
+  derivedRoomLifecycle,
   exitCompatibilityPolicies,
   exitTypes,
   rooms,
@@ -109,7 +112,10 @@ export type { RawExitTypeDeclaration } from './exits-types';
 export type { RawFamiliarDeclaration } from './familiars-types';
 export type { RawKeepsakeDeclaration } from './keepsakes-types';
 export type { RawBiomeLayoutDeclaration, RawProgressionDeclaration } from './layouts/types';
-export type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
+export type {
+  RawRoomLifecycleProfileDeclaration,
+  RawRoomTemplateLifecycleDeclaration,
+} from './lifecycles/types';
 export type {
   RawAdditionalExitDeclaration,
   RawLocalChildDescriptor,

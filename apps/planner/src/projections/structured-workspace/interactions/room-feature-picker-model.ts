@@ -8,6 +8,8 @@ import type { WorkspaceFeatureAssessment } from '../contract';
 export interface StableIdentityPickerChoice<T> {
   readonly label: string;
   readonly value: T;
+  /** The engine's reason this reached choice cannot be taken here; it shows disabled. */
+  readonly unavailable?: string;
 }
 
 export interface StableIdentityPickerInput<T> {
@@ -31,14 +33,18 @@ export function projectStableIdentityPicker<T>({
 }: StableIdentityPickerInput<T>): ContextualPickerModel<T> {
   const selectedChoice = choices.find((choice) => Object.is(choice.value, selected));
   const selectedIsStale =
-    assessment === 'assessed' && selected !== undefined && selectedChoice === undefined;
+    assessment === 'assessed' &&
+    selected !== undefined &&
+    (selectedChoice === undefined || selectedChoice.unavailable !== undefined);
   const itemState = assessment === 'assessed' ? ('possible' as const) : ('unassessed' as const);
   const selectedItem = selectedIsStale
     ? Object.freeze({
         disabled: true,
-        explanations: Object.freeze(['This current choice is no longer available here.']),
+        explanations: Object.freeze([
+          selectedChoice?.unavailable ?? 'This current choice is no longer available here.',
+        ]),
         key: String(selected),
-        label: selectedLabel ?? String(selected),
+        label: selectedChoice?.label ?? selectedLabel ?? String(selected),
         selected: true,
         state: 'impossible' as const,
         value: selected,
@@ -53,15 +59,29 @@ export function projectStableIdentityPicker<T>({
           state: itemState,
           value: selectedChoice.value,
         });
-  const items: readonly ContextualPickerItem<T>[] = choices.map((choice) =>
-    Object.freeze({
-      disabled: false,
-      key: String(choice.value),
-      label: choice.label,
-      selected: Object.is(choice.value, selected),
-      state: itemState,
-      value: choice.value,
-    }),
+  // A refused current choice shows once, as the current selection.
+  const listed = selectedIsStale
+    ? choices.filter((choice) => !Object.is(choice.value, selected))
+    : choices;
+  const items: readonly ContextualPickerItem<T>[] = listed.map((choice) =>
+    assessment === 'assessed' && choice.unavailable !== undefined
+      ? Object.freeze({
+          disabled: true,
+          explanations: Object.freeze([choice.unavailable]),
+          key: String(choice.value),
+          label: choice.label,
+          selected: Object.is(choice.value, selected),
+          state: 'impossible' as const,
+          value: choice.value,
+        })
+      : Object.freeze({
+          disabled: false,
+          key: String(choice.value),
+          label: choice.label,
+          selected: Object.is(choice.value, selected),
+          state: itemState,
+          value: choice.value,
+        }),
   );
   const retainedUnassessed =
     assessment === 'unassessed' && selected !== undefined && selectedChoice === undefined

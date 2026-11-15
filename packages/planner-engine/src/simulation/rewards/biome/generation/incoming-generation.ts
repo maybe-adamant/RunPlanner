@@ -381,13 +381,6 @@ export function generateIncomingReward(
 
   // A rerolled door still offers its first draw; its acquisition is the effective reward's.
   const incoming = context.incoming === undefined ? undefined : forGeneration(context.incoming);
-  if (context.incoming?.rerolledRewardMismatch === true)
-    addRewardFinding(
-      findings,
-      rewardFinding('rerolledRewardMismatch', context.incoming.origin, {}),
-      ownerRegion(context.incoming.origin),
-      offerChronology ?? historyFindingChronology(event.sequence),
-    );
   if (incoming === undefined)
     return createGenerationEmissions(
       unspawnedRollBranch(catalog, context, inputs.branch, event.sequence, facts),

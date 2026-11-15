@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
@@ -17,14 +19,15 @@ import {
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
-import { DoorChipOptions, DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
+import { DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
 import { DoorRows } from '../DoorRows';
 import { wheelOfferChips } from '../doorSummary';
-import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
+import { RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { LeavePicker, type LeaveOption } from '../LeavePicker';
 import { LeaveRow } from '../TimelineDoors';
 
 /**
@@ -167,7 +170,6 @@ export function RewardWheelWorkbench({
                     </span>
                   }
                   room={null}
-                  secondary={<RerolledRewardRepairs rewards={[offer]} target={offer.label} />}
                   {...(choosesOffer
                     ? {
                         selection: (
@@ -201,14 +203,16 @@ export function RewardWheelWorkbench({
 
 /** The phase's last row: which wheel offer is taken, then that offer's reward as it stands. */
 export function SelectWheelRow({
+  gap,
   interactions,
   wheel,
 }: {
+  /** The control of the gap above the choice, drawn on the spine. */
+  readonly gap?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
   const findingMark = useFindingMark();
-  const dispatch = useAppDispatch();
   const pick = requireWorkspaceInteraction(
     interactions.rewardWheelPicks,
     workspaceInteractionKey(wheel.address),
@@ -217,42 +221,52 @@ export function SelectWheelRow({
   const offers = wheel.offers.filter((offer) => offer.active);
   const chosen = offers[wheel.pickedOfferIndex - 1];
   const chosenReward = chosen === undefined ? null : (chosen.rerolledOffer ?? chosen.control.offer);
+  // An offer is picked only once its evaluated candidate may be authored.
+  const options = wheelOfferChips(wheel, 'final').map((chip, index): LeaveOption => {
+    const candidate = pickCandidates.result?.find((option) => option.value === index + 1);
+    return {
+      key: chip.key,
+      label: chip.label,
+      chip,
+      disabledHint: candidateWaits(candidate) ? candidateWaitingHint : undefined,
+      ...(candidateMayBeAuthored(candidate)
+        ? {
+            intent: {
+              command: {
+                kind: 'ReplaceRewardWheelPicked',
+                wheel: wheel.address,
+                pickedOfferIndex: index + 1,
+              },
+            },
+          }
+        : {}),
+    };
+  });
   return (
-    <LeaveRow label="Select wheel">
-      <span className="timeline-leave-door">
-        {offers.length > 1 ? (
-          <DoorChipOptions
-            chips={wheelOfferChips(wheel, 'final')}
-            disabledHint={pick.contextReached ? undefined : candidateWaitingHint}
-            findingMark={findingMark(wheel.marker.address, 'wheelChoice')}
-            id={`wheel-pick-${wheel.key}`}
-            label={`${wheel.label} offer`}
-            onPick={(key) => {
-              const pickedOfferIndex = offers.findIndex((offer) => offer.key === key) + 1;
-              const results = pickCandidates.result ?? pickCandidates.activate();
-              const candidate = results?.find((option) => option.value === pickedOfferIndex);
-              if (!candidateMayBeAuthored(candidate)) return;
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceRewardWheelPicked',
-                  wheel: wheel.address,
-                  pickedOfferIndex,
-                }),
-              );
-            }}
-          />
-        ) : (
-          <>
-            <span>{chosen?.label ?? 'Offer'}</span>
-            {chosenReward === null ? null : (
-              <>
-                <span aria-hidden="true">·</span>
-                <ArtworkIcon className="artwork-label-icon" source={offerIcon(chosenReward)} />
-              </>
-            )}
-          </>
-        )}
-      </span>
+    <LeaveRow choice gap={gap} label="Select wheel">
+      {offers.length > 1 ? (
+        <LeavePicker
+          choiceLabel="Select wheel"
+          chosenKey={chosen?.key}
+          findingMark={findingMark(wheel.marker.address, 'wheelChoice')}
+          id={`wheel-pick-${wheel.key}`}
+          label={`${wheel.label} offer`}
+          onOpen={pickCandidates.activate}
+          options={options}
+          planEnd={undefined}
+          unreached={!pick.contextReached}
+        />
+      ) : (
+        <span className="timeline-leave-door">
+          <span>{chosen?.label ?? 'Offer'}</span>
+          {chosenReward === null ? null : (
+            <>
+              <span aria-hidden="true">·</span>
+              <ArtworkIcon className="artwork-label-icon" source={offerIcon(chosenReward)} />
+            </>
+          )}
+        </span>
+      )}
     </LeaveRow>
   );
 }

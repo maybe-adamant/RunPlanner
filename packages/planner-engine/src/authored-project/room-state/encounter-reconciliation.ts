@@ -201,5 +201,10 @@ export function reconcileRoomEncounterState(
     ...(Object.keys(customizationByPhase).length === 0
       ? {}
       : { customizationByPhase: Object.freeze(customizationByPhase) }),
+    // A locked door's fight stays with the door only while the room is the same lock host.
+    ...(previous.customizationByLockedExit === undefined ||
+    previousRoom.gameName !== replacementRoom.gameName
+      ? {}
+      : { customizationByLockedExit: previous.customizationByLockedExit }),
   });
 }

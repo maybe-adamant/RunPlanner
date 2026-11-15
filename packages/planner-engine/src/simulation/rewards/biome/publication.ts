@@ -23,7 +23,6 @@ import type { FindingRegionEntry, HistoryFindingChronology } from '../../finding
 import type { BiomeRewardSimulation } from '../model';
 import type { RoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import type { RewardProducerCandidateArtifacts } from '../producer-frontiers';
-import type { RerollSurfaceCandidateArtifacts } from './reroll-surfaces';
 
 export interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
@@ -43,7 +42,6 @@ export interface BiomeRewardEvaluationAssembly {
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;
   readonly objectInteractionArtifacts: RoomObjectInteractionArtifacts;
-  readonly rerollSurfaceArtifacts: RerollSurfaceCandidateArtifacts;
   readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   /** Each entered room's vow ranks, read by its encounter compositions. */
@@ -57,8 +55,15 @@ export interface BiomeRewardEvaluationAssembly {
   readonly through: (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
-    overviewStopped?: SemanticAddress,
+    overviewStopped?: OverviewStop,
   ) => BiomeRewardEvaluationAssembly;
+}
+
+/** A room whose Overview a cut stops. */
+export interface OverviewStop {
+  readonly room: SemanticAddress;
+  /** The stop is a required item left unplaced, taken where the room's Timeline starts. */
+  readonly placement: boolean;
 }
 
 /** Freezes the complete product accumulated by the chronological evaluator. */

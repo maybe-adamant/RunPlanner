@@ -726,6 +726,8 @@ export function BiomeWorkspace({
       ? undefined
       : resolveInspectorSubject(biome, explicitDestination?.inspectorSubject);
   const subject = explicitSubject ?? defaultSubject;
+  // Choosing the route's next step asks for its source room's doors, on the tab that opens them.
+  const continuesRoute = explicitSubject?.kind === 'frontier';
   // The rail selection comes from whichever destination supplied the inspector.
   const selectedRailKey =
     explicitSubject === undefined
@@ -946,10 +948,12 @@ export function BiomeWorkspace({
                   : { hubTab: explicitDestination.hubTab })}
             {...(focusPresentation?.kind === 'roomTimeline'
               ? { roomTab: 'actions' as const }
-              : explicitDestination?.roomTab === undefined
-                ? {}
-                : { roomTab: explicitDestination.roomTab })}
-            doorsRequested={explicitDestination?.timelineDoors === 'doorsOpen'}
+              : explicitDestination?.roomTab !== undefined
+                ? { roomTab: explicitDestination.roomTab }
+                : continuesRoute && sourceOccurrence !== undefined
+                  ? { roomTab: sourceOccurrence.room.doorsTab }
+                  : {})}
+            doorsRequested={explicitDestination?.timelineDoors === 'doorsOpen' || continuesRoute}
             {...(findingOrigin === undefined
               ? {}
               : { findingNavigationRevision: semanticNavigationRevision })}

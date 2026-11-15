@@ -1,6 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBiomeAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
@@ -15,6 +14,7 @@ import {
   type RoomActionReference,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 
 /** Where a case opens: one room on its Timeline, or a biome's Hub on one Timeline segment. */
 export type GalleryTarget =
@@ -45,8 +45,19 @@ export interface GalleryCase {
   readonly doorsExpanded?: true;
   /** A room case opens its Not reached yet rows. */
   readonly notReachedExpanded?: true;
-  /** A room case opens the Optional actions picker of this name on its Timeline. */
+  /** A room case opens the verbs of the live thing, or the Leave row picker, of this name on its Timeline. */
   readonly openPicker?: string;
+  /** With `openPicker`, the verb whose values the list then shows. */
+  readonly openVerb?: string;
+  /**
+   * A room case shows the `+` of this Timeline gap, or of the last one shown, as a hover does,
+   * and with `open` opens its menu.
+   */
+  readonly gap?: { readonly index?: number; readonly open: boolean };
+  /** A room case opens its Timeline legend. */
+  readonly legendOpen?: true;
+  /** A room case works on its Timeline's room action row at this index, so its map shows that row. */
+  readonly mapRow?: number;
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
   /** The case opens its biome as the biome's tab does, not its target. */
@@ -65,11 +76,10 @@ export function hub(biomeKey: string, segment?: number): GalleryTarget {
   return segment === undefined ? { kind: 'hub', biomeKey } : { kind: 'hub', biomeKey, segment };
 }
 
-/** The case's project with its commands applied through the engine's command authority. */
+/** The case's project with each of its commands settled as the editor's history settles it. */
 export function buildGalleryProject(entry: GalleryCase): ProjectDocument {
   return (entry.commands ?? []).reduce(
-    (current, step) =>
-      applyProjectCommand(current, catalog, typeof step === 'function' ? step(current) : step),
+    (current, step) => settleTestEdit(current, typeof step === 'function' ? step(current) : step),
     entry.project(),
   );
 }
@@ -127,13 +137,14 @@ export function occurrenceAddress(
 }
 
 /**
- * The project as a save that never placed the room's actions decodes: its required actions
- * stay owed and the Timeline offers to restore them.
+ * The project as a save that placed only the room's first `keep` actions decodes: the rest
+ * stay owed and the live row offers them.
  */
 export function withoutRoomActionOrder(
   project: ProjectDocument,
   biomeKey: string,
   occurrenceId: string,
+  keep = 0,
 ): ProjectDocument {
   return decodeProjectDocument(
     {
@@ -149,7 +160,10 @@ export function withoutRoomActionOrder(
                   ...biome.topology,
                   occurrences: biome.topology.occurrences.map((occurrence) =>
                     occurrence.occurrenceId === occurrenceId
-                      ? { ...occurrence, roomActions: { order: [] } }
+                      ? {
+                          ...occurrence,
+                          roomActions: { order: occurrence.roomActions.order.slice(0, keep) },
+                        }
                       : occurrence,
                   ),
                 },

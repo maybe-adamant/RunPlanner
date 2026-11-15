@@ -34,6 +34,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { requireWorkspaceRoom } from './catalog-room';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import { olympusExitTypeLabel } from '@planner/projections/roomSelectorProjection';
 import {
   StructuredWorkspaceProjectionContractError,
@@ -51,6 +52,7 @@ import {
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from './ordering';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
+import { clockworkRewardFacet } from './occurrence-room-facts';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import { presentRunState } from '../presentation/run-state';
@@ -221,7 +223,6 @@ function fieldsContextForCanonicalBatch(
   return Object.freeze({
     cageOutcome: batch.batchState.cageOutcome,
     cageTargetCount: batch.batchState.cageTargetCount,
-    doorCageRewardCount: batch.batchState.doorCageRewardCount,
     ...(support === undefined
       ? {}
       : {
@@ -240,7 +241,6 @@ function fieldsContextForAuthoredBatch(
   return Object.freeze({
     cageOutcome: facts.cageOutcome,
     cageTargetCount: facts.cageTargetCount,
-    doorCageRewardCount: facts.doorCageRewardCount,
   });
 }
 
@@ -351,14 +351,19 @@ function rewardPoolForBatch(
   };
 }
 
-/** How a Fields batch's cages read beside its doors. */
+/** How a Fields batch's roll and cages read beside its doors. */
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
+  const roll = Object.freeze({
+    target: 'doorRoll' as const,
+    text: [
+      '• Cages per combat room: Minimum 2, Maximum 3 (2 if the room only holds 2).',
+      '• Rolled even when no room has cages.',
+    ].join('\n'),
+  });
   return fields.cageTargetCount === 0
-    ? [
-        Object.freeze({ target: 'cageCount', text: 'No room here uses the cage count' }),
-        Object.freeze({ target: 'doorRoll', text: 'Max still affects later Fields rolls' }),
-      ]
+    ? [roll]
     : [
+        roll,
         Object.freeze({
           target: 'rewardColumn',
           text: 'Cage rewards appear bottom to top on the door',
@@ -513,9 +518,7 @@ function projectAuthoredTargetWithOverlay(
     roomControls: occurrenceAssembly.roomControls,
     rewardControls: occurrenceAssembly.rewardControls,
     target: Object.freeze({
-      ...(evaluatedTarget?.room.clockworkReward === undefined
-        ? {}
-        : { clockworkReward: evaluatedTarget.room.clockworkReward }),
+      ...clockworkRewardFacet(evaluatedTarget?.room),
       door,
       exitKey: target.exitKey,
       ...(exitTypeLabel === undefined ? {} : { exitTypeLabel }),
@@ -1020,8 +1023,11 @@ function assembleBatchDecision(
             mapChoices: Object.freeze(
               host.roomGameNames.map((gameName) => {
                 const room = requireWorkspaceRoom(input.catalog, gameName);
+                const roomNumber = candidateRoomNumber(input.catalog, source.biome.biomeKey, room);
                 return Object.freeze({
                   label: room.label,
+                  roomIcon: candidateRoomIcon(input.catalog, source.biome.biomeKey, room),
+                  ...(roomNumber === undefined ? {} : { roomNumber }),
                   value: room.gameName,
                 });
               }),

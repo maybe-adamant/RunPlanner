@@ -1,3 +1,4 @@
+import type { NotHostRefusal, ResourcePlacementRefusal } from './room-feature-refusals';
 import type { Catalog, ResourceFamily } from '../catalog-schema';
 import {
   createBiomeAddress,
@@ -23,7 +24,7 @@ const resourceKindByFamily = Object.freeze({
 
 export interface ResourcePlacementLegality {
   readonly legal: boolean;
-  readonly reasons: readonly string[];
+  readonly refusals: readonly ResourcePlacementRefusal[];
 }
 
 export interface ResourceEnteredRoom {
@@ -51,6 +52,19 @@ export interface RouteResourceAuthoring {
     Record<ResourceFamily, ResourcePlacementLegality | undefined>
   >;
   readonly legalTargetsByFamily: Readonly<Record<ResourceFamily, readonly ResourcePlacement[]>>;
+  /**
+   * Each entered host of a family it cannot take now, with every rule
+   * refusing it. A room that never hosts the family is no target.
+   */
+  readonly refusedTargetsByFamily: Readonly<
+    Record<
+      ResourceFamily,
+      readonly {
+        readonly placement: ResourcePlacement;
+        readonly refusals: readonly Exclude<ResourcePlacementRefusal, NotHostRefusal>[];
+      }[]
+    >
+  >;
 }
 
 /** Route assessment retains each invalid selection's exact resource-feature repair owner. */
@@ -74,7 +88,7 @@ export function resourcePlacementFindings(
             ),
             { kind: 'resource', family },
           ),
-          evidence: Object.freeze({ family, reasons: assessment?.reasons ?? [] }),
+          evidence: Object.freeze({ family, refusals: assessment?.refusals ?? [] }),
         }),
       ];
     }),
@@ -187,37 +201,63 @@ export function routeResourceAuthoring(
       assessmentByFamily[family]?.legal === true ? route.resourcePlacements[family] : null,
     ]),
   ) as Record<ResourceFamily, ResourcePlacement | null>;
-  const legalTargetsByFamily = Object.fromEntries(
-    (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
-      const targets = entered.flatMap((entry) => {
-        if (entry.origin.kind !== 'occurrence') return [];
-        const room = catalog.rooms.byKey[entry.gameName];
-        if (room?.resourcePointSupport.families.includes(family) !== true) return [];
-        const placement = Object.freeze({
-          biomeKey: entry.biomeKey,
-          occurrenceId: entry.origin.occurrenceId,
-        });
-        const proposal = { ...legalPlacements, [family]: placement };
-        return assessResourcePlacement(
-          catalog,
-          route.routeKey,
-          family,
-          placement,
-          entered,
-          proposal,
-        ).legal
-          ? [placement]
-          : [];
+  const assessedTargets = (family: ResourceFamily) =>
+    entered.flatMap((entry): RouteResourceAuthoring['refusedTargetsByFamily'][ResourceFamily] => {
+      if (entry.origin.kind !== 'occurrence') return [];
+      const room = catalog.rooms.byKey[entry.gameName];
+      if (
+        room?.resourcePointSupport.families.includes(family) !== true ||
+        room.resourcePointSupport.rules[family] === undefined
+      )
+        return [];
+      const placement = Object.freeze({
+        biomeKey: entry.biomeKey,
+        occurrenceId: entry.origin.occurrenceId,
       });
-      return [family, Object.freeze(targets)] as const;
-    }),
+      const proposal = { ...legalPlacements, [family]: placement };
+      const refusals = assessResourcePlacement(
+        catalog,
+        route.routeKey,
+        family,
+        placement,
+        entered,
+        proposal,
+      ).refusals.filter(
+        (refusal): refusal is Exclude<ResourcePlacementRefusal, NotHostRefusal> =>
+          refusal.reason !== 'notHost',
+      );
+      return [{ placement, refusals }];
+    });
+  const families = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
+  const targetsByFamily = new Map(families.map((family) => [family, assessedTargets(family)]));
+  const legalTargetsByFamily = Object.fromEntries(
+    families.map((family) => [
+      family,
+      Object.freeze(
+        targetsByFamily
+          .get(family)!
+          .flatMap(({ placement, refusals }) => (refusals.length === 0 ? [placement] : [])),
+      ),
+    ]),
   ) as RouteResourceAuthoring['legalTargetsByFamily'];
+  const refusedTargetsByFamily = Object.fromEntries(
+    families.map((family) => [
+      family,
+      Object.freeze(
+        targetsByFamily
+          .get(family)!
+          .filter(({ refusals }) => refusals.length > 0)
+          .map((target) => Object.freeze(target)),
+      ),
+    ]),
+  ) as RouteResourceAuthoring['refusedTargetsByFamily'];
   return Object.freeze({
     routeKey: route.routeKey,
     entered: Object.freeze(entered),
     placements: route.resourcePlacements,
     assessmentByFamily: Object.freeze(assessmentByFamily),
     legalTargetsByFamily: Object.freeze(legalTargetsByFamily),
+    refusedTargetsByFamily: Object.freeze(refusedTargetsByFamily),
   });
 }
 
@@ -237,18 +277,25 @@ export function assessResourcePlacement(
       entry.origin.occurrenceId === placement.occurrenceId,
   );
   const target = index < 0 ? undefined : entered[index];
-  const reasons: string[] = [];
+  const refusals: ResourcePlacementRefusal[] = [];
+  const refuse = (refusal: ResourcePlacementRefusal) => {
+    const key = JSON.stringify(refusal);
+    if (!refusals.some((existing) => JSON.stringify(existing) === key))
+      refusals.push(Object.freeze(refusal));
+  };
   const room = target === undefined ? undefined : catalog.rooms.byKey[target.gameName];
-  if (room === undefined || !room.resourcePointSupport.families.includes(family))
-    reasons.push('host does not declare the resource family');
   const rule = room?.resourcePointSupport.rules[family];
-  if (room === undefined || rule === undefined)
+  if (
+    room === undefined ||
+    !room.resourcePointSupport.families.includes(family) ||
+    rule === undefined
+  )
     return Object.freeze({
       legal: false,
-      reasons: Object.freeze(['host resource rules unavailable']),
+      refusals: Object.freeze([Object.freeze({ reason: 'notHost' as const })]),
     });
   if (room.resourcePointSupport.excludedRouteKeys?.includes(routeKey) === true)
-    reasons.push('route excluded');
+    refuse({ reason: 'routeExcluded' });
   const targetCandidate: ResourceCandidate = {
     biomeKey: placement.biomeKey,
     occurrenceId: placement.occurrenceId,
@@ -283,20 +330,22 @@ export function assessResourcePlacement(
       index: otherIndex,
       room: otherRoom,
     };
-    for (const reason of [
-      ...resourcePointConflictReasons(
+    for (const refusal of [
+      ...resourcePointConflicts(
         { family, candidate: targetCandidate },
         { family: otherFamily, candidate: otherCandidate },
       ),
-      ...resourcePointConflictReasons(
+      // The other spot's own rule: this host lies before it, within its lookback.
+      ...resourcePointConflicts(
         { family: otherFamily, candidate: otherCandidate },
         { family, candidate: targetCandidate },
+      ).map((refusal) =>
+        refusal.reason === 'resourceLookback' ? { ...refusal, order: 'after' as const } : refusal,
       ),
-    ]) {
-      if (!reasons.includes(reason)) reasons.push(reason);
-    }
+    ])
+      refuse({ ...refusal, ...('family' in refusal ? { family: otherFamily } : {}) });
   }
-  return Object.freeze({ legal: reasons.length === 0, reasons: Object.freeze(reasons) });
+  return Object.freeze({ legal: refusals.length === 0, refusals: Object.freeze(refusals) });
 }
 
 const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
@@ -319,37 +368,57 @@ interface ResourcePolicyEvaluation {
   };
 }
 
-function resourcePointConflictReasons(
+/**
+ * The rules `target` breaks beside `candidate`, by the target host's rule.
+ * Each family-bearing rule names the conflicting family; the caller sets it.
+ */
+function resourcePointConflicts(
   target: ResourcePointReference,
   candidate: ResourcePointReference,
-): readonly string[] {
-  const reasons: string[] = [];
+): readonly ResourcePlacementRefusal[] {
+  const refusals: ResourcePlacementRefusal[] = [];
   if (candidate.candidate.index < target.candidate.index) {
     const targetRule = target.candidate.room.resourcePointSupport.rules[target.family];
     if (targetRule !== undefined) {
       const distance = target.candidate.index - candidate.candidate.index;
       if (target.family === candidate.family && distance <= targetRule.sameFamilyLookback)
-        reasons.push('same-family lookback');
+        refusals.push({
+          reason: 'resourceLookback',
+          family: candidate.family,
+          scope: 'sameFamily',
+          order: 'before',
+          rooms: targetRule.sameFamilyLookback,
+        });
       if (
         target.family !== candidate.family &&
         distance <= targetRule.crossFamilyLookback[candidate.family]
       )
-        reasons.push('cross-family lookback');
+        refusals.push({
+          reason: 'resourceLookback',
+          family: candidate.family,
+          scope: 'crossFamily',
+          order: 'before',
+          rooms: targetRule.crossFamilyLookback[candidate.family],
+        });
       if (
         target.family === candidate.family &&
         candidate.candidate.biomeKey === target.candidate.biomeKey &&
         target.candidate.room.resourcePointSupport.ignoresBiomeLimit !== true
       )
-        reasons.push('biome family cap');
+        refusals.push({ reason: 'capReached', per: 'biome', count: 1, maximum: 1 });
     }
   }
   if (candidate.candidate.index === target.candidate.index && candidate.family !== target.family) {
     if (target.candidate.room.resourcePointSupport.capacity === 'allTools')
-      reasons.push('all-tool room capacity');
+      refusals.push({ reason: 'roomCapacity', family: candidate.family, capacity: 'allTools' });
     else if (resourceKindByFamily[candidate.family] === resourceKindByFamily[target.family])
-      reasons.push('room simple/complex capacity');
+      refusals.push({
+        reason: 'roomCapacity',
+        family: candidate.family,
+        capacity: 'simpleComplex',
+      });
   }
-  return reasons;
+  return refusals;
 }
 
 /**
@@ -424,10 +493,8 @@ export function deriveResourceExecutionPolicy(
     for (const candidate of candidates) {
       for (const family of resourceFamilies) {
         if (
-          resourcePointConflictReasons(
-            { family: targetFamily, candidate: target },
-            { family, candidate },
-          ).length > 0
+          resourcePointConflicts({ family: targetFamily, candidate: target }, { family, candidate })
+            .length > 0
         )
           suppress(family, candidate, target);
       }

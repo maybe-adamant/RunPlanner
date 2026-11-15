@@ -13,6 +13,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 const emptyModel = Object.freeze({ sections: Object.freeze([]) });
 
@@ -63,7 +64,7 @@ export function ShopOfferEditor({
         setOpen(false);
       }}
       open={open}
-      placeholder={interaction.summary}
+      placeholder=""
       itemIcon={(item) =>
         item.value === null ? undefined : shopItemIcon(item.value.optionKey, item.value.offer)
       }
@@ -72,7 +73,8 @@ export function ShopOfferEditor({
           ? undefined
           : shopItemIcon(interaction.selected.optionKey, interaction.selected.offer)
       }
-      triggerLabel={interaction.summary}
+      {...(interaction.selected === null ? {} : { triggerLabel: interaction.summary })}
+      {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
       {...(triggerSize === undefined ? {} : { triggerSize })}
     />
   );

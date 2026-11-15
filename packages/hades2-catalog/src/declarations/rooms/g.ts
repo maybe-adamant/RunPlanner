@@ -1099,10 +1099,12 @@ export const gRooms = [
     gameName: 'G_Story01',
     noReroll: true,
     secretPointAnchorCount: 1,
+    // RoomDataG.lua:2598,2629: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
     resourcePointSupport: underworldResourcePointSupport(
       ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
       {
         ignoresBiomeLimit: true,
+        unspacedFamilies: ['Pickaxe', 'Shovel'],
       },
     ),
     label: 'Narcissus',

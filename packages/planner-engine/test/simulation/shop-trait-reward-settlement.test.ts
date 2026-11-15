@@ -87,7 +87,6 @@ describe('Shop trait acquisition processing', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const inventory = processShopInventory(initializeTestRewardBranch(), {
@@ -167,7 +166,6 @@ describe('Shop trait acquisition processing', () => {
       occurrence,
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const facts = (state: {
@@ -240,7 +238,6 @@ describe('Shop trait acquisition processing', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const purchasedInventory = processShopInventory(seeded, {
@@ -302,7 +299,6 @@ describe('Shop trait acquisition processing', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const giftPurchased = settleShop(
@@ -392,7 +388,6 @@ describe('Shop trait acquisition processing', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const facts = (state: {
@@ -531,7 +526,6 @@ describe('Shop trait acquisition processing', () => {
         }),
         role: 'ordinary',
         entered: true,
-        lifecycleProfileKey: 'WorldShopRoom',
         loadout,
       });
       const facts = (state: {
@@ -733,7 +727,6 @@ describe('Shop trait acquisition processing', () => {
       occurrence,
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout: newLoadout,
     });
     const major = canonical.entryState?.offers.find((offer) => offer.offerKey === 'MajorNonBoon');

@@ -101,6 +101,7 @@ export function decodeRoomState(
       const rerolledCages = hasRerolledCages
         ? decodeRerolledRewards(
             state.rerolledCages,
+            catalog,
             descriptor.slotKeys,
             `${path}.rerolledCages`,
             (raw, rewardPath) => {
@@ -119,6 +120,7 @@ export function decodeRoomState(
               );
               return Object.freeze({ ...reward, offer });
             },
+            (offer) => descriptor.reward.allowedRewardTypes.includes(offer.rewardType),
           )
         : undefined;
       const optionalDescriptor = requireFieldsOptionalRewards(room, path);

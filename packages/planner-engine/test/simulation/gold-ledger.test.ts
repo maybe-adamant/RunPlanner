@@ -57,7 +57,12 @@ import {
   loadUnderworldWorldShopTravelDealCheckpoint,
   underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  editTestRoomActionOrder,
+  placeTestLivePickup,
+  stockTestProject,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGIxionChaosProject,
   createGoldenFGHIProject,
@@ -66,6 +71,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import { underworldFRerollsProject } from '../execution-plan/support/rerolls-fixture';
 import { checkedGoldFights, checkedGoldRows } from '../support/gold-fights';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -167,14 +173,11 @@ function narcissusProject(
   )![0];
   const site = createAcquisitionSiteAddress(room, siteKey);
   const storageKey = site.pointKey === 'roomExit' ? 'roomExit' : acquisitionSiteStorageKey(site);
-  // Taking the trait takes every drop; keep only the one under test.
-  project = editTestRoomActionOrder(project, catalog, room, (order) =>
-    order.filter(
-      (reference) =>
-        reference.kind !== 'interactAcquisitionEntry' ||
-        reference.siteKey !== storageKey ||
-        reference.entryKey === entryKey,
-    ),
+  // The owner picks up only the drop under test.
+  project = placeTestLivePickup(
+    project,
+    room,
+    roomActionKey({ kind: 'interactAcquisitionEntry', siteKey: storageKey, entryKey }),
   );
   return { project, room, site };
 }
@@ -241,7 +244,7 @@ describe('gold ledger walk', () => {
   });
 
   it('pays a Boatman Arcana activated after the boss', () => {
-    const gold = ledger(fixture('underworld-f-rerolls'));
+    const gold = ledger(stockTestProject(underworldFRerollsProject()));
     expect(
       gains(gold, createOccurrenceAddress(f, 'golden-f-preboss-shop:boss' as never)),
     ).toContainEqual(['arcanaGold', 300]);
@@ -495,6 +498,35 @@ describe('gold ledger walk', () => {
     const before = fGainsBeforeShop(project, gold);
     expect(room.room.doorsOpenBalance.balance.mean).toBeCloseTo(before.fixed + before.estimated, 9);
     expect(room.room.purchases.length).toBeGreaterThan(0);
+  });
+
+  it('finds a purchase its pickup owns by the Shop offer it buys', () => {
+    const shopId = 'golden-f-preboss-shop' as never;
+    const offer = createShopOfferAddress(f, shopId, 'Boon');
+    let project = applyProjectCommand(loadUnderworldWorldShopTravelDealCheckpoint(), catalog, {
+      kind: 'ReplaceShopOfferOption',
+      offer,
+      value: {
+        optionKey: 'BlindBoxLoot',
+        offer: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer,
+      purchased: true,
+    });
+    const gold = ledger(project);
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(f, shopId), 'roomExit'),
+      'Boon',
+    );
+    const owned = gold.purchaseAt(entry);
+    expect(owned).toMatchObject({ availability: 'available', purchase: { owner: entry } });
+    expect(gold.purchaseAt(offer)).toEqual(owned);
   });
 
   it('opens the fourth biome’s Preboss doors after its flushed deliveries and earlier purchases', () => {
@@ -805,7 +837,7 @@ describe('gold binding to wheel and cage rows', () => {
       occurrence: room,
       encounterCount: 3,
     });
-    const paid = actionGains(ledger(authorLegalTraitOffers(project)), room);
+    const paid = actionGains(ledger(authorTestTraitsAndRequiredItems(project)), room);
     expect(paid).toContainEqual([
       'moneyPickup',
       roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),

@@ -9,6 +9,7 @@ import type {
   AuthoredEncounterCustomization,
   RoomEncounterState,
 } from '../../authored-project/model';
+import type { ForcedRewardType } from '../../authored-project/clockwork-doors';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   encounterEnvelopeSlots,
@@ -16,6 +17,7 @@ import {
   encounterBindingsBySlot,
   selectedEncounterAuthoringProfileKey,
   fixedEncounterDefinitionKey,
+  rewardEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import {
   withUnsupportedCustomization,
@@ -155,7 +157,7 @@ export interface EncounterResolutionReachedFacts {
 
 /** Narrow retained facts needed to resolve contextual encounter identity. */
 export interface EncounterResolutionRoomFacts {
-  readonly clockworkReward?: 'goal' | 'nonGoal';
+  readonly forcedRewardType?: ForcedRewardType;
   readonly incomingReward?: { readonly offer: { readonly rewardType: string } };
   readonly unresolvedIncomingReward?: unknown;
 }
@@ -167,8 +169,8 @@ export function encounterResolutionContext(
   reached?: EncounterResolutionReachedFacts,
 ): EncounterResolutionContext {
   const facts = reached === undefined ? { routeKey } : { routeKey, reached };
-  if (room.clockworkReward === 'goal') {
-    return Object.freeze({ ...facts, kind: 'knownReward', rewardType: 'ClockworkGoal' });
+  if (room.forcedRewardType !== undefined) {
+    return Object.freeze({ ...facts, kind: 'knownReward', rewardType: room.forcedRewardType });
   }
   if (room.incomingReward !== undefined) {
     return Object.freeze({
@@ -208,10 +210,10 @@ export function resolveEncounterAuthoringProfile(
       return firstBiomeKey;
   }
   if (context.kind === 'unavailable') return undefined;
-  return context.kind === 'knownReward'
-    ? (profile.resolution.encounterDefinitionKeyByRewardType[context.rewardType] ??
-        profile.resolution.defaultEncounterDefinitionKey)
-    : profile.resolution.defaultEncounterDefinitionKey;
+  return rewardEncounterDefinitionKey(
+    profile.resolution,
+    context.kind === 'knownReward' ? context.rewardType : undefined,
+  );
 }
 
 /**

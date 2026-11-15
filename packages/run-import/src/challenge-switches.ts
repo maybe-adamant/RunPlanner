@@ -7,7 +7,7 @@ import {
   type RoomOccurrence,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
-import { insertRoomAction, roomActionAddress } from './actions';
+import { insertRoomAction, placeLiveRoomAction, roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
 import { chooseRoomFit, searchRoom } from './room-search';
@@ -37,9 +37,14 @@ export function importChallengeSwitches(context: RunImportContext): void {
       (name) => context.catalog.challengeSwitches.variants.byKey[name] !== undefined,
     );
     const used = `challengeSwitch:${roomIndex}`;
-    if (variantKey === undefined || context.used.has(used)) continue;
+    if (variantKey === undefined) continue;
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
+    // A claim's pickups lie live only once the walk passes the fight, after the doors open.
+    if (context.used.has(used)) {
+      if (context.pending(occurrenceId)) collectClaim(context, biomeKey, occurrenceId);
+      continue;
+    }
     if (!context.entered(occurrenceId)) continue;
     const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
     // The room's own questions settle its other pickups first; the claim takes what they leave.
@@ -105,7 +110,11 @@ function importSwitch(
       const command = outcomeCommand(candidate);
       const unchanged =
         current?.outcome === candidate.outcome && current.nectarDropped === candidate.nectarDropped;
-      return (unchanged || context.apply(command)) && pressSwitch(context, biomeKey, occurrenceId);
+      return (
+        (unchanged || context.apply(command)) &&
+        pressSwitch(context, biomeKey, occurrenceId) &&
+        collectClaim(context, biomeKey, occurrenceId)
+      );
     });
   if (pinned !== undefined) {
     if (!author(pinned))
@@ -186,6 +195,17 @@ function pressSwitch(context: RunImportContext, biomeKey: string, occurrenceId: 
         }) && runs(),
     )
   );
+}
+
+/** The claim's live pickups, each taken where the live room offers it; a left fight claims none. */
+function collectClaim(context: RunImportContext, biomeKey: string, occurrenceId: string): boolean {
+  for (const entryKey of ['reward', 'nectar'])
+    placeLiveRoomAction(context, biomeKey, occurrenceId, {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'challengeSwitch',
+      entryKey,
+    });
+  return true;
 }
 
 const switchKind = (context: RunImportContext, variantKey: string) => {

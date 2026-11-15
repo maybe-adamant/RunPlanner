@@ -24,7 +24,11 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected } from '@planner/state/editorSessionSlice';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import {
+  liveRoomForProjectEvaluationAssembly,
+  simulateProject,
+} from '@run-planner/engine/simulation';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -39,10 +43,10 @@ import {
   decisionContainingOccurrence,
   expectBefore,
   occurrenceById,
-  openNotReached,
   openRoomTab,
   reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 import {
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
@@ -66,6 +70,23 @@ async function chooseNemesisEvent(
   }
   await user.click(await screen.findByRole('button', { name: /^Nemesis event type/ }));
   await user.click(await screen.findByRole('option', { name: label }));
+}
+
+/** Meets Nemesis from the live row, as the owner would: her contact is the next row. */
+function meetNemesis(view: ReturnType<typeof renderOccurrenceWorkbench>, occurrenceId: string) {
+  const key = roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' });
+  const live = liveRoomForProjectEvaluationAssembly(
+    catalog,
+    view.application.store.getState().projectWorkspace.assembly!,
+    createOccurrenceAddress(goldenFBiome, createOccurrenceId(occurrenceId)),
+    'placements',
+  );
+  const place = live?.gaps[live.frontier]?.items
+    .flatMap((item) => item.verbs)
+    .find((verb) => verb.standing !== true && roomActionKey(verb.reference!) === key)
+    ?.commands?.[0];
+  if (place === undefined) throw new Error('Nemesis is not live at the frontier');
+  act(() => view.application.store.dispatch(authoredProjectCommandDispatched(place)));
 }
 
 describe('OccurrenceRoomFeatures', () => {
@@ -114,7 +135,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore door' })).toBeNull();
     view.unmount();
     cleanup();
 
@@ -127,11 +148,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     expect(screen.getByLabelText('Reward')).toBeTruthy();
     const map = screen.getByRole('button', { name: /^Door \d+ room$/ });
-    // Restore names the door it acts on, as Replace with Anomaly does.
-    const doorNumber = /^Door (\d+) room$/.exec(map.getAttribute('aria-label') ?? '')?.[1];
-    const restore = screen.getByRole('button', {
-      name: `Restore Combat 01 on Door ${doorNumber}`,
-    });
+    const restore = screen.getByRole('button', { name: 'Restore door' });
     expect(map.textContent).toContain('Anomaly 01');
     expect(screen.queryByRole('button', { name: /^Anomaly outcome/ })).toBeNull();
     await door.user.click(map);
@@ -155,7 +172,7 @@ describe('OccurrenceRoomFeatures', () => {
     ]);
   });
 
-  it('decides the Anomaly outcome at its Encounter outcome, before its end and reward pickup', async () => {
+  it('decides the Anomaly outcome at its Combat, before its end and reward pickup', async () => {
     const { occurrenceId, project } = reachedAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -180,7 +197,7 @@ describe('OccurrenceRoomFeatures', () => {
     expectBefore(encounterEnd, pickup);
     // The capture point is how the fight ended: it sits among its outcome's controls.
     expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
-    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter outcome'));
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Combat started'));
 
     await view.user.click(cleared);
     await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
@@ -214,11 +231,11 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore door' })).toBeNull();
     cleanup();
     renderDecisionWorkbench(invalid, 'Underworld', 'G', decisionContainingOccurrence(occurrenceId));
     expect(screen.getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^Restore Combat 01 on Door \d+$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Restore door' })).toBeTruthy();
   });
   it('authors a Gold trade immediately from Event through its action-row interaction and Undo', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
@@ -263,6 +280,7 @@ describe('OccurrenceRoomFeatures', () => {
       historyBefore,
     );
     await chooseNemesisEvent(view.user, 'Gold trade');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     const authoredEvent = () =>
       view.application.store
@@ -311,8 +329,8 @@ describe('OccurrenceRoomFeatures', () => {
     expect(hintOf(within(actionRow).getByRole('button', { name: 'Reward' }))).toContain(
       'Max Health',
     );
-    // The answer ends her encounter, so it is chosen on a banner, not on the row.
-    expect(within(actionRow).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    // Her answer is observed on her row.
+    expect(within(actionRow).getByRole('button', { name: /^Nemesis outcome/ })).toBeTruthy();
     const outcome = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
     expect(outcome().textContent).toBe('Declined');
     await view.user.click(outcome());
@@ -328,6 +346,8 @@ describe('OccurrenceRoomFeatures', () => {
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
+    // Her item lies on the ground until it is picked up from the live row.
+    await takeLive(view.user, 'Max Health', 'Pick up');
     await waitFor(() =>
       expect(
         [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].some(
@@ -338,6 +358,8 @@ describe('OccurrenceRoomFeatures', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past.length).toBeGreaterThan(
       historyBefore,
     );
+    // Undo takes back the pickup, then her answer.
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(outcome().textContent).toBe('Declined'));
     expect(
@@ -471,6 +493,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     expect(screen.queryByText('Choose a Nemesis event.')).toBeNull();
     let freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
@@ -499,7 +522,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(
       trait.compareDocumentPosition(fixedReward) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(within(freeAction).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(within(freeAction).getByRole('button', { name: /^Nemesis outcome/ })).toBeTruthy();
     await view.user.click(trait);
     const listbox = await screen.findByRole('listbox');
     const firstChoice = within(listbox).getAllByRole('option')[0];
@@ -522,9 +545,10 @@ describe('OccurrenceRoomFeatures', () => {
     freeAction = nemesisAction();
     expect(within(freeAction).getByText('hits you to get')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    // Her unchosen reward stops the walk at her row; the trade's outcome waits past it.
-    openNotReached();
-    expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
+    // Her unchosen reward stops the walk at her row, which keeps the trade's outcome.
+    expect(within(freeAction).getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe(
+      'Declined',
+    );
   });
 
   it('keeps the contest offer through its result; a failed contest spawns Consolation', async () => {
@@ -547,6 +571,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     const sentence = () =>
       screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
@@ -565,7 +590,7 @@ describe('OccurrenceRoomFeatures', () => {
 
     // A new contest has lost, with no success item planned; she still drops Consolation.
     expect(result().textContent).toBe('Failed');
-    expect(within(sentence()).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(sentence().contains(result())).toBe(true);
     expect(reward() ?? null).toBeNull();
     await view.user.click(within(sentence()).getByRole('button', { name: 'Reward' }));
     await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
@@ -584,9 +609,8 @@ describe('OccurrenceRoomFeatures', () => {
     await waitFor(() => expect(result().textContent).toBe('Failed'));
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
     expect(within(sentence()).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    // Her Consolation is collected, never the planned item.
-    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="moment"] button')!;
-    await view.user.click(chip);
+    // Her Consolation spawns and is picked up, never the planned item.
+    await takeLive(view.user, 'Red Onion', 'Pick up');
     const collect = await waitFor(() => {
       const row = document.querySelector<HTMLElement>(
         `[data-room-action-key="${CSS.escape(
@@ -601,7 +625,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
   });
 
-  it('keeps an unreached Well domain visible as unassessed', async () => {
+  it('keeps an unreached Well slot read-only until the walk stocks it', () => {
     const occurrenceId = createOccurrenceId('golden-f-b2-e2');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
     let project = loadUnderworldFGProject();
@@ -617,7 +641,7 @@ describe('OccurrenceRoomFeatures', () => {
     });
 
     const application = createApplication();
-    const view = renderOccurrenceWorkbench(
+    renderOccurrenceWorkbench(
       project,
       'Underworld',
       'F',
@@ -637,12 +661,11 @@ describe('OccurrenceRoomFeatures', () => {
     expect(well).toMatchObject({ assessment: 'unassessed' });
 
     openRoomTab('Room Overview');
-    const picker = screen.getByRole('button', { name: 'Stygian Well Offer 1 Item' });
-    await view.user.click(picker);
-    const choice = await screen.findByRole('option', { name: 'Splintered Shield' });
-    expect(picker.getAttribute('data-candidate-state')).toBe('unassessed');
-    expect(choice.getAttribute('data-candidate-state')).toBe('unassessed');
-    expect(choice.getAttribute('aria-disabled')).not.toBe('true');
+    const picker = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Stygian Well Offer 1 Item',
+    });
+    expect(picker.disabled).toBe(true);
+    expect(picker.getAttribute('data-hint')).toBe(candidateWaitingHint);
   });
 
   it('shows the entry flip the plan holds where the door settles another, and clears it', async () => {
@@ -662,7 +685,7 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Overview');
     const entry = screen.getByRole('button', { name: 'Entry' });
     expect(entry.getAttribute('aria-invalid')).toBe('true');
-    expect(entry.textContent).not.toContain('⇋');
+    expect(entry.textContent).not.toContain('↔');
     await view.user.click(entry);
     await view.user.click(await screen.findByRole('option', { name: /Flipped/ }));
     const layout = () =>

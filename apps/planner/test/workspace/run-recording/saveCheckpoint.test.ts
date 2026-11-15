@@ -413,6 +413,25 @@ describe('save checkpoint extraction', () => {
     ).toEqual([{ name: 'ForcePoseidonBoonKeepsake', rarity: 'Epic', rarityUpgradeUses: 1 }]);
   });
 
+  it('marks a Time Piece the game hid from the HUD as expired', () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const hero = run.Hero as LuaTable;
+    const timePiece = { Name: 'GoldifyKeepsake', Rarity: 'Epic', BoonConversionUses: 0 };
+    const withTraits = (traits: LuaTable[]): DecodedSave => ({
+      ...save,
+      globals: { ...save.globals, CurrentRun: { ...run, Hero: { ...hero, Traits: traits } } },
+    });
+    const traits = (traits: LuaTable[]) =>
+      extractSaveCheckpoint(withTraits(traits), true, NO_SAVED_VALUES, NO_WEAPONS).hero?.traits;
+    expect(traits([timePiece])).toEqual([
+      { name: 'GoldifyKeepsake', rarity: 'Epic', boonConversionUses: 0, expired: true },
+    ]);
+    expect(traits([{ ...timePiece, ShowInHUD: true }])).toEqual([
+      { name: 'GoldifyKeepsake', rarity: 'Epic', boonConversionUses: 0 },
+    ]);
+  });
+
   it("keeps a Hex tree's slot 0, which Nacelle's third row holds", () => {
     const save = sample('underworld-062');
     const run = save.globals.CurrentRun as LuaTable;

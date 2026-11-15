@@ -18,7 +18,7 @@ import {
   createEncounterPhaseAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
@@ -110,7 +110,7 @@ describe('Aetos appearance', () => {
       selection: createExitSelectionAddress(biome, source),
       value: { kind: 'normal', exitKey: 'exit1' },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const target = createEncounterPhaseAddress(
       biome,
       { kind: 'occurrence', occurrenceId: id },

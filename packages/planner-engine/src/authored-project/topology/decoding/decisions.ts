@@ -2,7 +2,6 @@ import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../catalog-sch
 import { decodeBatchState } from '../../batchState';
 import { decodeFountainRarityResult } from '../../fountain-rarity-codec';
 import { decodeRerollId } from '../../room-state/decoding/room-action-codec';
-import { decodeResolvedRewardOffer } from '../../room-state/decoding/reward-acquisition-codec';
 import type {
   AuthoredBatchState,
   BatchRewardStoreState,
@@ -495,12 +494,11 @@ export function decodeHubDecision(
         return Object.freeze({ kind: 'useFountain' });
       }
       if (kind === 'reroll') {
-        expectExactKeys(action, ['kind', 'rerollId', 'hubSlotKey', 'reward'], actionPath);
+        expectExactKeys(action, ['kind', 'rerollId', 'hubSlotKey'], actionPath);
         return Object.freeze({
           kind: 'reroll',
           rerollId: decodeRerollId(action.rerollId, `${actionPath}.rerollId`),
           hubSlotKey: expectNonBlankString(action.hubSlotKey, `${actionPath}.hubSlotKey`),
-          reward: decodeResolvedRewardOffer(action.reward, catalog, `${actionPath}.reward`),
         });
       }
       if (kind !== 'roomVisit')

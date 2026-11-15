@@ -22,6 +22,7 @@ import type {
 import type { KnownRoster } from '../../commerce/gold/known-roster';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
+import type { ReachedHistoryRoomAction } from '../../history/model';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { SemanticFinding } from '../../model';
 import type { RewardBranchState } from '../branch-primitives';
@@ -50,6 +51,10 @@ export interface ChronologyWalkContext {
   readonly resourceFindings: readonly SemanticFinding[];
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly history: BiomeRewardHistory;
+  /** The room actions the lifecycle walk reached, placed in that history. */
+  readonly reachedActions: readonly ReachedHistoryRoomAction[];
+  /** The reached room actions by the history sequence their contact is read at. */
+  readonly reachedActionsBySequence: ReadonlyMap<number, readonly ReachedHistoryRoomAction[]>;
   readonly prepared: PreparedRewardEvaluationInputs;
   /** Sources whose outgoing checkpoint creates a Hub instead of a reward batch. */
   readonly hubTakeoverSources: ReadonlySet<string>;
@@ -75,8 +80,14 @@ export interface HermesShrineRoomAssessment {
 
 export interface PurgingPoolRoomAssessment {
   readonly origin: OccurrenceAddress;
-  /** The initial list, assessed after the fountain. */
+  /** The entry list, assessed against the traits held on entry. */
   readonly assessment: PurgingPoolAssessment;
+  /** Each listed trait's rarity on entry: a fountain use that changes one makes the list stale. */
+  readonly entryRarities: Readonly<Record<string, string | undefined>>;
+  /** The list the Pool regenerates when the fountain use made the entry list stale. */
+  readonly refresh?: PurgingPoolAssessment;
+  /** The fountain use judged the entry list, stale or not. */
+  readonly fountainJudged?: boolean;
   /** Each reached reroll's list, assessed at the reroll, by its id. */
   readonly rolls?: Readonly<
     Record<
@@ -84,6 +95,8 @@ export interface PurgingPoolRoomAssessment {
       {
         readonly offeredSlotKeys: readonly import('../../../authored-project/model').PurgingPoolSlotKey[];
         readonly assessment: PurgingPoolAssessment;
+        /** The traits on show just before the reroll when the game bans one of them. */
+        readonly shownTraitKeys?: readonly string[];
       }
     >
   >;
@@ -105,8 +118,8 @@ export type GoldRecordedRoster =
 export interface ChronologyWalkState {
   /** The one reached state, or none once a block stopped the walk. */
   readonly branch: RewardBranchState | undefined;
-  /** A seam stopped the walk at its own sequence. */
-  readonly halted: boolean;
+  /** A required item left unplaced stops the walk before this sequence, its deadline. */
+  readonly haltBefore?: number;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   /** Each entered room's departure facts, its settled flip, by room. */
   readonly roomDepartures: ReadonlyMap<string, RoomDeparture>;
@@ -167,14 +180,18 @@ export interface ChronologyWalkState {
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
   /**
-   * The last reached point of each interactive object room's actions (Well,
-   * Pool, World Shop, Shrine, Contract pedestal), where a new action is
-   * appended, with the state there; by room.
+   * The last reached point of each entered room's actions, where a new action
+   * is appended, with the state there; by room.
    */
   readonly roomActionEnds: ReadonlyMap<
     string,
     { readonly historySequence: number; readonly branch: RewardBranchState }
   >;
+  /**
+   * The state each reached row of an entered room meets before it settles,
+   * where a new action placed just before it would settle; by room, then row key.
+   */
+  readonly roomActionContacts: ReadonlyMap<string, ReadonlyMap<string, RewardBranchState>>;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<string, RealizedHermesShrineTravelDealRefill>;
   /** Gorgon phases keyed `occurrence::phase`, shared by the outcome and settlement. */
@@ -235,7 +252,6 @@ export function createChronologyWalkState(
 ): ChronologyWalkState {
   return Object.freeze({
     branch,
-    halted: false,
     stygianWellAssessments: new Map(),
     roomDepartures: new Map(),
     challengeSwitchAssessments: new Map(),
@@ -255,6 +271,7 @@ export function createChronologyWalkState(
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),
     roomActionEnds: new Map(),
+    roomActionContacts: new Map(),
     hermesShrineTravelDealRefills: new Map(),
     eligibleGorgonPhases: new Set<string>(),
     blockedGorgonPhases: new Set<string>(),

@@ -1,5 +1,6 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { AuthoredProjectCheckpointId } from './manifest';
+import { stockTestProject } from '../settled-edit';
 import { dreamMixedHandoffProject } from '../routes/dream';
 import {
   createNemesisFieldsCheckpoint,
@@ -8,11 +9,8 @@ import {
 } from '../routes/nemesis-random-events';
 import {
   createSurfaceNBuriedTreasureCheckpoint,
-  createSurfaceNNaturalSelectionCheckpoint,
   createSurfaceNNaturalSelectionFrontier,
-  createSurfaceNQueensRansomCheckpoint,
   createSurfaceNQuickBuckCheckpoint,
-  createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
 import { surfaceScheduledLifecycleProject } from '../routes/scheduled-lifecycle';
 import {
@@ -35,7 +33,6 @@ import {
   underworldFigLeafSkipProject,
   underworldGeneratedCompositionProject,
   underworldGorgonAthenaProject,
-  underworldPersephoneCallingCardProject,
   underworldTwistScyllaProject,
   underworldWorldShopTravelDealProject,
   underworldZagreusContractProject,
@@ -51,7 +48,7 @@ export interface RecipeBackedCheckpoint {
  * recipe. Imported/user-authored saves intentionally stay out of this table:
  * their static loader and canonical-byte integrity coverage remains primary.
  */
-export const recipeBackedCheckpoints = Object.freeze([
+const recipes = [
   { id: 'dream-mixed-handoff', create: dreamMixedHandoffProject },
   { id: 'underworld-f-pool', create: createUnderworldFPoolCheckpoint },
   { id: 'underworld-f-stygian-well', create: createUnderworldFWellCheckpoint },
@@ -62,7 +59,6 @@ export const recipeBackedCheckpoints = Object.freeze([
   { id: 'underworld-automatic-boss', create: underworldAutomaticBossProject },
   { id: 'underworld-fig-leaf', create: underworldFigLeafSkipProject },
   { id: 'underworld-gorgon-athena', create: underworldGorgonAthenaProject },
-  { id: 'underworld-persephone-calling-card', create: underworldPersephoneCallingCardProject },
   { id: 'underworld-twist-scylla', create: underworldTwistScyllaProject },
   { id: 'underworld-world-shop-travel-deal', create: underworldWorldShopTravelDealProject },
   { id: 'underworld-zagreus-contract', create: underworldZagreusContractProject },
@@ -82,12 +78,14 @@ export const recipeBackedCheckpoints = Object.freeze([
     create: createSurfaceNOHermesShrineDeliveryCheckpoint,
   },
   { id: 'surface-n-natural-selection-frontier', create: createSurfaceNNaturalSelectionFrontier },
-  { id: 'surface-n-natural-selection', create: createSurfaceNNaturalSelectionCheckpoint },
   { id: 'surface-n-quick-buck', create: createSurfaceNQuickBuckCheckpoint },
   { id: 'surface-n-buried-treasure', create: createSurfaceNBuriedTreasureCheckpoint },
-  { id: 'surface-n-queens-ransom', create: createSurfaceNQueensRansomCheckpoint },
-  { id: 'surface-n-steady-growth-frontier', create: createSurfaceNSteadyGrowthFrontier },
   { id: 'nemesis-f-trait-trade', create: createNemesisTraitTradeCheckpoint },
   { id: 'nemesis-h-fields', create: createNemesisFieldsCheckpoint },
   { id: 'nemesis-f-pom-sea-star', create: createNemesisPomSeaStarCheckpoint },
-] as const satisfies readonly RecipeBackedCheckpoint[]);
+] as const satisfies readonly RecipeBackedCheckpoint[];
+
+/** Each recipe's plan as an edit leaves it: every blank stock slot its walk reaches is stocked. */
+export const recipeBackedCheckpoints: readonly RecipeBackedCheckpoint[] = Object.freeze(
+  recipes.map(({ id, create }) => Object.freeze({ id, create: () => stockTestProject(create()) })),
+);

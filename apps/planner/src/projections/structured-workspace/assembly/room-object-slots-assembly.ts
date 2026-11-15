@@ -13,15 +13,9 @@ import type {
 } from '@run-planner/engine/simulation';
 
 import { challengeSwitchRuleSentence } from '@planner/projections/challengeSwitchCopy';
-import {
-  hermesShrineRefusalSentence,
-  stygianWellRefusalSentence,
-} from '@planner/projections/roomObjectPlacementCopy';
-import type {
-  WorkspaceAnchorObjectLock,
-  WorkspaceRoomAnchorObject,
-  WorkspaceRoomObjectSlots,
-} from '../contracts/features';
+import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
+import type { WorkspaceFeatureLock } from '../contract';
+import type { WorkspaceRoomAnchorObject, WorkspaceRoomObjectSlots } from '../contracts/features';
 import type { WorkspaceMarker } from '../contracts/navigation';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 
@@ -47,8 +41,6 @@ function presenceAddress(
   }
 }
 
-const fullSentence = 'The room’s other objects take every spot.';
-
 /** The switch kinds in the order their toggles stand. */
 const switchKindOrder: readonly ChallengeSwitchKind[] = ['time', 'perfectClear', 'elite'];
 
@@ -64,11 +56,11 @@ function switchKindToggles(
   object: SwitchObject,
   observed: ChallengeSwitchKind | undefined,
   bind: (key: string, commands: readonly ProjectCommand[]) => string,
-  objectLock: WorkspaceAnchorObjectLock | undefined,
+  objectLock: WorkspaceFeatureLock | undefined,
   /** The present switch's removal. */
   removeKey: string | undefined,
 ): NonNullable<WorkspaceRoomAnchorObject['switchKinds']> {
-  const unreached: WorkspaceAnchorObjectLock = { reason: 'unreached' };
+  const unreached: WorkspaceFeatureLock = { reason: 'unreached' };
   return switchKindOrder.map((switchKind) => {
     const row = object.kinds.find((candidate) => candidate.switchKind === switchKind);
     if (object.present && switchKind === observed)
@@ -77,7 +69,7 @@ function switchKindToggles(
         ...(removeKey === undefined ? {} : { toggleKey: removeKey }),
       });
     // An absent switch with no spot left is refused whatever its kind.
-    const lock: WorkspaceAnchorObjectLock | undefined =
+    const lock: WorkspaceFeatureLock | undefined =
       row === undefined || object.refusals === undefined
         ? unreached
         : !object.present && object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor')
@@ -98,31 +90,17 @@ function switchKindToggles(
 }
 
 /** Why an absent object cannot be added now, each rule as one sentence; undefined while unreached. */
-function refusalLock(object: RoomAnchorObject): WorkspaceAnchorObjectLock | undefined {
+function refusalLock(object: RoomAnchorObject): WorkspaceFeatureLock | undefined {
   if (object.refusals === undefined) return { reason: 'unreached' };
-  const sentences = (() => {
-    switch (object.kind) {
-      case 'stygianWell':
-        return object.refusals.map((refusal) =>
-          refusal.reason === 'noFreeAnchor' ? fullSentence : stygianWellRefusalSentence(refusal),
-        );
-      case 'hermesShrine':
-        return object.refusals.map((refusal) =>
-          refusal.reason === 'noFreeAnchor' ? fullSentence : hermesShrineRefusalSentence(refusal),
-        );
-      case 'challengeSwitch':
-        if (object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor'))
-          return [fullSentence];
-        return object.kinds.flatMap((kind) =>
-          kind.lock === undefined ? [] : [challengeSwitchRuleSentence(kind.lock)],
-        );
-      case 'purgingPool':
-        return [];
-    }
-  })();
-  return sentences.length === 0
-    ? undefined
-    : { reason: 'refused', sentences: Object.freeze([...new Set(sentences)]) };
+  const sentences =
+    object.kind === 'challengeSwitch' &&
+    !object.refusals.some((refusal) => refusal.reason === 'noFreeAnchor')
+      ? roomFeatureRefusalSentences(
+          'challengeSwitch',
+          object.kinds.flatMap((kind) => (kind.lock === undefined ? [] : [kind.lock])),
+        )
+      : roomFeatureRefusalSentences(object.kind, object.refusals);
+  return sentences.length === 0 ? undefined : { reason: 'refused', sentences };
 }
 
 /**
@@ -190,17 +168,13 @@ export function assembleRoomObjectSlots(input: {
               anchor: Object.freeze({
                 ...(object.anchorId === undefined ? {} : { anchorId: object.anchorId }),
                 ...(pinned === undefined ? {} : { pinned }),
-                ...(object.defaultAnchorId === undefined
-                  ? {}
-                  : { defaultAnchorId: object.defaultAnchorId }),
                 choices: Object.freeze(
                   (object.anchorChoices ?? [])
-                    .filter((choice) => choice.anchorId !== (object.anchorId ?? null))
+                    // The anchor it stands on is not offered.
+                    .filter((choice) => choice.anchorId !== object.anchorId)
                     .map((choice) =>
                       Object.freeze({
-                        key: bind(`anchor:${object.kind}@${choice.anchorId ?? 'game'}`, [
-                          choice.command,
-                        ]),
+                        key: bind(`anchor:${object.kind}@${choice.anchorId}`, [choice.command]),
                         anchorId: choice.anchorId,
                       }),
                     ),
@@ -220,7 +194,6 @@ export function assembleRoomObjectSlots(input: {
         ...(anchor.occupant === undefined
           ? {}
           : { occupant: Object.freeze({ object: anchor.occupant, ...kindOf(anchor.occupant) }) }),
-        ...(anchor.default === true ? { default: true as const } : {}),
       }),
     );
   return Object.freeze({

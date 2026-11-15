@@ -1,26 +1,33 @@
 export {
   assessRoomActionPlacements,
   assembleRoomActionRoster,
+  asUnplacedWhenReplaced,
+  doorsReadyAfterRank,
+  performedRoomActions,
+  rowDueContact,
   scopeRoomActionRoster,
 } from './assemble';
+export { roomActionRowContact, timedPickupDueContact } from './required-scope';
+export type { TimedPickupDueContact } from './required-scope';
 export {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline,
+  roomLifecycleEntryActive,
   scopeRoomLifecycleTimeline,
 } from './timeline';
 export type {
-  RoomActionCheckpoint,
-  RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
   RoomActionProposal,
   RoomActionRoster,
-  RoomActionRosterContribution,
   RoomActionRosterIssue,
   RoomActionRow,
-  RoomActionWindow,
+  RoomActionRowLabel,
+  RoomActionBounds,
+  RoomActionContact,
+  RoomEventPoint,
 } from './model';
 export type {
   RoomLifecycleBoundary,

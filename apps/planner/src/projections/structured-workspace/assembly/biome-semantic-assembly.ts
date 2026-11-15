@@ -40,7 +40,7 @@ import {
   appendUniqueWorkspaceNodes,
 } from './assembly-products';
 import { requireWorkspaceRoom } from './catalog-room';
-import { candidateRoomIcon } from '../presentation/room-icon';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceAssessment,
@@ -56,7 +56,7 @@ import {
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
 import { workspaceRewardStoreLabel } from './reward-labels';
-import { workspaceDoorRerollTargetLabel } from './reroll-assembly';
+import { workspaceDoorRerollTargetLabel, workspaceRoomPress } from './reroll-assembly';
 import { biomeFieldLabel } from './biome-field-labels';
 import {
   appendUniqueBatchInteractionRequirements,
@@ -593,12 +593,23 @@ export function assembleWorkspaceBiomeSemantics(
       pastPlanEndAt: source.pastPlanEndAt,
       findingsFor: source.findingsFor,
       rerollSource: source,
-      rerollTargetLabel: (target) =>
-        workspaceDoorRerollTargetLabel(
-          { biome, catalog, layout: source.layout, plan: source.plan },
-          request.occurrence.occurrenceId,
-          target,
-        ),
+      rerollTargetLabel: (reference) => {
+        const press = workspaceRoomPress(source, request.occurrence.occurrenceId, reference);
+        return press === undefined
+          ? undefined
+          : {
+              ...(press.reward === undefined ? {} : { reward: press.reward }),
+              ...(press.target.kind === 'wheelOffer'
+                ? {}
+                : {
+                    subject: workspaceDoorRerollTargetLabel(
+                      { biome, catalog, layout: source.layout, plan: source.plan },
+                      request.occurrence.occurrenceId,
+                      press.target,
+                    ),
+                  }),
+            };
+      },
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
@@ -629,7 +640,10 @@ export function assembleWorkspaceBiomeSemantics(
       roomObjectInteractions: source.roomObjectInteractions,
       roomAnchorSlots: source.roomAnchorSlots,
       roomLayout: source.roomLayout,
+      chaosGatePosition: source.chaosGatePosition,
       spawnedLoot: source.spawnedLoot,
+      roomLive: source.roomLive,
+      roomActionResets: source.roomActionResets,
       encounterOutcomes: source.encounterOutcomes,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
@@ -980,6 +994,10 @@ export function assembleWorkspaceBiomeSemantics(
                       requireWorkspaceRoom(catalog, target.gameName),
                       biome.routeKey,
                     );
+              const roomNumber =
+                declaration === undefined
+                  ? undefined
+                  : candidateRoomNumber(catalog, biome.biomeKey, declaration);
               return Object.freeze({
                 kind: 'room' as const,
                 label: declaration?.label ?? 'Fixed room',
@@ -988,6 +1006,7 @@ export function assembleWorkspaceBiomeSemantics(
                   : {
                       gameName: target.gameName,
                       roomIcon: candidateRoomIcon(catalog, biome.biomeKey, declaration),
+                      ...(roomNumber === undefined ? {} : { roomNumber }),
                       continuation: Object.freeze({
                         marker: markerDestinations.marker(
                           createOccurrenceAddress(biome, target.occurrenceId),

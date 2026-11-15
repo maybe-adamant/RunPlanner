@@ -17,7 +17,7 @@ local function rowButtons(screen)
     return buttons
 end
 
--- Only the next planned purchase in authored order: the room's first purchase
+-- Only the next planned purchase or rush in authored order: the room's first purchase
 -- can trigger a Travel Deal refill, so buying out of order desynchronizes.
 local function plannedKeys(guide, kind)
     local occurrence = guide and guide.occurrence
@@ -28,9 +28,11 @@ local function plannedKeys(guide, kind)
             return { [description.generationKey] = true }
         elseif kind == "pool" and description.kind == "sellPurgingPoolTrait" and open then
             return { [description.traitKey] = true }
-        elseif kind == "shrine" and description.kind == "purchaseHermesShrineOffer" then
+        elseif kind == "shrine" and (description.kind == "purchaseHermesShrineOffer"
+            or description.kind == "rushHermesShrineOffer") then
             local progress = guide.shrineProgress(description.generationKey)
-            if progress == "pending" or (progress == "purchased" and description.rushed == true) then
+            if (description.kind == "purchaseHermesShrineOffer" and progress == "pending")
+                or (description.kind == "rushHermesShrineOffer" and progress == "purchased") then
                 return { [description.generationKey] = true }
             end
         end

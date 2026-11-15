@@ -1,23 +1,42 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
   createDefaultRouteLoadout,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
+  createRoomFeatureAddress,
+  createShopOfferAddress,
+  createRouteAddress,
   type AuthoredTraitOfferTraits,
+  type ProjectCommand,
   type ProjectDocument,
+  type SemanticAddress,
   selectedExitTarget,
 } from '@run-planner/engine/authored-project';
 import {
+  liveRoomForProjectEvaluationAssembly,
+  roomLayoutAuthoringForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import type { DraftSpec } from '../src';
-import type { DraftWalk } from '../src/walk';
+import type { AuthoringSession } from '@run-planner/engine/authoring';
+import { draftProject, type DraftSpec } from '../src';
+import { DraftWalk } from '../src/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { draftReport } from '../src/report';
+import { draftNpcHosts, draftNpcWindowOpen } from '../src/npc-windows';
 import { startDraftWalk } from './support/draft-walk';
 import { draftBasket } from './support/draft-basket';
-import { loadUnderworldWorldShopTravelDealCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGHICheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -230,6 +249,88 @@ describe('draft exit choice', () => {
   });
 });
 
+describe('draft Tartarus Goal steering', () => {
+  it('takes the Preboss door, a Clockwork Goal, over a combat door beside it', () => {
+    const underworld = createProjectDocument(catalog, {
+      projectId: 'u',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 4,
+    });
+    const practice = applyProjectCommand(underworld, catalog, {
+      kind: 'ReplacePracticeStart',
+      route: createRouteAddress(underworld.route.routeKey),
+      startPoint: { biomeKey: 'I', point: 'opening' },
+    });
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
+      rackKeepsakeKeys: [null, null, null],
+    };
+    // A seed whose Tartarus offers the Preboss beside a combat door and takes the combat.
+    const result = draftProject(catalog, practice, spec, 23);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const biome = result.project.route.biomes.find((b) => b.biomeKey === 'I')!;
+    const roomOf = (occurrenceId: string) =>
+      biome.topology!.occurrences.find((o) => o.occurrenceId === occurrenceId)?.gameName;
+    const kindOf = (occurrenceId: string) => catalog.rooms.byKey[roomOf(occurrenceId) ?? '']?.kind;
+    const decision = biome.topology!.decisions.find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.normal.targets
+          .map((target) => kindOf(target.occurrenceId))
+          .sort()
+          .join() === 'Combat,Preboss',
+    );
+    if (decision?.kind !== 'exit' || decision.source.kind !== 'occurrence')
+      throw new Error('no Preboss beside a combat door');
+    // Drop what the run did past the combat door, then reopen the choice.
+    const biomeAddress = createBiomeAddress(result.project.route.routeKey, 'I');
+    const combat = decision.normal.targets.find(
+      (target) => kindOf(target.occurrenceId) === 'Combat',
+    )!;
+    const trimmed = applyProjectCommand(result.project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(biomeAddress, {
+        kind: 'occurrence',
+        occurrenceId: combat.occurrenceId,
+      }),
+    });
+    const open = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(trimmed, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biomeAddress, decision.source),
+        value: { kind: 'unresolved' },
+      }),
+    );
+    const taken = (seed: number) => {
+      const walk = startDraftWalk(practice, { ...spec, pursueTartarusGoal: true }, seed, {
+        from: open,
+      });
+      walk.runBiome(practice.route.itineraryBiomeKeys.indexOf('I'), walk.steps + 1);
+      const exit = walk.project.route.biomes
+        .find((b) => b.biomeKey === 'I')!
+        .topology!.decisions.find(
+          (candidate) =>
+            candidate.kind === 'exit' &&
+            candidate.source.kind === 'occurrence' &&
+            decision.source.kind === 'occurrence' &&
+            candidate.source.occurrenceId === decision.source.occurrenceId,
+        );
+      const selected = exit?.kind === 'exit' ? selectedExitTarget(exit) : undefined;
+      return selected && kindOf(selected.occurrenceId);
+    };
+    // The Preboss door is a Clockwork Goal, so rushing the Goal takes it on every seed.
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    expect(seeds.map(taken)).toEqual(seeds.map(() => 'Preboss'));
+  });
+});
+
 describe("the starting keepsake's chosen result", () => {
   const pomSpec = (traitKey: string, extra: Partial<DraftSpec> = {}): DraftSpec => ({
     loadout: {
@@ -326,6 +427,200 @@ describe('draft Ephyra doors with a small pool', () => {
   );
 });
 
+describe('draft Ephyra Hub visit order', () => {
+  const surface = createProjectDocument(catalog, {
+    projectId: 'ephyra-order',
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
+  });
+  const hubRoom = catalog.rooms.byKey.N_Hub!;
+  const layout = catalog.biomeLayouts.byKey.N!.progression;
+  if (layout.kind !== 'hub') throw new Error('N has no Hub');
+  // Melinoë enters the Hub at its HeroStartPoint, the entry the PreHub's door also sets.
+  const entry = hubRoom.mapPoints!.heroStarts.find((point) => point.id === 50065)!;
+  const door = (slotKey: string) => {
+    const slot = layout.slots.find((candidate) => candidate.slotKey === slotKey)!;
+    return hubRoom.mapPoints!.exitDoors.find((point) => point.id === slot.physicalDoorId)!;
+  };
+  const fountain = hubRoom.mapPoints!.healthFountainPoint!;
+  const squared = (from: { x: number; y: number }, to: { x: number; y: number }) =>
+    (from.x - to.x) ** 2 + (from.y - to.y) ** 2;
+
+  /** The Hub's stops in order, each a visit's slot key or `fountain`, and where each stands. */
+  function hubStops(
+    seed: number,
+    fieldNpcs: readonly string[],
+    observe?: (session: AuthoringSession) => AuthoringSession,
+  ) {
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Hera', 'Apollo', 'Demeter'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: { N: fieldNpcs },
+      },
+      basketByGiver: {},
+      rackKeepsakeKeys: [],
+    };
+    const walk = startDraftWalk(surface, spec, seed, observe === undefined ? {} : { observe });
+    expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+    const topology = walk.project.route.biomes[0]!.topology!;
+    const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
+    const stops = hub.actions.flatMap((action) =>
+      action.kind === 'roomVisit'
+        ? [action.hubSlotKey]
+        : action.kind === 'useFountain'
+          ? ['fountain']
+          : [],
+    );
+    const encounterOf = (slotKey: string) => {
+      const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
+      const occurrence = topology.occurrences.find((o) => o.occurrenceId === target?.occurrenceId);
+      return occurrence === undefined ? undefined : JSON.stringify(occurrence.encounters);
+    };
+    return { walk, stops, encounterOf };
+  }
+  const at = (stop: string) => (stop === 'fountain' ? fountain : door(stop));
+  /** Whether each stop from `start` is the nearest of those left, from the previous stop. */
+  const nearestNext = (stops: readonly string[], start: number) =>
+    stops.slice(start).every((stop, offset) => {
+      const index = start + offset;
+      const from = index === 0 ? entry : at(stops[index - 1]!);
+      return stops
+        .slice(index)
+        .every((other) => squared(from, at(stop)) <= squared(from, at(other)));
+    });
+
+  it.each([1, 2, 3])(
+    'walks the drawn visits and the fountain nearest first, from the entry and each door (seed %i)',
+    (seed) => {
+      const { stops } = hubStops(seed, []);
+      expect(stops.filter((stop) => stop !== 'fountain')).toHaveLength(layout.requiredVisits);
+      expect(stops).toContain('fountain');
+      expect(nearestNext(stops, 0)).toBe(true);
+    },
+  );
+
+  it.each([1, 2, 3, 4])(
+    'takes a visit hosting an NPC before any other stop while her window is open (seed %i)',
+    (seed) => {
+      const host = draftNpcHosts(catalog, 'Surface', { N: ['Artemis'] }).get('N')![0]!;
+      // Each Hub action the walk appended, with her window and whether she was met before it.
+      const appended: { stop: string; open: boolean; met: boolean }[] = [];
+      const observe = (session: AuthoringSession): AuthoringSession => ({
+        ...session,
+        apply: (command, admission) => {
+          const before = session.current();
+          const outcome = session.apply(command, admission);
+          if (outcome.kind === 'applied' && command.kind === 'ReplaceHubActionOrder') {
+            const last = command.actions.at(-1);
+            const biome = before.evaluation.route.biomes.find((b) => b.biomeKey === 'N');
+            appended.push({
+              stop:
+                last?.kind === 'roomVisit'
+                  ? last.hubSlotKey
+                  : last?.kind === 'useFountain'
+                    ? 'fountain'
+                    : '',
+              open: draftNpcWindowOpen(before, 'N', host.conditions),
+              met:
+                biome !== undefined &&
+                'history' in biome &&
+                biome.history.ledgers.encounterRecords.some(
+                  (record) => record.encounterKey === 'ArtemisCombatN',
+                ),
+            });
+          }
+          return outcome;
+        },
+      });
+      const { walk, stops, encounterOf } = hubStops(seed, ['Artemis'], observe);
+      const met = stops.findIndex((stop) => encounterOf(stop)?.includes('ArtemisCombatN'));
+      expect(met).toBeGreaterThanOrEqual(0);
+      const topology = walk.project.route.biomes[0]!.topology!;
+      const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
+      const hosts = (stop: string) => {
+        const target = hub.openTargets.find((t) => t.hubSlotKey === stop);
+        const room = topology.occurrences.find((o) => o.occurrenceId === target?.occurrenceId);
+        return room !== undefined && host.hostRooms.has(room.gameName);
+      };
+      const chasing = appended.filter((entry) => entry.open && !entry.met);
+      expect(chasing.length).toBeGreaterThan(0);
+      // No fountain, miniboss or story room is taken while a drawn host waits on an open window.
+      expect(chasing.filter((entry) => !hosts(entry.stop))).toEqual([]);
+      expect(nearestNext(stops, met + 1)).toBe(true);
+    },
+  );
+
+  it('draws the same Hub order from the same seed', () => {
+    const first = hubStops(5, ['Artemis']);
+    const second = hubStops(5, ['Artemis']);
+    expect(second.stops).toEqual(first.stops);
+    expect(second.walk.project).toEqual(first.walk.project);
+  });
+});
+
+describe('draft Fields cage order', () => {
+  const dream = createProjectDocument(catalog, {
+    projectId: 'fields-order',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: ['H', 'F', 'N', 'I'],
+    configuredBiomeCount: 1,
+  });
+
+  it.each([1, 2, 3])(
+    'unlocks the cages of each drafted room nearest first from their stored points (seed %i)',
+    (seed) => {
+      const spec: DraftSpec = {
+        loadout,
+        world: { godKeys: ['Zeus', 'Hera'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+        basketByGiver: {},
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const result = draftProject(catalog, dream, spec, seed);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      const assembly = simulateProjectAssembly(catalog, result.project);
+      const biome = result.project.route.biomes[0]!;
+      let rooms = 0;
+      for (const occurrence of biome.topology!.occurrences) {
+        if (occurrence.state.kind !== 'fieldsCombat') continue;
+        const order = occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+        );
+        if (order.length < 2) continue;
+        rooms += 1;
+        const room = catalog.rooms.byKey[occurrence.gameName]!;
+        const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]!;
+        const spatial = occurrence.state.spatial;
+        // Settlement stored every unlocked cage's point by the time the walk placed it.
+        const points = order.map((phaseKey) => {
+          const attachment = envelope.slots.find((slot) => slot.key === phaseKey)!.rewardAttachment;
+          if (attachment?.kind !== 'localReward') throw new Error(`${phaseKey} has no cage slot`);
+          const pointId = spatial.cagePointIdBySlot[attachment.slotKey];
+          expect(pointId, `${occurrence.gameName} ${phaseKey}`).not.toBeNull();
+          return room.mapPoints!.fieldsCagePoints!.find((point) => point.id === pointId)!;
+        });
+        const entry = roomLayoutAuthoringForProjectEvaluationAssembly(
+          assembly,
+          createOccurrenceAddress(
+            createBiomeAddress(result.project.route.routeKey, biome.biomeKey),
+            occurrence.occurrenceId,
+          ),
+        )!.settlement.entry;
+        if (entry.kind === 'unknown') throw new Error(`${occurrence.gameName} has no entry`);
+        let from = room.mapPoints!.heroStarts.find((p) => p.id === entry.point.startPointId)!;
+        const squared = (a: typeof from, b: typeof from) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+        points.forEach((point, index) => {
+          for (const other of points.slice(index + 1))
+            expect(squared(from, point)).toBeLessThanOrEqual(squared(from, other));
+          from = point;
+        });
+      }
+      expect(rooms).toBeGreaterThan(0);
+    },
+  );
+});
+
 describe('a Travel Deal refill', () => {
   it("fills a missing refill from the refilled slot's options", () => {
     const project = loadUnderworldWorldShopTravelDealCheckpoint();
@@ -360,6 +655,79 @@ describe('a Travel Deal refill', () => {
       (occurrence) => occurrence.state.kind === 'shop',
     )!.state;
     expect(shop.kind === 'shop' ? shop.shop?.travelDealRefill : undefined).toBeDefined();
+  });
+});
+
+describe('an item offered only while the hero is missing a Last Stand', () => {
+  // The planner does not model held Last Stands: Draft never steers to Death Defiance.
+  const spec: DraftSpec = {
+    loadout,
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketByGiver: {},
+    rackKeepsakeKeys: [null, null, null],
+  };
+
+  it('never steers a Shop slot to Death Defiance', () => {
+    const i = createBiomeAddress('Underworld', 'I');
+    const survival = createShopOfferAddress(i, createOccurrenceId('golden-i-preboss'), 'Survival');
+    const blank = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+      kind: 'ClearShopOffer',
+      offer: survival,
+    });
+    const tried: string[] = [];
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const walk = startDraftWalk(blank, spec, seed, {
+        from: simulateProjectAssembly(catalog, blank),
+      });
+      // Refusing every pick makes the walk try each value it would steer to.
+      (
+        walk as unknown as {
+          steerShopOffer: (
+            origin: typeof survival,
+            apply: (command: ProjectCommand) => boolean,
+          ) => unknown;
+        }
+      ).steerShopOffer(survival, (command) => {
+        if (command.kind === 'ReplaceShopOfferOption') tried.push(command.value.optionKey);
+        return false;
+      });
+    }
+    expect(tried.length).toBeGreaterThan(0);
+    expect(tried).not.toContain('LastStandDrop');
+  });
+
+  it('never redraws a Shrine item to Death Defiance', () => {
+    const shrine = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const project = loadCheckpoint('surface-shrine-travel-deal');
+    const walk = startDraftWalk(project, spec, 1, {
+      from: simulateProjectAssembly(catalog, project),
+    });
+    const tried: string[] = [];
+    const apply = vi.spyOn(walk, 'apply').mockImplementation((command) => {
+      if (command.kind === 'ReplaceHermesShrineOffer') tried.push(command.value.rewardType);
+      return false;
+    });
+    try {
+      (
+        walk as unknown as {
+          hermesShrineOffer: (
+            feature: Extract<SemanticAddress, { kind: 'roomFeature' }>,
+          ) => boolean;
+        }
+      ).hermesShrineOffer(
+        createRoomFeatureAddress(shrine, {
+          kind: 'hermesShrineOffer',
+          generationKey: 'initial:first',
+        }),
+      );
+    } finally {
+      apply.mockRestore();
+    }
+    expect(tried.length).toBeGreaterThan(0);
+    expect(tried).not.toContain('LastStandDrop');
   });
 });
 
@@ -399,5 +767,217 @@ describe('draft room observations', () => {
           occurrence.roomActions.order.some((reference) => reference.kind === 'unlockExit'),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('draft essence rolls', () => {
+  const spec: DraftSpec = {
+    loadout,
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketByGiver: {},
+    rackKeepsakeKeys: [null, null, null],
+    resourceRoomChance: 0,
+  };
+  /** The rooms each essence roll is for, by game name, while `run` runs. */
+  function rolledRooms(run: () => void): string[] {
+    const rolled: string[] = [];
+    const roll = vi
+      .spyOn(
+        DraftWalk.prototype as unknown as {
+          rollEssence: (biomeKey: string, occurrenceId: string, gameName: string) => void;
+        },
+        'rollEssence',
+      )
+      .mockImplementation((_biomeKey, _occurrenceId, gameName) => {
+        rolled.push(gameName);
+      });
+    try {
+      run();
+    } finally {
+      roll.mockRestore();
+    }
+    return rolled;
+  }
+  function enteredRooms(walk: DraftWalk, biomeKeys: readonly string[]): string[] {
+    return walk.assembly.evaluation.route.biomes
+      .filter((biome) => biomeKeys.includes(biome.biomeKey))
+      .flatMap((biome) =>
+        'history' in biome
+          ? biome.history.ledgers.roomAppearances.flatMap((appearance) =>
+              appearance.origin.kind === 'occurrence' &&
+              appearance.origin.biomeKey === biome.biomeKey
+                ? [appearance.gameName]
+                : [],
+            )
+          : [],
+      );
+  }
+
+  it('rolls every room entered since the previous step, in entry order', () => {
+    const earlier = startDraftWalk(base, spec, 2);
+    earlier.runBiome(0, 12);
+    const crossed = enteredRooms(earlier, ['F']);
+    expect(crossed.length).toBeGreaterThan(1);
+    const walk = startDraftWalk(base, spec, 2, { from: earlier.assembly });
+    expect(rolledRooms(() => walk.runBiome(0, 1))).toEqual(crossed);
+  });
+
+  it('rolls each room once, through the Postboss each biome closes on', () => {
+    const walk = startDraftWalk(base, spec, 2);
+    const rolled = rolledRooms(() => {
+      expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+      expect(walk.runBiome(1, walk.steps + 600), walk.failure).toBe(true);
+    });
+    const entered = enteredRooms(walk, ['F', 'G']);
+    expect(entered).toContain('G_PostBoss01');
+    expect(rolled).toEqual(entered);
+  });
+});
+
+describe('draft trait drops', () => {
+  it("picks up Buried Treasure's and Quick Buck's drops right after the boon that grants them", () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Poseidon', 'Zeus', 'Apollo', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket(['RoomRewardBonusBoon', 'MoneyMultiplierBoon']),
+      rackKeepsakeKeys: [null, null, null],
+      resourceRoomChance: 0,
+    };
+    const walk = startDraftWalk(base, spec, 3);
+    expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+    const occurrences = walk.project.route.biomes[0]!.topology!.occurrences;
+    const pickedUp = occurrences.flatMap((occurrence) => {
+      const order = occurrence.roomActions.order;
+      return order.some((reference) => reference.kind === 'interactAcquisitionEntry')
+        ? [
+            [
+              occurrence.gameName,
+              ...order.map((reference) =>
+                reference.kind === 'interactAcquisitionEntry' ? reference.entryKey : reference.kind,
+              ),
+            ],
+          ]
+        : [];
+    });
+    // Each boon is the room's reward; its drops follow it in spawn order.
+    expect(pickedUp).toEqual([
+      [
+        'F_Combat07',
+        'interactIncomingReward',
+        'smallGold',
+        'tinyGold1',
+        'tinyGold2',
+        'minorHeal1',
+        'minorHeal2',
+        'bones',
+      ],
+      ['F_Combat14', 'interactIncomingReward', 'quickBuckGold'],
+    ]);
+    const biome = createBiomeAddress('Underworld', 'F');
+    const leftBehind = occurrences.flatMap(
+      (occurrence) =>
+        liveRoomForProjectEvaluationAssembly(
+          catalog,
+          walk.assembly,
+          createOccurrenceAddress(biome, occurrence.occurrenceId),
+        )?.leftBehind ?? [],
+    );
+    expect(
+      leftBehind.filter(
+        (pickup) => pickup.source.kind === 'generated' && pickup.source.family.kind === 'trait',
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('a walk returned to an earlier point', () => {
+  /** The walk's own return, as a pending purchase that falls short makes it. */
+  type Returnable = { mark(): unknown; returnTo(mark: unknown): void };
+  type Memory = {
+    readonly essenceRooms: ReadonlyMap<number, number>;
+    readonly steeredShops: ReadonlySet<string>;
+    readonly authoredRewards: ReadonlySet<string>;
+    readonly hooked: ReadonlySet<string>;
+  };
+  const memory = (walk: DraftWalk) => {
+    const state = walk as unknown as Memory;
+    return {
+      steps: walk.steps,
+      essenceRooms: [...state.essenceRooms],
+      steeredShops: [...state.steeredShops].sort(),
+      authoredRewards: [...state.authoredRewards].sort(),
+      hooked: [...state.hooked].sort(),
+    };
+  };
+
+  it('forgets the steps it took back, so later rooms still roll essence and author rewards', () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: draftBasket(['ZeusWeaponBoon']),
+      rackKeepsakeKeys: [null, null, null],
+      resourceRoomChance: 100,
+    };
+    const walk = startDraftWalk(base, spec, 1);
+    const rooms = () => walk.project.route.biomes[0]?.topology?.occurrences.length ?? 0;
+    while (rooms() < 2) walk.runBiome(0, walk.steps + 1);
+    const returnable = walk as unknown as Returnable;
+    const mark = returnable.mark();
+    const marked = { project: walk.project, memory: memory(walk) };
+    while (rooms() < 5) walk.runBiome(0, walk.steps + 1);
+    expect(memory(walk)).not.toEqual(marked.memory);
+    returnable.returnTo(mark);
+    expect(walk.project).toBe(marked.project);
+    expect(memory(walk)).toEqual(marked.memory);
+    const before = new Set(
+      walk.project.route.biomes[0]!.topology!.occurrences.map((room) => room.occurrenceId),
+    );
+    // The biome completes, its rewards authored past the return.
+    expect(walk.runBiome(0, walk.steps + 600), walk.failure).toBe(true);
+    // Rooms entered after the return still roll their resource points.
+    const placed = Object.values(walk.project.route.resourcePlacements).flatMap((placement) =>
+      placement === null ? [] : [placement.occurrenceId],
+    );
+    expect(placed.some((occurrenceId) => !before.has(occurrenceId))).toBe(true);
+  });
+});
+
+describe('filler take-back', () => {
+  it("never takes back filler from a Shop the plan held before the draft, only the draft's own", () => {
+    const project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const { startingReward: _start, ...checkpointLoadout } = project.route.loadout;
+    void _start;
+    const spec: DraftSpec = {
+      loadout: checkpointLoadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const assembly = simulateProjectAssembly(catalog, project);
+    const shop = 'golden-f-preboss-shop';
+    const except = createShopOfferAddress(
+      createBiomeAddress('Underworld', 'F'),
+      shop as never,
+      'Boon',
+    );
+    const takeBack = (walk: DraftWalk) =>
+      (
+        walk as unknown as {
+          fillerPurchases(except: SemanticAddress): readonly SemanticAddress[];
+        }
+      ).fillerPurchases(except);
+    // The checkpoint's Shop bought Max Health before any draft walked it.
+    expect(takeBack(startDraftWalk(project, spec, 1, { from: assembly }))).toEqual([]);
+    expect(
+      takeBack(
+        startDraftWalk(project, spec, 1, { from: assembly, draftedBefore: new Set([`F/${shop}`]) }),
+      ),
+    ).toEqual([
+      createShopOfferAddress(createBiomeAddress('Underworld', 'F'), shop as never, 'MajorNonBoon'),
+    ]);
   });
 });

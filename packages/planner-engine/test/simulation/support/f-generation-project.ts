@@ -16,7 +16,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
 
 export const fGenerationBiome = createBiomeAddress('Underworld', 'F');
 export const fGenerationStartId = createOccurrenceId('possibility-start');
@@ -225,7 +228,10 @@ export function createFGenerationProject(
     }
   }
 
-  if (options.includeTakeover === false) return authorLegalTraitOffers(project);
+  if (options.includeTakeover === false)
+    return authorLegalTraitOffers(
+      scheduleTestRequiredRoomActions(project, catalog, fGenerationBiome),
+    );
 
   const finalBatch = batches.at(-1);
   if (finalBatch === undefined) throw new Error('F generation fixture needs one ordinary batch');
@@ -275,5 +281,7 @@ export function createFGenerationProject(
       });
     }
   }
-  return authorLegalTraitOffers(project);
+  return authorLegalTraitOffers(
+    scheduleTestRequiredRoomActions(project, catalog, fGenerationBiome),
+  );
 }

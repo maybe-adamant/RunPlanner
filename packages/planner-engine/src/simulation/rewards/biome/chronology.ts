@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../../encounters/model';
 import { physicalExitKey } from '../../../authored-project/topology/query';
 import { withEchoKeepsakeGold, withGoldEvents, withRunStartGold } from './gold-event-seams';
 import type { Catalog } from '../../../catalog-schema';
@@ -29,6 +30,7 @@ import {
 } from './chronology-accumulator';
 import { publishChronology } from './chronology-publication';
 import type { HistoryEvent } from '../../history';
+import type { ReachedHistoryRoomAction } from '../../history/model';
 import { walkHistoryEvent } from './chronology-seams';
 import { captureRunState, targetSlotHistory } from './chronology-run-state';
 import { applyRoomEntryEffects } from './lifecycle-transitions/room-entered';
@@ -41,7 +43,7 @@ import {
   type ChronologyWalkState,
 } from './chronology-walk';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
-import { type BiomeRewardEvaluationAssembly } from './publication';
+import { type BiomeRewardEvaluationAssembly, type OverviewStop } from './publication';
 
 import { initializeRewardBranch } from '../branch-lifecycle';
 import { rewardFinding } from '../findings';
@@ -55,6 +57,7 @@ function createWalkContext(
     | 'catalog'
     | 'snapshot'
     | 'history'
+    | 'reachedActions'
     | 'routePosition'
     | 'routeLoadout'
     | 'resourcePlacements'
@@ -117,8 +120,15 @@ function createWalkContext(
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
       : undefined;
+  const reachedActionsBySequence = new Map<number, ReachedHistoryRoomAction[]>();
+  for (const action of inputs.reachedActions) {
+    const atSequence = reachedActionsBySequence.get(action.sequence) ?? [];
+    atSequence.push(action);
+    reachedActionsBySequence.set(action.sequence, atSequence);
+  }
   return Object.freeze({
     ...inputs,
+    reachedActionsBySequence,
     rooms,
     views,
     enteredBiomeCount: routePosition.ordinal,
@@ -248,7 +258,7 @@ function captureFailedOverviewEntry(
   );
   if (
     room?.kind !== 'authored' ||
-    room.lifecycleProfileKey === 'ShipCombatRoom' ||
+    roomOpensRewardWheels(room) ||
     entry === undefined ||
     entered === undefined
   )
@@ -383,6 +393,7 @@ export function evaluateBiomeRewardChronology(
   seedFrontier: RewardBranch | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly import('../../model').SemanticFinding[] = [],
+  reachedActions: readonly import('../../history/model').ReachedHistoryRoomAction[] = [],
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
@@ -393,6 +404,7 @@ export function evaluateBiomeRewardChronology(
     catalog,
     snapshot,
     history,
+    reachedActions,
     routePosition,
     routeLoadout,
     resourcePlacements,
@@ -424,6 +436,7 @@ export function evaluateBiomeRewardChronology(
   const steps: WalkStep[] = [];
   for (const event of history.events) {
     if (walk.branch === undefined) break;
+    if (walk.haltBefore !== undefined && event.sequence >= walk.haltBefore) break;
     steps.push({
       sequence: event.sequence,
       received: walk,
@@ -435,7 +448,6 @@ export function evaluateBiomeRewardChronology(
       walkHistoryEvent(context, accumulator, walk, event),
       event,
     );
-    if (walk.halted) break;
   }
   finalizeWalk(context, accumulator, walk);
   // A cut through the last walked event also reaches what the walk settles after it.
@@ -447,7 +459,7 @@ export function evaluateBiomeRewardChronology(
   const through = (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
-    overviewStopped?: SemanticAddress,
+    overviewStopped?: OverviewStop,
   ): BiomeRewardEvaluationAssembly => {
     const { received, emissionCount, settled } = walkThrough(steps, walked, cut);
     const replay = createChronologyAccumulator(prepared.rooms);

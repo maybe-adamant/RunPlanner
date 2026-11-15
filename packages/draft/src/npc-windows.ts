@@ -150,10 +150,11 @@ export function draftNpcWindowOpen(
     const last = ledgers.encounterRecords.findLast((record) =>
       gap.encounterKeys.includes(record.encounterKey),
     );
+    // Native SumPrevRooms is read as the current room leaves, which RoomHistory then holds twice.
     if (
       last !== undefined &&
       ledgers.roomAppearances.filter((appearance) => appearance.sequence > last.sequence).length <
-        gap.roomWindow
+        gap.roomWindow - 1
     )
       return false;
   }

@@ -1,6 +1,7 @@
 import type {
   CatalogCollection,
   EncounterEnvelope,
+  EncounterEnvelopeKind,
   EncounterEnvelopeSlot,
   EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
@@ -121,6 +122,45 @@ function normalizeEnvelopeSlot(
   });
 }
 
+/**
+ * A cage starts its encounter when the player uses it (StartFieldsEncounter,
+ * EncounterLogic.lua:2890, 2939): a local-reward slot of a cage envelope.
+ */
+function withActivationVerb(
+  kind: EncounterEnvelopeKind,
+  slot: EncounterEnvelopeSlot,
+): EncounterEnvelopeSlot {
+  return kind === 'playerActivatedCages' && slot.rewardAttachment?.kind === 'localReward'
+    ? Object.freeze({ ...slot, activatedByVerb: 'completeFieldsCage' as const })
+    : slot;
+}
+
+/** The envelope kind its slots support: wheel phases carry wheels, cages carry local rewards. */
+function normalizeEnvelopeKind(
+  kind: EncounterEnvelopeKind,
+  slots: readonly EncounterEnvelopeSlot[],
+  path: string,
+): EncounterEnvelopeKind {
+  const supported = (() => {
+    switch (kind) {
+      case 'none':
+        return slots.length === 0;
+      case 'single':
+        return slots.length === 1;
+      case 'sequential':
+        return slots.length > 1 && slots.every((slot) => slot.rewardAttachment === undefined);
+      case 'wheelPhases':
+        return slots.some((slot) => slot.rewardAttachment?.kind === 'rewardWheel');
+      case 'playerActivatedCages':
+        return slots.some((slot) => slot.rewardAttachment?.kind === 'localReward');
+      default:
+        fail(path, `unknown encounter envelope kind ${String(kind)}`);
+    }
+  })();
+  if (!supported) fail(path, `${kind} does not fit the envelope's slots`);
+  return kind;
+}
+
 export function normalizeEncounterEnvelopes(
   rawEnvelopes: readonly RawEncounterEnvelopeDeclaration[],
   rewards: RewardKernelCatalog,
@@ -159,7 +199,16 @@ export function normalizeEncounterEnvelopes(
             `${slot.moneyStoreSlotKey} must be another slot that drains its own store`,
           );
       }
-      return Object.freeze({ key, slots: Object.freeze(slots) });
+      const kind = normalizeEnvelopeKind(raw.kind, slots, `${path}.kind`);
+      return Object.freeze({
+        key,
+        kind,
+        // Sequential and wheel-phase rooms declare MultipleEncountersData, which
+        // SetupRoomMultipleEncountersData prepares (RoomLogic.lua:4343-4344, 4383;
+        // RoomDataO.lua:1761, RoomDataP.lua:1529); Fields cages are chosen separately.
+        multiEncounter: kind === 'sequential' || kind === 'wheelPhases',
+        slots: Object.freeze(slots.map((slot) => withActivationVerb(kind, slot))),
+      });
     }),
     'encounterEnvelopes',
     (envelope) => envelope.key,

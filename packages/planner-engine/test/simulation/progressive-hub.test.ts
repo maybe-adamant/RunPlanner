@@ -32,7 +32,12 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
   nBiome,
@@ -223,7 +228,7 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
       },
     });
   }
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function nEvaluation(project: ReturnType<typeof openHub>) {
@@ -538,11 +543,13 @@ describe('Hub progressive biome evaluation', () => {
   });
 
   it('publishes the reached visit as coverage at a Hub local frontier', () => {
-    const project = applyProjectCommand(openHub(9, true), catalog, {
-      kind: 'ReplaceHubActionOrder',
-      hub: createHubDecisionAddress(nBiome, 'hub'),
-      actions: hubVisitActions(['combat05', 'combat02']),
-    });
+    const project = collectTestRequiredItems(
+      applyProjectCommand(openHub(9, true), catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        actions: hubVisitActions(['combat05', 'combat02']),
+      }),
+    );
     const biome = nEvaluation(project);
 
     expect(biome.coverage, JSON.stringify(biome.findings)).toMatchObject({

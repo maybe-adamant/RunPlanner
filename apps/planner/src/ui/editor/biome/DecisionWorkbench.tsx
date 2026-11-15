@@ -35,15 +35,15 @@ import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPo
 import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { CandidatePicker } from './CandidatePicker';
-import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
+import {
+  AnomalyRoomControl,
+  MakeAnomalyAction,
+  RevertAnomalyAction,
+} from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
-import {
-  DoorRewardEditor,
-  DoorRewardHiddenTag,
-  FixedRewardChip,
-  RerolledRewardRepairs,
-} from './DoorRewardEditor';
+import { RoomNumberIcon, RoomOptionFace } from './RoomNumberIcon';
+import { DoorRewardEditor, DoorRewardHiddenTag, FixedRewardChip } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { NotedText } from '@planner/ui/controls/NotedText';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
@@ -388,11 +388,8 @@ function TargetRow({
     door.room.anomaly === undefined;
   const replaceWithAnomaly =
     !target.selected || target.anomalyTakeover === undefined ? null : (
-      <button
-        aria-label={`Replace Door ${target.index} with Anomaly`}
-        className="quiet-action action-compact"
-        data-command="SwitchTargetToAnomaly"
-        onClick={() =>
+      <MakeAnomalyAction
+        onMake={() =>
           dispatch(
             authoredProjectCommandDispatched({
               kind: 'SwitchTargetToAnomaly',
@@ -400,10 +397,7 @@ function TargetRow({
             }),
           )
         }
-        type="button"
-      >
-        {target.anomalyTakeover.label}
-      </button>
+      />
     );
   return (
     <DoorRow
@@ -440,20 +434,18 @@ function TargetRow({
         ) : door.room.anomaly !== undefined ? (
           <AnomalyRoomControl ariaLabel={`Door ${target.index} room`} room={door.room} />
         ) : (
-          <FixedValueChip icon={roomKindIcon(door.room.roomIcon)} label={door.room.label} />
+          <FixedValueChip
+            badge={door.room.roomNumber}
+            icon={roomKindIcon(door.room.roomIcon)}
+            label={door.room.label}
+          />
         )
       }
       secondary={
         <>
-          <RerolledRewardRepairs
-            rewards={door.offerRewardSurface.rewards}
-            target={`Door ${target.index}`}
-          />
           <DoorRewardHiddenTag door={door} />
           {replaceWithAnomaly}
-          {door.room.anomaly === undefined ? null : (
-            <RevertAnomalyAction doorIndex={target.index} room={door.room} />
-          )}
+          {door.room.anomaly === undefined ? null : <RevertAnomalyAction room={door.room} />}
         </>
       }
       state={{
@@ -537,7 +529,7 @@ function AdditionalExitRow({
         <span className="door-row-number">{chaos === undefined ? 'Contract' : 'Chaos Gate'}</span>
       }
       map={{ gameName: room.gameName, hostId: key, points: room.map, title: room.label }}
-      {...(chaos === undefined ? {} : { mapLink: { kind: 'chaosGate' } as const })}
+      mapLink={chaos === undefined ? { kind: 'contractExit' } : { kind: 'chaosGate' }}
       reward={
         <span className="door-row-rewards">
           <span className="row-reward-fixed">
@@ -556,7 +548,16 @@ function AdditionalExitRow({
             // Locked with the other doors where the room's exit is dormant.
             findingTarget={findingTarget(control.owner, `chaos-room-${room.occurrenceId}`)}
             id={`chaos-room-${room.occurrenceId}`}
-            itemIcon={() => art}
+            itemFace={(item) => {
+              const choice = control.mapChoices.find((candidate) => candidate.value === item.value);
+              return (
+                <RoomOptionFace
+                  label={item.label}
+                  number={choice?.roomNumber}
+                  room={choice?.roomIcon ?? room.roomIcon}
+                />
+              );
+            }}
             label=""
             layout="inline"
             model={declaredChoicesPicker(
@@ -565,11 +566,12 @@ function AdditionalExitRow({
             )}
             onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
             placeholder="Choose a room"
+            {...(room.roomNumber === undefined ? {} : { triggerBadge: room.roomNumber })}
             triggerIcon={art}
             triggerSize="content"
           />
         ) : (
-          <FixedValueChip icon={art} label={room.label} />
+          <FixedValueChip badge={room.roomNumber} icon={art} label={room.label} />
         )
       }
       state={{ available: true, picked: control.selected }}
@@ -690,27 +692,11 @@ function BatchSettings({
               placeholder="Select roll"
             />
           )}
-          {node.fields === undefined ? null : (
-            <>
-              <dl className="fields-batch-summary">
-                <div>
-                  <dt>
-                    <NotedText label="Cages per combat room" note={noteFor('cageCount')}>
-                      Cages per combat room
-                    </NotedText>
-                  </dt>
-                  <dd>{node.fields.doorCageRewardCount}</dd>
-                </div>
-                <div>
-                  <dt>Prior Max outcomes</dt>
-                  <dd>
-                    {node.fields.priorMaxOutcomes === undefined
-                      ? 'Unavailable'
-                      : `${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled} / ${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
-                  </dd>
-                </div>
-              </dl>
-            </>
+          {node.fields?.priorMaxOutcomes === undefined ? null : (
+            // The run's Maximum rolls so far.
+            <span className="fields-batch-summary">
+              {`· Max ${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled}/${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
+            </span>
           )}
         </div>
       )}
@@ -794,7 +780,11 @@ export function DoorChipFace({ chip }: { readonly chip: DoorChip }) {
           </span>
         )
       ) : (
-        <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
+        <RoomNumberIcon
+          iconClassName="artwork-label-icon"
+          number={chip.roomNumber}
+          room={chip.roomIcon}
+        />
       )}
       {chip.rewards.map((icon, index) => (
         <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />
@@ -1058,4 +1048,19 @@ export function AuthoringFrontier({
         'Hub structural frontiers must be rendered by HubDecisionWorkbench.',
       );
   }
+}
+
+/** The locked door a press opens: its door chip, or its name before the doors are known. */
+export function UnlockedDoor({
+  chip,
+  label,
+}: {
+  readonly chip?: DoorChip;
+  readonly label: string;
+}) {
+  return chip === undefined ? (
+    <span>{label}</span>
+  ) : (
+    <DoorChips chips={[{ ...chip, locked: false }]} label={label} />
+  );
 }

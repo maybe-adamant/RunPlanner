@@ -32,9 +32,9 @@ const candidateHorizonExemptions: Readonly<Record<string, RegExp>> = {
  * nothing between that use and opening the Pool can remove a listed boon or
  * change its rarity, so native opens the inventory assessed there.
  */
-const fountainPinnedOverview = {
+const poolEntryList = {
   assessment: 'commerce/purging-pool.ts',
-  contact: 'rewards/biome/lifecycle-transitions/fountain-used.ts',
+  contact: 'rewards/biome/lifecycle-transitions/room-entered.ts',
 } as const;
 
 const timelineViews =
@@ -52,15 +52,14 @@ describe('room Overview reads only entry state', () => {
     expect(violations).toEqual([]);
   });
 
-  it('pins the Purging Pool inventory at fountain use as its one declared exception', () => {
-    expect(overviewModules).not.toContain(fountainPinnedOverview.assessment);
+  it('assesses the Purging Pool entry list only at room entry', () => {
     const callers = readdirSync(sourceRoot, { recursive: true, encoding: 'utf8' }).filter(
       (path) =>
         path.endsWith('.ts') &&
-        path !== fountainPinnedOverview.assessment &&
+        path !== poolEntryList.assessment &&
         /\bassessPurgingPool\(/.test(readFileSync(join(sourceRoot, path), 'utf8')),
     );
-    expect(callers).toEqual([fountainPinnedOverview.contact]);
+    expect(callers).toEqual([poolEntryList.contact]);
   });
 
   it.each([

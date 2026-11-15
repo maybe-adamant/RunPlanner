@@ -70,13 +70,27 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
     .map((item) => item.value as ResolvedRewardOffer);
 }
 
-/** Appends a press to one stay through its bound list, with the first reward it offers. */
+/** Appends a press to one stay through its bound list, with its drawn reward. */
+/**
+ * Appends a press through the stay's list, then sets its unset result to the
+ * first reward its row's picker offers.
+ */
 async function append(project: ProjectDocument, precedingVisitCount: number, hubSlotKey: string) {
   const { interaction } = stayList(projectStructuredWorkspaceFixture(project), precedingVisitCount);
-  const key = slotDoorKey(project, hubSlotKey);
-  const [reward] = await possibleRewards(interaction.pendingReward(key));
-  const intent = interaction.appendIntent(key, reward!);
-  return { intent, next: applyProjectCommand(project, catalog, intent.command), reward: reward! };
+  const intent = interaction.pressIntent(slotDoorKey(project, hubSlotKey))!;
+  const placed = applyProjectCommand(project, catalog, intent.command);
+  const after = stayList(projectStructuredWorkspaceFixture(placed), precedingVisitCount);
+  const row = after.rerolls.rows.find((candidate) => candidate.reward === undefined)!;
+  const reward = (await possibleRewards(after.interaction.rowReward(row.key)))[0]!;
+  return {
+    intent,
+    next: applyProjectCommand(
+      placed,
+      catalog,
+      after.interaction.replaceRewardIntent(row.key, reward).command,
+    ),
+    reward,
+  };
 }
 
 describe('Hub Timeline details', () => {
@@ -165,7 +179,6 @@ describe('Hub Timeline details', () => {
       kind: 'InsertHubReroll',
       hub,
       hubSlotKey: 'combat03',
-      reward,
       index: rerollAppendIndex(base, { kind: 'hubStay', hub, precedingVisitCount: 2 }),
     });
     const projected = projectStructuredWorkspaceFixture(next);

@@ -105,7 +105,7 @@ counts the four qualifying H rooms nor re-evaluates Preboss eligibility.
 I has **no new navigation mechanism**; exact rooms, ordinary rewards, peers,
 and the fixed Preboss-to-Boss link use the baseline, and the game keeps its
 Clockwork counters and goal lifecycle. One product mapping is required: the
-canonical room's `clockworkReward: 'goal'` crosses the boundary as the
+canonical room's forced `ClockworkGoal` reward crosses the boundary as the
 ordinary exact reward identity `ClockworkGoal`, never as an I-specific counter
 or cap controller. The executor does not count Goals, apply the cap, advance
 Tartarus stages, or re-evaluate Preboss eligibility. Its witness proves that

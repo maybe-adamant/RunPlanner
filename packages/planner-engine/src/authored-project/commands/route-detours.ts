@@ -25,7 +25,7 @@ import {
 } from '../topology/query';
 import { sameExitDecisionSource } from '../topology/source-identity';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topology/impact';
-import { createDefaultRoomActionState } from '../room-actions/state';
+import { createEmptyRoomActionState } from '../room-actions/state';
 import {
   failCommand,
   requireAnomalyRoom,
@@ -533,7 +533,7 @@ function addZagreusContract(
       contractRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
-    roomActions: createDefaultRoomActionState(contractRoom),
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
   });
   const withContract = appendOccurrence(topology, contractOccurrence, command);
@@ -702,7 +702,7 @@ function addChaos(
       chaosRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
-    roomActions: createDefaultRoomActionState(chaosRoom),
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
   });
   const withChaos = appendOccurrence(topology, chaosOccurrence, command);

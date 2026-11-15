@@ -32,6 +32,8 @@ import {
 export const fEncounterDefinitions = [
   {
     key: 'OpeningGeneratedF',
+    // Combat starts once its room reward is used (SpawnRoomReward WaitUntilPickup, BeginOpeningEncounter, EncounterData.lua:504-508).
+    script: { gate: { kind: 'useItemRole', role: 'self' } },
     moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedF],
     label: 'Opening combat',
@@ -93,6 +95,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'DevotionTestF',
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestF],
     label: 'Devotion combat',
@@ -313,6 +317,9 @@ export const fEncounterDefinitions = [
             requirement: 'talentLegal',
           },
         ],
+        // Her ordinary damage lines need NoHitShieldAvailable (NPCData_Nemesis.lua:10199-10606,
+        // RequirementsData.lua:1384-1390).
+        unavailableWhileHeldTraitKeys: ['ReserveManaHitShieldBoon'],
         response: ['accept', 'decline'],
         pickupRequiredOnAccept: true,
       },

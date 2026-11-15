@@ -1,4 +1,5 @@
 import type { SemanticAddress } from '../authored-project/addresses';
+import type { RoomEventPoint } from '../authored-project/room-actions/event-graph';
 
 export type SimulationPhase =
   'completeness' | 'encounterResolution' | 'rewardGeneration' | 'roomGeneration';
@@ -33,6 +34,8 @@ export type RoomGenerationFindingCode =
 
 export type EncounterResolutionFindingCode =
   | 'roomActionOrderUnavailable'
+  /** A ranked row whose item was replaced since it was placed. */
+  | 'roomActionItemReplaced'
   | 'encounterSlotActivationUnavailable'
   | 'encounterUnavailable'
   | 'encounterCustomizationUnavailable'
@@ -46,9 +49,9 @@ export type RewardGenerationFindingCode =
   | 'rewardMissing'
   | 'phantomExitPlaceholderUnavailable'
   | 'phantomExitRewardUnavailable'
-  | 'rerolledRewardMismatch'
   | 'rerollUnavailable'
   | 'rerollTargetUnavailable'
+  | 'rerollResultMissing'
   | 'rerollPoolExceeded'
   | 'screenRerollUnavailable'
   | 'rollOfferUnavailable'
@@ -97,6 +100,7 @@ export type RewardGenerationFindingCode =
   | 'fieldsOptionalCapacityUnavailable'
   | 'nemesisOutcomeMissing'
   | 'nemesisOutcomeUnavailable'
+  | 'nemesisEventUnavailable'
   | 'purgingPoolUnavailable'
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'
@@ -183,6 +187,35 @@ export type FindingEvidenceValue =
 
 export type FindingEvidence = Readonly<Record<string, FindingEvidenceValue>>;
 
+/**
+ * A `roomActionOrderUnavailable` finding's evidence, in its bound's vocabulary:
+ * the point the row stands before, or the deadline it stands past, and the
+ * action that must come first or that stands only after that deadline.
+ */
+export type RoomActionOrderEvidence =
+  | { readonly reason: 'dependency'; readonly prerequisite: string }
+  | {
+      readonly reason: 'pastDeadline';
+      readonly deadline: RoomEventPoint;
+      readonly precedingAction: string;
+    }
+  | {
+      readonly reason: 'beforeSpawn' | 'beforeEnabler';
+      readonly point: RoomEventPoint;
+      readonly requiredAction?: string;
+      /** The point names a phase the room no longer plays. */
+      readonly unavailable?: true;
+    };
+
+/** The order evidence of a `roomActionOrderUnavailable` finding. */
+export function roomActionOrderEvidence(
+  finding: SemanticFinding,
+): RoomActionOrderEvidence | undefined {
+  return finding.code === 'roomActionOrderUnavailable'
+    ? (finding.evidence as RoomActionOrderEvidence)
+    : undefined;
+}
+
 export interface SemanticFinding {
   readonly code: FindingCode;
   readonly phase: SimulationPhase;
@@ -228,10 +261,12 @@ export function isRequiredMissingInputFinding(
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':
     case 'echoGoldPickupPlacementRequired':
+    case 'ixionChaosMissing':
     case 'hexActivationMissing':
     case 'rewardMissing':
     case 'traitOfferMissing':
     case 'rerolledScreenMissing':
+    case 'rerollResultMissing':
     case 'allTogetherResultMissing':
     case 'judgmentOutcomeMissing':
     case 'figurineOutcomeMissing':

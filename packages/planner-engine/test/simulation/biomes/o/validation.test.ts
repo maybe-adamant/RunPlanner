@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../../src/simulation/room-actions';
 import { ordinaryPositionFor } from '../../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -34,8 +35,11 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
+  scheduleTestRequiredRoomActions,
+  settleTestEdit,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   authorSurfaceWorldShop,
@@ -45,6 +49,10 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { reachedFrontier } from '../../../support/reward-frontier';
+import {
+  candidateBiome,
+  candidateBiomeRooms,
+} from '../../../../src/simulation/candidates/evaluated-biome';
 
 function evaluateO(project = loadSurfaceNOProject()) {
   const evaluation = simulateProject(catalog, project);
@@ -123,13 +131,17 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const expanded = expandedHistory.present;
-    const expandedOrder = expanded.route.biomes
-      .find((plan) => plan.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-      )?.roomActions.order;
+    const orderOf = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((plan) => plan.biomeKey === 'O')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+        )?.roomActions.order;
     expect(expandedHistory.past).toHaveLength(1);
+    // The new phase's cohort is required of the owner; the command places none of it.
+    expect(orderOf(expandedHistory.present)).toEqual(beforeOrder);
+    const expanded = scheduleTestRequiredRoomActions(expandedHistory.present, catalog, oBiome);
+    const expandedOrder = orderOf(expanded);
     expect(expandedOrder).toEqual([
       ...beforeOrder,
       { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
@@ -165,21 +177,20 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const restoredOrder = restored.route.biomes
-      .find((plan) => plan.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-      )?.roomActions.order;
-    expect(restoredOrder).toEqual(expandedOrder);
+    expect(orderOf(restored)).toEqual(expandedOrder);
   });
 
   it('adds a newly required contact without repairing an unrelated retained Ship timing error', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence,
-      encounterCount: 3,
-    });
+    let project = scheduleTestRequiredRoomActions(
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence,
+        encounterCount: 3,
+      }),
+      catalog,
+      oBiome,
+    );
     const wheel2Choice = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
@@ -188,7 +199,7 @@ describe('selected O validation', () => {
     });
     const invalidBefore = materializedORoom(project, oOccurrenceIds.combat07);
     expect(invalidBefore.roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({ kind: 'window' }),
+      expect.objectContaining({ kind: 'pastDeadline' }),
     );
     const retainedOrder = invalidBefore.roomActions.order;
 
@@ -199,14 +210,24 @@ describe('selected O validation', () => {
     });
     const after = materializedORoom(project, oOccurrenceIds.combat07);
     const contact = { kind: 'interactEncounter' as const, phaseKey: 'Combat2' };
+    // The contact is required of the owner; the order, timing error included, is untouched.
+    expect(after.roomActions.order).toEqual(retainedOrder);
     expect(
-      after.roomActions.order.filter(
-        (reference) => roomActionKey(reference) !== roomActionKey(contact),
-      ),
-    ).toEqual(retainedOrder);
-    expect(after.roomActions.order).toContainEqual(contact);
+      assembleRoomActionDomain({
+        producer: true,
+        routePosition: ordinaryPositionFor(catalog, oBiome),
+        catalog,
+        biome: oBiome,
+        topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
+        occurrence: project.route.biomes
+          .find((plan) => plan.biomeKey === 'O')!
+          .topology!.occurrences.find(
+            (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+          )!,
+      }).contributions,
+    ).toContainEqual(expect.objectContaining({ participation: 'required', reference: contact }));
     expect(after.roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({ kind: 'window' }),
+      expect.objectContaining({ kind: 'pastDeadline' }),
     );
   });
 
@@ -276,7 +297,8 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    project = authorTestTraitsAndRequiredItems(project);
+    const { biome } = evaluateValidO(project);
     const sourceDecision = biome.snapshot.decisions.find(
       (decision) =>
         decision.kind === 'batch' &&
@@ -290,12 +312,14 @@ describe('selected O validation', () => {
       .find((candidate) => candidate.occurrenceId === oOccurrenceIds.combat07);
     if (room?.kind !== 'authored') throw new Error('Ship source room is missing');
 
-    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel2' },
-    ]);
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual(
+      withItemContents(project, createOccurrenceAddress(oBiome, oOccurrenceIds.combat07), [
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel2' },
+      ]),
+    );
     const authoredOccurrence = project.route.biomes
       .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
@@ -303,29 +327,27 @@ describe('selected O validation', () => {
       );
     if (authoredOccurrence === undefined) throw new Error('authored Ship occurrence is missing');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, oBiome),
       catalog,
       biome: oBiome,
       topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
       occurrence: authoredOccurrence,
     });
+    expect(domain.contributions.map((entry) => roomActionKey(entry.reference))).toEqual(
+      room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key),
+    );
     expect(
-      domain.contributions
-        .filter((entry) => entry.kind === 'action')
-        .map((entry) => roomActionKey(entry.reference)),
-    ).toEqual(room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key));
-    expect(room.roomActionRoster.checkpoints).toEqual(
+      room.roomActionRoster.rows
+        .filter((row) => row.reference.kind === 'interactWheelReward')
+        .map((row) => [row.label, row.rank]),
+    ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
-        expect.objectContaining({ checkpointKey: 'combat:Combat2', afterRank: 4 }),
-        expect.objectContaining({
-          checkpointKey: 'outgoingGeneration',
-          afterRank: 4,
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
-        }),
-        expect.objectContaining({ checkpointKey: 'exitUsable', afterRank: 4 }),
+        [expect.objectContaining({ phaseKey: 'Combat1' }), 2],
+        [expect.objectContaining({ phaseKey: 'Combat2' }), 4],
       ]),
     );
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(4);
     expect(
       room.roomActionRoster.proposals.find(
         (proposal) =>
@@ -347,14 +369,16 @@ describe('selected O validation', () => {
     const invalidRoom = materializedORoom(invalidOrder, oOccurrenceIds.combat07);
     expect(invalidRoom.roomActionRoster.issues).toContainEqual(
       expect.objectContaining({
-        kind: 'requiredFirst',
+        kind: 'beforeEnabler',
         reference: wheel2Choice,
         requiredAction: { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
       }),
     );
-    expect(room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey)).toEqual(
-      ['combat:Intro', 'combat:Combat1', 'combat:Combat2', 'outgoingGeneration', 'exitUsable'],
-    );
+    expect(room.roomActionRoster.eventGraph.phases.map((phase) => phase.phaseKey)).toEqual([
+      'Intro',
+      'Combat1',
+      'Combat2',
+    ]);
     const invalid = simulateProject(catalog, invalidOrder);
     const owner = createRoomActionAddress(
       oBiome,
@@ -368,7 +392,6 @@ describe('selected O validation', () => {
         code: 'roomActionOrderUnavailable',
         origin: owner,
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
         }),
       }),
@@ -396,7 +419,8 @@ describe('selected O validation', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    project = authorTestTraitsAndRequiredItems(project);
+    const { biome } = evaluateValidO(project);
     const decisions = biome.snapshot.decisions.filter((decision) => decision.kind === 'batch');
     const sourceDecision = decisions.find(
       (decision) =>
@@ -415,25 +439,18 @@ describe('selected O validation', () => {
       throw new Error('two-phase Ship chronology is missing');
     }
 
-    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
-    ]);
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual(
+      withItemContents(project, createOccurrenceAddress(oBiome, oOccurrenceIds.combat07), [
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+      ]),
+    );
     expect(
-      room.roomActionRoster.checkpoints.some(
-        (checkpoint) =>
-          checkpoint.checkpointKey.includes('wheel2') ||
-          checkpoint.checkpointKey === 'combat:Combat2',
+      room.roomActionRoster.eventGraph.phases.some(
+        (phase) => phase.rewardWheelKey === 'wheel2' || phase.phaseKey === 'Combat2',
       ),
     ).toBe(false);
-    expect(
-      room.roomActionRoster.checkpoints.find(
-        (checkpoint) => checkpoint.checkpointKey === 'outgoingGeneration',
-      ),
-    ).toMatchObject({
-      afterRank: 2,
-      window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-    });
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(2);
     expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
     expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
     expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
@@ -452,7 +469,9 @@ describe('selected O validation', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    withThree = authorLegalTraitOffers(withThree);
+    withThree = authorTestTraitsAndRequiredItems(
+      scheduleTestRequiredRoomActions(withThree, catalog, oBiome),
+    );
 
     const withTwo = applyProjectCommand(withThree, catalog, {
       kind: 'ReplaceShipEncounterCount',
@@ -473,8 +492,8 @@ describe('selected O validation', () => {
       ),
     ).toBe(false);
     expect(
-      dormantRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-    ).not.toContain('combat:Combat2');
+      dormantRoom.roomActionRoster.eventGraph.phases.map((phase) => phase.phaseKey),
+    ).not.toContain('Combat2');
 
     const restored = applyProjectCommand(withTwo, catalog, {
       kind: 'ReplaceShipEncounterCount',
@@ -493,37 +512,37 @@ describe('selected O validation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel1,
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel2,
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel: wheel2,
       offerCount: 1,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
     });
-    const evaluated = evaluateO(authorLegalTraitOffers(project)).biome;
+    const evaluated = evaluateO(authorTestTraitsAndRequiredItems(project)).biome;
 
     expect(evaluated.rewards.findings).toContainEqual(
       expect.objectContaining({
@@ -560,8 +579,8 @@ describe('selected O validation', () => {
       'wheel1',
       'offer1',
     );
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
+    project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(project, {
         kind: 'ReplaceRewardWheelOffer',
         offer: wheelOffer,
         value: { rewardType: 'HermesUpgrade' },
@@ -617,14 +636,15 @@ describe('selected O validation', () => {
     expect(
       timeline.slice(
         timeline.indexOf('encounterEnd:Intro'),
-        timeline.indexOf('encounterStart:Combat1') + 1,
+        timeline.indexOf('encounterStarted:Combat1') + 1,
       ),
     ).toEqual([
       'encounterEnd:Intro',
       'wheelsOpen:wheel1',
+      'encounterBegun:Combat1',
       'delivery',
       'choose',
-      'encounterStart:Combat1',
+      'encounterStarted:Combat1',
     ]);
   });
 
@@ -715,7 +735,7 @@ describe('selected O validation', () => {
       'offer1',
     );
     const { biome } = evaluateValidO(
-      authorLegalTraitOffers(
+      authorTestTraitsAndRequiredItems(
         applyProjectCommand(wheel2DeliveryProject(), catalog, {
           kind: 'ReplaceRewardWheelOffer',
           offer: wheelOffer,
@@ -736,13 +756,89 @@ describe('selected O validation', () => {
     ]);
   });
 
+  it('stops at a missing wheel reward before the delivery an unplaced next choice waits on', () => {
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    const valid = authorTestTraitsAndRequiredItems(
+      applyProjectCommand(wheel2DeliveryProject(), catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+        value: { rewardType: 'HermesUpgrade' },
+      }),
+    );
+    const reward = { kind: 'interactWheelReward', wheelKey: 'wheel1' } as const;
+    const project = {
+      ...valid,
+      route: {
+        ...valid.route,
+        biomes: valid.route.biomes.map((plan) =>
+          plan.biomeKey !== 'O' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== oOccurrenceIds.combat02
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          roomActions: {
+                            order: occurrence.roomActions.order.filter(
+                              (reference) =>
+                                roomActionKey(reference) !== roomActionKey(reward) &&
+                                !(
+                                  reference.kind === 'chooseRewardWheel' &&
+                                  reference.wheelKey === 'wheel2'
+                                ),
+                            ),
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.issue?.reasons[0]).toMatchObject({
+      code: 'roomActionPlacementRequired',
+      origin: createRoomActionAddress(oBiome, oOccurrenceIds.combat02, roomActionKey(reward)),
+    });
+    const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O')!;
+    if (!('history' in biome)) throw new Error('O lost its history');
+    expect(combat02Events(biome as ReturnType<typeof evaluateO>['biome'])).not.toContain(
+      'delivery',
+    );
+
+    // The Timeline starts wheel 2's fight where the walk would, not after the delivery.
+    const evaluated = candidateBiome(assembly.evaluation, 'Surface', 'O')!;
+    const room = candidateBiomeRooms(evaluated).find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(ship),
+    )!;
+    const entries = room.roomLifecycleTimeline.entries;
+    const deliveryEntry = entries.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.reference.kind === 'interactAcquisitionEntry' &&
+        entry.action.reference.siteKey === 'hermesShrineDelivery',
+    );
+    const combat2Start = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStarted:Combat2',
+    );
+    expect(deliveryEntry).toBeGreaterThanOrEqual(0);
+    expect(combat2Start).toBeGreaterThanOrEqual(0);
+    expect(combat2Start).toBeLessThan(deliveryEntry);
+  });
+
   it('rerolls a wheel from Wheels open, each roll seeing the pickups ranked before it', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
-    const project = applyProjectCommand(wheel2DeliveryProject({ rerolls: true }), catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
-      value: { rewardType: 'MaxHealthDrop' },
-    });
+    const project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(wheel2DeliveryProject({ rerolls: true }), {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    );
     const order = () =>
       project.route.biomes
         .find((candidate) => candidate.biomeKey === 'O')!
@@ -755,8 +851,8 @@ describe('selected O validation', () => {
         reference.siteKey === 'hermesShrineDelivery',
     );
     const reroll = (index: number, rewardType: string) =>
-      authorLegalTraitOffers(
-        applyProjectCommand(project, catalog, {
+      authorTestTraitsAndRequiredItems(
+        settleTestEdit(project, {
           kind: 'InsertReroll',
           occurrence: ship,
           target: { kind: 'wheelOffer', wheelKey: 'wheel2', offerKey: 'offer1' },
@@ -796,7 +892,6 @@ describe('selected O validation', () => {
       expect.objectContaining({
         code: 'roomActionOrderUnavailable',
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
         }),
       }),
@@ -882,7 +977,7 @@ describe('selected O validation', () => {
       });
     }
 
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
       kind: 'batch',
       rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
@@ -972,7 +1067,7 @@ describe('selected O validation', () => {
   });
 
   it('retains only the blocked Devotion role capability before its after-combat sibling', () => {
-    const base = authorLegalTraitOffers(loadSurfaceNOProject());
+    const base = authorTestTraitsAndRequiredItems(loadSurfaceNOProject());
     const baseO = evaluateValidO(base).biome;
     const owner = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
     const selected = baseO.rewards.selectedTraitOffers.filter(
@@ -1194,6 +1289,52 @@ describe('selected O validation', () => {
         encounterCount: 2,
       }),
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
+  it('answers a wheel candidate on an open wheel whose choice is unplaced as on a placed one', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const placed = loadSurfaceNOProject();
+    let unplaced = placed;
+    for (const reference of [
+      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+    ] as const)
+      unplaced = applyProjectCommand(unplaced, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(oBiome, oOccurrenceIds.combat04, roomActionKey(reference)),
+      });
+    // The walk opens the wheel at Wheels open and stops at its unplaced choice.
+    expect(simulateProject(catalog, unplaced).issue?.reasons[0]).toMatchObject({
+      code: 'roomActionPlacementRequired',
+      origin: createRoomActionAddress(
+        oBiome,
+        oOccurrenceIds.combat04,
+        roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+      ),
+    });
+    const answers = (project: ProjectDocument) => {
+      const session = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      );
+      return [
+        session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'RunProgress' }),
+        session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' }),
+        session.evaluate({ kind: 'rewardWheelOfferCount', wheel, offerCount: 1 }),
+        session.evaluate({ kind: 'shipEncounterCount', occurrence, encounterCount: 2 }),
+      ];
+    };
+
+    const open = answers(unplaced);
+    expect(open.map((answer) => answer.kind)).toEqual([
+      'rewardWheelStore',
+      'rewardWheelStore',
+      'rewardWheelOfferCount',
+      'shipEncounterCount',
+    ]);
+    // Generated from Wheels open, its answers match the placed choice's.
+    expect(open).toEqual(answers(placed));
   });
 
   it('evaluates a supported opening target through the prepared selected O prefix', () => {
@@ -1442,7 +1583,7 @@ describe('selected O validation', () => {
       occurrence: shipOwner,
       encounterCount: 3,
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const route = project.route;
     if (route === undefined) throw new Error('O fixture has no Surface route');
     const replacementWeapon = catalog.weapons.values.find(
@@ -1530,7 +1671,7 @@ describe('selected O validation', () => {
   });
 
   it('keeps Combat2 authorable while exposing its newly active unresolved wheel leaf', () => {
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOProject(), {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: {
@@ -1538,7 +1679,7 @@ describe('selected O validation', () => {
         payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     expect(simulateProject(catalog, project).status).toBe('valid');
 
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
@@ -1796,6 +1937,54 @@ describe('selected O validation', () => {
         gameName: 'O_PreBoss01',
       }),
     ).toMatchObject({ kind: 'takeoverPrebossBatch', result: { requiredExitKeys: ['exit1'] } });
+  });
+
+  it('counts a Shop as a room of the Ship intro window, so a combat may follow three', () => {
+    // Intro, C04, C07, C01, Shop, C03, C02: native `SumPrevRooms = 3` reads the room the doors
+    // open in and the two before it, and the Shop's started encounter holds no Ship intro.
+    let project = loadSurfaceNOProject();
+    for (const [occurrenceId, gameName] of [
+      [oOccurrenceIds.devotion, 'O_Shop01'],
+      [oOccurrenceIds.story, 'O_Combat03'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(oBiome, occurrenceId),
+        gameName,
+      });
+    project = authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.devotion);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.story, 'wheel1', 'offer1'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat02, 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    project = settleTestEdit(project, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
+    const pressureFrom = (sourceGameName: string) =>
+      biome.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find((entry) => entry.sourceGameName === sourceGameName);
+    const combats = (names: readonly string[] | undefined) =>
+      (names ?? []).filter((name) => name.startsWith('O_Combat'));
+
+    // C01's own intro fills its window (C01, C07, C04): no combat may follow it.
+    expect(pressureFrom('O_Combat01')).toMatchObject({ selectedGameName: 'O_Shop01' });
+    expect(combats(pressureFrom('O_Combat01')?.eligibleRoomGameNames)).toEqual([]);
+    // The Shop's window (Shop, C01, C07) holds two intros.
+    expect(pressureFrom('O_Shop01')).toMatchObject({
+      selectedGameName: 'O_Combat03',
+      selectedPossible: true,
+    });
+    expect(combats(pressureFrom('O_Shop01')?.eligibleRoomGameNames)).toContain('O_Combat03');
   });
 
   it('keeps the declaration-driven terminal takeover assessable from its empty envelope', () => {

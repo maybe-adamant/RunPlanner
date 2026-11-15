@@ -31,7 +31,11 @@ import {
   pOccurrenceId,
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
   it('publishes only the recorded P encounter prefix when Heracles ends the sequence', () => {
@@ -42,11 +46,14 @@ describe('resolved execution encounters', () => {
       'Intro',
     );
     const ordinary = loadSurfaceNOPQProject();
-    const heracles = applyProjectCommand(ordinary, catalog, {
-      kind: 'SelectEncounter',
-      phase: intro,
-      encounterKey: 'HeraclesCombatP',
-    });
+    // The owner talks to Heracles.
+    const heracles = collectTestRequiredItems(
+      applyProjectCommand(ordinary, catalog, {
+        kind: 'SelectEncounter',
+        phase: intro,
+        encounterKey: 'HeraclesCombatP',
+      }),
+    );
     const assembly = simulateProjectAssembly(catalog, heracles);
     expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);
     expect(assembly.evaluation.route.findings).toEqual([]);
@@ -620,7 +627,7 @@ describe('resolved execution encounters', () => {
           },
         },
       });
-      project = authorLegalTraitOffers(project);
+      project = authorTestTraitsAndRequiredItems(project);
       const assembly = simulateProjectAssembly(catalog, project);
       expect(assembly.evaluation.route.findings).toEqual([]);
       expect(assembly.evaluation.status).toBe('valid');

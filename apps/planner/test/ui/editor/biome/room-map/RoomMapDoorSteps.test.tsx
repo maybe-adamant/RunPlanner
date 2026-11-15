@@ -13,7 +13,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import type { PlannerApplication } from '@planner/composition/createApplication';
@@ -22,6 +21,8 @@ import {
   requireWorkspaceBiome,
   projectStructuredWorkspaceFixture,
 } from '@planner-test/fixtures/structuredWorkspace';
+import { takeLive } from '@planner-test/support/live-row';
+import { pressWithPickedResult } from '@planner-test/support/reroll-press';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(() => cleanup());
@@ -40,7 +41,7 @@ function timelineRows(): HTMLElement[] {
 }
 
 const doorsOpenRow = () =>
-  timelineRows().find((row) => row.matches('[data-doors-open], [data-boundary-kind="cleanup"]'))!;
+  timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!;
 
 function mapDoor(doorIndex: number): HTMLElement {
   const map = screen
@@ -67,8 +68,7 @@ describe('room map door steps', () => {
     const { application, user } = renderWorkspace(locked, 'Underworld', 'G');
     focusRoom(application, host);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Doors' }));
-    await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
+    await takeLive(user, 'Locked doors', 'Unlock Door 2');
     // With no row marked, the Timeline's map shows the doors as the room is left.
     expect(mapDoor(2).getAttribute('data-locked')).toBeNull();
 
@@ -105,23 +105,14 @@ describe('room map door steps', () => {
     );
     if (batch?.kind !== 'ordinaryBatch' || batch.rerolls === undefined)
       throw new Error('the source room has no Rerolls list');
-    const interaction = projected.workspace.interactions.roomRerolls.get(
-      batch.rerolls.interactionKey,
-    )!;
     const door1Key = semanticAddressKey(
       createIncomingRewardAddress(f, createOccurrenceId('golden-f-b3-e1')),
     );
-    const resolver = interaction.pendingReward(door1Key);
-    const items = resolver
-      .model(await resolver.load(), 'type')
-      .sections.flatMap((section) => section.items)
-      .filter(
-        (item) => !item.disabled && (item.value as ResolvedRewardOffer).payload === undefined,
-      );
-    const rerolled: ProjectDocument = applyProjectCommand(
+    const rerolled: ProjectDocument = await pressWithPickedResult(
       withCard,
-      catalog,
-      interaction.appendIntent(door1Key, items[0]!.value as ResolvedRewardOffer).command,
+      batch.rerolls.interactionKey,
+      door1Key,
+      batch.targets[0]?.door.offerRewardSurface.rewards[0]?.offer,
     );
 
     const { application, user } = renderWorkspace(rerolled, 'Underworld', 'F');

@@ -7,7 +7,6 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
-  createHubRerollAddress,
   createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
@@ -24,9 +23,6 @@ import {
 import {
   createStaleSurfaceHermesDeliveryPlacement,
   loadSurfaceNEntryFrontierResolvedProject,
-  loadSurfaceNProject,
-  nBiome,
-  nOccurrenceId,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import {
@@ -39,19 +35,17 @@ import {
   loadSurfaceNPartialHubCheckpoint,
   loadSurfaceNTenOpenInvalidCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
 } from '@planner-test/support/finding-states';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { findingSelected } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -142,12 +136,56 @@ it('marks the Nemesis interaction choice its action row needs, not the row', asy
     event: createNemesisRandomEventAddress(phase),
     family: 'freeItem',
   });
+  project = collectTestRequiredItems(project);
   const view = renderWorkspace(project, 'Underworld', 'F');
   const row = await openFirstFinding(view);
   expect(row.hasAttribute('data-has-findings')).toBe(false);
   const reward = within(row).getByRole('button', { name: 'Reward' });
   expect(paintedFindings()).toEqual([reward]);
   await waitFor(() => expect(document.activeElement).toBe(reward));
+});
+
+it('marks the Overview event type picker of a family her spawn state refuses', async () => {
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+  let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: shieldRoom,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(shieldRoom, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+        { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+        { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+    },
+  } as never);
+  project = applyProjectCommand(collectTestRequiredItems(project), catalog, {
+    kind: 'SelectEncounter',
+    phase,
+    encounterKey: 'NemesisRandomEvent',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SelectNemesisRandomEventFamily',
+    event: createNemesisRandomEventAddress(phase),
+    family: 'damageTrade',
+  });
+  const view = renderWorkspace(project, 'Underworld', 'F');
+  await selectFirstFinding(view);
+  const picker = await screen.findByRole('button', { name: /^Nemesis event type/ });
+  expect(paintedFindings()).toEqual([picker]);
 });
 
 it('marks Delete on a Timeline action that should not exist', async () => {
@@ -220,78 +258,10 @@ it('marks the next visit’s room picker for an incomplete Hub visit order', asy
   await waitFor(() => expect(document.activeElement).toBe(picker));
 });
 
-it('marks the visit reward’s repair for a rerolled reward its Hub rerolls no longer reach', async () => {
-  const hub = createHubDecisionAddress(nBiome, 'hub');
-  const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
-  const held = applyProjectCommand(loadSurfaceNProject(), catalog, {
-    kind: 'ReplaceManualArcanaSelection',
-    route: { kind: 'route', routeKey: 'Surface' },
-    arcanaKeys: ['DoorReroll'],
-  });
-  const view = renderWorkspace(
-    applyProjectCommand(held, catalog, {
-      kind: 'InsertHubReroll',
-      hub,
-      hubSlotKey: 'combat05',
-      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-      index: 0,
-    }),
-    'Surface',
-    'N',
-  );
-  // The visit picks the rerolled Boon, then its press goes and the pick stays for repair.
-  act(() => {
-    view.application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(reward, 'source'),
-        value: {
-          kind: 'traits',
-          giverKey: 'Ares',
-          options: [
-            { traitKey: 'AresWeaponBoon', rarity: 'Common' },
-            { traitKey: 'AresSpecialBoon', rarity: 'Common' },
-            { traitKey: 'AresCastBoon', rarity: 'Common' },
-          ],
-          selectedOptionKey: 'option1',
-          rarificationActions: [],
-        },
-      }),
-    );
-    view.application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'RemoveHubReroll',
-        reroll: createHubRerollAddress(nBiome, 'hub', 'r1'),
-      }),
-    );
-  });
-  const finding = view.application.store
-    .getState()
-    .projectWorkspace.assembly!.evaluation.findings.find(
-      (candidate) => candidate.code === 'rerolledRewardMismatch',
-    );
-  if (finding === undefined) throw new Error('the rerolled reward finding is missing');
-  expect(finding.origin).toEqual(reward);
-  act(() =>
-    view.application.store.dispatch(
-      findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-    ),
-  );
-  expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
-    'true',
-  );
-  const visits = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
-  const repair = within(visits).getByRole('button', {
-    name: /^Drop rerolled reward for Combat 05/,
-  });
-  expect(paintedFindings()).toEqual([repair]);
-  await waitFor(() => expect(document.activeElement).toBe(repair));
-});
-
-it('marks Restore on an Anomaly its source cannot produce', async () => {
+it('marks the live chip of a required contact an Anomaly source still owes', async () => {
   const view = renderWorkspace(artemisSourceAnomalyProject(), 'Underworld', 'G');
-  const door = await openFirstFinding(view);
-  expect(paintedFindings()).toEqual([within(door).getByRole('button', { name: /^Restore / })]);
+  const chip = await openFirstFinding(view);
+  expect(paintedFindings()).toEqual([within(chip).getByRole('button', { name: 'Artemis' })]);
 });
 
 it('renders a Fields cage with an ordering issue as a movable row', async () => {

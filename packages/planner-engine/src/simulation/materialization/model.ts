@@ -64,11 +64,6 @@ export interface CanonicalRewardReroll {
 /** Fields a rerollable reward owner carries beside its offer. */
 export interface CanonicalRerollableReward {
   readonly reroll?: CanonicalRewardReroll;
-  /**
-   * The authored rerolled acquisition does not match the effective offer, or
-   * no reroll remains for it; kept for repair and reported.
-   */
-  readonly rerolledRewardMismatch?: true;
 }
 
 /**
@@ -107,6 +102,8 @@ export interface CanonicalResolvedIncomingReward extends CanonicalRerollableRewa
    * acquisition point during the entered lifecycle.
    */
   readonly acquisitionEnabled?: boolean;
+  /** The room's encounter spawns this reward as one that can never duplicate. */
+  readonly blocksSeaStarDuplication?: true;
 }
 
 export interface CanonicalShopOffer {
@@ -295,11 +292,25 @@ export interface CanonicalAuthoredRoom {
   /** Normalized catalog whitelist consumed by an Extended Well purchase. */
   readonly stygianWellExtendedDirectPurchaseItemKeys?: readonly string[];
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
-  /** Fields combat rooms only: the room-action domain's cage order state. */
-  readonly fieldsCageOrder?: import('../../authored-project/room-actions/domain').FieldsCageOrderState;
+  /** The room's door, cage and wheel presses whose target holds their result, by reroll id. */
+  readonly rerollPresses?: ReadonlyMap<
+    string,
+    import('../../authored-project/rerolls').ResolvedRerollPress
+  >;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
-  readonly clockworkReward?: 'goal' | 'nonGoal';
+  /**
+   * The reward its door forces in place of a counted choice: a Clockwork Goal,
+   * which spawns no pickup and draws from no store.
+   */
+  readonly forcedRewardType?: import('../../authored-project/clockwork-doors').ForcedRewardType;
+  /**
+   * Whether the room runs its reward's producer, its reward chosen or not
+   * (`roomRunsProducer`); the room's walk, event graph and cut read this.
+   */
+  readonly runsProducer: boolean;
+  /** Its reward, spawned through a Clockwork batch's door, counts toward the next forced Goal. */
+  readonly countsTowardClockworkGoal?: true;
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly unresolvedIncomingReward?: Omit<
     CanonicalResolvedIncomingReward,
@@ -362,6 +373,8 @@ export interface CanonicalHubRoom {
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;
+  /** The Hub board room spawns no reward. */
+  readonly runsProducer: false;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: true;
 }
@@ -554,7 +567,8 @@ export interface CanonicalHubDecision {
 export interface CanonicalHubReroll {
   readonly origin: import('../../authored-project/addresses').HubRerollAddress;
   readonly hubSlotKey: string;
-  readonly reward: ResolvedRewardOffer;
+  /** The reward the press drew; absent while its slot is closed. */
+  readonly reward?: ResolvedRewardOffer;
   /** Room visits completed, including their Hub returns, before the press. */
   readonly precedingVisitCount: number;
   /** Whether the Hub fountain use precedes the press in the same stay. */

@@ -4,7 +4,6 @@ import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
 import underworldFMidshopPomRaw from './underworld-f-midshop-pom-frontier.runplanner.json';
 import underworldFTraitOrderChecksRaw from './underworld-f-trait-order-checks.runplanner.json';
-import underworldFDuoExchangeOrderRaw from './underworld-f-duo-exchange-order.runplanner.json';
 import underworldFPoolRaw from './underworld-f-pool.runplanner.json';
 import underworldFStygianWellRaw from './underworld-f-stygian-well.runplanner.json';
 import underworldFGRaw from './underworld-fg.runplanner.json';
@@ -16,7 +15,6 @@ import underworldArachneCocoonsRaw from './underworld-arachne-cocoons.runplanner
 import underworldAutomaticBossRaw from './underworld-automatic-boss.runplanner.json';
 import underworldFigLeafRaw from './underworld-fig-leaf.runplanner.json';
 import underworldGorgonAthenaRaw from './underworld-gorgon-athena.runplanner.json';
-import underworldPersephoneCallingCardRaw from './underworld-persephone-calling-card.runplanner.json';
 import underworldTwistScyllaRaw from './underworld-twist-scylla.runplanner.json';
 import underworldZagreusContractRaw from './underworld-zagreus-contract.runplanner.json';
 import underworldWorldShopTravelDealRaw from './underworld-world-shop-travel-deal.runplanner.json';
@@ -45,14 +43,12 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-automatic-boss': checkpointArtifact(underworldAutomaticBossRaw),
   'underworld-fig-leaf': checkpointArtifact(underworldFigLeafRaw),
   'underworld-gorgon-athena': checkpointArtifact(underworldGorgonAthenaRaw),
-  'underworld-persephone-calling-card': checkpointArtifact(underworldPersephoneCallingCardRaw),
   'underworld-twist-scylla': checkpointArtifact(underworldTwistScyllaRaw),
   'underworld-zagreus-contract': checkpointArtifact(underworldZagreusContractRaw),
   'underworld-world-shop-travel-deal': checkpointArtifact(underworldWorldShopTravelDealRaw),
   'underworld-generated-composition': checkpointArtifact(underworldGeneratedCompositionRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
   'underworld-f-trait-order-checks': checkpointArtifact(underworldFTraitOrderChecksRaw),
-  'underworld-f-duo-exchange-order': checkpointArtifact(underworldFDuoExchangeOrderRaw),
   'natural-chaos-unresolved-trial': checkpointArtifact(naturalChaosUnresolvedTrialRaw),
   'nemesis-f-trait-trade': checkpointArtifact(nemesisFTraitTradeRaw),
   'nemesis-h-fields': checkpointArtifact(nemesisHFieldsRaw),
@@ -101,10 +97,6 @@ export function loadUnderworldFigLeafCheckpoint(): ProjectDocument {
 
 export function loadUnderworldGorgonAthenaCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-gorgon-athena'].load();
-}
-
-export function loadUnderworldPersephoneCallingCardCheckpoint(): ProjectDocument {
-  return underworldCheckpointArtifacts['underworld-persephone-calling-card'].load();
 }
 
 export function loadUnderworldTwistScyllaCheckpoint(): ProjectDocument {

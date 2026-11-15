@@ -1055,6 +1055,70 @@ describe('run record builder', () => {
     });
   });
 
+  it("counts an unslotted Time Piece's last charge, whose spend removes its trait", () => {
+    const slotted = (checkpoint: SaveCheckpoint): SaveCheckpoint => ({
+      ...checkpoint,
+      hero: { ...checkpoint.hero!, slotted: { Keepsake: 'BossPreDamageKeepsake' } },
+    });
+    const kept = { name: 'BossPreDamageKeepsake', id: '11120.50.4', rarity: 'Epic' };
+    const record = buildRunRecord([
+      slotted(
+        save({
+          history: [],
+          current: room('P_Combat07', { chosenRewardType: 'SpellDrop' }),
+          traits: [{ ...startTraits[0]!, boonConversionUses: 1 }, kept],
+        }),
+      ),
+      slotted(
+        save({
+          history: ['P_Combat07'],
+          current: room('P_Combat03'),
+          departure: room('P_Combat07', { chosenRewardType: 'SpellDrop' }),
+          traits: [kept],
+        }),
+      ),
+    ]);
+    expect(record.rooms[0]).toMatchObject({
+      traits: { removed: ['GoldifyKeepsake'] },
+      conversions: { timePiece: 1 },
+    });
+  });
+
+  it('records no Time Piece conversion when choosing a keepsake that opposes Fated expires it', () => {
+    const withKeepsake =
+      (keepsake: string) =>
+      (checkpoint: SaveCheckpoint): SaveCheckpoint => ({
+        ...checkpoint,
+        hero: { ...checkpoint.hero!, slotted: { Keepsake: keepsake } },
+      });
+    const opposing = { name: 'ForceZeusBoonKeepsake', id: '11120.50.5', rarity: 'Common' };
+    const expired = { ...startTraits[0]!, boonConversionUses: 0, expired: true as const };
+    const run = (start: string, held: SavedTrait[]) =>
+      buildRunRecord([
+        withKeepsake(start)(
+          save({
+            history: [],
+            current: room('P_PreBoss01', { chosenRewardType: 'SpellDrop' }),
+            traits: [{ ...startTraits[0]!, boonConversionUses: 2 }, ...held],
+          }),
+        ),
+        withKeepsake('ForceZeusBoonKeepsake')(
+          save({
+            history: ['P_PreBoss01'],
+            current: room('P_Boss01'),
+            departure: room('P_PreBoss01', { chosenRewardType: 'SpellDrop' }),
+            traits: [expired, opposing],
+          }),
+        ),
+      ]);
+    // An unslotted Time Piece held beside the swap, and the slotted one swapped away.
+    const kept = { name: 'BossPreDamageKeepsake', id: '11120.50.4', rarity: 'Epic' };
+    for (const record of [run('BossPreDamageKeepsake', [kept]), run('GoldifyKeepsake', [])]) {
+      expect(record.rooms[0]!.keepsakeSwap?.to).toBe('ForceZeusBoonKeepsake');
+      expect(record.rooms[0]!.conversions?.timePiece).toBeUndefined();
+    }
+  });
+
   it("carries an acquired trait's kept saved values as first saved", () => {
     const savedValues = {
       'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,

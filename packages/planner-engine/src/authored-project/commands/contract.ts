@@ -1,7 +1,7 @@
 import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
-import { INITIAL_ROLL_KEY } from '../feature-rolls';
+import { PURGING_POOL_REFRESH_ROLL_KEY } from '../feature-rolls';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
+import type { SemanticAddress } from '../addresses';
 import {
   semanticAddressKey,
   createBiomeAddress,
@@ -37,7 +37,7 @@ export class ProjectCommandContractError extends Error {
 
   constructor(
     commandKind: CommandContractSubject['kind'],
-    address: SemanticAddress | AcquisitionSiteAddress,
+    address: SemanticAddress,
     detail: string,
     options?: ErrorOptions,
   ) {
@@ -50,9 +50,7 @@ export class ProjectCommandContractError extends Error {
   }
 }
 
-function commandContractAddress(
-  command: CommandContractSubject,
-): SemanticAddress | AcquisitionSiteAddress {
+function commandContractAddress(command: CommandContractSubject): SemanticAddress {
   switch (command.kind) {
     case 'RenameProject':
       return command.project;
@@ -147,7 +145,6 @@ function commandContractAddress(
     case 'ReplaceRoomObjectAnchor':
       return command.occurrence;
     case 'ReplaceOccurrenceRoom':
-    case 'ReplaceFieldsCageOrder':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':
     case 'InsertPurgingPoolReroll':
@@ -158,6 +155,7 @@ function commandContractAddress(
     case 'ReplaceChallengeSwitchElite':
     case 'ReplaceChallengeSwitchCustomization':
     case 'ReplaceLockedExit':
+    case 'ReplaceLockedExitCustomization':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -169,6 +167,7 @@ function commandContractAddress(
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
+    case 'SetHermesShrineRush':
     case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
@@ -176,18 +175,10 @@ function commandContractAddress(
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
-    case 'SetHermesShrinePurchaseRush':
     case 'ReplaceRerollReward':
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
-    case 'ReplaceUnlockExitCustomization':
       return command.action;
-    case 'SellPurgingPoolRollSlot':
-      return createRoomFeatureAddress(command.occurrence, {
-        kind: 'purgingPoolOffer',
-        slotKey: command.slotKey,
-        ...(command.rollKey === INITIAL_ROLL_KEY ? {} : { rollKey: command.rollKey }),
-      });
     case 'InsertReroll':
       return command.occurrence;
     case 'InsertHubReroll':
@@ -195,9 +186,6 @@ function commandContractAddress(
     case 'ReplaceHubRerollReward':
     case 'RemoveHubReroll':
       return command.reroll;
-    case 'DropRerolledReward':
-    case 'AdoptRerolledReward':
-      return command.owner;
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
     case 'PurchaseShopTravelDealRefill':
@@ -225,10 +213,9 @@ function commandContractAddress(
       return command.pedestal;
     case 'ReplacePhantomExit':
       return command.exit;
-    case 'PlaceEchoGoldPickup':
-      return command.site;
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
+    case 'PlaceEchoGoldPickup':
       return command.entry;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;
@@ -267,9 +254,7 @@ function commandContractAddress(
   }
 }
 
-export function projectCommandAddress(
-  command: ProjectCommand,
-): SemanticAddress | AcquisitionSiteAddress {
+export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
   switch (command.kind) {
     case 'ReplaceFieldsOptionalRewardCount':
       return createRoomFeatureAddress(command.occurrence, { kind: 'fieldsOptionalRewardCount' });
@@ -281,12 +266,6 @@ export function projectCommandAddress(
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
       return command.action;
-    case 'SellPurgingPoolRollSlot':
-      return createRoomFeatureAddress(command.occurrence, {
-        kind: 'purgingPoolOffer',
-        slotKey: command.slotKey,
-        ...(command.rollKey === INITIAL_ROLL_KEY ? {} : { rollKey: command.rollKey }),
-      });
     case 'ReplaceStygianWellOffer':
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'stygianWellOffer',
@@ -313,6 +292,7 @@ export function projectCommandAddress(
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'purgingPoolOffer',
         slotKey: command.slotKey,
+        ...(command.list === undefined ? {} : { rollKey: PURGING_POOL_REFRESH_ROLL_KEY }),
       });
     case 'SetHermesShrinePresence':
       return createRoomFeatureAddress(command.occurrence, { kind: 'hermesShrinePresence' });
@@ -341,6 +321,7 @@ export function projectCommandAddress(
     case 'ReplaceChallengeSwitchCustomization':
       return createRoomFeatureAddress(command.occurrence, { kind: 'challengeSwitch' });
     case 'ReplaceLockedExit':
+    case 'ReplaceLockedExitCustomization':
       return createRoomFeatureAddress(command.occurrence, { kind: 'lockedExits' });
     case 'ReplaceRoomLayout':
       return createRoomFeatureAddress(command.occurrence, {

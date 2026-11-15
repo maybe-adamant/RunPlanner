@@ -256,7 +256,11 @@ contact and its own lifecycle witness.
 
 The planner disposition is **Exact within modeled producers**. Provider-force
 use belongs to the producer's loot-materialization lifecycle, not its optional
-pickup disposition. Purchases are excluded by provenance. No new player-facing
+pickup disposition: a room reward spends it as it spawns, a Fields cage on
+room entry and never at its completion, and a reward Vow of Forfeit replaces
+spends none, since Forfeit returns before `GiveLoot`. An Opening reward's use
+and Devotion's two are spent at the pickup (each god's, for Devotion) rather
+than at encounter start; no door generation separates the two. Purchases are excluded by provenance. No new player-facing
 choice is implied by this automatic effect.
 
 ## Provider-specific rarification

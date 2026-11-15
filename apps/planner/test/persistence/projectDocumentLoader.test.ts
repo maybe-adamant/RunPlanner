@@ -1,27 +1,55 @@
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createHubDecisionAddress,
+  createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
+  heraclesBountySiteKey,
   encodeProjectDocument,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateSiteKey,
+  type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
+import {
+  fillNemesisBetOutcomeWins,
+  recoverLegacyTimedOutcomes,
+} from '@run-planner/engine/project-migration';
+import { migrateProjectDocumentJudgedBy as migrate100To101JudgedBy } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
-import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
+import {
+  liftProjectDocument as migrate102To103,
+  migrateProjectDocument as settle102To103,
+  migrateProjectDocumentRecoveredBy as settle102To103RecoveredBy,
+} from '@planner/persistence/project-102-to-103.js';
+import { readLegacyTimedOutcomes } from '@planner/persistence/project-98-to-99.js';
+import { PROJECT_TRANSITION_STEPS } from '@planner/persistence/project-transitions.js';
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
+  loadUnderworldFPoolCheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  authorTestArtificerReplacement,
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
   goldenFBiome,
@@ -33,14 +61,31 @@ import {
   legacyRareEpicHexTrees,
   legacySchema99Body,
   legacySchema100Body,
+  legacySchema101Body,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
+  loadSurfaceNOPQProject,
   loadSurfaceNProject,
   nBiome,
+  nOccurrenceId,
   nVisitSlotKeys,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
   withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
-import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceScheduledLifecycleCheckpoint,
+  surfaceCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/surface';
+import { createAuthoringSession } from '@run-planner/engine/authoring';
+import {
+  createFreshFileFProject,
+  freshFileFPostbossId,
+  withRetainedFreshFilePostboss,
+} from '@run-planner/test-fixtures/fresh-file';
 
 import {
   applyProjectDocumentTransitions,
@@ -69,10 +114,24 @@ function currentRevisionText(checkpoint: unknown): string {
   );
 }
 
+/**
+ * The plan without its stored positions, as a legacy save lacks them: its
+ * migration stores only those of the rooms its walk reaches.
+ */
+function withoutPositions(document: unknown): unknown {
+  return JSON.parse(JSON.stringify(document), (key, value: unknown) =>
+    key === 'layout' || key === 'anchorId' || key === 'spawnPointIndex' ? undefined : value,
+  );
+}
+
 /** The plan as opening it saved at schema 102 leaves it: settled once by its migration. */
 const openedAt102 = (document: ProjectDocument) =>
   loadProjectDocument(
-    JSON.stringify({ ...JSON.parse(encodeProjectDocument(document)), schemaVersion: 102 }),
+    JSON.stringify({
+      ...JSON.parse(encodeProjectDocument(document)),
+      schemaVersion: 102,
+      schemaRevision: 1,
+    }),
     catalog,
   ).project;
 
@@ -97,6 +156,366 @@ describe('project document loader', () => {
       const json = JSON.stringify({ ...project, schemaRevision: revision });
       expect(loadProjectDocument(json, catalog)).toEqual({ migrationProvenance: [], project });
     }
+  });
+
+  it('stocks the blank Well and Pool a schema 103.0 plan reaches, once, at load', () => {
+    const saved = JSON.parse(
+      encodeProjectDocument(loadUnderworldFPoolCheckpoint()),
+    ) as ProjectDocument;
+    const gPostboss = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === 'golden-g-preboss-shop:postboss',
+        )!;
+    const blank = gPostboss(saved) as unknown as {
+      stygianWell: { offerKeyBySlot: Record<string, string | null> };
+      purgingPool: { traitKeyBySlot: Record<string, string | null> };
+    };
+    blank.stygianWell.offerKeyBySlot = { healing: null, secondLeft: null, secondRight: null };
+    blank.purgingPool.traitKeyBySlot = { left: null, middle: null, right: null };
+    const loaded = (revision: number) =>
+      loadProjectDocument(JSON.stringify({ ...saved, schemaRevision: revision }), catalog).project;
+
+    const opened = loaded(0);
+    const { stygianWell, purgingPool } = gPostboss(opened);
+    expect(Object.values(stygianWell!.offerKeyBySlot)).not.toContain(null);
+    expect(Object.values(purgingPool!.traitKeyBySlot)).not.toContain(null);
+    expect(simulateProject(catalog, opened).findings.map((finding) => finding.code)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/Missing$/)]),
+    );
+    // A plan saved at the current revision loads as is.
+    expect(gPostboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION)).stygianWell!.offerKeyBySlot).toEqual(
+      blank.stygianWell.offerKeyBySlot,
+    );
+  });
+
+  it('fills the blank positions a schema 103.1 plan reaches, once, at load', () => {
+    const saved = JSON.parse(
+      encodeProjectDocument(loadUnderworldFPoolCheckpoint()),
+    ) as ProjectDocument;
+    const layouts = (document: ProjectDocument) =>
+      document.route.biomes.flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).map((occurrence) => occurrence.layout),
+      );
+    expect(layouts(saved).some((layout) => layout !== undefined)).toBe(true);
+    for (const biome of saved.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? [])
+        delete (occurrence as { layout?: unknown }).layout;
+    const loaded = (revision: number) =>
+      loadProjectDocument(JSON.stringify({ ...saved, schemaRevision: revision }), catalog).project;
+    expect(layouts(loaded(1))).toEqual(layouts(loadUnderworldFPoolCheckpoint()));
+    // A plan saved at the current revision loads as is.
+    expect(
+      layouts(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION)).every((layout) => layout === undefined),
+    ).toBe(true);
+  });
+
+  it('drops a Well and Pool its route never spawns, with their rows, from a plan before 103.3', () => {
+    const retained = withRetainedFreshFilePostboss(createFreshFileFProject(), {
+      well: true,
+      poolSaleTraitKey: 'ApolloWeaponBoon',
+    });
+    const postboss = (document: ProjectDocument) =>
+      document.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === freshFileFPostbossId,
+      )!;
+    const loaded = (revision: number) =>
+      loadProjectDocument(
+        JSON.stringify({
+          ...JSON.parse(encodeProjectDocument(retained)),
+          schemaRevision: revision,
+        }),
+        catalog,
+      ).project;
+
+    const opened = postboss(loaded(2));
+    expect(opened.stygianWell).toBeUndefined();
+    expect(opened.purgingPool).toBeUndefined();
+    expect(opened.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'sellPurgingPoolTrait' }),
+    );
+    expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
+    // A plan saved at the current revision loads as is.
+    expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  describe("a Sea Star copy of an Anomaly's reward, which never duplicates", () => {
+    const g = createBiomeAddress('Underworld', 'G');
+    const anomalyId = createOccurrenceId('golden-g-b3-e2');
+    const normal = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, createOccurrenceId('golden-g-b4-e1')),
+      'self',
+    );
+    // A copy of an ordinary room reward stays.
+    const current = applyProjectCommand(loadUnderworldGAnomalyRosterCheckpoint(), catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: normal,
+      procced: true,
+    });
+    const anomalyOccurrence = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === anomalyId)!;
+    const incoming = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, anomalyId),
+      'self',
+    );
+    // The Anomaly reward converted by the Artificer into Max Health.
+    const replacementEntry = createAcquisitionEntryAddress(
+      artificerAcquisitionSite(createOccurrenceAddress(g, anomalyId), incoming.owner),
+      artificerReplacementEntryKey(incoming.owner, 'self'),
+    );
+    const converted = authorTestArtificerReplacement(
+      current,
+      catalog,
+      incoming,
+      Object.freeze({
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({
+          self: Object.freeze({ kind: 'normal' as const }),
+        }),
+      }),
+    );
+    /** Saved before the rule: a copy of `source`'s reward with its pickup row. */
+    function withCopyOf(
+      document: ProjectDocument,
+      source: ReturnType<typeof createAcquisitionRoleAddress>,
+      rewardType: string,
+    ): ProjectDocument {
+      const siteKey = seaStarDuplicateSiteKey(source);
+      const saved = JSON.parse(encodeProjectDocument(document)) as ProjectDocument;
+      const occurrence = anomalyOccurrence(saved) as unknown as {
+        acquisitionSites?: Record<string, unknown>;
+        roomActions: { order: unknown[] };
+      };
+      occurrence.acquisitionSites = {
+        ...occurrence.acquisitionSites,
+        [siteKey]: {
+          pickupEntries: {
+            [SEA_STAR_DUPLICATE_ENTRY_KEY]: {
+              offer: { rewardType },
+              traitOffersByAcquisitionRole: {},
+              dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+            },
+          },
+        },
+      };
+      occurrence.roomActions.order.push({
+        kind: 'interactAcquisitionEntry',
+        siteKey,
+        entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+        content: ['native', rewardType],
+      });
+      return saved;
+    }
+
+    it.each([
+      ['the reward', () => [current, incoming, 'MetaCardPointsCommonBigDrop'] as const],
+      [
+        'its Artificer replacement',
+        () =>
+          [
+            converted,
+            createAcquisitionRoleAddress(replacementEntry, 'self'),
+            'MaxHealthDrop',
+          ] as const,
+      ],
+    ])('drops a copy of %s with its row on load at every revision', (_, cases) => {
+      const [expected, source, rewardType] = cases();
+      const withCopy = withCopyOf(expected, source, rewardType);
+      expect(Object.keys(anomalyOccurrence(withCopy).acquisitionSites ?? {})).toContain(
+        seaStarDuplicateSiteKey(source),
+      );
+      for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
+        const loaded = loadProjectDocument(
+          JSON.stringify({ ...withCopy, schemaRevision: revision }),
+          catalog,
+        ).project;
+        expect(loaded).toEqual(expected);
+      }
+    });
+
+    it("keeps an ordinary room reward's copy and a plan without one unchanged", () => {
+      expect(
+        Object.keys(
+          current.route.biomes
+            .find((biome) => biome.biomeKey === 'G')!
+            .topology!.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === 'golden-g-b4-e1',
+            )!.acquisitionSites ?? {},
+        ),
+      ).toEqual([seaStarDuplicateSiteKey(normal)]);
+      for (const document of [current, converted])
+        expect(
+          loadProjectDocument(
+            JSON.stringify({
+              ...JSON.parse(encodeProjectDocument(document)),
+              schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+            }),
+            catalog,
+          ).project,
+        ).toEqual(document);
+    });
+  });
+
+  describe('a plan saved before Heracles’s bounty was a pickup (101.2)', () => {
+    const heraclesPhases = [
+      [nBiome, nOccurrenceId('combat05'), 'Encounter', 'HeraclesCombatN'],
+      [oBiome, oOccurrenceIds.combat01, 'Intro', 'HeraclesCombatO'],
+      [pBiome, pOccurrenceId('P_Combat02', 2, 1), 'Intro', 'HeraclesCombatP'],
+    ] as const;
+    // A two-offer wheel makes the schema 100 -> 101 migration judge the plan's evaluation.
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const wheelOffer = (offerKey: string) =>
+      createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', offerKey);
+    const current = heraclesPhases.reduce(
+      (document, [biome, occurrenceId, phaseKey, encounterKey]) =>
+        applyProjectCommand(document, catalog, {
+          kind: 'SelectEncounter',
+          phase: createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey),
+          encounterKey,
+        }),
+      (
+        [
+          { kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: 2 },
+          {
+            kind: 'ReplaceRewardWheelOffer',
+            offer: wheelOffer('offer1'),
+            value: { rewardType: 'MaxHealthDrop' },
+          },
+          {
+            kind: 'ReplaceRewardWheelOffer',
+            offer: wheelOffer('offer2'),
+            value: { rewardType: 'RoomMoneyDrop' },
+          },
+        ] satisfies ProjectCommand[]
+      ).reduce(
+        (document, command) => applyProjectCommand(document, catalog, command),
+        loadSurfaceNOPQProject(),
+      ),
+    );
+    const bountySite = (
+      document: ProjectDocument,
+      [biome, occurrenceId, phaseKey]: (typeof heraclesPhases)[number],
+    ) =>
+      document.route.biomes
+        .find((plan) => plan.biomeKey === biome.biomeKey)!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!
+        .acquisitionSites?.[heraclesBountySiteKey(phaseKey)];
+    /** The plan as an earlier save holds it: no bounty site or collect row. */
+    const withoutBounties = (document: unknown) =>
+      JSON.parse(JSON.stringify(document), (key, value: unknown) =>
+        key.startsWith('heraclesBounty:')
+          ? undefined
+          : Array.isArray(value)
+            ? value.filter(
+                (entry: unknown) =>
+                  !String((entry as { siteKey?: unknown } | null)?.siteKey).startsWith(
+                    'heraclesBounty:',
+                  ),
+              )
+            : value,
+      ) as Record<string, unknown>;
+
+    it('gains the bounty site of each phase Heracles fights in N, O and P, never its row', () => {
+      for (const site of heraclesPhases.map((phase) => bountySite(current, phase)))
+        expect(site).toBeDefined();
+      const saved = JSON.parse(encodeProjectDocument(current)) as unknown;
+      const at100 = withoutBounties(legacySchema100Body(saved));
+      const at101 = withoutBounties(legacySchema101Body(saved));
+      expect(JSON.stringify([at100, at101])).not.toContain('heraclesBounty');
+      for (const legacy of [
+        { ...at100, schemaVersion: 100 },
+        { ...at101, schemaVersion: 101, schemaRevision: 1 },
+      ]) {
+        const loaded = loadProjectDocument(JSON.stringify(legacy), catalog).project;
+        for (const phase of heraclesPhases)
+          expect(bountySite(loaded, phase)).toEqual(bountySite(current, phase));
+        // Collecting the bounty stays the owner's placement.
+        expect(encodeProjectDocument(loaded)).not.toContain('"siteKey":"heraclesBounty');
+      }
+      // From 101.2 on a plan stored the site, so its absence is malformed.
+      expect(() =>
+        loadProjectDocument(
+          JSON.stringify({ ...at101, schemaVersion: 101, schemaRevision: 2 }),
+          catalog,
+        ),
+      ).toThrow(/heraclesBounty:Encounter\.pickupEntries: does not match selected descriptor/);
+    });
+
+    it('reaches the schema 100 -> 101 wheel judge decoded, its bounty sites added', () => {
+      const legacy = {
+        ...withoutBounties(legacySchema100Body(JSON.parse(encodeProjectDocument(current)))),
+        schemaVersion: 100,
+      };
+      const judged: ProjectDocument[] = [];
+      migrate100To101JudgedBy(legacy, catalog, (project) => {
+        judged.push(project);
+        return undefined;
+      });
+      expect(judged).toHaveLength(1);
+      for (const phase of heraclesPhases)
+        expect(bountySite(judged[0]!, phase)).toEqual(bountySite(current, phase));
+      expect(() =>
+        simulateProject(catalog, loadProjectDocument(JSON.stringify(legacy), catalog).project),
+      ).not.toThrow();
+    });
+  });
+
+  describe('the Zagreus contract Champion row, granted with no pickup', () => {
+    const current = loadUnderworldZagreusContractCheckpoint();
+    const championRow = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+      content: ['native', 'InfernalContractBoon'],
+    } as const;
+    const contractRoomOrder = (document: ProjectDocument) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.gameName === 'C_Boss01')!.roomActions.order;
+    // Ranked before the gems, as the old roster proposed it.
+    const withChampion = JSON.parse(encodeProjectDocument(current)) as ProjectDocument;
+    (contractRoomOrder(withChampion) as unknown[]).unshift(championRow);
+    const saved = (document: ProjectDocument, envelope: Record<string, number>) =>
+      JSON.stringify({ ...JSON.parse(encodeProjectDocument(document)), ...envelope });
+
+    it('is dropped on load at every revision, leaving every other row', () => {
+      expect(contractRoomOrder(withChampion)).toEqual([
+        championRow,
+        { kind: 'collectRequiredReward' },
+      ]);
+      for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
+        const loaded = loadProjectDocument(
+          JSON.stringify({ ...withChampion, schemaRevision: revision }),
+          catalog,
+        ).project;
+        expect(loaded).toEqual(current);
+        expect(simulateProject(catalog, loaded).findings).toEqual(
+          simulateProject(catalog, current).findings,
+        );
+      }
+    });
+
+    it('is dropped from a plan upgraded from schema 102', () => {
+      const loaded = loadProjectDocument(
+        JSON.stringify({ ...withChampion, schemaVersion: 102, schemaRevision: 1 }),
+        catalog,
+      );
+      expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([103]);
+      expect(contractRoomOrder(loaded.project)).toEqual([{ kind: 'collectRequiredReward' }]);
+    });
+
+    it('leaves a plan without it unchanged', () => {
+      expect(
+        loadProjectDocument(
+          saved(current, { schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION }),
+          catalog,
+        ).project,
+      ).toEqual(current);
+    });
   });
 
   describe('a plan saved before schema 103', () => {
@@ -134,7 +553,11 @@ describe('project document loader', () => {
     });
 
     it('opens as saved when settling changes nothing', () => {
-      const clean = { ...JSON.parse(encodeProjectDocument(project)), schemaVersion: 102 };
+      const clean = {
+        ...JSON.parse(encodeProjectDocument(project)),
+        schemaVersion: 102,
+        schemaRevision: 1,
+      };
       expect(loadProjectDocument(JSON.stringify(clean), catalog)).toEqual({
         migrationProvenance: [
           {
@@ -186,7 +609,7 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       101, 102, 103,
     ]);
-    expect(loaded.project).toEqual(current);
+    expect(withoutPositions(loaded.project)).toEqual(withoutPositions(current));
 
     const won = applyProjectCommand(current, catalog, {
       kind: 'ReplaceNemesisBetOutcome',
@@ -201,7 +624,7 @@ describe('project document loader', () => {
     legacy.schemaVersion = 99;
     const migrated = loadProjectDocument(JSON.stringify(legacy), catalog);
     expect(migrated.migrationProvenance).toHaveLength(4);
-    expect(migrated.project).toEqual(won);
+    expect(withoutPositions(migrated.project)).toEqual(withoutPositions(won));
   });
 
   it('loads one plan saved at schema 98, 99 or 100 as the same current project', () => {
@@ -443,7 +866,9 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
-    expect(encodeProjectDocument(loaded.project)).toBe(JSON.stringify(unresolved, null, 2) + '\n');
+    expect(withoutPositions(JSON.parse(encodeProjectDocument(loaded.project)))).toEqual(
+      withoutPositions(unresolved),
+    );
   });
 
   it('loads schema-94 Path screens unresolved, leaving each reached screen to its author', () => {
@@ -459,8 +884,12 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
-    expect(encodeProjectDocument(loaded.project)).toBe(
-      JSON.stringify({ ...legacy, schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION }, null, 2) + '\n',
+    expect(withoutPositions(JSON.parse(encodeProjectDocument(loaded.project)))).toEqual(
+      withoutPositions(
+        JSON.parse(
+          currentRevisionText({ ...legacy, schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION }),
+        ),
+      ),
     );
   });
 
@@ -771,7 +1200,9 @@ describe('project document loader', () => {
       parseProjectDocument(
         JSON.stringify(
           migrate102To103(
-            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog)),
+            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog), {
+              catalog,
+            }),
           ),
         ),
         catalog,
@@ -884,7 +1315,7 @@ describe('project document loader', () => {
           targetSchemaVersion: 103,
         },
       ],
-      project: expected,
+      project: withoutPositions(expected),
     });
   });
 
@@ -1017,23 +1448,31 @@ describe('project document loader', () => {
     expect(occurrence?.hermesShrine?.offerBySlot.first?.delay).toBe(2);
     expect(occurrence?.hermesShrine?.offerBySlot.secondRight?.delay).toBe(5);
     expect(occurrence?.hermesShrine?.travelDealRefill?.offer?.delay).toBe(2);
-    expect(occurrence?.roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      { kind: 'interactKeepsakeRack' },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight', rushed: true },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: false },
-      {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'hermesShrineDelivery',
-        entryKey: entryKey('initial:first'),
-      },
-      {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'hermesShrineDelivery',
-        entryKey: entryKey('initial:secondRight'),
-      },
-    ]);
+    expect(occurrence?.roomActions.order).toEqual(
+      withItemContents(
+        loaded.project,
+        createOccurrenceAddress(createBiomeAddress('Surface', 'N'), createOccurrenceId(shrine)),
+        [
+          { kind: 'useFountain' },
+          { kind: 'interactKeepsakeRack' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+          { kind: 'rushHermesShrineOffer', generationKey: 'initial:first' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight' },
+          { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondRight' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: entryKey('initial:first'),
+          },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: entryKey('initial:secondRight'),
+          },
+        ],
+      ),
+    );
 
     // The saved board repeats Ares on Combat05 before four distinct gods in the game's
     // assignment order; the unvisited Combat01/Combat10 swap restores it.
@@ -1117,5 +1556,171 @@ describe('project document loader', () => {
         evidence: { rewardType: 'ChaosWeaponUpgrade', role: 'self', lifecyclePoint: 'purchase' },
       }),
     ]);
+  });
+});
+
+describe('timed outcomes saved before schema 99', () => {
+  type Saved = { occurrenceId: string; biomeKey: string; phaseKey: string };
+  /** Each landed cycle: where a schema 98 save held it, its saved value and its authoring command. */
+  function landed(project: ProjectDocument) {
+    return simulateProjectAssembly(catalog, project).evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? [
+            ...biome.rewards.steadyGrowthOutcomes.map((outcome) => ({
+              at: { ...outcome.owner, phaseKey: outcome.phaseKey } as Saved,
+              field: 'steadyGrowthTargetByPhase',
+              value: outcome.targetTraitKey as unknown,
+              author: (set: boolean): ProjectCommand => ({
+                kind: 'ReplaceSteadyGrowthTarget',
+                outcome: outcome.address,
+                targetTraitKey: set ? outcome.targetTraitKey! : null,
+              }),
+            })),
+            ...biome.rewards.transcendentEmbryoOutcomes.map((outcome) => ({
+              at: { ...outcome.owner, phaseKey: outcome.phaseKey } as Saved,
+              field: 'transcendentEmbryoBlessingByPhase',
+              value: outcome.value as unknown,
+              author: (set: boolean): ProjectCommand => ({
+                kind: 'ReplaceTranscendentEmbryoTransformation',
+                outcome: outcome.address,
+                value: set ? outcome.value! : null,
+              }),
+            })),
+          ]
+        : [],
+    );
+  }
+
+  /** The plan without these landed outcomes, as a schema 99 migration leaves it. */
+  const strip = (project: ProjectDocument, held: readonly ReturnType<typeof landed>[number][]) =>
+    held.reduce((plan, { author }) => applyProjectCommand(plan, catalog, author(false)), project);
+  const authored = loadSurfaceScheduledLifecycleCheckpoint();
+  const outcomes = landed(authored);
+  const stripped = strip(authored, outcomes);
+  /** The stripped plan saved at an older schema, holding these phase-keyed values. */
+  function savedAt(
+    schemaVersion: number,
+    held: readonly (typeof outcomes)[number][],
+    plan: ProjectDocument = stripped,
+  ) {
+    const body = legacySchema99Body(JSON.parse(encodeProjectDocument(plan))) as {
+      route: {
+        biomes: {
+          biomeKey: string;
+          topology?: {
+            occurrences: {
+              occurrenceId: string;
+              encounters: Record<string, Record<string, unknown> | undefined>;
+            }[];
+          };
+        }[];
+      };
+    };
+    for (const { at, field, value } of held) {
+      const occurrence = body.route.biomes
+        .find((biome) => biome.biomeKey === at.biomeKey)!
+        .topology!.occurrences.find((room) => room.occurrenceId === at.occurrenceId)!;
+      occurrence.encounters[field] = { ...occurrence.encounters[field], [at.phaseKey]: value };
+    }
+    return JSON.stringify({ ...body, schemaVersion, schemaRevision: 1 });
+  }
+  const unrecovered = loadProjectDocument(savedAt(98, []), catalog).project;
+
+  it('puts each saved target and blessing back on its source cycle, as authoring them would', () => {
+    const session = createAuthoringSession(catalog, simulateProjectAssembly(catalog, unrecovered));
+    for (const { author } of outcomes) expect(session.apply(author(true)).kind).toBe('applied');
+    const expected = encodeProjectDocument(session.current().project);
+    for (const schemaVersion of [98, 96]) {
+      const loaded = loadProjectDocument(savedAt(schemaVersion, outcomes), catalog);
+      expect(loaded.migrationProvenance.at(-1)?.targetSchemaVersion).toBe(103);
+      expect(encodeProjectDocument(loaded.project)).toBe(expected);
+      expect(landed(loaded.project).map(({ value }) => value)).toEqual(
+        outcomes.map(({ value }) => value),
+      );
+    }
+  });
+
+  it('puts back a saved value that lands only once the upgrade settlement fills an earlier blank', () => {
+    // Without the Embryo nothing lands before N's Postboss, whose blank Shrine slot stops the
+    // walk until the upgrade settlement stocks it.
+    const growthOnly = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'EscalatingKeepsake',
+    });
+    const growth = landed(growthOnly);
+    expect(growth.length).toBeGreaterThan(1);
+    const at98 = JSON.parse(savedAt(98, growth, strip(growthOnly, growth))) as {
+      route: { biomes: { topology?: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const postboss = at98.route.biomes[0]!.topology!.occurrences.find(
+      (room) => room.occurrenceId === 'surface-n-preboss:postboss',
+    ) as { hermesShrine: { offerBySlot: Record<string, unknown> } };
+    postboss.hermesShrine.offerBySlot.secondRight = null;
+    const saved = JSON.stringify(at98);
+    const legacyTimedOutcomes = readLegacyTimedOutcomes(JSON.parse(saved));
+    const at102 = PROJECT_TRANSITION_STEPS.filter(
+      (step) => step.SOURCE_SCHEMA_VERSION >= 98 && step.OUTPUT_SCHEMA_VERSION <= 102,
+    ).reduce(
+      (document, step) => step.migrateProjectDocument(document, { catalog }),
+      JSON.parse(saved) as unknown,
+    );
+    const bare = parseProjectDocument(JSON.stringify(migrate102To103(at102, catalog)), catalog);
+    expect(
+      recoverLegacyTimedOutcomes({ catalog, project: bare, outcomes: legacyTimedOutcomes }).dropped,
+    ).toEqual(legacyTimedOutcomes.map((legacy) => ({ legacy, reason: 'unlanded' })));
+
+    const loaded = loadProjectDocument(saved, catalog).project;
+    expect(landed(loaded).map(({ at, value }) => ({ at, value }))).toEqual(
+      growth.map(({ at, value }) => ({ at, value })),
+    );
+    expect(simulateProject(catalog, loaded).findings).toEqual([]);
+  });
+
+  it('drops a saved value no cycle lands at', () => {
+    const [first] = outcomes;
+    const elsewhere = { ...first!, at: { ...first!.at, phaseKey: 'Elsewhere' } };
+    expect(loadProjectDocument(savedAt(98, [elsewhere]), catalog).project).toEqual(unrecovered);
+  });
+
+  it('leaves a plan saved at schema 99 as it was', () => {
+    const at99 = JSON.parse(savedAt(99, [])) as Record<string, unknown>;
+    delete at99.schemaRevision;
+    expect(loadProjectDocument(JSON.stringify(at99), catalog).project).toEqual(unrecovered);
+  });
+
+  it('rejects a schema 99 plan holding a stray phase-keyed target, as strict decoding did', () => {
+    const growth = outcomes.filter(({ field }) => field === 'steadyGrowthTargetByPhase');
+    const at99 = JSON.parse(savedAt(99, growth)) as Record<string, unknown>;
+    delete at99.schemaRevision;
+    expect(() => loadProjectDocument(JSON.stringify(at99), catalog)).toThrow(
+      /steadyGrowthTargetByPhase: is not a project document field/,
+    );
+  });
+
+  it('settles the plan without its saved outcomes when their recovery throws or faults', () => {
+    const at98 = JSON.parse(savedAt(98, outcomes)) as unknown;
+    const legacyTimedOutcomes = readLegacyTimedOutcomes(at98);
+    expect(legacyTimedOutcomes).toHaveLength(outcomes.length);
+    const at102 = PROJECT_TRANSITION_STEPS.filter(
+      (step) => step.SOURCE_SCHEMA_VERSION >= 98 && step.OUTPUT_SCHEMA_VERSION <= 102,
+    ).reduce((document, step) => step.migrateProjectDocument(document, { catalog }), at98);
+    const withoutOutcomes = settle102To103(at102, { catalog });
+    const failures = [
+      () => {
+        throw new Error('recovery failed');
+      },
+      () => ({
+        project: stripped,
+        recovered: [],
+        dropped: [],
+        fault: { key: 'test', owner: createOccurrenceAddress(nBiome, nOccurrenceId('combat03')) },
+      }),
+    ] as const;
+    for (const recover of failures) {
+      const migrated = settle102To103RecoveredBy(at102, { catalog, legacyTimedOutcomes }, recover);
+      expect(migrated).toEqual(withoutOutcomes);
+    }
+    expect(landed(parseProjectDocument(JSON.stringify(withoutOutcomes), catalog))).toHaveLength(1);
   });
 });

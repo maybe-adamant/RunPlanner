@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createNemesisRandomEventAddress,
+  createOccurrenceAddress,
   createRoomActionAddress,
   NEMESIS_BET_OUTCOMES,
   NEMESIS_RANDOM_EVENT_FAMILIES,
@@ -18,7 +19,10 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
   infiniteRosterSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
+  planEndAvailability,
   type NemesisRandomEventCandidateSupport,
+  type NemesisRandomEventFamilyRefusal,
+  type PlanEndAvailability,
   type ProjectEvaluationAssembly,
   unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -55,6 +59,7 @@ import type {
 } from '../contracts/locals';
 import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
+import { planEndCommand } from '../assembly/plan-end-assembly';
 import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import { bindEncounterCustomizationInteraction } from './encounter-customization-binding';
 import { bindChallengeSwitchInteraction } from './challenge-switch-binding';
@@ -71,6 +76,12 @@ import type {
 } from '../contracts/features';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
+import {
+  nemesisFreeItemOfferCondition,
+  offerConditionProp,
+  selectedCondition,
+  shopOptionOfferCondition,
+} from './unmodeled-offer-conditions';
 import {
   createMemoizedStableIdentityPickerLoad,
   projectStableIdentityPicker,
@@ -261,18 +272,29 @@ function projectNemesisEventDomain(
   }
 }
 
-/** Whether the engine reached this Nemesis event; a non-exact assembly reaches nothing. */
-function nemesisEventReached(
+/** The engine's support for this Nemesis event; a non-exact assembly reaches nothing. */
+function nemesisEventSupport(
   assembly: ProjectEvaluationAssembly,
   event: import('@run-planner/engine/authored-project').NemesisRandomEventAddress,
-): boolean {
+): NemesisRandomEventCandidateSupport | undefined {
   try {
-    return (
-      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event) !== undefined
-    );
+    return nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event);
   } catch (error) {
-    if (error instanceof Error && error.name === 'ProjectSimulationContractError') return false;
+    if (error instanceof Error && error.name === 'ProjectSimulationContractError') return undefined;
     throw error;
+  }
+}
+
+/** Why the engine refuses one Nemesis event type where she spawns. */
+export function nemesisFamilyRefusalLabel(
+  catalog: Catalog,
+  refusal: NemesisRandomEventFamilyRefusal,
+): string {
+  switch (refusal.kind) {
+    case 'heldTrait':
+      return `Not while holding ${catalog.traits.byKey[refusal.traitKey]?.label ?? 'that boon'}`;
+    case 'noSellableGodTrait':
+      return 'Needs a god boon to trade';
   }
 }
 
@@ -321,6 +343,11 @@ export function bindOccurrenceLocalInteractions(
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
+  // The Shrine stocks the Surface Shop's items; the Well, the Room Shop's.
+  const shrineCondition = (rewardType: string) =>
+    offerConditionProp(shopOptionOfferCondition(catalog, 'SurfaceShop', { rewardType }));
+  const wellCondition = (optionKey: string) =>
+    offerConditionProp(shopOptionOfferCondition(catalog, 'RoomShop', { optionKey }));
   const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
   const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
@@ -351,9 +378,7 @@ export function bindOccurrenceLocalInteractions(
             );
           }
           let options:
-            | readonly import('@planner/projections/candidates/candidateProjection').CandidateOptionProjection<
-                number | null
-              >[]
+            | readonly import('@planner/projections/candidates/candidateProjection').CandidateOptionProjection<number>[]
             | undefined;
           const spatial = control.address;
           fieldsSpatialPoints.set(
@@ -364,7 +389,7 @@ export function bindOccurrenceLocalInteractions(
                 kind: 'fieldsSpatialPoint',
                 spatial,
               }),
-              intentFor: (pointId: number | null) =>
+              intentFor: (pointId: number) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplaceFieldsSpatialPoint' as const,
@@ -480,21 +505,28 @@ export function bindOccurrenceLocalInteractions(
               : Object.freeze({
                   encounterKey: nemesisChoice.value,
                   owner: createNemesisRandomEventAddress(phase.owner),
-                  familyPicker: projectStableIdentityPicker({
-                    // The declared families claim nothing until the event's context is reached.
-                    assessment: nemesisEventReached(
+                  familyPicker: (() => {
+                    // The declared families claim nothing until the room's entry is reached.
+                    const support = nemesisEventSupport(
                       assembly,
                       createNemesisRandomEventAddress(phase.owner),
-                    )
-                      ? 'assessed'
-                      : 'unassessed',
-                    choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
-                      label: nemesisFamilyLabel(family),
-                      value: family,
-                    })),
-                    selected: phase.nemesisEvent?.value?.kind,
-                    selectedLabel: undefined,
-                  }),
+                    );
+                    return projectStableIdentityPicker({
+                      assessment: support === undefined ? 'unassessed' : 'assessed',
+                      choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => {
+                        const refusal = support?.unavailableFamilies[family];
+                        return {
+                          label: nemesisFamilyLabel(family),
+                          value: family,
+                          ...(refusal === undefined
+                            ? {}
+                            : { unavailable: nemesisFamilyRefusalLabel(catalog, refusal) }),
+                        };
+                      }),
+                      selected: phase.nemesisEvent?.value?.kind,
+                      selectedLabel: undefined,
+                    });
+                  })(),
                   familyIntentFor: (family: AuthoredNemesisRandomEventKind) =>
                     Object.freeze({
                       command: Object.freeze({
@@ -677,6 +709,13 @@ export function bindOccurrenceLocalInteractions(
                 ...(event.value === null || event.value.kind === 'freeItem'
                   ? {}
                   : { outcome: nemesisEventOutcome(event.owner, event.value, event.reward) }),
+                ...(event.value?.kind !== 'freeItem' || event.reward === null
+                  ? {}
+                  : selectedCondition(
+                      offerConditionProp(
+                        nemesisFreeItemOfferCondition(catalog, event.reward.rewardType),
+                      ),
+                    )),
                 ...(event.reward === null
                   ? {}
                   : {
@@ -702,7 +741,8 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
-                contextReached: nemesisEventReached(assembly, event.owner),
+                contextReached:
+                  nemesisEventSupport(assembly, event.owner)?.assessment !== undefined,
                 load: () =>
                   event.value === null
                     ? undefined
@@ -732,18 +772,6 @@ export function bindOccurrenceLocalInteractions(
         roomActions.set(
           key,
           Object.freeze({
-            ...(requirement.fieldsCageOrder === undefined
-              ? {}
-              : {
-                  fieldsCageOrderIntentFor: (phaseKeys: readonly string[]) =>
-                    Object.freeze({
-                      command: Object.freeze({
-                        kind: 'ReplaceFieldsCageOrder' as const,
-                        occurrence: requirement.owner,
-                        phaseKeys: Object.freeze([...phaseKeys]),
-                      }),
-                    }),
-                }),
             intentFor(proposalKey: string) {
               const proposal = proposals.find((candidate) => candidate.key === proposalKey);
               if (proposal === undefined) {
@@ -804,26 +832,25 @@ export function bindOccurrenceLocalInteractions(
           purgingPoolSlots.set(
             slot.interactionKey,
             Object.freeze({
-              intentFor: (traitKey: string | null) =>
+              contextReached: requirement.assessment === 'assessed',
+              intentFor: (traitKey: string) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplacePurgingPoolSlot' as const,
                     occurrence: requirement.owner,
                     slotKey: slot.slotKey,
                     traitKey,
+                    ...(requirement.list === undefined ? {} : { list: requirement.list }),
                   }),
                 }),
               key: slot.interactionKey,
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...slot.candidateTraits.map((trait) => ({
-                    label: trait.label,
-                    value: trait.key,
-                  })),
-                ],
-                selected: slot.traitKey,
+                choices: slot.candidateTraits.map((trait) => ({
+                  label: trait.label,
+                  value: trait.key,
+                })),
+                selected: slot.traitKey ?? undefined,
                 selectedLabel: slot.traitLabel,
               }),
               owner: requirement.owner,
@@ -903,8 +930,9 @@ export function bindOccurrenceLocalInteractions(
             intentFor: (decisionKey, value) =>
               Object.freeze({
                 command: Object.freeze({
-                  kind: 'ReplaceUnlockExitCustomization' as const,
-                  action: encounter.address,
+                  kind: 'ReplaceLockedExitCustomization' as const,
+                  occurrence: encounter.occurrence,
+                  exitKey: encounter.exitKey,
                   decisionKey,
                   value,
                 }),
@@ -943,6 +971,7 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
                 choices: slot.candidateRewards.map((reward) => ({
@@ -955,6 +984,9 @@ export function bindOccurrenceLocalInteractions(
               owner: requirement.owner,
               slotKey: slot.slotKey,
               rewardType: slot.rewardType,
+              ...(slot.rewardType === null
+                ? {}
+                : selectedCondition(shrineCondition(slot.rewardType))),
               candidateRewardTypes: slot.candidateRewardTypes,
               delay: slot.delay,
               delayIntentFor: (
@@ -995,23 +1027,22 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...slot.candidateItems.map((item) => ({
-                    label: item.label,
-                    value: item.key,
-                  })),
-                ],
-                selected: slot.itemKey,
+                choices: slot.candidateItems.map((item) => ({
+                  label: item.label,
+                  value: item.key,
+                })),
+                selected: slot.itemKey ?? undefined,
                 selectedLabel: slot.itemLabel,
               }),
               owner: requirement.owner,
               generationKey: slot.generationKey,
               itemKey: slot.itemKey,
+              ...(slot.itemKey === null ? {} : selectedCondition(wellCondition(slot.itemKey))),
               candidateItemKeys: slot.candidateItemKeys,
-              intentFor: (itemKey: string | null) =>
+              intentFor: (itemKey: string) =>
                 Object.freeze({
                   command:
                     slot.slotKey === 'travelDealRefill'
@@ -1035,19 +1066,17 @@ export function bindOccurrenceLocalInteractions(
             twist.interactionKey,
             Object.freeze({
               key: twist.interactionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...twist.candidateItems.map((item) => ({
-                    label: item.label,
-                    value: item.key,
-                  })),
-                ],
-                selected: twist.itemKey,
+                choices: twist.candidateItems.map((item) => ({
+                  label: item.label,
+                  value: item.key,
+                })),
+                selected: twist.itemKey ?? undefined,
                 selectedLabel:
                   twist.itemKey === null
-                    ? 'Unresolved'
+                    ? undefined
                     : (catalog.rewards.shops.byKey.RoomShop?.groups.values
                         .flatMap((group) => group.options.values)
                         .find((option) => option.key === twist.itemKey)?.label ?? twist.itemKey),
@@ -1055,8 +1084,9 @@ export function bindOccurrenceLocalInteractions(
               owner: requirement.owner,
               generationKey: twist.generationKey,
               itemKey: twist.itemKey,
+              ...(twist.itemKey === null ? {} : selectedCondition(wellCondition(twist.itemKey))),
               candidateItemKeys: twist.candidateItemKeys,
-              intentFor: (itemKey: string | null) =>
+              intentFor: (itemKey: string) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplaceStygianWellTwistResult' as const,
@@ -1104,8 +1134,17 @@ export function bindOccurrenceLocalInteractions(
             'local-visit generation',
           );
         }
+        const mainRoom = createOccurrenceAddress(
+          createBiomeAddress(requirement.order.routeKey, requirement.order.biomeKey),
+          requirement.order.sourceOccurrenceId,
+        );
         for (const leave of requirement.leaves) {
           const selected = leave.options.find((option) => option.key === leave.selectedKey);
+          const hub = leave.options.find((option) => option.occurrenceId === undefined);
+          if (hub === undefined)
+            throw new StructuredWorkspaceProjectionContractError(
+              `${leave.interactionKey} has no Hub return`,
+            );
           const choices = Object.freeze(
             leave.options.map((option) =>
               Object.freeze({ label: option.key, value: option.proposedOccurrenceIds }),
@@ -1114,6 +1153,12 @@ export function bindOccurrenceLocalInteractions(
           const proposals = Object.freeze(
             leave.options.map((option) => option.proposedOccurrenceIds),
           );
+          const cut = Object.freeze({
+            kind: 'ReplaceLocalVisitOrder' as const,
+            order: requirement.order,
+            occurrenceIds: hub.proposedOccurrenceIds,
+          });
+          let endAvailability: PlanEndAvailability | undefined;
           set(
             localVisitOrders,
             leave.interactionKey,
@@ -1137,6 +1182,11 @@ export function bindOccurrenceLocalInteractions(
                     occurrenceIds: Object.freeze([...occurrenceIds]),
                   }),
                 }),
+              endPlanIntent: Object.freeze({
+                commands: Object.freeze([cut, planEndCommand(mainRoom)]),
+              }),
+              endPlanAvailability: () =>
+                (endAvailability ??= planEndAvailability(catalog, assembly, mainRoom, cut)),
               owner: requirement.order,
             }),
             'local-visit leave',
@@ -1174,7 +1224,7 @@ export function bindOccurrenceLocalInteractions(
               occurrence: requirement.owner,
             }),
           }),
-          'Ship combat-phase count',
+          'Ship phase count',
         );
         for (const wheel of requirement.wheels) {
           const key = semanticAddressKey(wheel.address);

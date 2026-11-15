@@ -31,6 +31,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { placeTestLivePickupsAtSite, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import {
@@ -87,6 +88,9 @@ function withSwitch(
       nectarDropped: false,
       ...options.outcome,
     } as ProjectCommand);
+  // The owner picks up what the claim drops.
+  if (options.used === true)
+    next = placeTestLivePickupsAtSite(next, createOccurrenceAddress(biome, id), 'challengeSwitch');
   return next;
 }
 
@@ -355,15 +359,16 @@ describe('challenge switch claims', () => {
     const kinds = events.map((event) => event.kind);
     const claim = kinds.indexOf('challengeSwitchInteracted');
     expect(claim).toBeGreaterThan(kinds.indexOf('outgoingGenerationCheckpoint'));
-    // Not an encounter end: no further encounter completion or end effects follow it.
+    // Not an encounter end: past its own fight's completion, no encounter
+    // completion or end effects follow it.
     expect(
-      kinds
+      events
         .slice(claim)
         .filter(
-          (kind) =>
-            kind === 'encounterCompleted' ||
-            kind === 'encounterEndEffectsApplied' ||
-            kind === 'offerPointAcquired',
+          (event) =>
+            (event.kind === 'encounterCompleted' && event.phaseKey !== 'challengeSwitch') ||
+            event.kind === 'encounterEndEffectsApplied' ||
+            event.kind === 'offerPointAcquired',
         ),
     ).toEqual([]);
     expect(claimAcquisitions(used)).toEqual(['MaxHealthDrop']);
@@ -760,16 +765,21 @@ describe('a left switch fight ends its room', () => {
 
   it('takes a Well purchase in before a left press, and reports a preserved one after it', () => {
     const occurrenceAddress = createOccurrenceAddress(fBiome, hostId);
-    let project = applyProjectCommand(left(), catalog, {
+    let project = settleTestEdit(left(), {
       kind: 'AddStygianWell',
       occurrence: occurrenceAddress,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: occurrenceAddress,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: occurrenceAddress,
       generationKey: 'initial:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
     const order = occurrence(project, 'F', 'golden-f-b8-e1').roomActions.order;
     expect(order.map((reference) => reference.kind)).toEqual([
@@ -931,16 +941,25 @@ describe('challenge switch encounter', () => {
     const used = withSwitch(golden(), 'F', 'golden-f-b8-e1', 'TimeChallengeSwitch_Money', {
       used: true,
     });
-    const press = fBiomeOf(used).history.events.find(
-      (event) => event.kind === 'challengeSwitchInteracted',
-    );
-    expect(press).toMatchObject({
-      encounter: {
-        encounterKey: 'TimeChallengeF',
-        phaseKind: 'combat',
-        countsEncounterDepth: true,
-      },
-    });
+    // The press runs its fight as the switch's phase: recorded, started, counted and completed.
+    const events = fBiomeOf(used).history.events;
+    const press = events.findIndex((event) => event.kind === 'challengeSwitchInteracted');
+    expect(
+      events
+        .slice(press, press + 5)
+        .map((event) => [
+          event.kind,
+          'phaseKey' in event ? event.phaseKey : undefined,
+          'encounterKey' in event ? event.encounterKey : undefined,
+        ]),
+    ).toEqual([
+      ['challengeSwitchInteracted', undefined, undefined],
+      ['encounterRecorded', 'challengeSwitch', 'TimeChallengeF'],
+      ['encounterStarted', 'challengeSwitch', 'TimeChallengeF'],
+      ['encounterDepthAdvanced', 'challengeSwitch', undefined],
+      ['encounterCompleted', 'challengeSwitch', undefined],
+    ]);
+    expect(events[press + 4]).toMatchObject({ endEffects: 'none' });
     // RecordEncounter, StartEncounter and its completion: the caches, never an end effect.
     expect(switchRecords(observed)).toEqual([]);
     expect(
@@ -1096,11 +1115,9 @@ describe('challenge switch encounter', () => {
     // The press records the composed roster's operands for later rolls and gold.
     expect(
       fBiomeOf(customized).history.events.find(
-        (event) => event.kind === 'challengeSwitchInteracted',
+        (event) => event.kind === 'encounterStarted' && event.phaseKey === 'challengeSwitch',
       ),
-    ).toMatchObject({
-      encounter: { generatedCustomization: { decisionKey: 'generatedComposition' } },
-    });
+    ).toMatchObject({ generatedCustomization: { decisionKey: 'generatedComposition' } });
     const [published] = overviewSwitch(customized) as {
       customization?: { kind: string; waveCount: number; waves: unknown[] }[];
     }[];

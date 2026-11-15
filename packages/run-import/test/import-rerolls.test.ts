@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createLocalRewardAddress,
+  createRewardWheelOfferAddress,
+  hubRerollOwner,
+  rerolledRewardOf,
+  rerollResult,
+  resolveRerollTarget,
+  roomRerollOwner,
+  type OccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { projectFromRunRecord, type RunImport } from '../src/import';
 import type { RunRecord } from '../src/run-record';
 import {
@@ -71,10 +83,54 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       )
       .map(describeEntry);
 
+  /** A room's order, each press with its resolved target and the reward its rerolled item drew. */
+  const resolvedOrder = (project: ProjectDocument, occurrenceId: string) => {
+    const biome = project.route.biomes.find((entry) =>
+      entry.topology?.occurrences.some((candidate) => candidate.occurrenceId === occurrenceId),
+    )!;
+    const topology = biome.topology!;
+    return occurrence(project, occurrenceId).roomActions.order.map((action) => {
+      if (action.kind !== 'reroll') return action;
+      const owner = roomRerollOwner(
+        createBiomeAddress(project.route.routeKey, biome.biomeKey),
+        topology,
+        occurrenceId as OccurrenceId,
+        action,
+      );
+      const reward = rerollResult(topology, owner, action.rerollId);
+      return {
+        ...action,
+        target: resolveRerollTarget(topology, action) ?? action.target,
+        ...(reward === undefined ? {} : { reward }),
+      };
+    });
+  };
+
   const pressesOf = (project: ProjectDocument, occurrenceId: string) =>
-    occurrence(project, occurrenceId).roomActions.order.filter(
-      (action) => action.kind === 'reroll',
-    );
+    resolvedOrder(project, occurrenceId).filter((action) => action.kind === 'reroll');
+
+  /** A biome's Hub actions, each press with the reward its rerolled board door drew. */
+  const hubActions = (project: ProjectDocument) => {
+    const biome = project.route.biomes[0]!;
+    const hub = biome.topology!.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') return [];
+    return hub.actions.map((action) => {
+      if (action.kind !== 'reroll') return action;
+      const reward = rerollResult(
+        biome.topology!,
+        hubRerollOwner(createBiomeAddress(project.route.routeKey, biome.biomeKey), hub, action),
+        action.rerollId,
+      );
+      return { ...action, ...(reward === undefined ? {} : { reward }) };
+    });
+  };
+
+  /** What an owner's rerolled item holds: the drawn reward with its outcomes. */
+  const rerolledAt = (
+    project: ProjectDocument,
+    occurrenceId: string,
+    owner: Parameters<typeof rerolledRewardOf>[1],
+  ) => rerolledRewardOf(occurrence(project, occurrenceId), owner);
 
   it("redraws the first door that can have drawn the store's lost reward", () => {
     const imported = projectFromRunRecord(
@@ -201,15 +257,20 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     // The opening stock stays the initial roll; the record keeps no later roll's content.
     expect(postboss.stygianWell?.offerKeyBySlot.secondRight).toBe('TemporaryForcedSecretDoorTrait');
     expect(postboss.roomActions.order.slice(2)).toEqual([
+      { kind: 'rerollStygianWell', rerollId: 'r1' },
+      { kind: 'rerollPurgingPool', rerollId: 'r1' },
+      // Placed rows record the item content they act on.
       {
-        kind: 'rerollStygianWell',
-        rerollId: 'r1',
-        offerKeyBySlot: { secondRight: 'TemporaryForcedSecretDoorTrait' },
+        kind: 'purchaseStygianWellOffer',
+        generationKey: 'r1:secondRight',
+        content: ['TemporaryForcedSecretDoorTrait'],
       },
-      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { left: 'BoonDecayBoon' } },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'r1:secondRight' },
-      { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1', content: ['BoonDecayBoon'] },
     ]);
+    expect(postboss.stygianWell?.rerollOfferKeyBySlot).toEqual({
+      r1: { secondRight: 'TemporaryForcedSecretDoorTrait' },
+    });
+    expect(postboss.purgingPool?.rerollTraitKeyBySlot).toEqual({ r1: { left: 'BoonDecayBoon' } });
     expect(
       imported.report.entries
         .filter((entry) => entry.reason === 'assumption' && entry.record?.roomIndex === 13)
@@ -240,12 +301,18 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       withReroll(oceanus1010(), 17, 'RunProgress', { Boon: -1 }),
     );
     expect(rerollLines(imported, 17)).toEqual(['assumption reroll r17 occurrence@G-r17']);
-    const entered = occurrence(imported.project, 'G-r18');
     expect(reward(imported.project, 'G-r18').offer).toEqual({
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'AresUpgrade' },
     });
-    expect(entered.rerolledIncomingReward).toMatchObject({
+    const g = createBiomeAddress('Underworld', 'G');
+    expect(
+      rerolledAt(
+        imported.project,
+        'G-r18',
+        createIncomingRewardAddress(g, 'G-r18' as OccurrenceId),
+      ),
+    ).toMatchObject({
       offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
       traitOffersByAcquisitionRole: {
         source: { giverKey: 'Zeus', rerolledScreens: [{ options: expect.any(Array) }] },
@@ -285,7 +352,18 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       rewardType: 'Boon',
     });
     // The bracket's first exit is H_Combat05, never entered, so its redrawn cage shows no screen.
-    expect(fields.kind === 'fieldsCombat' && fields.rerolledCages?.['cage1']).toMatchObject({
+    expect(
+      rerolledAt(
+        imported.project,
+        'H-r28-d565616',
+        createLocalRewardAddress(
+          createBiomeAddress('Underworld', 'H'),
+          'H-r28-d565616' as OccurrenceId,
+          'cages',
+          'cage1',
+        ),
+      ),
+    ).toMatchObject({
       offer: { rewardType: 'HermesUpgrade' },
       traitOffersByAcquisitionRole: { self: null },
     });
@@ -301,7 +379,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     // reported: the plan holds it as a press on the unpicked offer.
     expect(rerollLines(imported, 22)).toEqual([]);
     const ship = occurrence(imported.project, 'O-r22');
-    expect(ship.roomActions.order.slice(0, 2)).toEqual([
+    expect(resolvedOrder(imported.project, 'O-r22').slice(0, 2)).toEqual([
       {
         kind: 'reroll',
         rerollId: 'r1',
@@ -312,8 +390,19 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     ]);
     expect(ship.state.kind === 'shipCombat' && ship.state.wheels['wheel1']).toMatchObject({
       offers: { offer2: { offer: { rewardType: 'MetaCurrencyBigDrop' } } },
-      rerolledOffers: { offer2: { offer: { rewardType: 'GiftDrop' } } },
     });
+    expect(
+      rerolledAt(
+        imported.project,
+        'O-r22',
+        createRewardWheelOfferAddress(
+          createBiomeAddress('Surface', 'O'),
+          'O-r22' as OccurrenceId,
+          'wheel1',
+          'offer2',
+        ),
+      )?.offer,
+    ).toEqual({ rewardType: 'GiftDrop' });
   });
 
   it("redraws a Hub board door before the Hub's first visit", () => {
@@ -322,10 +411,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       withReroll(surfaceWithEnchantress(4), 2, 'HubRewards', { WeaponUpgrade: -1 }),
     );
     expect(rerollLines(imported, 2)).toEqual(['assumption reroll r2 hubDecision@N:hub']);
-    const hub = imported.project.route.biomes[0]!.topology!.decisions.find(
-      (decision) => decision.kind === 'hub',
-    );
-    expect(hub?.kind === 'hub' && hub.actions.slice(0, 2)).toEqual([
+    expect(hubActions(imported.project).slice(0, 2)).toEqual([
       {
         kind: 'reroll',
         rerollId: 'r1',
@@ -356,10 +442,7 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     };
     const imported = projectFromRunRecord(catalog, record);
     expect(rerollLines(imported, 8)).toEqual(['assumption reroll r8 hubDecision@N:hub']);
-    const hub = imported.project.route.biomes[0]!.topology!.decisions.find(
-      (decision) => decision.kind === 'hub',
-    );
-    expect(hub?.kind === 'hub' && hub.actions.slice(3, 5)).toEqual([
+    expect(hubActions(imported.project).slice(3, 5)).toEqual([
       { kind: 'roomVisit', hubSlotKey: 'combat21' },
       {
         kind: 'reroll',

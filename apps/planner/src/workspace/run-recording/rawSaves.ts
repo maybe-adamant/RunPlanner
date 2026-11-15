@@ -35,6 +35,10 @@ export interface RawSaveCapture {
   delete(id: string): Promise<void>;
   /** Removes every folder but the stored runs' and the open runs' of `profiles`. */
   prune(ids: ReadonlySet<string>, profiles: ReadonlySet<number>): Promise<void>;
+  /** Whether the profile's open run has saves kept. */
+  holds(profile: number): Promise<boolean>;
+  /** Removes every stored run's saves; open runs keep theirs. */
+  clear(): Promise<void>;
 }
 
 export function createRawSaveCapture(host: RawSavesHost): RawSaveCapture {
@@ -81,6 +85,11 @@ export function createRawSaveCapture(host: RawSavesHost): RawSaveCapture {
         if (profile !== undefined) next.delete(profile);
         await host.delete(folder);
       }
+    },
+    holds: async (profile: number) => (await host.list(openRawFolder(profile))).length > 0,
+    async clear() {
+      for (const folder of await host.folders())
+        if (openRawProfile(folder) === undefined) await host.delete(folder);
     },
   });
 }

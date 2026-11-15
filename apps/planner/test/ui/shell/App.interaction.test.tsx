@@ -53,7 +53,10 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import {
   reachedTraitOffers,
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   prepareLegalPomTraitOffers,
+  replaceTestPlacedItem,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -105,7 +108,7 @@ function projectWithArtemisInErebus() {
   );
   return {
     phase,
-    project: authorLegalTraitOffers(
+    project: authorTestTraitsAndRequiredItems(
       applyProjectCommand(initial, catalog, {
         kind: 'SelectEncounter',
         phase,
@@ -140,7 +143,7 @@ function seaStarRewardFixture() {
     reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const openingOffer = supportedTraitOffer(
     project,
     createTraitOfferAddress(startReward, 'source'),
@@ -232,7 +235,7 @@ function seaStarRewardFixture() {
     reward: seaStarReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const seaStarOffer = supportedTraitOffer(
     project,
     createTraitOfferAddress(seaStarReward, 'source'),
@@ -302,7 +305,7 @@ function seaStarRewardFixture() {
     value: { rewardType: 'RoomMoneyDrop' },
   });
   return {
-    project,
+    project: collectTestRequiredItems(project),
     targetReward,
     targetAcquisition: createAcquisitionRoleAddress(targetReward, 'self'),
     target,
@@ -380,7 +383,7 @@ function heroicConcaveStoneTraitFixture() {
     trait: createTraitOfferAddress(startReward, 'source'),
     value: { kind: 'noProc' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: targetReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
@@ -418,12 +421,12 @@ function allTogetherFindingFixture() {
   let optionKey: 'option1' | 'option2' | 'option3' | undefined;
   for (const [biomeAddress, occurrenceId, traitKey] of plans) {
     const reward = createIncomingRewardAddress(biomeAddress, occurrenceId);
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const prepared = prepareLegalPomTraitOffers(project);
     project = prepared.project;
     const trace = reachedTraitOffers(project).find(
@@ -1269,19 +1272,10 @@ describe('planner history interaction', () => {
     const childTarget = () =>
       document.getElementById(semanticOwnerControlElementId(childDestination.focusAddress));
     await waitFor(() => expect(childTarget()).not.toBeNull());
-    const childRow = childTarget()?.closest('[data-room-action-key]');
     expect(childDestination.focusAddress.kind).toBe('roomAction');
-    if (childDestination.focusAddress.kind !== 'roomAction') {
-      throw new Error('Sea Star duplicate does not focus its room action');
-    }
-    expect(childRow?.getAttribute('data-room-action-key')).toBe(
-      childDestination.focusAddress.actionKey,
-    );
-    // The row reads its verb, then the reward as an icon named by the reward.
-    expect(childRow?.textContent).toContain('Collect');
-    expect(
-      childRow?.querySelector('[role="img"].row-reward-icon')?.getAttribute('aria-label'),
-    ).toBe('Gold');
+    // The copy lies on the ground: its finding leads to its chip on the live row.
+    expect(childTarget()?.closest('.timeline-live-row')).not.toBeNull();
+    expect(within(childTarget()!).getByRole('button').getAttribute('aria-label')).toBe('Gold');
     expect(
       application.store
         .getState()
@@ -1576,6 +1570,7 @@ describe('planner history interaction', () => {
     if (launcher === null) throw new Error('trait editor launcher is missing');
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
+    const initialGiver = within(dialog).getByRole('heading', { level: 2 }).textContent;
     const traitTrigger = within(dialog).getByLabelText('option1 trait');
     expect(traitTrigger.textContent).toContain(
       application.catalog.traits.byKey[initialValue.options[0]?.traitKey ?? '']?.label,
@@ -1596,18 +1591,12 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
     expect(replacement.value).toBeNull();
-    const replacementValue = replacement.traitOfferStartingOutcome?.();
-    if (replacementValue?.kind !== 'traits')
-      throw new Error('replacement trait interaction must provide a transient traits draft');
-    await waitFor(() =>
-      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[replacementValue.options[0]?.traitKey ?? '']?.label,
-      ),
-    );
-    expect(replacement.value).not.toEqual(initialValue);
-    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
-      replacement.giver.label,
-    );
+    // The swap takes the pickup with it: the new reward's offer waits on its placement, so the
+    // editor closes rather than keep the old giver's options.
+    expect(replacement.contextReached).toBe(false);
+    expect(replacement.giver.label).not.toBe(initialGiver);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     const restored = application
@@ -1617,13 +1606,19 @@ describe('planner history interaction', () => {
     const restoredValue = restored.value;
     if (restoredValue?.kind !== 'traits')
       throw new Error('restored trait interaction must offer traits');
-    await waitFor(() =>
-      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[restoredValue.options[0]?.traitKey ?? '']?.label,
-      ),
-    );
     expect(restored.value).toEqual(initialValue);
-    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
+    // Undo restores the reached offer; its editor reopens on the restored value.
+    const restoredLauncher = await waitFor(() => {
+      const found = document.getElementById(`trait-launcher-${semanticAddressKey(target)}`);
+      if (found === null) throw new Error('restored trait editor launcher is missing');
+      return found;
+    });
+    await view.user.click(restoredLauncher);
+    const restoredDialog = await screen.findByRole('dialog');
+    expect(within(restoredDialog).getByLabelText('option1 trait').textContent).toContain(
+      application.catalog.traits.byKey[restoredValue.options[0]?.traitKey ?? '']?.label,
+    );
+    expect(within(restoredDialog).getByRole('heading', { level: 2 }).textContent).toBe(
       restored.giver.label,
     );
   });
@@ -1852,8 +1847,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'PlaceEchoGoldPickup',
-        site,
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
         sourceOfferKey: derived.sourceOfferKey,
       }),
     );
@@ -1963,7 +1957,7 @@ describe('planner history interaction', () => {
       [goldenFOccurrenceId(6, 1), 'Hera', 'HeraUpgrade', 'BoonDecayBoon'],
     ] as const) {
       const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
-      project = applyProjectCommand(project, application.catalog, {
+      project = replaceTestPlacedItem(project, {
         kind: 'ReplaceIncomingReward',
         reward,
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
@@ -2135,7 +2129,7 @@ describe('planner history interaction', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(
         goldenGBiome,
@@ -2143,7 +2137,7 @@ describe('planner history interaction', () => {
       ),
       value: { rewardType: 'HermesUpgrade' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-b7-e1:exit3')),
       value: { rewardType: 'StackUpgrade' },

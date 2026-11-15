@@ -3,17 +3,17 @@ import type {
   HermesShrineGenerationKey,
   OccurrenceId,
   RerollTarget,
+  RoomActionContent,
   RoomActionReference,
   RoomActionState,
 } from '../../model';
-import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
-import { decodeGeneratedEncounterCustomization } from './generated-encounter-codec';
+import { decodeRerollId } from './reward-acquisition-codec';
+
+export { decodeRerollId };
 import { decodeStygianWellGenerationKey } from './well-codec';
-import { PURGING_POOL_SLOT_KEYS, STYGIAN_WELL_SLOT_KEYS } from '../../feature-rolls';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
-  expectBoolean,
   expectExactKeys,
   expectNonBlankString,
   expectRecord,
@@ -21,35 +21,18 @@ import {
   failProjectDocument,
 } from '../../validation';
 
-/** A persisted reroll instance identity: `r` and a positive integer. */
-export function decodeRerollId(value: unknown, path: string): string {
-  const rerollId = expectNonBlankString(value, path);
-  if (!/^r[1-9][0-9]*$/.test(rerollId)) failProjectDocument(path, 'must be a reroll id');
-  return rerollId;
-}
-
 function decodeRerollTarget(value: unknown, path: string): RerollTarget {
   const target = expectRecord(value, path);
   const kind = expectString(target.kind, `${path}.kind`);
   if (kind === 'door' || kind === 'cage') {
-    expectExactKeys(
-      target,
-      ['kind', 'exitKey', 'occurrenceId', ...(kind === 'cage' ? ['slotKey'] : [])],
-      path,
-    );
+    // A cage press's slot is wherever its target holds its result.
+    expectExactKeys(target, ['kind', 'exitKey', 'occurrenceId'], path);
     const exitKey = expectNonBlankString(target.exitKey, `${path}.exitKey`);
     const occurrenceId = expectNonBlankString(
       target.occurrenceId,
       `${path}.occurrenceId`,
     ) as OccurrenceId;
-    return kind === 'door'
-      ? Object.freeze({ kind, exitKey, occurrenceId })
-      : Object.freeze({
-          kind,
-          exitKey,
-          occurrenceId,
-          slotKey: expectNonBlankString(target.slotKey, `${path}.slotKey`),
-        });
+    return Object.freeze({ kind, exitKey, occurrenceId });
   }
   if (kind === 'wheelOffer') {
     expectExactKeys(target, ['kind', 'wheelKey', 'offerKey'], path);
@@ -60,6 +43,26 @@ function decodeRerollTarget(value: unknown, path: string): RerollTarget {
     });
   }
   failProjectDocument(`${path}.kind`, `unknown reroll target ${kind}`);
+}
+
+/** The item content a row recorded: a non-empty list of non-blank strings. */
+function decodeRoomActionContent(value: unknown, path: string): RoomActionContent {
+  const content = expectArray(value, path);
+  if (content.length === 0) failProjectDocument(path, 'must name the item content');
+  return Object.freeze(
+    content.map((entry, index) => expectNonBlankString(entry, `${path}.${index}`)),
+  );
+}
+
+/** The optional `content` key a row acting on an item may carry, and its decoded value. */
+function contentField(reference: Record<string, unknown>, path: string) {
+  const hasContent = Object.hasOwn(reference, 'content');
+  return {
+    keys: hasContent ? ['content'] : [],
+    value: hasContent
+      ? { content: decodeRoomActionContent(reference.content, `${path}.content`) }
+      : {},
+  };
 }
 
 function decodeRoomActionReference(
@@ -74,11 +77,15 @@ function decodeRoomActionReference(
     kind === 'useFountain' ||
     kind === 'interactKeepsakeRack' ||
     kind === 'interactEris' ||
-    kind === 'interactChallengeSwitch' ||
-    kind === 'interactInfernalContractPedestal'
+    kind === 'interactChallengeSwitch'
   ) {
     expectExactKeys(reference, ['kind'], path);
     return Object.freeze({ kind });
+  }
+  const content = contentField(reference, path);
+  if (kind === 'interactInfernalContractPedestal') {
+    expectExactKeys(reference, ['kind', ...content.keys], path);
+    return Object.freeze({ kind, ...content.value });
   }
   if (kind === 'completeFieldsCage' || kind === 'interactEncounter' || kind === 'interactGorgon') {
     expectExactKeys(reference, ['kind', 'phaseKey'], path);
@@ -88,49 +95,61 @@ function decodeRoomActionReference(
     });
   }
   if (kind === 'interactIncomingReward') {
-    expectExactKeys(reference, ['kind', 'producerPoint', 'acquisitionRole'], path);
+    expectExactKeys(reference, ['kind', 'producerPoint', 'acquisitionRole', ...content.keys], path);
     return Object.freeze({
       kind,
       producerPoint: expectNonBlankString(reference.producerPoint, `${path}.producerPoint`),
       acquisitionRole: expectNonBlankString(reference.acquisitionRole, `${path}.acquisitionRole`),
+      ...content.value,
     });
   }
   if (kind === 'interactLocalReward') {
-    expectExactKeys(reference, ['kind', 'groupKey', 'slotKey'], path);
+    expectExactKeys(reference, ['kind', 'groupKey', 'slotKey', ...content.keys], path);
     return Object.freeze({
       kind,
       groupKey: expectNonBlankString(reference.groupKey, `${path}.groupKey`),
       slotKey: expectNonBlankString(reference.slotKey, `${path}.slotKey`),
+      ...content.value,
     });
   }
-  if (kind === 'chooseRewardWheel' || kind === 'interactWheelReward') {
+  if (kind === 'chooseRewardWheel') {
     expectExactKeys(reference, ['kind', 'wheelKey'], path);
     return Object.freeze({
       kind,
       wheelKey: expectNonBlankString(reference.wheelKey, `${path}.wheelKey`),
     });
   }
+  if (kind === 'interactWheelReward') {
+    expectExactKeys(reference, ['kind', 'wheelKey', ...content.keys], path);
+    return Object.freeze({
+      kind,
+      wheelKey: expectNonBlankString(reference.wheelKey, `${path}.wheelKey`),
+      ...content.value,
+    });
+  }
   if (kind === 'interactShopOffer') {
-    expectExactKeys(reference, ['kind', 'offerKey'], path);
+    expectExactKeys(reference, ['kind', 'offerKey', ...content.keys], path);
     if (reference.offerKey === 'travelDealRefill')
       failProjectDocument(path, 'Travel Deal uses its roomExit acquisition entry participation');
     return Object.freeze({
       kind,
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
+      ...content.value,
     });
   }
   if (kind === 'purchaseStygianWellOffer') {
-    expectExactKeys(reference, ['kind', 'generationKey'], path);
+    expectExactKeys(reference, ['kind', 'generationKey', ...content.keys], path);
     return Object.freeze({
       kind,
       generationKey: decodeStygianWellGenerationKey(
         reference.generationKey,
         `${path}.generationKey`,
       ),
+      ...content.value,
     });
   }
-  if (kind === 'purchaseHermesShrineOffer') {
-    expectExactKeys(reference, ['kind', 'generationKey', 'rushed'], path);
+  if (kind === 'purchaseHermesShrineOffer' || kind === 'rushHermesShrineOffer') {
+    expectExactKeys(reference, ['kind', 'generationKey', ...content.keys], path);
     const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
     if (
       !['initial:first', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill'].includes(
@@ -141,12 +160,16 @@ function decodeRoomActionReference(
     return Object.freeze({
       kind,
       generationKey: generationKey as HermesShrineGenerationKey,
-      rushed: expectBoolean(reference.rushed, `${path}.rushed`),
+      ...content.value,
     });
   }
   if (kind === 'sellPurgingPoolTrait') {
     const hasRollKey = Object.hasOwn(reference, 'rollKey');
-    expectExactKeys(reference, ['kind', 'slotKey', ...(hasRollKey ? ['rollKey'] : [])], path);
+    expectExactKeys(
+      reference,
+      ['kind', 'slotKey', ...(hasRollKey ? ['rollKey'] : []), ...content.keys],
+      path,
+    );
     const slotKey = expectNonBlankString(reference.slotKey, `${path}.slotKey`);
     if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
       failProjectDocument(`${path}.slotKey`, 'must be a declared Pool slot key');
@@ -155,133 +178,38 @@ function decodeRoomActionReference(
       kind,
       slotKey,
       ...(hasRollKey ? { rollKey: decodeRerollId(reference.rollKey, `${path}.rollKey`) } : {}),
+      ...content.value,
     });
   }
   if (kind === 'interactAcquisitionEntry') {
-    const hasEncounterPhaseKey = Object.hasOwn(reference, 'encounterPhaseKey');
-    expectExactKeys(
-      reference,
-      ['kind', 'siteKey', 'entryKey', ...(hasEncounterPhaseKey ? ['encounterPhaseKey'] : [])],
-      path,
-    );
+    expectExactKeys(reference, ['kind', 'siteKey', 'entryKey', ...content.keys], path);
     return Object.freeze({
       kind,
       siteKey: expectNonBlankString(reference.siteKey, `${path}.siteKey`),
       entryKey: expectNonBlankString(reference.entryKey, `${path}.entryKey`),
-      ...(hasEncounterPhaseKey
-        ? {
-            encounterPhaseKey: expectNonBlankString(
-              reference.encounterPhaseKey,
-              `${path}.encounterPhaseKey`,
-            ),
-          }
-        : {}),
+      ...content.value,
     });
   }
   if (kind === 'unlockExit') {
-    const hasCustomization = Object.hasOwn(reference, 'customization');
-    expectExactKeys(
-      reference,
-      ['kind', 'exitKey', ...(hasCustomization ? ['customization'] : [])],
-      path,
-    );
-    const customization = hasCustomization
-      ? (() => {
-          const record = expectRecord(reference.customization, `${path}.customization`);
-          if (Object.keys(record).length === 0)
-            failProjectDocument(`${path}.customization`, 'must not be empty');
-          // The locked door's fight declares only a generated composition.
-          return Object.freeze(
-            Object.fromEntries(
-              Object.entries(record).map(([decisionKey, value]) => [
-                decisionKey,
-                decodeGeneratedEncounterCustomization(
-                  expectRecord(value, `${path}.customization.${decisionKey}`),
-                  `${path}.customization.${decisionKey}`,
-                ),
-              ]),
-            ),
-          );
-        })()
-      : undefined;
+    expectExactKeys(reference, ['kind', 'exitKey'], path);
     return Object.freeze({
       kind,
       exitKey: expectNonBlankString(reference.exitKey, `${path}.exitKey`),
-      ...(customization === undefined ? {} : { customization }),
     });
   }
   if (kind === 'reroll') {
-    expectExactKeys(reference, ['kind', 'rerollId', 'target', 'reward'], path);
+    expectExactKeys(reference, ['kind', 'rerollId', 'target'], path);
     return Object.freeze({
       kind,
       rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
       target: decodeRerollTarget(reference.target, `${path}.target`),
-      reward: decodeResolvedRewardOffer(reference.reward, catalog, `${path}.reward`),
     });
   }
-  if (kind === 'rerollStygianWell') {
-    const hasTwist = Object.hasOwn(reference, 'twistResultKeyBySlot');
-    expectExactKeys(
-      reference,
-      ['kind', 'rerollId', 'offerKeyBySlot', ...(hasTwist ? ['twistResultKeyBySlot'] : [])],
-      path,
-    );
-    const known = new Set(
-      catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) =>
-        group.options.values.map((option) => option.key),
-      ) ?? [],
-    );
-    const item = (entry: unknown, entryPath: string): string => {
-      const itemKey = expectNonBlankString(entry, entryPath);
-      if (!known.has(itemKey)) failProjectDocument(entryPath, `unknown RoomShop item ${itemKey}`);
-      return itemKey;
-    };
-    const slots = (field: string, decode: (entry: unknown, entryPath: string) => unknown) => {
-      const record = expectRecord(reference[field], `${path}.${field}`);
-      for (const key of Object.keys(record))
-        if (!(STYGIAN_WELL_SLOT_KEYS as readonly string[]).includes(key))
-          failProjectDocument(`${path}.${field}`, `contains unknown Well slot ${key}`);
-      return Object.freeze(
-        Object.fromEntries(
-          Object.entries(record).map(([key, entry]) => [
-            key,
-            decode(entry, `${path}.${field}.${key}`),
-          ]),
-        ),
-      );
-    };
+  if (kind === 'rerollStygianWell' || kind === 'rerollPurgingPool') {
+    expectExactKeys(reference, ['kind', 'rerollId'], path);
     return Object.freeze({
       kind,
       rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
-      offerKeyBySlot: slots('offerKeyBySlot', item) as Record<string, string>,
-      ...(hasTwist
-        ? {
-            twistResultKeyBySlot: slots('twistResultKeyBySlot', (entry, entryPath) =>
-              entry === null ? null : item(entry, entryPath),
-            ) as Record<string, string | null>,
-          }
-        : {}),
-    });
-  }
-  if (kind === 'rerollPurgingPool') {
-    expectExactKeys(reference, ['kind', 'rerollId', 'traitKeyBySlot'], path);
-    const traits = expectRecord(reference.traitKeyBySlot, `${path}.traitKeyBySlot`);
-    for (const key of Object.keys(traits))
-      if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(key))
-        failProjectDocument(`${path}.traitKeyBySlot`, `contains unknown Pool slot ${key}`);
-    return Object.freeze({
-      kind,
-      rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
-      traitKeyBySlot: Object.freeze(
-        Object.fromEntries(
-          Object.entries(traits).map(([key, entry]) => {
-            const traitKey = expectNonBlankString(entry, `${path}.traitKeyBySlot.${key}`);
-            if (catalog.traits.byKey[traitKey] === undefined)
-              failProjectDocument(`${path}.traitKeyBySlot.${key}`, 'unknown trait');
-            return [key, traitKey];
-          }),
-        ),
-      ),
     });
   }
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);

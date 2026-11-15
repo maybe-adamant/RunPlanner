@@ -12,7 +12,10 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   hubVisitActions,
+  placeTestRushedShrinePickup,
+  replaceTestPlacedItem,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -33,10 +36,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  clockedTraitPickupPlacementForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -104,9 +107,28 @@ function settleReachedAutomaticOutcomes(project: ProjectDocument): ProjectDocume
   throw new Error('scheduled lifecycle fixture exceeded its automatic-outcome bound');
 }
 
+/** Collects required items, settling the outcomes and offers each newly reached room needs. */
+function collectReachedRoute(project: ProjectDocument): ProjectDocument {
+  let next = project;
+  for (let pass = 0; pass < 16; pass += 1) {
+    const settled = settleReachedAutomaticOutcomes(
+      authorLegalTraitOffers(collectTestRequiredItems(next)),
+    );
+    if (settled === next) return next;
+    next = settled;
+  }
+  throw new Error('scheduled lifecycle fixture did not settle its reached route');
+}
+
+/**
+ * Collects each Postboss's rushed Shrine item in its room and places its
+ * delayed delivery at the contact the engine derives.
+ */
 function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument {
   let next = project;
   for (const source of [nPostboss, oPostboss]) {
+    next = collectReachedRoute(next);
+    next = placeTestRushedShrinePickup(next, source, 'initial:first');
     const assembly = simulateProjectAssembly(catalog, next);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
     const contact = next.route.biomes
@@ -137,13 +159,13 @@ function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument
           })),
         )}`,
       );
-    next = applyProjectCommand(next, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
-      entry: contact.address,
-      ...(contact.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: contact.encounterPhaseKey }),
-    });
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      contact.address,
+    );
+    // Collecting the reached route already placed it after its due spawn.
+    if (placement !== undefined) next = applyProjectCommand(next, catalog, placement);
     next = settleReachedAutomaticOutcomes(next);
   }
   return next;
@@ -172,7 +194,8 @@ function acceptOneSupplyChainSlice(project: ProjectDocument): ProjectDocument {
   const entry = entries[0];
   if (entry === undefined)
     throw new Error('scheduled lifecycle fixture never matured Supply Chain');
-  const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(
+  const placement = timedPickupPlacementForProjectEvaluationAssembly(
+    catalog,
     assembly,
     entry.address,
   );
@@ -200,7 +223,7 @@ function acceptSupplyChainSliceAtAddress(
   entry: AcquisitionEntryAddress,
 ): ProjectDocument {
   const assembly = simulateProjectAssembly(catalog, project);
-  const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, entry);
+  const placement = timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, entry);
   if (placement === undefined)
     throw new Error(
       `scheduled lifecycle fixture lacks an attested Supply Chain placement for ${entry.entryKey}`,
@@ -298,7 +321,7 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
   });
 
   const growthReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat23'));
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: growthReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
@@ -317,12 +340,12 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },

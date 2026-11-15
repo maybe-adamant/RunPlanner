@@ -220,7 +220,7 @@ describe('structured workspace composer assembly', () => {
     const phases = result.assembly.node.room.encounterPhases;
     expect(phases.map((phase) => phase.address.phaseKey)).toEqual(['Intro', 'Combat1']);
     for (const [index, phase] of phases.entries()) {
-      expect(phase.timelineAnchor).toBe('encounterStart');
+      expect(phase.timelineAnchor).toBe('encounter');
       expect(tab(phase.marker.focusKey)).toBe('overview');
       expect(phase.figLeaf).toBeDefined();
       expect(tab(phase.figLeaf!.marker.focusKey)).toBe(
@@ -241,7 +241,6 @@ describe('structured workspace composer assembly', () => {
     const nemesis = activeFields.spatial.find((control) => control.target.kind === 'nemesis');
     expect(nemesis).toBeDefined();
     expect(nemesis?.pointChoices.map((choice) => choice.value)).toEqual([
-      null,
       ...(catalog.rooms.byKey[active.assembly.node.room.gameName]?.fieldsSpatial
         ?.optionalPointIds ?? []),
     ]);

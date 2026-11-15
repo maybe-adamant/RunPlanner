@@ -5,26 +5,25 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '../../../authored-project/addresses';
-import {
-  extraExitLockHost,
-  lockableExitKeys,
-  unlockExitAction,
-} from '../../../authored-project/locked-exits';
+import { lockableExitKeys, unlockExitAction } from '../../../authored-project/locked-exits';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
-import type { PreparedUnlockExitEncounter } from '../../encounters/unlock-exit';
-import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
+import {
+  prepareUnlockExitEncounter,
+  type PreparedUnlockExitEncounter,
+} from '../../encounters/unlock-exit';
+import {
+  hermesShrinePurchaseAction,
+  hermesShrineRushAction,
+  offerFor,
+} from '../../../authored-project/hermes-shrine-delivery';
 import {
   hermesShrineInitialGenerationKey,
   type HermesShrineGenerationKey,
   type HermesShrineInventoryOffer,
   type HermesShrineSlotKey,
 } from '../../../authored-project/model';
-import {
-  shopOfferOptionValues,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../../authored-project/shop';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import type { Catalog } from '../../../catalog-schema';
-import type { ShopOptionSelection } from '../../../reward-kernel';
 import {
   challengeSwitchKindVariant,
   eliteChallengeAttributeOptions,
@@ -51,6 +50,7 @@ import {
 import type { RewardBranchState } from '../branch-primitives';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import type { ChronologyWalkContext, ChronologyWalkState } from './chronology-walk';
 
 const SHRINE_SLOT_KEYS: readonly HermesShrineSlotKey[] = ['first', 'secondLeft', 'secondRight'];
@@ -74,33 +74,39 @@ function authoredRoom(
 }
 
 /**
- * A Well, Pool, World Shop, Shrine, Contract pedestal or locked door is
- * interacted with through room actions.
+ * Records where a new action of an entered room would settle: its latest
+ * reached point before its actions close, where one appends, and the state
+ * each reached row meets before it settles, where one placed just before it
+ * would. Its objects' interactions and a loose pickup's conversions read them.
  */
-function hasInteractiveObject(catalog: Catalog, room: CanonicalAuthoredRoom): boolean {
-  return (
-    extraExitLockHost(catalog, room.gameName) !== undefined ||
-    room.stygianWell !== undefined ||
-    room.purgingPool !== undefined ||
-    room.hermesShrine !== undefined ||
-    room.entryState?.kind === 'shop' ||
-    room.infernalContractPedestal !== undefined
-  );
-}
-
-/** Records an interactive object room's latest reached point before its actions close. */
-export function captureRoomActionEnd(
+export function captureRoomActionPoints(
   context: ChronologyWalkContext,
+  received: ChronologyWalkState,
   state: ChronologyWalkState,
   event: HistoryEvent,
 ): ChronologyWalkState {
+  let contacts = state.roomActionContacts;
+  // A row with events of its own meets the state before its first; one without, the state
+  // after the event it settles with.
+  for (const action of context.reachedActionsBySequence.get(event.sequence) ?? []) {
+    const branch = action.boundary === 'before' ? received.branch : state.branch;
+    const roomKey = semanticAddressKey(action.room);
+    if (branch === undefined || authoredRoom(context, roomKey) === undefined) continue;
+    const byRoom = new Map(contacts);
+    byRoom.set(roomKey, new Map(contacts.get(roomKey)).set(action.actionKey, branch));
+    contacts = byRoom;
+  }
+  const withContacts =
+    contacts === state.roomActionContacts
+      ? state
+      : Object.freeze({ ...state, roomActionContacts: contacts });
   if (!('origin' in event) || SEQUENCE_CLOSED_BY.has(event.kind) || state.branch === undefined)
-    return state;
+    return withContacts;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
-  if (room === undefined || !hasInteractiveObject(context.catalog, room)) return state;
+  if (room === undefined) return withContacts;
   return Object.freeze({
-    ...state,
+    ...withContacts,
     roomActionEnds: new Map(state.roomActionEnds).set(
       roomKey,
       Object.freeze({ historySequence: event.sequence, branch: state.branch }),
@@ -110,30 +116,11 @@ export function captureRoomActionEnd(
 
 type DerivedEntryFrontiers = ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
 
-/** The refilled slot's items the reached state can stock without a finding. */
-function travelDealRefillValues(
-  catalog: Catalog,
-  profileKey: string,
-  slotIndex: number | undefined,
-  frontier: DerivedAcquisitionEntryFrontier,
-): readonly ShopOptionSelection[] {
-  const slot =
-    slotIndex === undefined
-      ? undefined
-      : catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex];
-  if (slot === undefined) return Object.freeze([]);
-  return Object.freeze(
-    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) => {
-      const result = frontier.evaluateShopOption?.(value);
-      return result?.supported === true && result.findings.length === 0;
-    }),
-  );
-}
-
 function worldShopInteraction(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   historySequence: number,
+  branch: RewardBranchState,
   derivedEntries: DerivedEntryFrontiers,
 ): WorldShopInteraction | undefined {
   const shop = room.entryState;
@@ -163,8 +150,16 @@ function worldShopInteraction(
   const seeded = attestDerivedAcquisitionEntryCandidateCapability(refillFrontier);
   const live = seeded?.kind === 'travelDealRefill';
   const refill = shop.travelDealRefill ?? null;
+  // The first normal paid purchase made with Travel Deal held at entry restocks:
+  // a settled purchase leaves its placeholder until then; before any, the held trait decides.
+  const restocksNext =
+    seeded?.kind === 'travelDealPlaceholder' ||
+    (seeded === undefined &&
+      bought.size === 0 &&
+      branch.state.traitHistory.equippedTraits.RestockBoon !== undefined);
   return Object.freeze({
     historySequence,
+    travelDealRestocksNextPurchase: restocksNext,
     offers: Object.freeze(
       shop.offers
         .filter((offer) => !bought.has(offer.offerKey))
@@ -185,12 +180,6 @@ function worldShopInteraction(
           travelDealRefill: Object.freeze({
             rewardType: refill?.offer.rewardType ?? null,
             optionKey: refill?.optionKey ?? null,
-            values: travelDealRefillValues(
-              catalog,
-              shop.profileKey,
-              seeded?.slotIndex,
-              refillFrontier!,
-            ),
             command: Object.freeze({
               kind: 'PurchaseShopTravelDealRefill' as const,
               occurrence: room.origin,
@@ -205,25 +194,22 @@ function shrineOffer(
   generationKey: HermesShrineGenerationKey,
   offer: HermesShrineInventoryOffer | null | undefined,
 ): HermesShrineInteractionOffer {
-  const command = (rushed: boolean) =>
-    Object.freeze({
-      kind: 'PurchaseHermesShrineOffer' as const,
-      occurrence: room.origin,
-      generationKey,
-      rushed,
-    });
   return Object.freeze({
     generationKey,
     rewardType: offer?.rewardType ?? null,
     delay: offer?.delay ?? null,
-    buy: command(false),
-    rush: command(true),
+    buy: Object.freeze({
+      kind: 'PurchaseHermesShrineOffer' as const,
+      occurrence: room.origin,
+      generationKey,
+    }),
   });
 }
 
 function hermesShrineInteraction(
   room: CanonicalAuthoredRoom,
   historySequence: number,
+  branch: RewardBranchState,
   realized: RealizedHermesShrineTravelDealRefill | undefined,
 ): HermesShrineInteraction | undefined {
   const shrine = room.hermesShrine;
@@ -238,12 +224,40 @@ function hermesShrineInteraction(
       ? []
       : [shrineOffer(room, generationKey, offer)];
   });
+  // A bought item can be rushed once, any time after its purchase in this room.
+  const rushes = [
+    ...SHRINE_SLOT_KEYS.map(hermesShrineInitialGenerationKey),
+    'travelDealRefill' as const,
+  ].flatMap((generationKey) => {
+    const offer = offerFor(shrine, generationKey);
+    return unbought(generationKey) ||
+      hermesShrineRushAction(order, generationKey) !== undefined ||
+      offer === undefined ||
+      offer === null
+      ? []
+      : [
+          Object.freeze({
+            generationKey,
+            rewardType: offer.rewardType,
+            delay: offer.delay,
+            rush: Object.freeze({
+              kind: 'SetHermesShrineRush' as const,
+              occurrence: room.origin,
+              generationKey,
+              rushed: true,
+            }),
+          }),
+        ];
+  });
   // The first rush made with Travel Deal realizes the refill.
   const live = realized !== undefined;
   return Object.freeze({
     historySequence,
     offers: Object.freeze(offers),
+    rushes: Object.freeze(rushes),
     travelDealRefillLive: live,
+    travelDealRefillsNextRush:
+      !live && branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
     ...(!live || !unbought('travelDealRefill')
       ? {}
       : {
@@ -456,10 +470,59 @@ function challengeSwitchInteraction(
 }
 
 /**
+ * Each locked door's fight, by its press's address: a pressed door's as the
+ * walk prepared it at the press, and a door not yet pressed prepared where its
+ * press would append, at the room's last reached action, so its observed
+ * rolls can be authored before the press is placed.
+ */
+export function lockedDoorFights(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+): ReadonlyMap<string, PreparedUnlockExitEncounter> {
+  const fights = new Map(state.unlockExitEncounters);
+  for (const roomKey of state.enteredLockHosts) {
+    const end = state.roomActionEnds.get(roomKey);
+    const room = authoredRoom(context, roomKey);
+    if (end === undefined || room === undefined || room.origin.kind !== 'occurrence') continue;
+    const origin = room.origin;
+    const pressed = new Set(
+      room.roomActionRoster.rows.flatMap((row) =>
+        row.rank !== null && row.reference.kind === 'unlockExit' ? [row.reference.exitKey] : [],
+      ),
+    );
+    const unpressed = (room.lockedExits ?? []).filter((exitKey) => !pressed.has(exitKey));
+    if (unpressed.length === 0) continue;
+    const view = context.history.viewsBySequence[end.historySequence];
+    if (view === undefined)
+      throw new BiomeRewardSimulationContractError(`${roomKey} has no view where its actions end`);
+    const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
+    for (const exitKey of unpressed) {
+      const reference = unlockExitAction(exitKey);
+      const prepared = prepareUnlockExitEncounter(
+        context.catalog,
+        room,
+        context.routePosition,
+        reference,
+        view,
+        state.encounterEntryVowRanks.get(roomKey),
+      );
+      if (prepared === undefined) continue;
+      fights.set(
+        semanticAddressKey(
+          createRoomActionAddress(biome, origin.occurrenceId, roomActionKey(reference)),
+        ),
+        prepared,
+      );
+    }
+  }
+  return fights;
+}
+
+/**
  * An entered lock host's doors: each door that can lock with the command
  * flipping it (refused beside a challenge switch), and once its Timeline is
- * reached, each locked door's press, appended where its actions end, or its
- * fight once pressed.
+ * reached, each locked door's press, appended where its actions end, and its
+ * fight, at the press or where the press would append.
  */
 function lockedDoorsInteraction(
   catalog: Catalog,
@@ -528,8 +591,9 @@ function lockedDoorsInteraction(
                       ? {}
                       : {
                           reset: Object.freeze({
-                            kind: 'ReplaceUnlockExitCustomization' as const,
-                            action,
+                            kind: 'ReplaceLockedExitCustomization' as const,
+                            occurrence: origin,
+                            exitKey,
                             decisionKey: decision.key,
                             value: null,
                           }),
@@ -558,6 +622,7 @@ export function roomObjectInteractions(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   derivedEntries: DerivedEntryFrontiers,
+  doorFights: ReadonlyMap<string, PreparedUnlockExitEncounter>,
 ): ReadonlyMap<string, RoomObjectInteractions> {
   const interactions = new Map<string, RoomObjectInteractions>();
   for (const [roomKey, end] of state.roomActionEnds) {
@@ -567,11 +632,13 @@ export function roomObjectInteractions(
       context.catalog,
       room,
       end.historySequence,
+      end.branch,
       derivedEntries,
     );
     const hermesShrine = hermesShrineInteraction(
       room,
       end.historySequence,
+      end.branch,
       state.hermesShrineTravelDealRefills.get(roomKey),
     );
     const championItem = championItemInteraction(room, end.historySequence, end.branch);
@@ -606,7 +673,7 @@ export function roomObjectInteractions(
       context.catalog,
       room,
       state.roomActionEnds.has(roomKey),
-      state.unlockExitEncounters,
+      doorFights,
     );
     if (lockedDoors === undefined) continue;
     interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), lockedDoors }));

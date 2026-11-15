@@ -21,12 +21,14 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomSpawnedLoot,
+  type SpawnCause,
   type SpawnedLootItem,
 } from '@run-planner/engine/simulation';
 import {
@@ -77,9 +79,16 @@ import {
 import {
   authorLegalPomResolutions,
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
+import { authoredRoom } from '../../src/simulation/evaluation/evaluated-room';
+import {
+  spawnMomentBoundaryCause,
+  spawnMomentEntryIndex,
+} from '../../src/simulation/evaluation/spawned-loot';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 
@@ -126,6 +135,20 @@ function unlocks(spawned: RoomSpawnedLoot) {
 /** What each moment's items spawn as. */
 function momentRewards(spawned: RoomSpawnedLoot) {
   return spawned.moments.map((moment) => [moment.key, moment.items.map((item) => item.reward)]);
+}
+
+/** What each unlock and moment follows on the Timeline: an event's key or an action's. */
+function causes(spawned: RoomSpawnedLoot) {
+  const follows = (cause: SpawnCause) =>
+    cause.kind === 'event'
+      ? cause.event.key
+      : cause.kind === 'action'
+        ? `action:${cause.action.actionKey}`
+        : cause.kind;
+  return [
+    ...spawned.unlocks.map((unlock) => [`unlock:${unlock.key}`, follows(unlock.cause)]),
+    ...spawned.moments.map((moment) => [moment.key, follows(moment.cause)]),
+  ];
 }
 
 const offer = (rewardType: string) => ({ kind: 'offer', offer: { rewardType } });
@@ -184,11 +207,12 @@ describe('spawned loot', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const { assembly, spawned } = loot(project, 'P', pCombat03);
     const drop = spawned.moments[0]!.items.at(-1)!;
-    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
+    if (drop.placement.kind !== 'unplaced' || drop.owner.kind !== 'acquisitionEntry')
+      throw new Error('the second drop is placed');
     const placed = settleProjectEdit({
       catalog,
       before: assembly,
-      command: drop.placement.command!,
+      command: timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, drop.owner)!,
       evaluate,
     }).assembly;
     const room = createOccurrenceAddress(
@@ -234,10 +258,11 @@ describe('spawned loot', () => {
       ...items.slice(0, -1).map(() => undefined),
       'levelResolution',
     ]);
+    // The placement query places it at its last index; the bare command has no due spawn.
     const placed = settleProjectEdit({
       catalog,
       before: assembly,
-      command: drop.placement.command!,
+      command: timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, drop.owner)!,
       evaluate,
     }).assembly;
     const after = spawnedLootForProjectEvaluationAssembly(
@@ -304,10 +329,10 @@ describe('spawned loot', () => {
     expect(stop?.room.occurrenceId).not.toBe('golden-f-b5-e1');
   });
 
-  it('spawns an H miniboss reward caged at its encounter start, freed at its end', () => {
+  it('spawns an H miniboss reward caged as its encounter begins, freed at its end', () => {
     const { spawned } = loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01');
     expect(moments(spawned)).toEqual([
-      ['encounterStart:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
+      ['encounterBegun:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
     ]);
     expect(unlocks(spawned)).toEqual([
       ['encounterEnd:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
@@ -463,7 +488,7 @@ describe('spawned loot', () => {
 
   it('drops Heracles’s bounty after the encounter end’s own spawns', () => {
     const combat05 = nOccurrenceId('combat05');
-    const project = authorLegalTraitOffers(
+    const project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(loadSurfaceNCheckpoint(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(
@@ -503,6 +528,13 @@ describe('spawned loot', () => {
   const actionSpawns = (spawned: RoomSpawnedLoot) =>
     spawned.actionSpawns.map((spawn) => [spawn.source.kind, spawn.items.map(describeItem)]);
 
+  /** Each source action's kind with what its items spawn as. */
+  const actionSpawnRewards = (spawned: RoomSpawnedLoot) =>
+    spawned.actionSpawns.map((spawn) => [
+      spawn.source.kind,
+      spawn.items.map((item) => item.reward),
+    ]);
+
   it('lists the Artificer’s replacement under the reward it transforms', () => {
     const project = underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load();
     const { spawned } = loot(project, 'F', 'e9c1775e-a04b-4ed2-b749-7ef344614cbe');
@@ -531,9 +563,14 @@ describe('spawned loot', () => {
   it('lists Sea Star’s copy under the pickup it copies once that pickup settles', () => {
     // The Nemesis Pom's own level is unset: the walk stops at its pickup, which copies nothing yet.
     const unresolved = loadNemesisPomSeaStarCheckpoint();
-    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([]);
+    const herResult = [
+      'interactEncounter',
+      [expect.stringMatching(/^nemesisEvent required #\d+$/)],
+    ] as const;
+    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([herResult]);
     const { spawned } = loot(authorLegalPomResolutions(unresolved), 'F', 'golden-f-b5-e1');
     expect(actionSpawns(spawned)).toEqual([
+      herResult,
       ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],
     ]);
   });
@@ -548,15 +585,17 @@ describe('spawned loot', () => {
     const event = createNemesisRandomEventAddress(phase);
     /** Her event answered with an optional result, placed right after her interaction. */
     const answered = (value: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        value,
-        { rewardType },
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          value,
+          { rewardType },
+        ),
       );
       const reference = {
         kind: 'interactAcquisitionEntry' as const,
@@ -579,24 +618,24 @@ describe('spawned loot', () => {
       });
     };
 
-    it('spawns at her outcome when the outcome decides it: an accepted trade', () => {
+    it('spawns under her talk row, where her answer decides it: an accepted trade', () => {
       const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
-      expect(moments(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
       ]);
-      expect(spawned.actionSpawns).toEqual([]);
     });
 
-    it('spawns at her outcome when the outcome decides it: a contest', () => {
+    it('spawns under her talk row, where her answer decides it: a contest', () => {
       const { spawned } = loot(
         answered({ kind: 'damageContest', result: 'failure' }, 'RoomRewardConsolationPrize'),
         'F',
         nemesisRoom,
       );
-      expect(moments(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
       ]);
-      expect(spawned.actionSpawns).toEqual([]);
     });
 
     it('spawns the planned item from a won contest and Consolation from a lost one', () => {
@@ -605,36 +644,36 @@ describe('spawned loot', () => {
         'F',
         nemesisRoom,
       ).spawned;
-      expect(momentRewards(won)).toEqual([
-        ['encounterOutcome:Encounter', [offer('MaxHealthDrop')]],
-      ]);
+      expect(actionSpawnRewards(won)).toEqual([['interactEncounter', [offer('MaxHealthDrop')]]]);
       // Losing keeps the planned item as the offer; Consolation is what spawns.
       const lost = loot(
         answered({ kind: 'damageContest', result: 'failure' }, 'MaxHealthDrop'),
         'F',
         nemesisRoom,
       );
-      expect(momentRewards(lost.spawned)).toEqual([
-        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      expect(actionSpawnRewards(lost.spawned)).toEqual([
+        ['interactEncounter', [offer('RoomRewardConsolationPrize')]],
       ]);
       expect(lost.assembly.evaluation.findings).toEqual([]);
     });
 
     it('spawns Consolation from a lost contest with no success item planned', () => {
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        { kind: 'damageContest', result: 'failure' },
-        null,
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          { kind: 'damageContest', result: 'failure' },
+          null,
+        ),
       );
       const { assembly, spawned } = loot(project, 'F', nemesisRoom);
       expect(assembly.evaluation.findings).toEqual([]);
-      expect(momentRewards(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      expect(actionSpawnRewards(spawned)).toEqual([
+        ['interactEncounter', [offer('RoomRewardConsolationPrize')]],
       ]);
     });
 
@@ -656,15 +695,17 @@ describe('spawned loot', () => {
 
     it('spawns nothing her outcome decides while the walk is stopped at her row', () => {
       // A won contest with no item planned blocks her interaction.
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        { kind: 'damageContest', result: 'success' },
-        null,
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          { kind: 'damageContest', result: 'success' },
+          null,
+        ),
       );
       const { assembly, spawned } = loot(project, 'F', nemesisRoom);
       const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
@@ -687,17 +728,14 @@ describe('spawned loot', () => {
     });
   });
 
-  it('lists a rushed Shrine item under its purchase in the Shrine’s own room', () => {
+  it('lists a rushed Shrine item under its rush in the Shrine’s own room', () => {
     const { spawned } = loot(
       loadSurfaceShrineTravelDealCheckpoint(),
       'N',
       'surface-n-preboss:postboss',
     );
     expect(actionSpawns(spawned)).toEqual([
-      [
-        'purchaseHermesShrineOffer',
-        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
-      ],
+      ['rushHermesShrineOffer', [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)]],
     ]);
     expect(spawned.moments).toEqual([]);
   });
@@ -712,20 +750,21 @@ describe('spawned loot', () => {
   });
 
   it('spawns an O phase’s deliveries only once its wheel reward is collected', () => {
-    // Wheel 1 offers a Boon whose trait offer is unset: the walk stops at its pickup.
+    // Wheel 1 offers a Boon in place of its picked reward: the old pickup's
+    // item is replaced, so the walk stops there and the Boon lies unplaced.
     const project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
     expect(moments(loot(project, 'O', oOccurrenceIds.combat04).spawned)).toEqual([
-      ['encounterEnd:Combat1', ['rewardWheel required #2']],
+      ['encounterEnd:Combat1', ['rewardWheel required unplaced:InsertRoomAction']],
     ]);
   });
 
-  it('spawns Heracles’s bounty with the rest of an encounter end a due delivery blocks', () => {
+  it('spawns Heracles’s bounty with the rest of an encounter end whose due delivery is unplaced', () => {
     const combat09 = nOccurrenceId('combat09');
-    const project = authorLegalTraitOffers(
+    const selected = authorLegalTraitOffers(
       applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(
@@ -736,11 +775,21 @@ describe('spawned loot', () => {
         encounterKey: 'HeraclesCombatN',
       }),
     );
+    // The owner picks up the bounty from its spawn notice; the delivery stays unplaced.
+    const bounty = loot(selected, 'N', combat09)
+      .spawned.moments.flatMap((moment) => moment.items)
+      .find(
+        (item) => item.source.kind === 'generated' && item.source.family.kind === 'heraclesBounty',
+      );
+    if (bounty?.placement.kind !== 'unplaced' || bounty.placement.command === undefined)
+      throw new Error('Heracles bounty has no placement');
+    const project = applyProjectCommand(selected, catalog, bounty.placement.command);
     const { assembly, spawned } = loot(project, 'N', combat09);
     const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    // The walk passes the encounter end and stops where the delivery falls due.
     expect(n?.coverage.kind === 'prefix' ? n.coverage.roomStop : undefined).toMatchObject({
       room: { occurrenceId: combat09 },
-      at: 'entry',
+      at: 'before',
     });
     expect(moments(spawned)).toEqual([
       [
@@ -792,6 +841,11 @@ describe('spawned loot', () => {
       kind: 'PurchaseHermesShrineOffer',
       occurrence: shrine,
       generationKey: 'initial:first',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineRush',
+      occurrence: shrine,
+      generationKey: 'initial:first',
       rushed: true,
     });
     // Its other offers unset, the walk stops at the room's Overview, before the purchase.
@@ -806,11 +860,93 @@ describe('spawned loot', () => {
         slotKey,
         value: { rewardType },
       });
+    // Rushing places no pickup: the item is listed for the owner to take.
     expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
-      [
-        'purchaseHermesShrineOffer',
-        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
-      ],
+      ['rushHermesShrineOffer', ['hermesShrineDelivery optional unplaced:InsertRoomAction']],
     ]);
+  });
+
+  describe('causes', () => {
+    it('follows Room entered for entry loot and the fourth-biome delivery flush', () => {
+      expect(causes(loot(loadSurfaceNCheckpoint(), 'N', nOccurrenceIds.opening).spawned)).toEqual([
+        ['roomEntered', 'roomEntered'],
+      ]);
+      expect(
+        causes(loot(surfaceShrineDeliveriesProject(), 'Q', qOccurrenceIds.preboss).spawned),
+      ).toEqual([['deliveryFlush', 'roomEntered']]);
+    });
+
+    it('follows an encounter’s begin for a caged miniboss reward and its end for the unlock', () => {
+      expect(
+        causes(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01').spawned),
+      ).toEqual([
+        ['unlock:encounterEnd:Encounter', 'encounterEnd:Encounter'],
+        ['encounterBegun:Encounter', 'encounterBegun:Encounter'],
+      ]);
+    });
+
+    it('follows each Fields cage’s end for its unlock', () => {
+      expect(causes(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-combat02').spawned)).toEqual(
+        [
+          ['unlock:encounterEnd:Cage02', 'encounterEnd:Cage02'],
+          ['unlock:encounterEnd:Cage01', 'encounterEnd:Cage01'],
+          ['roomEntered', 'roomEntered'],
+        ],
+      );
+    });
+
+    it('follows the encounter’s end, never Boss defeated, in a Boss room', () => {
+      expect(
+        causes(loot(loadUnderworldFGHCheckpoint(), 'F', 'golden-f-preboss-shop:boss').spawned),
+      ).toEqual([['encounterEnd:Encounter', 'encounterEnd:Encounter']]);
+    });
+
+    it('follows Boss defeated where the Timeline shows no encounter end, else the Timeline’s end', () => {
+      // Every Boss phase's graph ends with its encounter end; drop it to reach the fallbacks.
+      const { assembly, spawned } = loot(
+        loadUnderworldFGHCheckpoint(),
+        'F',
+        'golden-f-preboss-shop:boss',
+      );
+      const entries = authoredRoom(assembly, spawned.owner)!.roomLifecycleTimeline.entries;
+      const without = (...kinds: readonly string[]) =>
+        entries.filter(
+          (entry) => entry.kind !== 'boundary' || !kinds.includes(entry.boundary.kind),
+        );
+      const follows = (cause: SpawnCause) =>
+        cause.kind === 'event' ? cause.event.key : cause.kind;
+      expect(
+        follows(spawnMomentBoundaryCause(without('encounterEnd'), 'encounterEnd', 'Encounter')),
+      ).toBe('bossDefeated:Encounter');
+      const bare = without('encounterEnd', 'bossDefeated');
+      expect(follows(spawnMomentBoundaryCause(bare, 'encounterEnd', 'Encounter'))).toBe(
+        'timelineEnd',
+      );
+      // The walk judges such a moment at the last entry, after everything the Timeline shows.
+      expect(spawnMomentEntryIndex(bare, 'encounterEnd', 'Encounter')).toBe(bare.length - 1);
+      expect(
+        follows(spawnMomentBoundaryCause(entries, 'wheelsOpen', 'Encounter', 'absentWheel')),
+      ).toBe('timelineEnd');
+    });
+
+    it('follows the wheel reward’s collection for an O phase’s end effects, and the next Wheels open for an earlier phase’s', () => {
+      const project = surfaceShrineDeliveriesProject();
+      const combat04 = loot(project, 'O', oOccurrenceIds.combat04).spawned;
+      const reward = (spawned: RoomSpawnedLoot) =>
+        spawned.moments
+          .flatMap((moment) => moment.items)
+          .find((item) => item.source.kind === 'rewardWheel')!.reference;
+      expect(causes(combat04)).toEqual([
+        ['encounterEnd:Combat1', 'encounterEnd:Combat1'],
+        ['afterEncounterReward:Combat1', `action:${roomActionKey(reward(combat04))}`],
+      ]);
+      const combat01 = loot(project, 'O', oOccurrenceIds.combat01).spawned;
+      // The Intro phase's end effects spawn as wheel1 opens, which the moment names.
+      expect(causes(combat01)).toEqual([
+        ['wheelsOpen:Intro', 'wheelsOpen:wheel1'],
+        ['encounterEnd:Combat1', 'encounterEnd:Combat1'],
+        ['afterEncounterReward:Combat1', `action:${roomActionKey(reward(combat01))}`],
+      ]);
+    });
   });
 });

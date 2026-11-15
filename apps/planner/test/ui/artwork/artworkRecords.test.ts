@@ -165,6 +165,7 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
       'unseenSigil',
       'lockedDoors',
       'doorLock',
+      'rewardWheel',
     ],
   ],
   ['fountains', fountainArtwork, catalog.biomes.values.map((b) => b.key)],

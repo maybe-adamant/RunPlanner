@@ -17,13 +17,7 @@ import {
   type ProjectDocument,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
-import {
-  assessRoomActionPlacements,
-  blockedOccurrenceRoomForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
-  settleProjectEdit,
-  simulateProjectAssembly,
-} from '@run-planner/engine/simulation';
+import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 const owner = createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop'));
 const site = createAcquisitionSiteAddress(owner, 'roomExit');
@@ -48,10 +42,10 @@ beforeAll(() => {
 });
 
 describe('required Echo Gold activation', () => {
-  it('inserts required membership before the unfinished paid source child is resolved', () => {
+  it('places no required duplicate while the paid source child is unresolved', () => {
     const beforeOrder = shop(project).roomActions.order;
     const settled = settle(project, purchase);
-    expect(gold(settled.project)).toBeDefined();
+    expect(gold(settled.project)).toBeUndefined();
     expect(
       shop(settled.project).roomActions.order.filter((reference) =>
         beforeOrder.some((old) => roomActionKey(old) === roomActionKey(reference)),
@@ -76,8 +70,7 @@ describe('required Echo Gold activation', () => {
     expect(gold(changed.project)).toBeUndefined();
     const restored = settle(changed.project, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Boon',
     });
     expect(gold(restored.project)).toBeDefined();
@@ -114,8 +107,7 @@ describe('required Echo Gold activation', () => {
     });
     duplicated = applyProjectCommand(duplicated, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Minor',
     });
     duplicated = applyProjectCommand(duplicated, catalog, {
@@ -133,23 +125,36 @@ describe('required Echo Gold activation', () => {
     );
     expect(() => evaluate(duplicated)).not.toThrow();
   });
-  it('inserts a newly required duplicate when an optional source becomes loot', () => {
+  it('leaves a newly required duplicate live when an optional source becomes loot', () => {
     let optional = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer,
       value: { rewardType: 'BlindBoxLoot' },
     });
     optional = applyProjectCommand(optional, catalog, purchase);
-    const settled = settle(optional, {
+    const swapped = settle(optional, {
       kind: 'ReplaceShopOffer',
       offer,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    expect(gold(settled.project)).toBeDefined();
+    // The loot is a new item: its purchase goes, and the owner buys it again.
+    expect(shop(swapped.project).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey({ kind: 'interactShopOffer', offerKey: 'Boon' }),
+    );
+    const settled = settle(swapped.project, purchase);
+    expect(gold(settled.project)).toBeUndefined();
+    // Once the Boon's offer is authored, the unplaced duplicate stands with its finding.
+    expect(evaluate(authorLegalTraitOffers(settled.project)).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'echoGoldPickupPlacementRequired' }),
+    );
   });
   it('retains populated incompatible children and placement when a different slot becomes the trigger', () => {
     const second = createShopOfferAddress(goldenHBiome, owner.occurrenceId, 'Minor');
-    let initial = settle(project, purchase).project;
+    let initial = applyProjectCommand(settle(project, purchase).project, catalog, {
+      kind: 'PlaceEchoGoldPickup',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
+      sourceOfferKey: 'Boon',
+    });
     initial = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceShopOffer',
       offer: second,
@@ -200,41 +205,47 @@ describe('required Echo Gold activation', () => {
     });
     expect(gold(settle(omitted, command).project)).toBeUndefined();
   });
-  it('refuses removing active required membership', () => {
-    const settled = settle(project, purchase);
-    const room = blockedOccurrenceRoomForProjectEvaluationAssembly(settled, owner);
-    if (room === undefined) throw new Error('expected blocked source room');
-    const roster = assessRoomActionPlacements(
-      settled.project.route,
-      owner,
-      room.roomActionRoster,
-      [],
-      derivedAcquisitionEntriesForProjectEvaluationAssembly(settled, site),
+  it('takes a placed duplicate with its purchase', () => {
+    const placed = authorLegalTraitOffers(
+      settle(settle(project, purchase).project, {
+        kind: 'PlaceEchoGoldPickup',
+        entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
+        sourceOfferKey: 'Boon',
+      }).project,
     );
-    expect(
-      roster.proposals.some(
-        (proposal) =>
-          proposal.kind === 'remove' &&
-          proposal.reference.kind === 'interactAcquisitionEntry' &&
-          proposal.reference.entryKey === entry.entryKey,
+    expect(gold(placed)).toBeDefined();
+
+    const unbought = settle(placed, { ...purchase, purchased: false });
+
+    expect(gold(unbought.project)).toBeUndefined();
+    expect(unbought.evaluation.findings.map((finding) => finding.code)).not.toContain(
+      'echoGoldPickupPlacementRequired',
+    );
+  });
+  it('removes a placed required duplicate, which lies live again with its finding', () => {
+    const placed = evaluate(
+      authorLegalTraitOffers(
+        settle(settle(project, purchase).project, {
+          kind: 'PlaceEchoGoldPickup',
+          entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
+          sourceOfferKey: 'Boon',
+        }).project,
       ),
-    ).toBe(false);
-    const reference = gold(settled.project);
+    );
+    const reference = gold(placed.project);
     if (reference === undefined) throw new Error('required Gold missing');
-    expect(
-      settleProjectEdit({
-        catalog,
-        before: settled,
-        evaluate,
-        command: {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(
-            goldenHBiome,
-            owner.occurrenceId,
-            roomActionKey(reference),
-          ),
-        },
-      }).assembly,
-    ).toBe(settled);
+    const removed = settleProjectEdit({
+      catalog,
+      before: placed,
+      evaluate,
+      command: {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(goldenHBiome, owner.occurrenceId, roomActionKey(reference)),
+      },
+    }).assembly;
+    expect(gold(removed.project)).toBeUndefined();
+    expect(removed.evaluation.findings.map((finding) => finding.code)).toContain(
+      'echoGoldPickupPlacementRequired',
+    );
   });
 });

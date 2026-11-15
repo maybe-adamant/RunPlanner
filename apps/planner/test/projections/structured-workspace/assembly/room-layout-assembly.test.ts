@@ -134,7 +134,7 @@ describe('room entry', () => {
     });
   });
 
-  it('settles a chosen pair and returns the entry and flip to the game together', () => {
+  it('settles a chosen pair and offers no choice returning it to the game', () => {
     const first = layoutOf(createGoldenFGHIProject());
     const flipping = choicesOf(first).find((choice) => choice.pair?.flipped === true)!;
     const project = applyProjectCommand(
@@ -145,12 +145,7 @@ describe('room entry', () => {
     const layout = layoutOf(project);
     expect(layout.state).toMatchObject({ kind: 'choice', value: flipping.pair });
     expect(layout).toMatchObject({ entryId: flipping.pair!.pointId, flipped: true });
-    const game = choicesOf(layout).find((choice) => choice.pair === null)!;
-    expect(layout.commandOf(game.key)).toEqual({
-      kind: 'ReplaceRoomLayout',
-      occurrence: rolled,
-      layout: {},
-    });
+    expect(choicesOf(layout).every((choice) => choice.pair !== null)).toBe(true);
   });
 
   it('shows a door-decided entry and flip as one settled pair', () => {

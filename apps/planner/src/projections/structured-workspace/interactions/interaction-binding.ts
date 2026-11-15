@@ -180,6 +180,7 @@ export function bindWorkspaceInteractions(
   });
 
   const roomRerolls = bindRoomRerollInteractions({
+    assembly,
     candidates,
     project: assembly.project,
     requirements: occurrenceInteractionRequirements.values(),

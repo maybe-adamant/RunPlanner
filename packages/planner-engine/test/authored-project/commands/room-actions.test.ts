@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../src/simulation/room-actions';
 import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
@@ -5,7 +6,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   assembleRoomActionDomain,
   activeRoomActionReferences,
   authoredAcquisitionSources,
@@ -40,12 +41,16 @@ import {
   type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
+  type StygianWellGenerationKey,
 } from '@run-planner/engine/authored-project';
 import {
   assembleRoomActionRoster,
   assembleRoomLifecycleTimeline,
   materializeBiomePrefix,
+  simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import { withoutStaleDerivedItems } from '../../../src/authored-project/acquisition/derived-items';
 import {
   createCompleteFGProject,
   replaceNemesisRandomEventInteraction,
@@ -57,8 +62,14 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 import { createCompleteNProject } from '../support/complete-n-project';
+import { canonicalRoom } from '../../support/live-room';
 import { gBiome, gProject } from '../support/configured-projects';
-import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  replaceTestRoomActionOrder,
+  scheduleTestRequiredRoomActions,
+  withItemContent,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrenceId = createOccurrenceId('room-actions-start');
@@ -68,6 +79,7 @@ const reward: RoomActionReference = {
   acquisitionRole: 'source',
 };
 const invented: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'invented' };
+const start = createOccurrenceAddress(biome, occurrenceId);
 
 function action(reference: RoomActionReference) {
   return createRoomActionAddress(biome, occurrenceId, roomActionKey(reference));
@@ -219,7 +231,7 @@ function parallelTarget(document: ProjectDocument) {
 }
 
 describe('room-action commands', () => {
-  it('replaces every Fields cage permutation atomically while retaining mixed actions and cage leaves', () => {
+  it('reorders Fields cages by moving their cage rows, and the walk takes that order', () => {
     const fieldsId = createOccurrenceId('golden-h-combat02');
     const owner = createOccurrenceAddress(goldenHBiome, fieldsId);
     const expanded = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -251,129 +263,34 @@ describe('room-action commands', () => {
       document.route.biomes
         .find((plan) => plan.biomeKey === 'H')!
         .topology!.occurrences.find((candidate) => candidate.occurrenceId === fieldsId)!;
-    const cases = [
-      {
-        permutation: [1, 2, 3],
-        order: [cage(1), pickup(1), cage(2), pickup(2), cage(3), pickup(3)],
-      },
-      {
-        permutation: [1, 3, 2],
-        order: [cage(1), pickup(1), cage(3), cage(2), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [2, 1, 3],
-        order: [cage(2), cage(1), pickup(1), pickup(2), cage(3), pickup(3)],
-      },
-      {
-        permutation: [2, 3, 1],
-        order: [cage(2), cage(3), cage(1), pickup(1), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [3, 1, 2],
-        order: [cage(3), cage(1), pickup(1), cage(2), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [3, 2, 1],
-        order: [cage(3), cage(2), cage(1), pickup(1), pickup(2), pickup(3)],
-      },
-    ];
-    for (const scenario of cases) {
-      const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: owner,
-        phaseKeys: scenario.permutation.map((number) => `Cage0${number}`),
-      });
-      expect(room(history.present).roomActions.order).toEqual(scenario.order);
-      expect(room(history.present).encounters).toEqual(room(initial).encounters);
-      expect(room(history.present).state).toEqual(room(initial).state);
-      if (scenario.permutation.join('') === '123') {
-        expect(history.present).toBe(initial);
-        expect(history.past).toHaveLength(0);
-      } else {
-        expect(history.past).toHaveLength(1);
-        expect(undoProjectHistory(history).present).toBe(initial);
-        expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(history.present);
-      }
-    }
-  });
-
-  it('requires an exact active cage permutation and preserves a missing-action repair', () => {
-    const initial = createGoldenFGHProject();
-    const fieldsId = createOccurrenceId('golden-h-combat02');
-    const owner = createOccurrenceAddress(goldenHBiome, fieldsId);
-    for (const phaseKeys of [[], ['Cage01'], ['Cage01', 'Cage01'], ['Cage01', 'Cage03']]) {
-      expect(() =>
-        applyProjectCommand(initial, catalog, {
-          kind: 'ReplaceFieldsCageOrder',
-          occurrence: owner,
-          phaseKeys,
-        }),
-      ).toThrow('each active Fields cage exactly once');
-    }
-    const missing = decodeProjectDocument(
-      {
-        ...initial,
-        route: {
-          ...initial.route,
-          biomes: initial.route.biomes.map((plan) =>
-            plan.biomeKey !== 'H'
-              ? plan
-              : {
-                  ...plan,
-                  topology: {
-                    ...plan.topology!,
-                    occurrences: plan.topology!.occurrences.map((room) =>
-                      room.occurrenceId !== fieldsId
-                        ? room
-                        : {
-                            ...room,
-                            roomActions: {
-                              order: room.roomActions.order.filter(
-                                (reference) =>
-                                  reference.kind !== 'completeFieldsCage' ||
-                                  reference.phaseKey !== 'Cage02',
-                              ),
-                            },
-                          },
-                    ),
-                  },
-                },
-          ),
-        },
-      },
-      catalog,
+    const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenHBiome, fieldsId, roomActionKey(cage(3))),
+      toIndex: 0,
+    });
+    expect(room(history.present).roomActions.order).toEqual(
+      withItemContents(history.present, owner, [
+        cage(3),
+        cage(1),
+        pickup(1),
+        cage(2),
+        pickup(2),
+        pickup(3),
+      ]),
     );
-    const cageOrder = (document: ProjectDocument) =>
-      roomActionDomainForOccurrence(document, catalog, goldenHBiome, fieldsId)?.domain
-        .fieldsCageOrder;
-    expect(cageOrder(initial)).toEqual({
-      activePhaseKeys: ['Cage01', 'Cage02'],
-      phaseKeys: ['Cage02', 'Cage01'],
-      available: true,
-    });
-    expect(cageOrder(missing)).toEqual({
-      activePhaseKeys: ['Cage01', 'Cage02'],
-      phaseKeys: ['Cage01'],
-      available: false,
-    });
-    expect(
-      roomActionDomainForOccurrence(project(), catalog, biome, occurrenceId)?.domain
-        .fieldsCageOrder,
-    ).toBeUndefined();
-    expect(() =>
-      applyProjectCommand(missing, catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: owner,
-        phaseKeys: ['Cage02', 'Cage01'],
-      }),
-    ).toThrow('restore missing cage actions');
-    expect(() =>
-      applyProjectCommand(project(), catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: createOccurrenceAddress(biome, occurrenceId),
-        phaseKeys: ['Cage01'],
-      }),
-    ).toThrow('does not own Fields cage order');
+    expect(room(history.present).encounters).toEqual(room(initial).encounters);
+    expect(room(history.present).state).toEqual(room(initial).state);
+    // Each cage row begins its own fight, so the encounters follow the rows.
+    const begun = (document: ProjectDocument) =>
+      canonicalRoom(
+        simulateProjectAssembly(catalog, document),
+        owner,
+      )!.roomLifecycleTimeline.boundaries.flatMap((boundary) =>
+        boundary.kind === 'encounterBegun' ? [boundary.phaseKey] : [],
+      );
+    expect(begun(initial)).toEqual(['Cage01', 'Cage02', 'Cage03']);
+    expect(begun(history.present)).toEqual(['Cage03', 'Cage01', 'Cage02']);
+    expect(undoProjectHistory(history).present).toBe(initial);
   });
 
   it('projects a concrete Nemesis result as an ordinary acquisition entry with its exact action owner', () => {
@@ -393,6 +310,17 @@ describe('room-action commands', () => {
       { kind: 'freeItem' },
       { rewardType: 'ArmorBoost' },
     );
+    // The result spawns from the Nemesis contact, so it is an action once the contact is placed.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(5, 1),
+        roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+      ),
+      reference: { kind: 'interactEncounter', phaseKey: 'Encounter' },
+      index: 0,
+    });
     const eventOccurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
@@ -406,6 +334,7 @@ describe('room-action commands', () => {
       site: { pointKey: 'nemesisGenerated:Encounter' },
     });
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
@@ -414,26 +343,34 @@ describe('room-action commands', () => {
     });
     expect(domain.contributions).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
-        reference: {
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'nemesisGenerated:Encounter',
-          entryKey: 'result',
-        },
+        reference: withItemContent(
+          project,
+          createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'nemesisGenerated:Encounter',
+            entryKey: 'result',
+          },
+        ),
         owner: source?.acquisition.owner,
       }),
     );
   });
-  it('defaults an active required reference and rejects its direct removal', () => {
+  it('creates a room with no rows and removes a placed required row', () => {
     const initial = project();
-    const original = occurrence(initial);
-    expect(original.roomActions.order).toEqual([reward]);
-    expect(() =>
-      applyProjectCommand(initial, catalog, {
-        kind: 'RemoveRoomAction',
-        action: action(reward),
-      }),
-    ).toThrow('active required room action cannot be removed');
+    expect(occurrence(initial).roomActions.order).toEqual([]);
+    const placed = applyProjectCommand(initial, catalog, {
+      kind: 'InsertRoomAction',
+      action: action(reward),
+      reference: reward,
+      index: 0,
+    });
+    expect(occurrence(placed).roomActions.order).toEqual([withItemContent(placed, start, reward)]);
+    const removed = applyProjectCommand(placed, catalog, {
+      kind: 'RemoveRoomAction',
+      action: action(reward),
+    });
+    expect(occurrence(removed).roomActions.order).toEqual([]);
   });
 
   it('reconciles a normal Reprieve to reward then fountain, while both ranked orders remain Cleanup-valid', () => {
@@ -466,23 +403,38 @@ describe('room-action commands', () => {
       reward: createIncomingRewardAddress(biome, reprieveId),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    const reprieve = authored.route?.biomes[0]?.topology?.occurrences.find(
-      (candidate) => candidate.occurrenceId === reprieveId,
-    );
-    if (reprieve === undefined) throw new Error('normal Reprieve target is missing');
+    const reprieveOf = (document: ProjectDocument) =>
+      document.route?.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === reprieveId,
+      );
     const pickup: RoomActionReference = {
       kind: 'interactIncomingReward',
       producerPoint: 'roomRewardPickup',
       acquisitionRole: 'source',
     };
     const fountain: RoomActionReference = { kind: 'useFountain' };
-    expect(reprieve.roomActions.order).toEqual([pickup, fountain]);
-    expect(() =>
-      applyProjectCommand(authored, catalog, {
-        kind: 'RemoveRoomAction',
-        action: createRoomActionAddress(biome, reprieveId, roomActionKey(fountain)),
-      }),
-    ).toThrow('active required room action cannot be removed');
+    expect(reprieveOf(authored)?.roomActions.order).toEqual([]);
+    for (const [index, reference] of [pickup, fountain].entries())
+      authored = applyProjectCommand(authored, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(biome, reprieveId, roomActionKey(reference)),
+        reference,
+        index,
+      });
+    const reprieve = reprieveOf(authored);
+    if (reprieve === undefined) throw new Error('normal Reprieve target is missing');
+    const reprieveRoom = createOccurrenceAddress(biome, reprieveId);
+    expect(reprieve.roomActions.order).toEqual(
+      withItemContents(authored, reprieveRoom, [pickup, fountain]),
+    );
+    expect(
+      reprieveOf(
+        applyProjectCommand(authored, catalog, {
+          kind: 'RemoveRoomAction',
+          action: createRoomActionAddress(biome, reprieveId, roomActionKey(fountain)),
+        }),
+      )?.roomActions.order,
+    ).toEqual([withItemContent(authored, reprieveRoom, pickup)]);
 
     const reversed = applyProjectCommand(authored, catalog, {
       kind: 'MoveRoomAction',
@@ -496,6 +448,7 @@ describe('room-action commands', () => {
 
     for (const candidate of [reprieve, reversedReprieve]) {
       const domain = assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, biome),
         catalog,
         biome,
@@ -506,7 +459,7 @@ describe('room-action commands', () => {
         owner: createOccurrenceAddress(biome, candidate.occurrenceId),
         order: candidate.roomActions.order,
         contributions: domain.contributions,
-        lifecycleStructure: domain.lifecycleStructure,
+        eventGraph: domain.eventGraph,
       });
       expect(roster.valid).toBe(true);
       const timeline = assembleRoomLifecycleTimeline({
@@ -517,7 +470,7 @@ describe('room-action commands', () => {
         .filter((entry) => entry.kind === 'action')
         .map((entry) => entry.action.rank);
       const cleanup = timeline.entries.findIndex(
-        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
       );
       const lastAction = timeline.entries.reduce(
         (index, entry, entryIndex) => (entry.kind === 'action' ? entryIndex : index),
@@ -596,12 +549,16 @@ describe('room-action commands', () => {
       acquisition: createAcquisitionRoleAddress(incoming, 'self'),
       value: { kind: 'artificer' },
     });
+    // The pickup's row activates its replacement, which a second pass places.
+    authored = scheduleTestRequiredRoomActions(authored, catalog, biome);
+    authored = scheduleTestRequiredRoomActions(authored, catalog, biome);
 
     const hostOccurrence = authored.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === hostId,
     );
     if (hostOccurrence === undefined) throw new Error('missing Well host');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
@@ -612,7 +569,7 @@ describe('room-action commands', () => {
       owner: host,
       order: hostOccurrence.roomActions.order,
       contributions: domain.contributions,
-      lifecycleStructure: domain.lifecycleStructure,
+      eventGraph: domain.eventGraph,
     });
     const replacement: RoomActionReference = {
       kind: 'interactAcquisitionEntry',
@@ -625,8 +582,8 @@ describe('room-action commands', () => {
     };
     expect(roster.valid).toBe(true);
     expect(
-      roster.rows.find((row) => roomActionKey(row.reference) === roomActionKey(purchase))?.window,
-    ).toEqual({ kind: 'postOutgoing' });
+      roster.rows.find((row) => roomActionKey(row.reference) === roomActionKey(purchase))?.label,
+    ).toEqual({ kind: 'afterDoorsOpen' });
     expect(
       roster.proposals.find(
         (proposal) =>
@@ -733,7 +690,13 @@ describe('room-action commands', () => {
         .find((plan) => plan.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
         ?.roomActions.order,
-    ).toContainEqual(optional);
+    ).toContainEqual(
+      withItemContent(
+        inserted,
+        createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId),
+        optional,
+      ),
+    );
   });
 
   it('rejects reinserting a retained incoming reward after its Anomaly fails', () => {
@@ -763,6 +726,18 @@ describe('room-action commands', () => {
       reward: createIncomingRewardAddress(gBiome, targetId),
       value: { rewardType: 'MaxHealthDrop' },
     });
+    const pickup: RoomActionReference = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+    };
+    const pickupAddress = createRoomActionAddress(gBiome, targetId, roomActionKey(pickup));
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'InsertRoomAction',
+      action: pickupAddress,
+      reference: pickup,
+      index: 0,
+    });
     authored = applyProjectCommand(authored, catalog, {
       kind: 'SwitchTargetToAnomaly',
       target: createTargetAddress(gBiome, source, 'exit1'),
@@ -772,12 +747,6 @@ describe('room-action commands', () => {
       occurrence: createOccurrenceAddress(gBiome, targetId),
       success: false,
     });
-    const pickup: RoomActionReference = {
-      kind: 'interactIncomingReward',
-      producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'self',
-    };
-    const pickupAddress = createRoomActionAddress(gBiome, targetId, roomActionKey(pickup));
     const removed = applyProjectCommand(failed, catalog, {
       kind: 'RemoveRoomAction',
       action: pickupAddress,
@@ -792,7 +761,7 @@ describe('room-action commands', () => {
     ).toThrow('room action is not active for this occurrence');
   });
 
-  it('uses contribution ordinal for parallel required actions activated by one selection', () => {
+  it('schedules parallel required actions activated by one selection by contribution ordinal', () => {
     const targetId = parallelTargetId;
     const source = { kind: 'occurrence' as const, occurrenceId: parallelSourceId };
     const authored = parallelRequiredProject();
@@ -807,25 +776,34 @@ describe('room-action commands', () => {
       selection: createExitSelectionAddress(biome, source),
       value: { kind: 'normal', exitKey: 'exit1' },
     });
-    expect(targetOccurrence(selected)?.roomActions.order).toEqual([
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-    ]);
+    // The selection activates them without placing either.
+    expect(targetOccurrence(selected)?.roomActions.order).toEqual([]);
+    const scheduled = scheduleTestRequiredRoomActions(selected, catalog, biome);
+    expect(targetOccurrence(scheduled)?.roomActions.order).toEqual(
+      withItemContents(scheduled, createOccurrenceAddress(biome, targetId), [
+        {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        },
+        { kind: 'interactEncounter', phaseKey: 'Encounter' },
+      ]),
+    );
   });
 
   it('inserts a missing required action at any legal index, its canonical one by default', () => {
-    const selected = applyProjectCommand(parallelRequiredProject(), catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(biome, {
-        kind: 'occurrence',
-        occurrenceId: parallelSourceId,
+    const selected = scheduleTestRequiredRoomActions(
+      applyProjectCommand(parallelRequiredProject(), catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biome, {
+          kind: 'occurrence',
+          occurrenceId: parallelSourceId,
+        }),
+        value: { kind: 'normal', exitKey: 'exit1' },
       }),
-      value: { kind: 'normal', exitKey: 'exit1' },
-    });
+      catalog,
+      biome,
+    );
     const [incoming, artemis] = parallelTarget(selected).roomActions.order;
     const missing = decodeProjectDocument(
       {
@@ -874,10 +852,22 @@ describe('room-action commands', () => {
     });
 
     expect(activated.past).toHaveLength(1);
-    expect(occurrence(activated.present).roomActions.order).toEqual([reward]);
+    // Activation places no row; placing it is its own entry.
+    expect(occurrence(activated.present).roomActions.order).toEqual([]);
     const undone = undoProjectHistory(activated);
     expect(undone.present).toBe(initial.present);
     expect(redoProjectHistory(undone).present).toBe(activated.present);
+    const placed = applyProjectHistoryCommand(activated, catalog, {
+      kind: 'InsertRoomAction',
+      action: action(reward),
+      reference: reward,
+      index: 0,
+    });
+    expect(placed.past).toHaveLength(2);
+    expect(occurrence(placed.present).roomActions.order).toEqual([
+      withItemContent(placed.present, start, reward),
+    ]);
+    expect(undoProjectHistory(placed).present).toBe(activated.present);
   });
 
   it('keeps an existing omission through unrelated edits and restores it canonically in one history step', () => {
@@ -890,7 +880,10 @@ describe('room-action commands', () => {
     expect(occurrence(retained).roomActions.order).toEqual([]);
 
     const roster = entryRoom(retained).roomActionRoster;
-    expect(roster.issues).toContainEqual({ kind: 'unrankedRequired', reference: reward });
+    expect(roster.issues).toContainEqual({
+      kind: 'unrankedRequired',
+      reference: withItemContent(retained, start, reward),
+    });
     const restores = roster.proposals.filter(
       (proposal) =>
         proposal.kind === 'insert' && roomActionKey(proposal.reference) === roomActionKey(reward),
@@ -911,7 +904,9 @@ describe('room-action commands', () => {
       index: 0,
     });
     expect(restored.past).toHaveLength(1);
-    expect(occurrence(restored.present).roomActions.order).toEqual([reward]);
+    expect(occurrence(restored.present).roomActions.order).toEqual([
+      withItemContent(restored.present, start, reward),
+    ]);
     expect(undoProjectHistory(restored).present).toBe(initial.present);
   });
 
@@ -934,7 +929,9 @@ describe('room-action commands', () => {
     expect(occurrence(activated).roomActions.order).toEqual([]);
     const roster = entryRoom(activated).roomActionRoster;
     expect(roster.issues).toEqual(
-      expect.arrayContaining([{ kind: 'unrankedRequired', reference: reward }]),
+      expect.arrayContaining([
+        { kind: 'unrankedRequired', reference: withItemContent(activated, start, reward) },
+      ]),
     );
     expect(roster.rows).not.toContainEqual(expect.objectContaining({ reference: replacement }));
     expect(
@@ -991,8 +988,13 @@ describe('room-action commands', () => {
       if (occurrence === undefined) throw new Error('Fields occurrence is missing');
       return occurrence;
     };
-    expect(fields(dormant).roomActions.order).not.toContainEqual(sourceReference);
-    expect(fields(dormant).roomActions.order).not.toContainEqual(replacement);
+    const fieldsRoom = createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId);
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(sourceReference),
+    );
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
+    );
     expect(fields(dormant).acquisitionSites?.[replacement.siteKey]?.pickupEntries).toHaveProperty(
       replacement.entryKey,
       null,
@@ -1004,15 +1006,15 @@ describe('room-action commands', () => {
       reference: sourceReference,
       index: 0,
     });
-    const order = fields(dormant).roomActions.order;
-    expect(order).toContainEqual(sourceReference);
-    expect(order).toContainEqual(replacement);
-    expect(
-      order.findIndex((reference) => roomActionKey(reference) === roomActionKey(sourceReference)),
-    ).toBeLessThan(
-      order.findIndex((reference) => roomActionKey(reference) === roomActionKey(replacement)),
+    // The source's participation activates the replacement without placing it.
+    expect(fields(dormant).roomActions.order).toContainEqual(
+      withItemContent(dormant, fieldsRoom, sourceReference),
+    );
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
     );
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
@@ -1021,37 +1023,49 @@ describe('room-action commands', () => {
     });
     expect(domain.contributions).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         reference: replacement,
         participation: 'required',
-        dependencies: [{ kind: 'afterAction', action: sourceReference }],
+        dependencies: [{ action: sourceReference }],
       }),
     );
-    expect(() =>
-      applyProjectCommand(dormant, catalog, {
-        kind: 'RemoveRoomAction',
-        action: replacementAction,
-      }),
-    ).toThrow('active required room action cannot be removed');
+    const withReplacement = applyProjectCommand(dormant, catalog, {
+      kind: 'InsertRoomAction',
+      action: replacementAction,
+      reference: replacement,
+      index: fields(dormant).roomActions.order.length,
+    });
+    expect(fields(withReplacement).roomActions.order.at(-1)).toEqual(
+      withItemContent(withReplacement, fieldsRoom, replacement),
+    );
+    // A placed required row may be removed: its item is live again.
+    expect(
+      fields(
+        applyProjectCommand(withReplacement, catalog, {
+          kind: 'RemoveRoomAction',
+          action: replacementAction,
+        }),
+      ).roomActions.order,
+    ).toEqual(fields(dormant).roomActions.order);
     const deactivated = applyProjectCommand(dormant, catalog, {
       kind: 'RemoveRoomAction',
       action: sourceAction,
     });
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenHBiome),
         catalog,
         biome: goldenHBiome,
         topology: deactivated.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
         occurrence: fields(deactivated),
       }).contributions,
-    ).not.toContainEqual(expect.objectContaining({ kind: 'action', reference: replacement }));
+    ).not.toContainEqual(expect.objectContaining({ reference: replacement }));
     expect(
       fields(deactivated).acquisitionSites?.[replacement.siteKey]?.pickupEntries,
     ).toHaveProperty(replacement.entryKey, null);
   });
 
-  it('undoes the Artificer required-replacement activation as one semantic edit', () => {
+  it('undoes the Artificer required-replacement activation as one semantic edit that places no row', () => {
     const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
     const source = createLocalRewardAddress(
       goldenHBiome,
@@ -1087,16 +1101,29 @@ describe('room-action commands', () => {
       entryKey: artificerReplacementEntryKey(source, 'self'),
     };
     expect(history.past).toHaveLength(1);
+    const fields = history.present.route.biomes
+      .find((plan) => plan.biomeKey === 'H')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId);
+    expect(fields?.roomActions.order).not.toContainEqual(replacement);
     expect(
-      history.present.route.biomes
-        .find((plan) => plan.biomeKey === 'H')
-        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
-        ?.roomActions.order,
-    ).toContainEqual(replacement);
+      assembleRoomActionDomain({
+        producer: true,
+        routePosition: ordinaryPositionFor(catalog, goldenHBiome),
+        catalog,
+        biome: goldenHBiome,
+        topology: history.present.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
+        occurrence: fields!,
+      }).contributions,
+    ).toContainEqual(
+      expect.objectContaining({
+        reference: replacement,
+        participation: 'required',
+      }),
+    );
     expect(undoProjectHistory(history).present).toBe(withSource);
   });
 
-  it('adds encounter and Gorgon contacts atomically without duplicating retained reactivation', () => {
+  it('activates encounter and Gorgon contacts without placing them or duplicating a retained row', () => {
     const combat = createCompleteFGProject();
     const combatOccurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
@@ -1120,10 +1147,16 @@ describe('room-action commands', () => {
       encounterKey: 'ArtemisCombatF',
     });
     expect(selected.past).toHaveLength(1);
-    expect(combatOccurrence(selected.present).roomActions.order).toContainEqual(encounter);
+    expect(combatOccurrence(selected.present).roomActions.order).not.toContainEqual(encounter);
     expect(undoProjectHistory(selected).present).toBe(combat);
+    const contacted = applyProjectCommand(selected.present, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenFBiome, combatOccurrenceId, roomActionKey(encounter)),
+      reference: encounter,
+      index: combatOccurrence(selected.present).roomActions.order.length,
+    });
 
-    const reset = applyProjectCommand(selected.present, catalog, {
+    const reset = applyProjectCommand(contacted, catalog, {
       kind: 'ResetEncounter',
       phase,
     });
@@ -1145,9 +1178,16 @@ describe('room-action commands', () => {
       value: true,
     });
     expect(gorgonHistory.past).toHaveLength(1);
-    expect(combatOccurrence(gorgonHistory.present).roomActions.order).toContainEqual(gorgon);
+    expect(combatOccurrence(gorgonHistory.present).roomActions.order).not.toContainEqual(gorgon);
     expect(undoProjectHistory(gorgonHistory).present).toBe(combat);
-    const clearedGorgon = applyProjectCommand(gorgonHistory.present, catalog, {
+    const gorgonContacted = applyProjectCommand(gorgonHistory.present, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenFBiome, combatOccurrenceId, roomActionKey(gorgon)),
+      reference: gorgon,
+      index: combatOccurrence(gorgonHistory.present).roomActions.order.length,
+    });
+    expect(combatOccurrence(gorgonContacted).roomActions.order).toContainEqual(gorgon);
+    const clearedGorgon = applyProjectCommand(gorgonContacted, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
       value: false,
@@ -1216,7 +1256,7 @@ describe('room-action commands', () => {
     expect(fieldsOccurrence(withoutStale).roomActions.order).not.toContainEqual(invented);
   });
 
-  it('keeps an Artificer replacement payload dormant while rejecting raw insertion until its source role reactivates', () => {
+  it('discards an Artificer replacement and its pickup when its source leaves the Artificer', () => {
     const source = createIncomingRewardAddress(biome, occurrenceId);
     const acquisition = createAcquisitionRoleAddress(source, 'source');
     const site = artificerAcquisitionSite(createOccurrenceAddress(biome, occurrenceId), source);
@@ -1227,27 +1267,105 @@ describe('room-action commands', () => {
       siteKey,
       entryKey,
     };
-    const active = applyProjectCommand(project(), catalog, {
+    const activated = applyProjectCommand(project(), catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'artificer' },
     });
-    expect(occurrence(active).roomActions.order).toContainEqual(replacement);
-    let dormant = applyProjectCommand(active, catalog, {
+    expect(occurrence(activated).roomActions.order).toEqual([]);
+    let active = activated;
+    for (const [index, reference] of [reward, replacement].entries())
+      active = applyProjectCommand(active, catalog, {
+        kind: 'InsertRoomAction',
+        action: action(reference),
+        reference,
+        index,
+      });
+    expect(occurrence(active).roomActions.order).toEqual(
+      withItemContents(active, start, [reward, replacement]),
+    );
+    // Leaving the Artificer discards the replacement and its pickup in the same edit.
+    const left = applyProjectCommand(active, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'normal' },
     });
-    expect(occurrence(dormant).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
-      entryKey,
-      null,
+    expect(occurrence(left).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(occurrence(left).roomActions.order).toEqual([withItemContent(left, start, reward)]);
+
+    // An equal offer rebuilt with another key order is the same source and keeps its chain.
+    const room = occurrence(active);
+    const acquisitionState = room.startingRewardAcquisition!;
+    const judged = (offer: object) =>
+      withoutStaleDerivedItems(biome, room, room, {
+        previousStartIncoming: {
+          offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+          ...acquisitionState,
+        },
+        startIncoming: { offer, ...acquisitionState } as never,
+      });
+    expect(
+      judged({ payload: { source: 'ApolloUpgrade', kind: 'BoonSource' }, rewardType: 'Boon' }),
+    ).toBe(room);
+    expect(
+      judged({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } })
+        .acquisitionSites?.[siteKey],
+    ).toBeUndefined();
+
+    // An earlier schema kept the replacement dormant once its source left the Artificer.
+    const dormant = decodeProjectDocument(
+      JSON.parse(
+        JSON.stringify({
+          ...left,
+          route: {
+            ...left.route,
+            biomes: left.route.biomes.map((plan, index) =>
+              index !== 0 || plan.topology === null
+                ? plan
+                : {
+                    ...plan,
+                    topology: {
+                      ...plan.topology,
+                      occurrences: plan.topology.occurrences.map((room, roomIndex) =>
+                        roomIndex === 0
+                          ? {
+                              ...room,
+                              acquisitionSites: occurrence(active).acquisitionSites,
+                              roomActions: { order: [reward, replacement] },
+                            }
+                          : room,
+                      ),
+                    },
+                  },
+            ),
+          },
+        }),
+      ),
+      catalog,
     );
-    dormant = applyProjectCommand(dormant, catalog, {
-      kind: 'RemoveRoomAction',
+    expect(occurrence(dormant).roomActions.order).toEqual([reward, replacement]);
+    // An unrelated edit to the room keeps it; the edit never changed its source.
+    const unrelated = applyProjectCommand(dormant, catalog, {
+      kind: 'MoveRoomAction',
       action: action(replacement),
+      toIndex: 0,
     });
+    expect(occurrence(unrelated).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
+      entryKey,
+    );
+    expect(occurrence(unrelated).roomActions.order).toEqual(
+      withItemContents(unrelated, start, [replacement, reward]),
+    );
+    // The 102 -> 103 upgrade drops it once, with its pickup.
+    const upgraded = settleProjectUpgrade({
+      catalog,
+      project: dormant,
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    }).assembly.project;
+    expect(occurrence(upgraded).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(occurrence(upgraded).roomActions.order).toEqual([reward]);
     expect(() =>
-      applyProjectCommand(dormant, catalog, {
+      applyProjectCommand(left, catalog, {
         kind: 'InsertRoomAction',
         action: action(replacement),
         reference: replacement,
@@ -1255,26 +1373,46 @@ describe('room-action commands', () => {
       }),
     ).toThrow('room action is not active for this occurrence');
 
-    const restored = applyProjectCommand(dormant, catalog, {
+    // Returning to the Artificer produces a new replacement, live until placed.
+    const restored = applyProjectCommand(left, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'artificer' },
     });
-    expect(occurrence(restored).roomActions.order).toContainEqual(replacement);
+    expect(occurrence(restored).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
+    );
     expect(occurrence(restored).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
       entryKey,
       null,
     );
+    const replaced = applyProjectCommand(restored, catalog, {
+      kind: 'InsertRoomAction',
+      action: action(replacement),
+      reference: replacement,
+      index: 1,
+    });
+    expect(occurrence(replaced).roomActions.order).toEqual(
+      withItemContents(replaced, start, [reward, replacement]),
+    );
   });
 
   it('preserves authored chronology when room identity is replaced', () => {
-    const replaced = applyProjectCommand(project(), catalog, {
+    const placed = applyProjectCommand(project(), catalog, {
+      kind: 'InsertRoomAction',
+      action: action(reward),
+      reference: reward,
+      index: 0,
+    });
+    const replaced = applyProjectCommand(placed, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, occurrenceId),
       gameName: 'F_Opening02',
     });
 
-    expect(occurrence(replaced).roomActions.order).toEqual([reward]);
+    expect(occurrence(replaced).roomActions.order).toEqual([
+      withItemContent(replaced, start, reward),
+    ]);
   });
 
   it('owns initial Shop participation through one exact append/remove command', () => {
@@ -1283,6 +1421,7 @@ describe('room-action commands', () => {
     const major = createShopOfferAddress(shopBiome, shopId, 'MajorNonBoon');
     const minor = createShopOfferAddress(shopBiome, shopId, 'Minor');
     const travel = createShopOfferAddress(shopBiome, shopId, 'travelDealRefill');
+    const shop = createOccurrenceAddress(shopBiome, shopId);
     const initial = createCompleteNProject();
     expect(() =>
       applyProjectCommand(initial, catalog, {
@@ -1306,10 +1445,12 @@ describe('room-action commands', () => {
       history.present.route.biomes
         .find((candidate) => candidate.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
-    expect(shopOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-    ]);
+    expect(shopOccurrence()?.roomActions.order).toEqual(
+      withItemContents(history.present, shop, [
+        { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+        { kind: 'interactShopOffer', offerKey: 'Minor' },
+      ]),
+    );
 
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceShopPurchaseParticipation',
@@ -1317,17 +1458,19 @@ describe('room-action commands', () => {
       purchased: false,
     });
     expect(shopOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
+      withItemContent(history.present, shop, { kind: 'interactShopOffer', offerKey: 'Minor' }),
     ]);
     expect(history.past).toHaveLength(3);
     history = undoProjectHistory(history);
-    expect(shopOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-    ]);
+    expect(shopOccurrence()?.roomActions.order).toEqual(
+      withItemContents(history.present, shop, [
+        { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+        { kind: 'interactShopOffer', offerKey: 'Minor' },
+      ]),
+    );
     history = redoProjectHistory(history);
     expect(shopOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
+      withItemContent(history.present, shop, { kind: 'interactShopOffer', offerKey: 'Minor' }),
     ]);
   });
 
@@ -1425,10 +1568,12 @@ describe('room-action commands', () => {
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === well.occurrenceId)
       ?.roomActions.order;
-    expect(order?.filter((reference) => reference.kind === 'purchaseStygianWellOffer')).toEqual([
-      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
-    ]);
+    expect(order?.filter((reference) => reference.kind === 'purchaseStygianWellOffer')).toEqual(
+      withItemContents(project, well, [
+        { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+        { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+      ]),
+    );
 
     for (const generationKey of ['initial:secondLeft', 'travelDealRefill'] as const) {
       project = applyProjectCommand(project, catalog, {
@@ -1457,12 +1602,15 @@ describe('room-action commands', () => {
     const reverseOrder = finalOccurrence.roomActions.order;
     expect(
       reverseOrder.filter((reference) => reference.kind === 'purchaseStygianWellOffer'),
-    ).toEqual([
-      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
-    ]);
+    ).toEqual(
+      withItemContents(project, well, [
+        { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+        { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+      ]),
+    );
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -1471,12 +1619,16 @@ describe('room-action commands', () => {
       }).contributions,
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
-        reference: { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+        reference: withItemContent(project, well, {
+          kind: 'purchaseStygianWellOffer',
+          generationKey: 'travelDealRefill',
+        }),
         dependencies: [
           {
-            kind: 'afterAction',
-            action: { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+            action: withItemContent(project, well, {
+              kind: 'purchaseStygianWellOffer',
+              generationKey: 'initial:secondLeft',
+            }),
             authoringOnly: true,
           },
         ],
@@ -1520,14 +1672,12 @@ describe('room-action commands', () => {
     };
     const fountain = { kind: 'useFountain' as const };
     const rack = { kind: 'interactKeepsakeRack' as const };
-    const bought = (generationKey: string) => ({
-      kind: 'purchaseStygianWellOffer' as const,
-      generationKey,
-    });
+    const bought = (generationKey: StygianWellGenerationKey) =>
+      withItemContent(project, well, { kind: 'purchaseStygianWellOffer', generationKey });
     expect(order(project)).toEqual([fountain, rack, bought('initial:secondLeft')]);
     const secondRight = { ...refill, generationKey: 'initial:secondRight' as const };
     // Anywhere after the fountain unlocks the Well; the default is the end.
-    expect(objectCommandInsertionIndexes(project, catalog, secondRight)).toEqual([1, 2, 3]);
+    expect(positionedCommandInsertionIndexes(project, catalog, secondRight)).toEqual([1, 2, 3]);
     expect(order(applyProjectCommand(project, catalog, { ...secondRight, index: 1 }))).toEqual([
       fountain,
       bought('initial:secondRight'),
@@ -1535,15 +1685,15 @@ describe('room-action commands', () => {
       bought('initial:secondLeft'),
     ]);
     expect(() => applyProjectCommand(project, catalog, { ...secondRight, index: 0 })).toThrow(
-      /index 0 is not a legal position .* a required action of an earlier window/,
+      /index 0 is not a legal position .* a required action whose deadline passes first/,
     );
     // The refill restocks only after the first purchase.
-    expect(objectCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);
+    expect(positionedCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);
     expect(() => applyProjectCommand(project, catalog, { ...refill, index: 2 })).toThrow(
       /must follow/,
     );
     const placed = applyProjectCommand(project, catalog, secondRight);
-    expect(objectCommandInsertionIndexes(placed, catalog, secondRight)).toEqual([]);
+    expect(positionedCommandInsertionIndexes(placed, catalog, secondRight)).toEqual([]);
     expect(() => applyProjectCommand(placed, catalog, { ...secondRight, index: 1 })).toThrow(
       'an index places only a new purchase',
     );
@@ -1562,7 +1712,7 @@ describe('room-action commands', () => {
     ).toThrow('unknown shop offer invented');
   });
 
-  it('keeps the permanent Postboss rack in place across set and clear and moves it in one undo step', () => {
+  it('keeps the Postboss rack in place across set and clear, moves it in one undo step and removes it', () => {
     const completion = createOccurrenceAddress(
       biome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -1583,9 +1733,10 @@ describe('room-action commands', () => {
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(postbossOf(replaced)?.roomActions.order).toEqual([{ kind: 'useFountain' }, rack]);
-    expect(() =>
-      applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action }),
-    ).toThrow('the keepsake rack is permanent');
+    // Removing the rack's use clears its choice; the held keepsake stays.
+    const unracked = applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action });
+    expect(postbossOf(unracked)?.roomActions.order).toEqual([{ kind: 'useFountain' }]);
+    expect(postbossOf(unracked)?.keepsakeRack).toEqual({ keepsakeKey: null });
 
     const history = applyProjectHistoryCommand(createProjectHistory(replaced), catalog, {
       kind: 'MoveRoomAction',
@@ -1677,7 +1828,7 @@ describe('room-action commands', () => {
         owner: completion,
         order,
         contributions: located.domain.contributions,
-        lifecycleStructure: located.domain.lifecycleStructure,
+        eventGraph: located.domain.eventGraph,
       });
     };
     const rackAction = createRoomActionAddress(biome, completion.occurrenceId, roomActionKey(rack));
@@ -1686,7 +1837,7 @@ describe('room-action commands', () => {
     expect(
       roomActionDomainForOccurrence(document, catalog, biome, completion.occurrenceId)?.occurrence
         .roomActions.order,
-    ).toEqual([fountain, rack, purchase]);
+    ).toEqual(withItemContents(document, completion, [fountain, rack, purchase]));
     for (const order of [
       [rack, fountain, purchase],
       [fountain, rack, purchase],
@@ -1698,19 +1849,14 @@ describe('room-action commands', () => {
         'optional',
       );
       // Doors open once the fountain resolves, whatever the rack's position.
-      expect(
-        assessed.checkpoints.find((checkpoint) => checkpoint.checkpointKey === 'exitUsable')
-          ?.afterRank,
-      ).toBe(order.indexOf(fountain) + 1);
+      expect(doorsReadyAfterRank(assessed.rows).afterRank).toBe(order.indexOf(fountain) + 1);
     }
     expect(
-      roster([rack, fountain, purchase]).rows.find((row) => row.key === roomActionKey(rack))
-        ?.window,
-    ).toEqual({ kind: 'standard', phase: 'afterCombat' });
+      roster([rack, fountain, purchase]).rows.find((row) => row.key === roomActionKey(rack))?.label,
+    ).toEqual({ kind: 'afterCombat' });
     expect(
-      roster([fountain, purchase, rack]).rows.find((row) => row.key === roomActionKey(rack))
-        ?.window,
-    ).toEqual({ kind: 'postOutgoing' });
+      roster([fountain, purchase, rack]).rows.find((row) => row.key === roomActionKey(rack))?.label,
+    ).toEqual({ kind: 'afterDoorsOpen' });
     // The Well still unlocks only with the doors.
     expect(roster([purchase, fountain, rack]).valid).toBe(false);
     expect(
@@ -1721,12 +1867,12 @@ describe('room-action commands', () => {
           proposal.structurallyAuthorable,
       ),
     ).toHaveLength(2);
+    // The rack is an optional row like any other: removable, and insertable when absent.
     expect(
       roster([fountain, purchase, rack]).proposals.some(
         (proposal) => proposal.kind === 'remove' && proposal.reference.kind === rack.kind,
       ),
-    ).toBe(false);
-    // Rack membership belongs to the keepsake selection, so no generic insert is offered.
+    ).toBe(true);
     const current = roomActionDomainForOccurrence(
       document,
       catalog,
@@ -1738,11 +1884,11 @@ describe('room-action commands', () => {
         owner: completion,
         order: [fountain, purchase],
         contributions: current.domain.contributions,
-        lifecycleStructure: current.domain.lifecycleStructure,
+        eventGraph: current.domain.eventGraph,
       }).proposals.some(
         (proposal) => proposal.kind === 'insert' && proposal.reference.kind === rack.kind,
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       applyProjectCommand(document, catalog, {
         kind: 'MoveRoomAction',
@@ -1751,6 +1897,6 @@ describe('room-action commands', () => {
       }).route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
-    ).toEqual([rack, fountain, purchase]);
+    ).toEqual(withItemContents(document, completion, [rack, fountain, purchase]));
   });
 });

@@ -10,7 +10,7 @@ import {
 import { ArtworkChip } from '@planner/ui/editor/rewards/TimelineChip';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { useCommandsIntent } from '@planner/ui/controls/useCommandIntent';
-import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { featureLockHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
@@ -22,12 +22,8 @@ import { heldObjectIcon, heldObjectName, heldObjectShortName } from './roomObjec
 const isSwitchPlacementFinding = (finding: { readonly code: string }) =>
   finding.code === 'challengeSwitchPlacementUnavailable';
 
-function lockHint(object: {
-  readonly lock?: WorkspaceRoomAnchorObject['lock'];
-}): string | undefined {
-  const lock = object.lock;
-  if (lock === undefined) return undefined;
-  return lock.reason === 'unreached' ? candidateWaitingHint : lock.sentences.join(' ');
+function lockHint(object: { readonly lock?: WorkspaceRoomAnchorObject['lock'] }) {
+  return featureLockHint(object.lock);
 }
 
 /** Whether each anchor object stands in the room: a toggle where it can change, else its icon. */

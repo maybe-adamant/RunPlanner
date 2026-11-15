@@ -1,27 +1,30 @@
-import type {
-  SteadyGrowthOutcomeAddress,
-  TranscendentEmbryoOutcomeAddress,
-  OccurrenceAddress,
+import {
+  createBiomeAddress,
+  createRoomActionAddress,
+  type RoomActionAddress,
+  type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
+  type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
-import type {
-  RoomLifecycleStructure,
-  RoomLifecycleStructurePhase,
-  RoomLifecycleStructurePoint,
-} from '../../authored-project/room-actions/lifecycle-structure';
 import {
-  roomLifecycleWindowOrdinal,
-  scopeRoomLifecycleStructure,
-} from '../../authored-project/room-actions/lifecycle-structure';
+  cagePhase,
+  roomActionOpeningPoint,
+  roomEventActive,
+  roomEventPlaces,
+  roomEventPointPasses,
+  scopeRoomEventGraph,
+  type RoomEvent,
+  type RoomEventGraph,
+  type RoomEventGraphPhase,
+} from '../../authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { RoomActionRoster, RoomActionRow } from './model';
+import { doorsReadyAfterRank } from './assemble';
+import { isWheelContact, type RoomActionRoster, type RoomActionRow } from './model';
 
-/** A Timeline boundary; the internal outgoing generation and next-phase points are not. */
-export type RoomLifecycleBoundary = Exclude<
-  RoomLifecycleStructurePoint,
-  { readonly kind: 'nextPhase' } | { readonly kind: 'outgoingGeneration' }
->;
+/** A Timeline boundary: one event of the room's graph. */
+export type RoomLifecycleBoundary = RoomEvent;
 
 export type RoomLifecycleTimelineEntry =
   | {
@@ -30,6 +33,13 @@ export type RoomLifecycleTimelineEntry =
       /** The ranked action position at which the seam is rendered. */
       readonly rank: number;
       readonly placement: 'before' | 'after';
+      /**
+       * The placed row whose verb starts this encounter marker (a cage's Unlock, a gate
+       * pickup, a wheel's choice, a press), which the marker stands right after. Absent
+       * where the marker follows the event before it, or its row is unplaced or ranked
+       * where the marker cannot follow it.
+       */
+      readonly trigger?: RoomActionAddress;
     }
   | {
       readonly kind: 'action';
@@ -54,9 +64,11 @@ type RoomLifecycleBoundaryEntry = Extract<
 
 export interface RoomLifecycleTimeline {
   readonly owner: OccurrenceAddress;
-  readonly structure: RoomLifecycleStructure;
+  readonly graph: RoomEventGraph;
   readonly entries: readonly RoomLifecycleTimelineEntry[];
   readonly boundaries: readonly RoomLifecycleBoundary[];
+  /** The doors open after this many ranked rows: the slot of Doors open. */
+  readonly doorsAfterRank: number;
   /** Retained unranked/stale action rows remain available to a repair surface. */
   readonly repairRows: readonly RoomActionRow[];
 }
@@ -79,13 +91,11 @@ function appendAutomaticTimelineEffects(
     ),
     ...effects,
   ];
-  for (const effect of allEffects) {
-    const key = effect.phaseKey;
-    const current = byPhase.get(key) ?? [];
-    current.push(effect);
-    byPhase.set(key, current);
-  }
+  for (const effect of allEffects)
+    byPhase.set(effect.phaseKey, [...(byPhase.get(effect.phaseKey) ?? []), effect]);
   const order = (effect: AutomaticEffect) => (effect.effect === 'steadyGrowth' ? 0 : 1);
+  const phaseEffects = (phaseKey: string) =>
+    (byPhase.get(phaseKey) ?? []).sort((left, right) => order(left) - order(right));
   const shipPostCombatActionIndexByPhase = new Map<string, number>();
   let latestEncounterEndPhaseKey: string | undefined;
   timeline.entries.forEach((entry, index) => {
@@ -96,23 +106,18 @@ function appendAutomaticTimelineEffects(
     if (
       entry.kind === 'action' &&
       entry.action.participation === 'required' &&
-      entry.action.window.kind === 'shipPostCombat'
-    ) {
-      if (latestEncounterEndPhaseKey !== undefined)
-        shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
-    }
+      entry.action.contact.kind === 'afterWheelPhase' &&
+      latestEncounterEndPhaseKey !== undefined
+    )
+      shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
   });
   const entries: RoomLifecycleTimelineEntry[] = [];
   for (const [index, entry] of timeline.entries.entries()) {
     const boundary = entry.kind === 'boundary' ? entry.boundary : undefined;
     if (boundary?.kind === 'encounterEnd') {
       entries.push(entry);
-      if (!shipPostCombatActionIndexByPhase.has(boundary.phaseKey)) {
-        for (const effect of (byPhase.get(boundary.phaseKey) ?? []).sort(
-          (left, right) => order(left) - order(right),
-        ))
-          entries.push(effect);
-      }
+      if (!shipPostCombatActionIndexByPhase.has(boundary.phaseKey))
+        entries.push(...phaseEffects(boundary.phaseKey));
       continue;
     }
     if (entry.kind === 'automaticEffect') continue;
@@ -120,11 +125,7 @@ function appendAutomaticTimelineEffects(
     const phaseKey = [...shipPostCombatActionIndexByPhase.entries()].find(
       ([, actionIndex]) => actionIndex === index,
     )?.[0];
-    if (phaseKey !== undefined)
-      for (const effect of (byPhase.get(phaseKey) ?? []).sort(
-        (left, right) => order(left) - order(right),
-      ))
-        entries.push(effect);
+    if (phaseKey !== undefined) entries.push(...phaseEffects(phaseKey));
   }
   return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
 }
@@ -208,10 +209,6 @@ export function appendTranscendentEmbryoTimelineEffects(
   return appendAutomaticTimelineEffects(timeline, effects);
 }
 
-function checkpointRank(roster: RoomActionRoster, key: string): number | undefined {
-  return roster.checkpoints.find((checkpoint) => checkpoint.checkpointKey === key)?.afterRank;
-}
-
 function actionRank(roster: RoomActionRoster, reference: RoomActionReference): number | undefined {
   const key = roomActionKey(reference);
   return roster.rows.find((candidate) => candidate.key === key)?.rank ?? undefined;
@@ -232,19 +229,24 @@ function lastRank(
   return matches.length === 0 ? undefined : (matches[matches.length - 1]!.rank ?? undefined);
 }
 
-type VisibleRoomLifecycleStructurePoint = RoomLifecycleBoundary;
-
 function boundaryEntry(
-  point: VisibleRoomLifecycleStructurePoint,
+  point: RoomLifecycleBoundary,
   rank: number,
   placement: 'before' | 'after',
+  trigger?: RoomActionAddress,
 ): RoomLifecycleBoundaryEntry {
   return Object.freeze({
     kind: 'boundary',
     boundary: point,
     rank,
     placement,
+    ...(trigger === undefined ? {} : { trigger }),
   });
+}
+
+/** The graph's events that stand on the Timeline: every event with a marker. */
+function timelineEvents(graph: RoomEventGraph): readonly RoomEvent[] {
+  return graph.events.filter((event) => !('markers' in event) || event.markers !== 'none');
 }
 
 function boundarySlot(entry: RoomLifecycleBoundaryEntry): number {
@@ -260,109 +262,167 @@ export function assembleRoomLifecycleTimeline(
   input: RoomLifecycleTimelineInput,
 ): RoomLifecycleTimeline {
   const { roomActionRoster: roster } = input;
-  const structure = roster.lifecycleStructure;
+  const structure = roster.eventGraph;
   const entries: RoomLifecycleTimelineEntry[] = [];
   const rankedRows = roster.rows
     .filter((row) => row.rank !== null && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   const finalRank = rankedRows.reduce((rank, row) => Math.max(rank, row.rank!), 0);
   const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
+  const rowByRank = new Map(rankedRows.map((row) => [row.rank!, row]));
+  const biome = createBiomeAddress(input.owner.routeKey, input.owner.biomeKey);
+  /** A marker its placed trigger row starts stands right after that row. */
+  const triggered = (
+    point: RoomLifecycleBoundary,
+    trigger: RoomActionReference,
+    rank: number,
+  ): RoomLifecycleBoundaryEntry => {
+    const key = roomActionKey(trigger);
+    return boundaryEntry(
+      point,
+      rank,
+      'after',
+      rowByRank.get(rank)?.key === key
+        ? createRoomActionAddress(biome, input.owner.occurrenceId, key)
+        : undefined,
+    );
+  };
   const finalPhaseKey = structure.phases.at(-1)?.phaseKey;
 
-  const rowsForPhase = (phase: RoomLifecycleStructurePhase): readonly RoomActionRow[] =>
+  /** The row whose press or cage begins a phase's encounter, when a row does. */
+  const beginningRow = (phaseKey: string): RoomActionReference | undefined => {
+    const begun = structure.events.find(
+      (event) => event.kind === 'encounterBegun' && event.phaseKey === phaseKey,
+    );
+    return begun?.kind === 'encounterBegun' && begun.trigger.kind === 'action'
+      ? begun.trigger.action
+      : undefined;
+  };
+
+  const wheelRow = ({ contact }: RoomActionRow): string | undefined =>
+    isWheelContact(contact) ? contact.wheelKey : undefined;
+  // Only a delivery or clocked drop spawns at end effects; the walk names which, so its
+  // row stands with the room's last phase and never places a Wheels open.
+  const endEffectsRow = (row: RoomActionRow, phaseKey: string): boolean =>
+    row.bounds.spawn.kind === 'endEffects' && phaseKey === finalPhaseKey;
+
+  const rowsForPhase = (phase: RoomEventGraphPhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
-      if (phase.rewardWheelKey !== undefined) {
+      if (phase.rewardWheelKey !== undefined) return wheelRow(row) === phase.rewardWheelKey;
+      if (cagePhase(structure, phase.phaseKey))
         return (
-          (row.window.kind === 'shipPreCombat' ||
-            row.window.kind === 'shipWheelsOpen' ||
-            row.window.kind === 'shipPostCombat') &&
-          row.window.wheelKey === phase.rewardWheelKey
+          (row.bounds.spawn.kind === 'encounterEnd' &&
+            row.bounds.spawn.phaseKey === phase.phaseKey) ||
+          endEffectsRow(row, phase.phaseKey)
         );
-      }
-      if (structure.profileKey === 'FieldsCombatRoom') {
-        return (
-          (row.window.kind === 'fields' && row.window.phaseKey === phase.phaseKey) ||
-          (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey)
-        );
-      }
       return (
-        (row.window.kind === 'standard' &&
-          (row.window.phase === 'beforeCombat' || phase.phaseKey === finalPhaseKey)) ||
-        (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey)
+        row.contact.kind === 'beforeCombat' ||
+        (row.contact.kind === 'afterCombat' && phase.phaseKey === finalPhaseKey) ||
+        endEffectsRow(row, phase.phaseKey)
       );
     });
 
-  const firstPostCombatRankForPhase = (phase: RoomLifecycleStructurePhase): number | undefined => {
+  const firstPostCombatRankForPhase = (phase: RoomEventGraphPhase): number | undefined => {
     const phaseRows = rowsForPhase(phase);
     return phase.rewardWheelKey === undefined
       ? firstRank(
           phaseRows,
-          (row) =>
-            (row.window.kind === 'standard' && row.window.phase === 'afterCombat') ||
-            (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey),
+          (row) => row.contact.kind === 'afterCombat' || endEffectsRow(row, phase.phaseKey),
         )
-      : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
+      : firstRank(phaseRows, (row) => row.contact.kind === 'afterWheelPhase');
   };
 
-  const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined => {
-    if (structure.profileKey !== 'ShipCombatRoom') return undefined;
-    if (row.window.kind === 'shipPostCombat') {
-      const wheelKey = row.window.wheelKey;
-      return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
+  const place = roomEventPlaces(structure);
+  const opening = (row: RoomActionRow) => place(roomActionOpeningPoint(row.bounds));
+
+  // The slot of the last boundary placed; boundaries follow the structure's order.
+  let precedingSlot = 0;
+
+  /**
+   * Where the fight an unplaced cage or wheel choice starts would start: after
+   * the executable rows of its window the walk reaches before it, from the
+   * last boundary placed, up to the first row of a later window or one it
+   * cannot take. Undefined while a required action due by then is missing,
+   * since the walk stops there first.
+   */
+  const unplacedStartRank = (start: RoomActionReference, fromSlot: number): number | undefined => {
+    const startRow = roster.rows.find((row) => row.key === roomActionKey(start));
+    if (startRow === undefined) return undefined;
+    const ordinal = opening(startRow);
+    if (
+      roster.rows.some(
+        (row) =>
+          row.rank === null &&
+          row.participation === 'required' &&
+          !row.stale &&
+          roomEventPointPasses(place, roomActionOpeningPoint(startRow.bounds), row.bounds.deadline),
+      )
+    )
+      return undefined;
+    let rank: number | undefined;
+    for (const row of rankedRows) {
+      if (row.rank! <= fromSlot) continue;
+      if (!row.executable || opening(row) > ordinal) break;
+      rank = row.rank!;
     }
-    if (row.window.kind === 'shipPreCombat' || row.window.kind === 'shipWheelsOpen') {
-      const wheelKey = row.window.wheelKey;
-      const targetIndex = structure.phases.findIndex((phase) => phase.rewardWheelKey === wheelKey);
-      return targetIndex > 0 ? structure.phases[targetIndex - 1]?.phaseKey : undefined;
-    }
-    return undefined;
+    return rank;
   };
 
-  const desiredBoundary = (
-    point: VisibleRoomLifecycleStructurePoint,
+  /** Combat: after its gate row, or after the rows that precede an automatic start. */
+  const desiredCombat = (
+    point: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }>,
+    begun: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterBegun' }> | undefined,
   ): RoomLifecycleBoundaryEntry => {
+    // A cage's or press's row begins its fight, and a wheel's choice or a gate pickup starts it.
+    const start =
+      (begun?.trigger.kind === 'action' ? begun.trigger.action : undefined) ??
+      (point.trigger.kind === 'action' ? point.trigger.action : undefined);
+    if (start !== undefined) {
+      const placed = actionRank(roster, start);
+      if (placed !== undefined) return triggered(point, start, placed);
+      const unplaced = unplacedStartRank(start, precedingSlot);
+      return unplaced === undefined
+        ? boundaryEntry(point, 0, 'before')
+        : boundaryEntry(point, unplaced, 'after');
+    }
+    const lastPreCombatRank = lastRank(rankedRows, (row) => row.contact.kind === 'beforeCombat');
+    return lastPreCombatRank === undefined
+      ? boundaryEntry(point, 0, 'before')
+      : boundaryEntry(point, lastPreCombatRank, 'after');
+  };
+
+  const desiredBoundary = (point: RoomLifecycleBoundary): RoomLifecycleBoundaryEntry => {
     switch (point.kind) {
       case 'roomEntered':
         return boundaryEntry(point, 0, 'before');
-      case 'encounterStart': {
-        const phase = phaseByKey.get(point.phaseKey);
-        if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
-        const cage =
-          structure.profileKey !== 'FieldsCombatRoom'
-            ? undefined
-            : phase.endsOnInteraction === true
-              ? Object.freeze({ kind: 'interactEncounter' as const, phaseKey: phase.phaseKey })
-              : Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: phase.phaseKey });
-        const choose =
-          phase.rewardWheelKey === undefined
-            ? undefined
-            : Object.freeze({
-                kind: 'chooseRewardWheel' as const,
-                wheelKey: phase.rewardWheelKey,
-              });
-        const lastPreCombatRank =
-          cage === undefined && choose === undefined
-            ? lastRank(
-                rankedRows,
-                (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
-              )
-            : undefined;
-        const rank =
-          cage !== undefined
-            ? (actionRank(roster, cage) ?? 0)
-            : choose !== undefined
-              ? (actionRank(roster, choose) ?? 0)
-              : (lastPreCombatRank ?? 0);
-        return boundaryEntry(
-          point,
-          rank,
-          cage !== undefined
-            ? 'before'
-            : choose !== undefined || lastPreCombatRank !== undefined
-              ? 'after'
-              : 'before',
+      case 'encounterBegun': {
+        // An encounter no gate separates from its Combat stands where its Combat does.
+        const combat = structure.events.find(
+          (event): event is Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }> =>
+            event.kind === 'encounterStarted' && event.phaseKey === point.phaseKey,
         );
+        if (combat?.trigger.kind === 'automatic') {
+          const at = desiredCombat(combat, point);
+          return boundaryEntry(point, at.rank, at.placement, at.trigger);
+        }
+        // A cage's row begins it; otherwise it begins with what came before (room
+        // entry, Wheels open, the previous phase's end).
+        if (point.trigger.kind === 'action') {
+          const placed = actionRank(roster, point.trigger.action);
+          if (placed !== undefined) return triggered(point, point.trigger.action, placed);
+          const unplaced = unplacedStartRank(point.trigger.action, precedingSlot);
+          if (unplaced !== undefined) return boundaryEntry(point, unplaced, 'after');
+        }
+        return boundaryEntry(point, 0, 'before');
       }
+      case 'encounterStarted':
+        return desiredCombat(
+          point,
+          structure.events.find(
+            (event): event is Extract<RoomLifecycleBoundary, { readonly kind: 'encounterBegun' }> =>
+              event.kind === 'encounterBegun' && event.phaseKey === point.phaseKey,
+          ),
+        );
       case 'bossDefeated': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
@@ -373,26 +433,13 @@ export function assembleRoomLifecycleTimeline(
           firstPostCombatRank === undefined ? 'after' : 'before',
         );
       }
-      // How the fight ended stands where it ends, just before its end.
-      case 'encounterOutcome':
       case 'encounterEnd': {
+        // A fight its row begins ends with that row.
+        const begunBy = beginningRow(point.phaseKey);
+        if (begunBy !== undefined)
+          return boundaryEntry(point, actionRank(roster, begunBy) ?? 0, 'after');
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
-        const interactionRank =
-          phase.endsOnInteraction === true
-            ? actionRank(roster, { kind: 'interactEncounter', phaseKey: phase.phaseKey })
-            : undefined;
-        if (interactionRank !== undefined) return boundaryEntry(point, interactionRank, 'after');
-        if (structure.profileKey === 'FieldsCombatRoom' && phase.endsOnInteraction !== true) {
-          return boundaryEntry(
-            point,
-            actionRank(roster, {
-              kind: 'completeFieldsCage',
-              phaseKey: phase.phaseKey,
-            }) ?? 0,
-            'after',
-          );
-        }
         const phaseRows = rowsForPhase(phase);
         const firstPostCombatRank = firstPostCombatRankForPhase(phase);
         const rank =
@@ -410,67 +457,61 @@ export function assembleRoomLifecycleTimeline(
           0;
         return boundaryEntry(point, rank, firstPostCombatRank === undefined ? 'after' : 'before');
       }
-      // The next wheels roll right after the previous phase's end effects.
+      // The next wheels roll right after the previous phase's end effects; a first
+      // phase's wheels open with the room.
       case 'wheelsOpen': {
-        const previousPhase =
-          structure.phases[
-            structure.phases.findIndex((phase) => phase.rewardWheelKey === point.wheelKey) - 1
-          ];
-        if (previousPhase === undefined) return boundaryEntry(point, 0, 'after');
-        const opened = Object.freeze({
-          kind: 'encounterEnd' as const,
-          phaseKey: previousPhase.phaseKey,
-        });
-        const openedOrdinal = roomLifecycleWindowOrdinal(structure, opened);
+        if (point.afterPhaseKey === undefined) return boundaryEntry(point, 0, 'after');
+        const openedOrdinal = place(
+          Object.freeze({ kind: 'endEffects' as const, phaseKey: point.afterPhaseKey }),
+        );
         return boundaryEntry(
           point,
           lastRank(
             rankedRows,
             (row) =>
               row.participation === 'required' &&
-              roomLifecycleWindowOrdinal(structure, row.window) < openedOrdinal,
+              row.bounds.spawn.kind !== 'endEffects' &&
+              opening(row) < openedOrdinal,
           ) ?? 0,
           'after',
         );
       }
-      case 'cleanup':
-        return boundaryEntry(point, checkpointRank(roster, 'exitUsable') ?? finalRank, 'after');
+      // The doors open right after the row that makes the exits ready: the last
+      // required one before them, once every encounter has ended.
+      case 'doorsOpened':
+        return boundaryEntry(point, doorsReadyAfterRank(roster.rows).afterRank, 'after');
     }
   };
 
-  let precedingSlot = 0;
-  const boundaryEntries = structure.points
-    .filter(
-      (point): point is VisibleRoomLifecycleStructurePoint =>
-        point.kind !== 'outgoingGeneration' && point.kind !== 'nextPhase',
-    )
-    .map((point) => {
-      const desired = desiredBoundary(point);
-      const desiredSlot = boundarySlot(desired);
-      const slot = Math.max(precedingSlot, desiredSlot);
-      precedingSlot = slot;
-      return Object.freeze({
-        entry:
-          slot === desiredSlot
-            ? desired
-            : Object.freeze({ ...desired, rank: slot, placement: 'after' as const }),
-        slot,
-      });
+  // A Nemesis random event's events carry no marker, so they hold no Timeline position.
+  const boundaryEntries = timelineEvents(structure).map((point) => {
+    const desired = desiredBoundary(point);
+    const desiredSlot = boundarySlot(desired);
+    const slot = Math.max(precedingSlot, desiredSlot);
+    precedingSlot = slot;
+    return Object.freeze({
+      entry:
+        slot === desiredSlot
+          ? desired
+          : // Moved forward past contradictory ranks, it no longer follows its trigger row.
+            boundaryEntry(desired.boundary, slot, 'after'),
+      slot,
     });
+  });
   const boundaryBySlot = new Map<number, RoomLifecycleBoundaryEntry[]>();
   for (const { entry, slot } of boundaryEntries) {
     const at = boundaryBySlot.get(slot) ?? [];
     at.push(entry);
     boundaryBySlot.set(slot, at);
   }
-  const rowByRank = new Map(rankedRows.map((row) => [row.rank!, row]));
   const finalSlot = Math.max(finalRank, ...boundaryEntries.map(({ slot }) => slot));
   for (let slot = 0; slot <= finalSlot; slot += 1) {
     entries.push(...(boundaryBySlot.get(slot) ?? []));
     const row = rowByRank.get(slot + 1);
     if (row !== undefined) {
       const phaseKey =
-        shipPhaseKeyForAction(row) ??
+        // A wheel's rerolls, choice and spoils stand in its phase's encounter.
+        (wheelRow(row) === undefined ? undefined : row.contact.phaseKey) ??
         ('phaseKey' in row.reference ? row.reference.phaseKey : undefined);
       entries.push(
         Object.freeze({
@@ -485,51 +526,48 @@ export function assembleRoomLifecycleTimeline(
 
   return Object.freeze({
     owner: input.owner,
-    structure,
+    graph: structure,
     entries: Object.freeze(entries),
     boundaries: Object.freeze(boundaryEntries.map(({ entry }) => entry.boundary)),
+    doorsAfterRank:
+      boundaryEntries.find(({ entry }) => entry.boundary.kind === 'doorsOpened')?.slot ?? 0,
     repairRows: Object.freeze(roster.rows.filter((row) => row.rank === null || row.stale)),
   });
 }
 
-/** Apply an engine-assessed active phase prefix without reconstructing the skeleton in a consumer. */
+/** Whether a scoped phase prefix keeps a Timeline entry: one of a dormant phase never plays. */
+export function roomLifecycleEntryActive(
+  scopedGraph: RoomEventGraph,
+  entry: RoomLifecycleTimeline['entries'][number],
+): boolean {
+  switch (entry.kind) {
+    case 'boundary':
+      return roomEventActive(scopedGraph, entry.boundary);
+    case 'action':
+      return (
+        entry.phaseKey === undefined || scopedGraph.activeEncounterSlotKeys.includes(entry.phaseKey)
+      );
+    case 'automaticEffect':
+      return scopedGraph.activeEncounterSlotKeys.includes(entry.phaseKey);
+  }
+}
+
+/** Apply an engine-assessed active phase prefix without reconstructing the graph in a consumer. */
 export function scopeRoomLifecycleTimeline(
   timeline: RoomLifecycleTimeline,
   activePhaseKeys: readonly string[],
 ): RoomLifecycleTimeline {
-  const structure = scopeRoomLifecycleStructure(timeline.structure, activePhaseKeys);
-  if (structure === timeline.structure) return timeline;
-  const active = new Set(structure.activeEncounterSlotKeys);
-  const activeWheelKeys = new Set(
-    structure.phases.flatMap((phase) =>
-      phase.rewardWheelKey === undefined ? [] : [phase.rewardWheelKey],
-    ),
-  );
-  const boundaryActive = (boundary: RoomLifecycleBoundary): boolean => {
-    switch (boundary.kind) {
-      case 'encounterStart':
-      case 'encounterOutcome':
-      case 'bossDefeated':
-      case 'encounterEnd':
-        return active.has(boundary.phaseKey);
-      case 'wheelsOpen':
-        return activeWheelKeys.has(boundary.wheelKey);
-      case 'roomEntered':
-      case 'cleanup':
-        return true;
-    }
-  };
-  const entries = timeline.entries.filter(
-    (entry) =>
-      (entry.kind === 'boundary' && boundaryActive(entry.boundary)) ||
-      (entry.kind === 'action' && (entry.phaseKey === undefined || active.has(entry.phaseKey))) ||
-      (entry.kind === 'automaticEffect' && active.has(entry.phaseKey)),
-  );
+  const graph = scopeRoomEventGraph(timeline.graph, activePhaseKeys);
+  if (graph === timeline.graph) return timeline;
+  const entries = timeline.entries.filter((entry) => roomLifecycleEntryActive(graph, entry));
   return Object.freeze({
     owner: timeline.owner,
-    structure,
+    graph,
     entries: Object.freeze(entries),
-    boundaries: Object.freeze(timeline.boundaries.filter(boundaryActive)),
+    boundaries: Object.freeze(
+      timeline.boundaries.filter((boundary) => roomEventActive(graph, boundary)),
+    ),
+    doorsAfterRank: timeline.doorsAfterRank,
     repairRows: timeline.repairRows,
   });
 }

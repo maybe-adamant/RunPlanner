@@ -164,8 +164,7 @@ describe('occurrence room facts', () => {
     if (source === undefined) throw new Error('selected Shop Boon is missing');
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Boon',
     });
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
@@ -223,11 +222,6 @@ describe('occurrence room facts', () => {
     expect(result.occurrenceInteractionRequirements).toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: 'roomActions' })]),
     );
-    expect(
-      result.occurrenceInteractionRequirements.filter(
-        (requirement) => requirement.kind === 'roomObjectActions',
-      ),
-    ).toHaveLength(1);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
       focusAddress: {

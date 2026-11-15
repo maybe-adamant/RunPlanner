@@ -15,7 +15,8 @@ import type {
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel';
-import { finalSharedBatchStoreKey, orderedTargets } from '../materialization/batch';
+import { finalSharedBatchStoreKey } from '../materialization/batch';
+import { orderedTargets } from '../../authored-project/topology/query';
 import { resolvedStoreKey } from '../materialization/rooms/templates';
 import type { RewardProducerCandidateCapability } from './producer-frontiers';
 

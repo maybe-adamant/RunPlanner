@@ -1,17 +1,17 @@
 import type {
   AuthoredTranscendentEmbryoOutcome,
+  DerivedPickupPlacementCommand,
   FigurineArcanaAddress,
   FountainRarityOutcomeAddress,
   JudgmentArcanaAddress,
   OccurrenceAddress,
   ProjectCommand,
-  RoomActionAddress,
   RoomActionReference,
   SteadyGrowthOutcomeAddress,
   TranscendentEmbryoOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { ChaosNumericOperand } from '@run-planner/engine/catalog-schema';
-import type { RoomActionWindow } from '@run-planner/engine/simulation';
+import type { RoomActionRowLabel } from '@run-planner/engine/simulation';
 import type { CandidateProjectionEvaluation } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
@@ -92,12 +92,6 @@ export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
   readonly label: string;
-  /** Where the room's Add area offers this action while it is optional and unplaced. */
-  readonly addGroup?: {
-    readonly key: string;
-    readonly label: string;
-    readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
-  };
   /** Engine-published source of a generated pickup; absent for every other action. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
   /** The observed switch's kind on a switch use row, named and pictured by it. */
@@ -122,6 +116,8 @@ export interface WorkspaceRoomActionRow {
     readonly origin?: string;
     /** The NPC a Talk row names, by NPC key; the row shows its portrait with the name as its title. */
     readonly npcKey?: string;
+    /** The encounter a fought contact names, by native declaration key; the row shows its icon. */
+    readonly encounterKey?: string;
     /** The trait the name stands for, such as a Pool sale's; the row shows it as a chip. */
     readonly traitKey?: string;
     /** The name is the room object used; the row shows its icon as a chip after the verb. */
@@ -133,6 +129,8 @@ export interface WorkspaceRoomActionRow {
       readonly boosted: boolean;
       /** A Stygian Well item's own key: the row shows that item, not its reward type. */
       readonly itemKey?: string;
+      /** A Trial god's boon: which side of the Trial it is, marked on the icon. */
+      readonly devotionRole?: WorkspaceDevotionRole;
     };
   };
   readonly marker: WorkspaceMarker;
@@ -140,18 +138,8 @@ export interface WorkspaceRoomActionRow {
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
   readonly requiredScope?: import('@run-planner/engine/simulation').RoomActionRow['requiredScope'];
-  /** Participation is authored by an inventory control (Overview or a Travel Deal line). */
-  readonly participationOwnedByOverview: boolean;
   /** Engine-published exact materialization command for one derived acquisition entry. */
-  readonly placement?: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      {
-        readonly kind:
-          'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' | 'PlaceEchoGoldPickup';
-      }
-    >
-  >;
+  readonly placement?: WorkspaceCommandIntent<DerivedPickupPlacementCommand>;
   readonly rank: number | null;
   /** Artificer output identity authored at this source transformation checkpoint. */
   readonly artificerOutput?: {
@@ -171,8 +159,10 @@ export interface WorkspaceRoomActionRow {
   readonly blockingProduct?: true;
   readonly stale: boolean;
 
-  /** Engine-owned lifecycle window used by closed presentation groupings. */
-  readonly window: RoomActionWindow;
+  /** The engine phase the row belongs to; absent when the room plays none it names. */
+  readonly phaseKey?: string;
+  /** When in the room the engine places the row's use. */
+  readonly timing: RoomActionRowLabel;
   /** Exact encounter/Gorgon payload settled by this action. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */
@@ -196,6 +186,13 @@ export interface WorkspaceRoomActionRow {
     readonly candidateItemKeys: readonly string[];
     readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
     readonly interactionKey: string;
+  };
+  /**
+   * The list the Pool regenerates as this fountain use makes its entry list stale, shown
+   * on its own row right after it.
+   */
+  readonly purgingPoolRefresh?: {
+    readonly slots: readonly import('./features').WorkspacePurgingPoolSlot[];
   };
   /** The restocked slots of this Well or Pool reroll. */
   readonly featureRoll?: {
@@ -221,6 +218,7 @@ export interface WorkspaceRoomActionRow {
           | 'ReplaceShopPurchaseParticipation'
           | 'SetInfernalContractPedestalCollected'
           | 'SetHermesShrinePurchase'
+          | 'SetHermesShrineRush'
           | 'SetStygianWellPurchase'
           | 'RemoveRoomAction';
       }
@@ -242,28 +240,16 @@ export type WorkspaceTravelDealLine =
 
 export interface WorkspaceRoomActions {
   readonly timeline: WorkspaceRoomLifecycleTimeline;
-  readonly checkpoints: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly afterRank: number;
-    /** Engine-owned lifecycle window used by closed presentation groupings. */
-    readonly window: RoomActionWindow;
-  }[];
+  /** An event point of this room, named with its phase as the room's blockers name it. */
+  readonly pointName: (
+    point: import('@run-planner/engine/authored-project').RoomEventPoint,
+  ) => string;
   readonly interactionKey: string;
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
-  /**
-   * Active optional actions that have not been inserted into the lifecycle order,
-   * apart from spawned loot, which its spawn row places.
-   */
-  readonly optionalRows: readonly WorkspaceRoomActionRow[];
-  /** Missing required or retained stale rows rendered once outside active lifecycle order. */
+  /** Retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
-  /** Each present Well and Pool's next purchase, sale or reroll, opened above the optional actions. */
-  readonly featureRolls?: readonly import('./features').WorkspaceFeatureRollActions[];
-  /** Each present World Shop, Hermes Shrine and Pedestal's next action, opened above the optional actions. */
-  readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
   /** The room's urn gold, shown on its Room entered banner. */
@@ -277,6 +263,113 @@ export interface WorkspaceRoomActions {
   readonly actionSpawns?: readonly WorkspaceActionSpawn[];
   /** Sea Star copies, each marked on the row collecting the pickup it copies. */
   readonly spawnCopies?: readonly WorkspaceSpawnCopy[];
+  /** What can be done next, at the walk's frontier; absent while the room is unreached. */
+  readonly live?: WorkspaceRoomLive;
+}
+
+type EngineLiveItem =
+  import('@run-planner/engine/simulation').LiveRoom['gaps'][number]['items'][number];
+
+/** The room objects the engine names as live. */
+export type WorkspaceLiveObjectKind = Extract<
+  EngineLiveItem,
+  { readonly kind: 'object' }
+>['object'];
+
+/** Which side of a Trial of the Gods a god's boon is on. */
+export type WorkspaceDevotionRole = 'chosen' | 'spurned';
+
+/** How a live thing or verb is pictured: the row it acts on, by its icon inputs. */
+export interface WorkspaceLiveFace {
+  readonly reference?: RoomActionReference;
+  readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
+  readonly challengeSwitchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+  /** The reward it takes or buys. */
+  readonly reward?: NonNullable<WorkspaceRoomActionRow['labelParts']>['reward'];
+  /** The NPC it talks to. */
+  readonly npcKey?: string;
+  /** The encounter it fights, by native declaration key. */
+  readonly encounterKey?: string;
+  readonly traitKey?: string;
+  /** The Fields cage or optional slot it sits in. */
+  readonly place?: { readonly badge: string; readonly label: string };
+}
+
+/** A value a verb's picker offers before the verb applies, each applying it with that value. */
+export interface WorkspaceLiveChoice {
+  readonly key: string;
+  readonly label: string;
+  /** The reward it pictures; absent while that reward is not chosen. */
+  readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+  readonly intent: import('../contract').WorkspaceCommandsIntent;
+}
+
+/** An outcome a placed row settles on its own picker, as the engine names it. */
+export type WorkspaceRowChoice = Extract<
+  import('@run-planner/engine/simulation').LiveVerbChoice,
+  { readonly timing: 'after' }
+>['picker'];
+
+/** What choosing a verb does. */
+export type WorkspaceLiveVerbAction =
+  /** What a placed row already does: choosing it changes nothing. */
+  | { readonly kind: 'current' }
+  /** Applies its commands as one edit; the placed row then opens the choice `opens` names. */
+  | {
+      readonly kind: 'apply';
+      readonly intent: import('../contract').WorkspaceCommandsIntent;
+      readonly opens?: { readonly rowKey: string; readonly choice: WorkspaceRowChoice };
+    }
+  /** Lists its values first. */
+  | { readonly kind: 'choose'; readonly choices: readonly WorkspaceLiveChoice[] }
+  /**
+   * Picks a door, cage or wheel offer from the surface's rerolls; the press is placed with
+   * a drawn reward, which its row then opens on.
+   */
+  | {
+      readonly kind: 'rerollPress';
+      readonly interactionKey: string;
+      readonly opens?: { readonly rowKey: string; readonly choice: 'rerollResult' };
+    };
+
+/** One interaction with a live thing. */
+export interface WorkspaceLiveVerb extends WorkspaceLiveFace {
+  readonly key: string;
+  readonly label: string;
+  readonly action: WorkspaceLiveVerbAction;
+}
+
+/** A thing live at the frontier: a pickup on the ground or a room object, with its verbs. */
+export interface WorkspaceLiveItem extends WorkspaceLiveFace {
+  readonly key: string;
+  readonly label: string;
+  readonly group: 'required' | 'optional' | 'object';
+  readonly object?: WorkspaceLiveObjectKind;
+  /** Spawned before it can be taken. */
+  readonly locked?: true;
+  /** The row off the Timeline this thing stands for, where finding navigation lands. */
+  readonly anchor?: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
+  /** The rows whose placement findings mark this thing. */
+  readonly findingOwners: readonly import('@run-planner/engine/authored-project').RoomActionSemanticAddress[];
+  readonly verbs: readonly WorkspaceLiveVerb[];
+}
+
+/** A gap before the frontier: what can be inserted there, and its Reset from here. */
+export interface WorkspaceLiveGap {
+  readonly index: number;
+  readonly items: readonly WorkspaceLiveItem[];
+  /** Takes back every row after the gap; absent where that changes nothing. */
+  readonly reset?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }>
+  >;
+}
+
+export interface WorkspaceRoomLive {
+  /** The gap the walk stands at. */
+  readonly frontier: number;
+  readonly items: readonly WorkspaceLiveItem[];
+  /** Each gap before the frontier, in order. */
+  readonly gaps: readonly WorkspaceLiveGap[];
 }
 
 /** One item the game spawned, as a chip that leads to the action collecting it. */
@@ -286,24 +379,14 @@ export interface WorkspaceSpawnedItem {
   readonly actionKey: string;
   readonly label: string;
   /** What it spawns as, which its chip shows; absent while its reward is not chosen. */
-  readonly reward?: import('@run-planner/engine/simulation').SpawnedLootReward;
-  /** What using its chip does, said on hover. */
-  readonly hint: string;
+  readonly reward?: WorkspaceLiveFace['reward'];
   readonly participation: 'required' | 'optional';
   /** The Fields cage or optional slot it sits in, marked on its chip. */
   readonly place?: { readonly badge: string; readonly label: string };
   /** Spawned before it can be taken; its unlock row lists it again. */
   readonly locked?: true;
-  readonly placement:
-    /** Collected in the order: its row is focused. */
-    | {
-        readonly kind: 'placed';
-        readonly owner: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
-      }
-    /** Not collected yet: one edit places it. */
-    | { readonly kind: 'unplaced'; readonly intent: WorkspaceCommandIntent }
-    /** Not collected yet and no place takes it now. */
-    | { readonly kind: 'unavailable'; readonly reason: string };
+  /** Collected in the order, its chip leading to its row; or still on the ground. */
+  readonly placed: boolean;
 }
 
 /** The boon, keepsake, NPC or room object that spawned a group of items. */
@@ -338,36 +421,28 @@ export interface WorkspaceActionSpawn {
   readonly groups: readonly WorkspaceSpawnGroup[];
 }
 
+/** One event of the room's graph, as the engine publishes it. */
 export type WorkspaceRoomLifecycleBoundary =
-  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
-  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'wheelsOpen'; readonly key: string; readonly wheelKey: string }
-  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+  import('@run-planner/engine/authored-project').RoomEvent;
 
 /**
- * The encounter controls of one phase event. Its start hosts the identity and the Fig Leaf
- * skip; its outcome hosts how the fight ended (Aetos, the Gorgon condition, the Nemesis bet
- * or event result, an Anomaly cleared).
+ * The encounter controls one Timeline line hosts for a phase: its identity where the
+ * encounter begins, the Fig Leaf skip where its combat starts, and how the fight ended
+ * (Aetos, the Gorgon condition, the Nemesis bet or event result, an Anomaly cleared)
+ * where the engine observes it: its Combat, or a Nemesis random event's talk row.
  */
-export type WorkspaceEncounterBannerSupplement =
-  | {
-      readonly kind: 'encounterStart';
-      readonly phase: WorkspaceEncounterPhase;
-      /**
-       * Phase role (when the room has several and no cage names it) and encounter name
-       * of a definitional encounter start; absent for an encounter settled on entry.
-       */
-      readonly identityLabel?: string;
-    }
-  | {
-      readonly kind: 'encounterOutcome';
-      readonly phase: WorkspaceEncounterPhase;
-      /** The engine's choices this outcome hosts, in the room's choice order. */
-      readonly choices: readonly import('@run-planner/engine/simulation').EncounterOutcomeChoice[];
-    };
+export interface WorkspaceEncounterEvents {
+  readonly phase: WorkspaceEncounterPhase;
+  /**
+   * Phase role (when the room has several and no cage names it) and encounter name
+   * of a definitional encounter; absent for an encounter settled on entry.
+   */
+  readonly identityLabel?: string;
+  /** Hosts the phase's Fig Leaf skip. */
+  readonly start?: true;
+  /** The engine's choices observed here, in the room's choice order. */
+  readonly choices: readonly import('@run-planner/engine/simulation').EncounterOutcomeChoice[];
+}
 
 export type WorkspaceRoomLifecycleTimelineEntry =
   | {
@@ -375,30 +450,42 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly boundary: WorkspaceRoomLifecycleBoundary;
       /** Projection-owned text; React does not reconstruct boundary wording. */
       readonly label: string;
-      /** Projection-owned lifecycle checkpoint identity for suppression and placement. */
-      readonly checkpointKey: string;
+      /** A phase's marker in a room of several: its marker shown with its phase as a chip. */
+      readonly phaseTitle?: { readonly marker: string; readonly phase: string };
       /** Projection-owned insertion position immediately adjacent to this boundary. */
       readonly dropIndex: number;
       readonly rank: number;
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected encounter controls this banner hosts. */
-      readonly supplement?: WorkspaceEncounterBannerSupplement;
+      readonly supplement?: WorkspaceEncounterEvents;
+      /**
+       * The marker that leads its phase: its Encounter, or its Combat where the begin shows
+       * with it or, in a Ship, as its Wheels open.
+       */
+      readonly beginsEncounter?: true;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
+      /**
+       * The action row whose verb starts this marker (a cage's Unlock, a gate pickup, a
+       * wheel's choice, a press), which the engine stands it right after.
+       */
+      readonly triggerActionKey?: string;
     }
   | {
       readonly kind: 'action';
       readonly actionKey: string;
       readonly rank: number;
       /** Closed application presentation for rows represented by a lifecycle-boundary control. */
-      readonly presentation: 'row' | 'fieldsCageAnchor' | 'rewardWheelAnchor';
+      readonly presentation: 'row' | 'rewardWheelAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
       /** Exact family-specific Nemesis interaction placed on its required action row. */
       readonly supplement?: {
         readonly kind: 'nemesisInteraction';
         readonly owner: NemesisRandomEventAddress;
+        /** Her event's result, observed as she is answered. */
+        readonly events?: WorkspaceEncounterEvents;
       };
     }
   | {
@@ -417,6 +504,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly label: string;
       /** Lists locked loot as it becomes takeable rather than as it spawns. */
       readonly unlocks?: true;
+      /** Stands right under the entry of its cause; without, it ends the Timeline. */
+      readonly underCause?: true;
       readonly groups: readonly WorkspaceSpawnGroup[];
     };
 
@@ -431,7 +520,7 @@ export type WorkspaceNotReachedEntry =
       readonly key: string;
       readonly label: string;
       readonly phaseKey: string;
-      readonly supplement: WorkspaceEncounterBannerSupplement;
+      readonly supplement: WorkspaceEncounterEvents;
     };
 
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */
@@ -541,25 +630,6 @@ export interface WorkspaceFieldsCageLabel {
   readonly cage: string;
   /** The cage's slot, subscripted on its encounter's name. */
   readonly slot: number;
-  /** The cage's reward. */
-  readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
-  /** The cage action the label stands for; absent while that action is its own row. */
-  readonly owner?: RoomActionAddress;
-}
-
-export interface WorkspaceFieldsCageOrderControl {
-  readonly choices: readonly {
-    readonly phaseKey: string;
-    /** The cage's name ("Cage 1"). */
-    readonly label: string;
-    /** The cage's slot, matching its rewards' `C1` mark. */
-    readonly slot: number;
-    /** The cage with its reward named, for the accessible name. */
-    readonly fullLabel: string;
-    readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
-  }[];
-  readonly phaseKeys: readonly string[];
-  readonly unavailableReason?: string;
 }
 
 /** Where the walk stops before a Timeline starts: its room's Overview, or an earlier phase. */
@@ -567,7 +637,6 @@ export type WorkspaceTimelineWait =
   { readonly kind: 'overview' } | { readonly kind: 'phase'; readonly phaseLabel: string };
 
 export interface WorkspaceRoomLifecycleTimeline {
-  readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
   /** Up to the room's stop when the walk stops here: its doors and exit are then unreached. */
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /**
@@ -581,14 +650,11 @@ export interface WorkspaceRoomLifecycleTimeline {
   /** The walk stops in this room before its doors: their picks and Leave row wait. */
   readonly doorsWait?: true;
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
-  /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
-  readonly suppressedCheckpointKeys: readonly string[];
+  /** The doors open after this many ranked rows. */
+  readonly doorsAfterRank: number;
 }
 
 export interface WorkspaceRoomActionInteraction {
-  readonly fieldsCageOrderIntentFor?: (
-    phaseKeys: readonly string[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsCageOrder' }>>;
   readonly intentFor: (proposalKey: string) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,

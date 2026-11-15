@@ -1,6 +1,11 @@
 import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -18,7 +23,7 @@ import {
   createOccurrenceId,
   createProjectHistory,
   createRoomActionAddress,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   decodeProjectDocument,
   defaultHermesShrineDeliveryReward,
   encodeProjectDocument,
@@ -50,6 +55,7 @@ import {
   surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
+import { withRoomOrder } from '../../support/live-room';
 import { assessGeneratedPickupPlacement } from '../../../src/authored-project/generated-pickup-placement';
 import { assessRoomActionPlacements } from '../../../src/simulation';
 import { initializeTestRewardBranch } from '../../support/arcana-fear';
@@ -107,7 +113,6 @@ function projectWithUnrankedDeliveryHost() {
         Object.freeze({
           kind: 'purchaseHermesShrineOffer' as const,
           generationKey: 'initial:first' as const,
-          rushed: false,
         }),
         ...source.roomActions.order,
       ]),
@@ -250,7 +255,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('buys a Shrine item at a chosen legal index, a rushed one with its pickup right after', () => {
+  it('buys a Shrine item at a chosen legal index and rushes it after, without placing its pickup', () => {
     const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const order = (document: typeof project) =>
@@ -258,43 +263,65 @@ describe('Hermes Shrine delivery placement', () => {
         .flatMap((biome) => biome.topology?.occurrences ?? [])
         .find((occurrence) => occurrence.occurrenceId === source.occurrenceId)!.roomActions.order;
     const before = order(project);
-    const purchase = (rushed: boolean) =>
-      ({
-        kind: 'PurchaseHermesShrineOffer',
-        occurrence: source,
-        generationKey: 'initial:secondRight',
-        rushed,
-      }) as const;
-    const bought = (rushed: boolean) => ({
-      kind: 'purchaseHermesShrineOffer' as const,
+    const purchase = {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: source,
       generationKey: 'initial:secondRight',
-      rushed,
+    } as const;
+    const bought = withItemContent(project, source, {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:secondRight',
     });
+    const rushRow = withItemContent(project, source, {
+      kind: 'rushHermesShrineOffer',
+      generationKey: 'initial:secondRight',
+    });
+    const rush = {
+      kind: 'SetHermesShrineRush',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      rushed: true,
+    } as const;
     const pickup = {
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'hermesShrineDelivery',
       entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
     };
-    // After the wheel, among the Shrine's purchases; the default is the end.
-    expect(objectCommandInsertionIndexes(project, catalog, purchase(false))).toEqual([2, 3, 4, 5]);
-    expect(objectCommandInsertionIndexes(project, catalog, purchase(true))).toEqual([2, 3, 4, 5]);
-    expect(order(applyProjectCommand(project, catalog, purchase(false)))).toEqual([
-      ...before,
-      bought(false),
-    ]);
-    expect(order(applyProjectCommand(project, catalog, { ...purchase(false), index: 3 }))).toEqual([
+    // After the wheel, anywhere among the Shrine's rows, even between the first
+    // item's purchase and its rush; the default is the end.
+    expect(positionedCommandInsertionIndexes(project, catalog, purchase)).toEqual([2, 3, 4, 5, 6]);
+    expect(order(applyProjectCommand(project, catalog, purchase))).toEqual([...before, bought]);
+    const atFour = applyProjectCommand(project, catalog, { ...purchase, index: 4 });
+    expect(order(atFour)).toEqual([...before.slice(0, 4), bought, ...before.slice(4)]);
+    expect(() => applyProjectCommand(project, catalog, { ...purchase, index: 1 })).toThrow(
+      /index 1 is not a legal position .* a required action whose deadline passes first/,
+    );
+    expect(order(applyProjectCommand(project, catalog, { ...purchase, index: 3 }))).toEqual([
       ...before.slice(0, 3),
-      bought(false),
+      bought,
       ...before.slice(3),
     ]);
-    expect(order(applyProjectCommand(project, catalog, { ...purchase(true), index: 2 }))).toEqual([
-      ...before.slice(0, 2),
-      bought(true),
-      pickup,
-      ...before.slice(2),
+    // Only a bought item is rushed, at any gap after its purchase in its room.
+    expect(() => applyProjectCommand(project, catalog, rush)).toThrow(
+      /only a bought Shrine item can be rushed/,
+    );
+    expect(positionedCommandInsertionIndexes(atFour, catalog, rush)).toEqual([5, 6, 7]);
+    const rushed = applyProjectCommand(atFour, catalog, rush);
+    expect(order(rushed)).toEqual([...before.slice(0, 4), bought, rushRow, ...before.slice(4)]);
+    expect(order(applyProjectCommand(atFour, catalog, { ...rush, index: 5 }))).toEqual(
+      order(rushed),
+    );
+    expect(order(rushed)).not.toContainEqual(pickup);
+    // Later, with rows between it and its purchase.
+    expect(order(applyProjectCommand(atFour, catalog, { ...rush, index: 7 }))).toEqual([
+      ...before.slice(0, 4),
+      bought,
+      ...before.slice(4),
+      rushRow,
     ]);
-    expect(() => applyProjectCommand(project, catalog, { ...purchase(true), index: 1 })).toThrow(
-      /index 1 is not a legal position .* a required action of an earlier window/,
+    // Never before its purchase.
+    expect(() => applyProjectCommand(atFour, catalog, { ...rush, index: 3 })).toThrow(
+      /index 3 is not a legal position .* must follow/,
     );
     const set = {
       kind: 'SetHermesShrinePurchase' as const,
@@ -304,7 +331,7 @@ describe('Hermes Shrine delivery placement', () => {
     };
     expect(order(applyProjectCommand(project, catalog, { ...set, index: 4 }))).toEqual([
       ...before.slice(0, 4),
-      bought(false),
+      bought,
       ...before.slice(4),
     ]);
   });
@@ -359,21 +386,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
 
-    const wrongPhase = applyProjectCommand(project, catalog, {
-      ...placement,
-      encounterPhaseKey: 'Encounter',
-    });
-    const wrongPhaseAssembly = simulateProjectAssembly(catalog, wrongPhase);
-    expect(wrongPhaseAssembly.evaluation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'hermesShrineDeliveryPlacementRequired',
-        origin: placement.entry,
-      }),
-    );
-    const repair = duePlacement(wrongPhaseAssembly, source, 'initial:secondRight');
-    expect(repair).toEqual(placement);
-    const repaired = applyProjectCommand(wrongPhase, catalog, repair!);
-    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(repaired)), catalog);
+    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(simulateProjectAssembly(catalog, roundTrip).evaluation.status).toBe('valid');
   });
 
@@ -387,17 +400,16 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     const placedHost = placed.route.biomes
       .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
-    expect(placedHost?.roomActions.order).toContainEqual({
+    const placedDelivery = withItemContent(placed, host, {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey,
-      encounterPhaseKey: 'Encounter',
     });
+    expect(placedHost?.roomActions.order).toContainEqual(placedDelivery);
     expect(
       placedHost?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
     ).toMatchObject({ offer: { rewardType: 'HealBigDrop' } });
@@ -408,12 +420,7 @@ describe('Hermes Shrine delivery placement', () => {
     const decodedHost = decoded.route.biomes
       .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
-    expect(decodedHost?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-      encounterPhaseKey: 'Encounter',
-    });
+    expect(decodedHost?.roomActions.order).toContainEqual(placedDelivery);
   });
 
   it('retracts an actual matured Shrine delivery from its later host while retaining payload', () => {
@@ -683,7 +690,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('requires the exact due-phase action even when the retained delivery entry exists', () => {
+  it('requires a placed delivery action even when the retained delivery entry exists', () => {
     const source = createOccurrenceAddress(
       createBiomeAddress('Surface', 'N'),
       createOccurrenceId('retained-source'),
@@ -726,7 +733,10 @@ describe('Hermes Shrine delivery placement', () => {
           },
         },
       },
-      roomActionRoster: { rows: [] },
+      roomActionRoster: {
+        rows: [],
+        eventGraph: { phases: [], pressFights: [], events: [], activeEncounterSlotKeys: [] },
+      },
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
       catalog,
@@ -749,7 +759,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('repairs a stale due phase in place without duplicating the delivery action', () => {
+  it('places an already placed delivery again without duplicating its action', () => {
     const { project, biome, source, host } = projectWithUnrankedDeliveryHost();
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     const entry = createAcquisitionEntryAddress(
@@ -759,12 +769,10 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     const repaired = applyProjectCommand(placed, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'LaterEncounter',
     });
     const repairedHost = repaired.route.biomes
       .find((candidate) => candidate.biomeKey === biome.biomeKey)
@@ -774,12 +782,11 @@ describe('Hermes Shrine delivery placement', () => {
         reference.kind === 'interactAcquisitionEntry' && reference.entryKey === entryKey,
     );
     expect(deliveryActions).toEqual([
-      {
+      withItemContent(repaired, host, {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'LaterEncounter',
-      },
+      }),
     ]);
   });
 });
@@ -812,6 +819,12 @@ function materializedRoom(project: ProjectDocument, occurrenceId: string): Roste
   return found;
 }
 
+function evaluationCodes(project: ProjectDocument): readonly string[] {
+  return simulateProjectAssembly(catalog, project).evaluation.findings.map(
+    (finding) => finding.code,
+  );
+}
+
 function occurrenceOf(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   const occurrence = project.route.biomes
     .find((candidate) => candidate.biomeKey === biomeKey)
@@ -832,16 +845,17 @@ function staleDeliveryFindings(project: ProjectDocument) {
   return simulateProjectAssembly(catalog, project).evaluation.findings.filter(
     (finding) =>
       finding.code === 'rewardSourceUnavailable' &&
-      (finding.evidence as { reason?: string } | undefined)?.reason === 'staleHermesShrineDelivery',
+      ['sourceInactive', 'dueContactMismatch'].includes(
+        (finding.evidence as { reason?: string } | undefined)?.reason ?? '',
+      ),
   );
 }
 
-function deliveryAction(entryKey: string, encounterPhaseKey = 'Encounter'): RoomActionReference {
+function deliveryAction(entryKey: string): RoomActionReference {
   return {
     kind: 'interactAcquisitionEntry',
     siteKey: 'hermesShrineDelivery',
     entryKey,
-    encounterPhaseKey,
   };
 }
 
@@ -851,7 +865,7 @@ function projectWithTwoSideRoomDeliveries() {
   const parentId = createOccurrenceId('round-trip-n-combat02');
   const sourceId = nLocalOccurrenceId('combat02', 'sideDoor1');
   const hostId = createOccurrenceId('round-trip-n-combat04');
-  const base = createEnteredNLocalProject();
+  const base = authorTestTraitsAndRequiredItems(createEnteredNLocalProject());
   const plan = base.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   const sourceOccurrence = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === sourceId,
@@ -875,7 +889,6 @@ function projectWithTwoSideRoomDeliveries() {
           Object.freeze({
             kind: 'purchaseHermesShrineOffer' as const,
             generationKey,
-            rushed: false,
           }),
         ),
       ]),
@@ -914,7 +927,6 @@ function projectWithTwoSideRoomDeliveries() {
         createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
         entryKey,
       ),
-      encounterPhaseKey: 'Encounter',
     });
   }
   return Object.freeze({
@@ -1059,21 +1071,26 @@ describe('Hermes Shrine delivery source participation', () => {
         biome,
         host.occurrenceId,
       )?.domain;
-      const contributionKeys = domain?.contributions.flatMap((entry) =>
-        entry.kind === 'action' ? [roomActionKey(entry.reference)] : [],
-      );
+      const contributionKeys = domain?.contributions.flatMap((entry) => [
+        roomActionKey(entry.reference),
+      ]);
       for (const entryKey of entryKeys) {
         expect(contributionKeys).toContain(roomActionKey(deliveryAction(entryKey)));
-        expect(() =>
-          applyProjectCommand(loaded, catalog, {
-            kind: 'RemoveRoomAction',
-            action: createRoomActionAddress(
-              biome,
-              host.occurrenceId,
-              roomActionKey(deliveryAction(entryKey)),
-            ),
-          }),
-        ).toThrow('active required room action cannot be removed');
+        // A required row may be removed: the delivery lies live again.
+        expect(
+          orderedDeliveryKeys(
+            applyProjectCommand(loaded, catalog, {
+              kind: 'RemoveRoomAction',
+              action: createRoomActionAddress(
+                biome,
+                host.occurrenceId,
+                roomActionKey(deliveryAction(entryKey)),
+              ),
+            }),
+            biome.biomeKey,
+            host.occurrenceId,
+          ),
+        ).toEqual(entryKeys.filter((key) => key !== entryKey));
       }
 
       const materialized = materializedRoom(loaded, host.occurrenceId);
@@ -1091,7 +1108,10 @@ describe('Hermes Shrine delivery source participation', () => {
           placementAssessment: { kind: 'invalid' },
         });
         expect(room.roomActionRoster.proposals).toContainEqual(
-          expect.objectContaining({ kind: 'unplace', reference: deliveryAction(entryKey) }),
+          expect.objectContaining({
+            kind: 'unplace',
+            reference: withItemContent(loaded, host, deliveryAction(entryKey)),
+          }),
         );
       }
 
@@ -1124,7 +1144,7 @@ describe('Hermes Shrine delivery source participation', () => {
     },
   );
 
-  it('keeps an entered source required with its reward editor context and refuses removal', () => {
+  it('keeps an entered source required with its reward editor context and allows removal', () => {
     const { project, biome, host, entryKeys } = projectWithTwoSideRoomDeliveries();
     const domain = roomActionDomainForOccurrence(
       project,
@@ -1135,19 +1155,21 @@ describe('Hermes Shrine delivery source participation', () => {
     for (const entryKey of entryKeys) {
       const key = roomActionKey(deliveryAction(entryKey));
       expect(
-        domain?.contributions.find(
-          (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === key,
-        ),
+        domain?.contributions.find((entry) => roomActionKey(entry.reference) === key),
       ).toMatchObject({
         participation: 'required',
         owner: { kind: 'acquisitionEntry', entryKey },
       });
-      expect(() =>
-        applyProjectCommand(project, catalog, {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(biome, host.occurrenceId, key),
-        }),
-      ).toThrow('active required room action cannot be removed');
+      expect(
+        orderedDeliveryKeys(
+          applyProjectCommand(project, catalog, {
+            kind: 'RemoveRoomAction',
+            action: createRoomActionAddress(biome, host.occurrenceId, key),
+          }),
+          biome.biomeKey,
+          host.occurrenceId,
+        ),
+      ).toEqual(entryKeys.filter((candidate) => candidate !== entryKey));
     }
     const room = materializedRoom(project, host.occurrenceId);
     for (const entryKey of entryKeys) {
@@ -1189,13 +1211,12 @@ describe('Hermes Shrine delivery source participation', () => {
         createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
         entryKey,
       ),
-      encounterPhaseKey: 'Encounter',
     });
     expect(orderedDeliveryKeys(project, oBiome.biomeKey, host.occurrenceId)).toEqual([entryKey]);
     expect(
       roomActionDomainForOccurrence(project, catalog, oBiome, host.occurrenceId)?.domain
         .activeReferences,
-    ).toContainEqual(deliveryAction(entryKey));
+    ).toContainEqual(withItemContent(project, host, deliveryAction(entryKey)));
 
     const withdrawn = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
@@ -1244,7 +1265,7 @@ describe('Hermes Shrine delivery source participation', () => {
     expect(
       roomActionDomainForOccurrence(loaded, catalog, oBiome, host.occurrenceId)?.domain
         .activeReferences,
-    ).toContainEqual(deliveryAction(entryKey));
+    ).toContainEqual(withItemContent(loaded, host, deliveryAction(entryKey)));
     const removed = applyProjectCommand(loaded, catalog, {
       kind: 'UnplaceGeneratedDelivery',
       action: createRoomActionAddress(
@@ -1277,8 +1298,7 @@ describe('Hermes Shrine delivery source participation', () => {
         oBiome,
         source.occurrenceId,
       )?.domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(rushed!),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(rushed!),
       );
     expect(contribution(project)).toMatchObject({ participation: 'optional' });
 
@@ -1292,11 +1312,12 @@ describe('Hermes Shrine delivery source participation', () => {
         (reference) => roomActionKey(reference) === roomActionKey(rushed!),
       ),
     ).toBe(false);
-    expect(host.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-      rushed: true,
-    });
+    expect(host.roomActions.order).toContainEqual(
+      withItemContent(removed, source, {
+        kind: 'rushHermesShrineOffer',
+        generationKey: 'initial:first',
+      }),
+    );
     expect(host.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[rushedKey]).toMatchObject({
       offer: { rewardType: 'HealBigDrop' },
     });
@@ -1365,7 +1386,6 @@ describe('explicit generated delivery unplacement', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -1539,7 +1559,6 @@ describe('flush-host admission after source retraction', () => {
       host.occurrenceId,
     )?.domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.entryKey === entryKey,
     );
@@ -1575,22 +1594,44 @@ describe('flush-host admission after source retraction', () => {
       purchased: true,
     });
     expect(settled.fault).toBeUndefined();
-    expect(settled.assembly.evaluation.status).toBe('valid');
-    expect(orderedKeys(settled.assembly.project)).toEqual([
-      { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
+    // Settlement leaves the due delivery live; its owner picks it up at the flush host.
+    expect(orderedKeys(settled.assembly.project)).toEqual([]);
+    const collected = collectTestRequiredItems(settled.assembly.project);
+    expect(evaluate(collected).evaluation.status).toBe('valid');
+    expect(orderedKeys(collected)).toEqual([
+      withItemContent(collected, host, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
     ]);
-    expect(requiredContribution(settled.assembly.project)).toMatchObject({
+    expect(requiredContribution(collected)).toMatchObject({
       participation: 'required',
     });
-    return settled.assembly.project;
+    return collected;
   }
 
-  function expectDormant(project: ProjectDocument) {
+  /** Its source no longer produces the delivery: its pickup and payload go, announced at its host. */
+  function expectDiscarded(settled: ReturnType<typeof settle>, placed: ProjectDocument) {
+    expect(settled.fault).toBeUndefined();
+    const project = settled.assembly.project;
     expect(orderedKeys(project)).toEqual([]);
     expect(
       hostOf(project).acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
-    ).toMatchObject({ offer: { rewardType: 'HealBigDrop' } });
+    ).toBeUndefined();
     expect(requiredContribution(project)).toBeUndefined();
+    expect(settled.removedStaleActions).toContainEqual({
+      occurrence: host,
+      actions: orderedKeys(placed),
+      discarded: [
+        {
+          item: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+            entryKey,
+          ),
+        },
+      ],
+    });
     const evaluation = evaluate(project).evaluation;
     expect(
       evaluation.findings
@@ -1602,7 +1643,7 @@ describe('flush-host admission after source retraction', () => {
     return evaluation;
   }
 
-  it('leaves retained payload dormant when the purchase is cleared and restores it on repurchase', () => {
+  it('discards the delivery when its purchase is cleared; a repurchase delivers a new item', () => {
     const placed = placedAtFlushHost();
     const cleared = settle(placed, {
       kind: 'SetHermesShrinePurchase',
@@ -1610,8 +1651,7 @@ describe('flush-host admission after source retraction', () => {
       generationKey: 'initial:first',
       purchased: false,
     });
-    expect(cleared.fault).toBeUndefined();
-    expect(expectDormant(cleared.assembly.project).status).toBe('valid');
+    expect(expectDiscarded(cleared, placed).status).toBe('valid');
     const history = publishProjectHistoryEdit(
       createProjectHistory(placed),
       cleared.assembly.project,
@@ -1625,22 +1665,27 @@ describe('flush-host admission after source retraction', () => {
       purchased: true,
     });
     expect(repurchased.fault).toBeUndefined();
-    expect(repurchased.assembly.evaluation.status).toBe('valid');
-    expect(orderedKeys(repurchased.assembly.project)).toHaveLength(1);
-    expect(requiredContribution(repurchased.assembly.project)).toMatchObject({
+    // The delivery is due again and lies live until it is picked up.
+    expect(orderedKeys(repurchased.assembly.project)).toEqual([]);
+    expect(repurchased.assembly.evaluation.issue?.reasons[0]?.code).toBe(
+      'hermesShrineDeliveryPlacementRequired',
+    );
+    const collected = collectTestRequiredItems(repurchased.assembly.project);
+    expect(evaluate(collected).evaluation.status).toBe('valid');
+    expect(orderedKeys(collected)).toHaveLength(1);
+    expect(requiredContribution(collected)).toMatchObject({
       participation: 'required',
     });
   });
 
-  it('leaves retained payload dormant when the Shrine is removed', () => {
+  it('discards the delivery when the Shrine is removed', () => {
     const placed = placedAtFlushHost();
     const removed = settle(placed, {
       kind: 'SetHermesShrinePresence',
       occurrence: source,
       present: false,
     });
-    expect(removed.fault).toBeUndefined();
-    expect(expectDormant(removed.assembly.project).status).toBe('valid');
+    expect(expectDiscarded(removed, placed).status).toBe('valid');
   });
 });
 
@@ -1649,10 +1694,13 @@ describe('Hermes Shrine purchase actions', () => {
     surfaceNBiome,
     createOccurrenceId('surface-n-preboss:postboss'),
   );
-  const purchase = (generationKey: HermesShrineGenerationKey, rushed: boolean) => ({
+  const purchase = (generationKey: HermesShrineGenerationKey) => ({
     kind: 'purchaseHermesShrineOffer' as const,
     generationKey,
-    rushed,
+  });
+  const rushOf = (generationKey: HermesShrineGenerationKey) => ({
+    kind: 'rushHermesShrineOffer' as const,
+    generationKey,
   });
   // The Postboss rack is permanent; it stays ranked right after the fountain.
   const rack = { kind: 'interactKeepsakeRack' as const };
@@ -1665,40 +1713,59 @@ describe('Hermes Shrine purchase actions', () => {
     project.route.biomes
       .find((biome) => biome.biomeKey === shrine.biomeKey)!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === shrine.occurrenceId)!;
+  /** Picks up a rushed item's pickup at the end of the room, as its owner would. */
+  const placePickup = (project: ProjectDocument, generationKey: HermesShrineGenerationKey) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        surfaceNBiome,
+        shrine.occurrenceId,
+        roomActionKey(pickup(generationKey)),
+      ),
+      reference: pickup(generationKey),
+      index: shrineRoom(project).roomActions.order.length,
+    });
   const rush = (
     project: ProjectDocument,
     generationKey: HermesShrineGenerationKey,
     rushed: boolean,
   ) =>
     applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchaseRush',
-      action: testHermesShrinePurchaseAction(shrine, generationKey),
+      kind: 'SetHermesShrineRush',
+      occurrence: shrine,
+      generationKey,
       rushed,
     });
 
   it('inserts an unrushed purchase before the Shrine pickups and clears it with its pickup', () => {
     const project = surfaceShrineTravelDealProject();
-    expect(shrineRoom(project).roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:first', true),
-      purchase('travelDealRefill', false),
-      pickup('initial:first'),
-    ]);
+    expect(shrineRoom(project).roomActions.order).toEqual(
+      withItemContents(project, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+      ]),
+    );
     const purchased = applyProjectCommand(project, catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
-    expect(shrineRoom(purchased).roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:first', true),
-      purchase('initial:secondLeft', false),
-      purchase('travelDealRefill', false),
-      pickup('initial:first'),
-    ]);
+    expect(shrineRoom(purchased).roomActions.order).toEqual(
+      withItemContents(purchased, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('initial:secondLeft'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+      ]),
+    );
     // The delay belongs to the item: an edit keeps the action, its rush and its rank.
     const delayed = applyProjectCommand(project, catalog, {
       kind: 'SetHermesShrineOfferDelay',
@@ -1715,58 +1782,78 @@ describe('Hermes Shrine purchase actions', () => {
       generationKey: 'initial:first',
       purchased: false,
     });
-    expect(shrineRoom(cleared).roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:secondLeft', false),
-      purchase('travelDealRefill', false),
-    ]);
+    expect(shrineRoom(cleared).roomActions.order).toEqual(
+      withItemContents(cleared, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:secondLeft'),
+        purchase('travelDealRefill'),
+      ]),
+    );
     // The rushed payload stays as repair detail; the dormant refill keeps its purchase.
     expect(
       shrineRoom(cleared).acquisitionSites?.hermesShrineDelivery?.pickupEntries,
     ).toHaveProperty(pickup('initial:first').entryKey);
     expect(shrineRoom(cleared).roomActions.order).toContainEqual(
-      purchase('travelDealRefill', false),
+      withItemContent(cleared, shrine, purchase('travelDealRefill')),
     );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(cleared)), catalog)).toEqual(
       cleared,
     );
   });
 
-  it('rushes on the purchase action, which adds and removes only its own pickup', () => {
+  it('rushes a bought item with its own action, which places no pickup and removes only its own', () => {
     const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
-    const rushed = rush(project, 'initial:secondLeft', true);
-    expect(shrineRoom(rushed).roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:first', true),
-      purchase('initial:secondLeft', true),
-      purchase('travelDealRefill', false),
-      pickup('initial:first'),
-      pickup('initial:secondLeft'),
-    ]);
+    const rushedOnly = rush(project, 'initial:secondLeft', true);
+    expect(shrineRoom(rushedOnly).roomActions.order).toEqual(
+      withItemContents(rushedOnly, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('initial:secondLeft'),
+        rushOf('initial:secondLeft'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+      ]),
+    );
+    const rushed = placePickup(rushedOnly, 'initial:secondLeft');
+    expect(shrineRoom(rushed).roomActions.order.at(-1)).toEqual(
+      withItemContent(rushed, shrine, pickup('initial:secondLeft')),
+    );
     const pickupContribution = roomActionDomainForOccurrence(
       rushed,
       catalog,
       surfaceNBiome,
       shrine.occurrenceId,
     )?.domain.contributions.find(
-      (entry) =>
-        entry.kind === 'action' &&
-        roomActionKey(entry.reference) === roomActionKey(pickup('initial:secondLeft')),
+      (entry) => roomActionKey(entry.reference) === roomActionKey(pickup('initial:secondLeft')),
     );
     expect(pickupContribution).toMatchObject({
       participation: 'optional',
-      dependencies: [
-        { kind: 'afterAction', action: purchase('initial:secondLeft', true), authoringOnly: true },
-      ],
+      dependencies: [{ action: rushOf('initial:secondLeft'), authoringOnly: true }],
     });
     expect(rush(rushed, 'initial:secondLeft', true)).toBe(rushed);
+    // The rush itself follows its purchase.
+    expect(
+      roomActionDomainForOccurrence(
+        rushed,
+        catalog,
+        surfaceNBiome,
+        shrine.occurrenceId,
+      )?.domain.contributions.find(
+        (entry) => roomActionKey(entry.reference) === roomActionKey(rushOf('initial:secondLeft')),
+      ),
+    ).toMatchObject({
+      participation: 'optional',
+      bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
+      dependencies: [{ action: purchase('initial:secondLeft'), authoringOnly: true }],
+    });
 
     const unrushed = rush(rushed, 'initial:secondLeft', false);
     expect(shrineRoom(unrushed).roomActions.order).toEqual(shrineRoom(project).roomActions.order);
@@ -1775,29 +1862,87 @@ describe('Hermes Shrine purchase actions', () => {
     ).toHaveProperty(pickup('initial:secondLeft').entryKey);
 
     // The refill pickup needs a rushed initial purchase to have created the refill.
-    const refillRushed = rush(project, 'travelDealRefill', true);
-    expect(shrineRoom(refillRushed).roomActions.order).toContainEqual(pickup('travelDealRefill'));
+    const refillRushed = placePickup(rush(project, 'travelDealRefill', true), 'travelDealRefill');
+    expect(shrineRoom(refillRushed).roomActions.order).toContainEqual(
+      withItemContent(refillRushed, shrine, pickup('travelDealRefill')),
+    );
     const sourceUnrushed = rush(refillRushed, 'initial:first', false);
-    expect(shrineRoom(sourceUnrushed).roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:first', false),
-      purchase('initial:secondLeft', false),
-      purchase('travelDealRefill', true),
-    ]);
+    expect(shrineRoom(sourceUnrushed).roomActions.order).toEqual(
+      withItemContents(sourceUnrushed, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:first'),
+        purchase('initial:secondLeft'),
+        purchase('travelDealRefill'),
+        rushOf('travelDealRefill'),
+      ]),
+    );
 
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetHermesShrinePurchaseRush',
-        action: createRoomActionAddress(
-          surfaceNBiome,
-          shrine.occurrenceId,
-          roomActionKey({ kind: 'useFountain' }),
-        ),
-        rushed: true,
-      }),
-    ).toThrow(/is not a Shrine purchase/);
-    expect(() => rush(project, 'initial:secondRight', true)).toThrow(/is not a Shrine purchase/);
+    expect(() => rush(project, 'initial:secondRight', true)).toThrow(
+      /only a bought Shrine item can be rushed/,
+    );
+    // A rush moves on its own to any later gap, and its purchase moves without it.
+    const later = applyProjectCommand(rushedOnly, catalog, {
+      kind: 'MoveRoomAction',
+      action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+      toIndex: 7,
+    });
+    expect(shrineRoom(later).roomActions.order.slice(4)).toEqual(
+      withItemContents(later, shrine, [
+        purchase('initial:secondLeft'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+        rushOf('initial:secondLeft'),
+      ]),
+    );
+    expect(evaluationCodes(later)).not.toContain('roomActionOrderUnavailable');
+    const purchaseMoved = applyProjectCommand(later, catalog, {
+      kind: 'MoveRoomAction',
+      action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
+      toIndex: 2,
+    });
+    expect(shrineRoom(purchaseMoved).roomActions.order.slice(2)).toEqual(
+      withItemContents(purchaseMoved, shrine, [
+        purchase('initial:secondLeft'),
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+        rushOf('initial:secondLeft'),
+      ]),
+    );
+    expect(evaluationCodes(purchaseMoved)).not.toContain('roomActionOrderUnavailable');
+    // The roster offers the rush only gaps after its purchase, and the purchase only gaps before its rush.
+    const proposals = materializedRoom(later, shrine.occurrenceId).roomActionRoster.proposals;
+    const authorableMoves = (reference: RoomActionReference) =>
+      proposals
+        .filter(
+          (proposal) =>
+            proposal.kind === 'move' &&
+            proposal.structurallyAuthorable &&
+            roomActionKey(proposal.reference) === roomActionKey(reference),
+        )
+        .map((proposal) => (proposal.kind === 'move' ? proposal.toIndex : -1));
+    expect(authorableMoves(rushOf('initial:secondLeft'))).toEqual([5, 6]);
+    expect(authorableMoves(purchase('initial:secondLeft'))).toEqual([1, 2, 3, 5, 6]);
+    // A preserved rush apart from its purchase is kept with its ordering finding.
+    const apart = shrineRoom(rushedOnly).roomActions.order.filter(
+      (reference) => roomActionKey(reference) !== roomActionKey(rushOf('initial:secondLeft')),
+    );
+    const early = withRoomOrder(rushedOnly, shrine, [
+      ...apart.slice(0, 2),
+      rushOf('initial:secondLeft'),
+      ...apart.slice(2),
+    ]);
+    expect(
+      simulateProjectAssembly(catalog, early).evaluation.findings.find(
+        (finding) => finding.code === 'roomActionOrderUnavailable',
+      ),
+    ).toMatchObject({
+      origin: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+      evidence: { reason: 'dependency' },
+    });
+    expect(rush(project, 'initial:secondLeft', false)).toBe(project);
   });
 
   it('moves the refill purchase and its pickup after a new Travel Deal trigger', () => {
@@ -1811,27 +1956,36 @@ describe('Hermes Shrine purchase actions', () => {
       'initial:secondLeft',
       true,
     );
-    project = rush(project, 'travelDealRefill', true);
+    project = placePickup(rush(project, 'travelDealRefill', true), 'travelDealRefill');
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
-      toIndex: 4,
+      toIndex: 7,
     });
-    expect(shrineRoom(project).roomActions.order.slice(0, 5)).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:first', true),
-      purchase('travelDealRefill', true),
-      purchase('initial:secondLeft', true),
-    ]);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+      toIndex: 7,
+    });
+    expect(shrineRoom(project).roomActions.order.slice(0, 8)).toEqual(
+      withItemContents(project, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('travelDealRefill'),
+        rushOf('travelDealRefill'),
+        purchase('initial:secondLeft'),
+        rushOf('initial:secondLeft'),
+      ]),
+    );
     const unrushed = rush(project, 'initial:first', false);
     const order = shrineRoom(unrushed).roomActions.order;
     const at = (reference: RoomActionReference) =>
       order.findIndex((candidate) => roomActionKey(candidate) === roomActionKey(reference));
-    expect(at(purchase('travelDealRefill', true))).toBeGreaterThan(
-      at(purchase('initial:secondLeft', true)),
-    );
-    expect(at(pickup('travelDealRefill'))).toBeGreaterThan(at(purchase('travelDealRefill', true)));
+    expect(at(purchase('travelDealRefill'))).toBeGreaterThan(at(rushOf('initial:secondLeft')));
+    expect(at(rushOf('travelDealRefill'))).toBeGreaterThan(at(purchase('travelDealRefill')));
+    expect(at(pickup('travelDealRefill'))).toBeGreaterThan(at(rushOf('travelDealRefill')));
     const codes = simulateProjectAssembly(catalog, unrushed).evaluation.findings.map(
       (finding) => finding.code,
     );
@@ -1844,79 +1998,59 @@ describe('Hermes Shrine purchase actions', () => {
       purchased: false,
     });
     const clearedOrder = shrineRoom(cleared).roomActions.order.map(roomActionKey);
-    expect(clearedOrder.indexOf(roomActionKey(purchase('travelDealRefill', true)))).toBeGreaterThan(
-      clearedOrder.indexOf(roomActionKey(purchase('initial:secondLeft', true))),
+    expect(clearedOrder.indexOf(roomActionKey(purchase('travelDealRefill')))).toBeGreaterThan(
+      clearedOrder.indexOf(roomActionKey(rushOf('initial:secondLeft'))),
     );
+    expect(clearedOrder).not.toContain(roomActionKey(rushOf('initial:first')));
   });
 
-  it('buys or rushes one unbought item at the end of the room in one edit', () => {
+  it('buys one unbought item at the end of the room, then rushes it later, each in one edit', () => {
     const project = surfaceShrineTravelDealProject();
     const order = shrineRoom(project).roomActions.order;
     const bought = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
       kind: 'PurchaseHermesShrineOffer',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
-      rushed: false,
     });
-    expect(shrineRoom(bought.present).roomActions.order).toEqual([
-      ...order,
-      purchase('initial:secondLeft', false),
-    ]);
+    expect(shrineRoom(bought.present).roomActions.order).toEqual(
+      withItemContents(bought.present, shrine, [...order, purchase('initial:secondLeft')]),
+    );
     expect(undoProjectHistory(bought).present).toBe(project);
 
-    const rushed = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'PurchaseHermesShrineOffer',
+    // A rush at its chosen index directly follows its purchase.
+    const rushed = applyProjectHistoryCommand(bought, catalog, {
+      kind: 'SetHermesShrineRush',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
       rushed: true,
+      index: order.length + 1,
     });
-    expect(shrineRoom(rushed.present).roomActions.order).toEqual([
-      ...order,
-      purchase('initial:secondLeft', true),
-      pickup('initial:secondLeft'),
-    ]);
-    expect(undoProjectHistory(rushed).present).toBe(project);
+    expect(shrineRoom(rushed.present).roomActions.order).toEqual(
+      withItemContents(rushed.present, shrine, [
+        ...order,
+        purchase('initial:secondLeft'),
+        rushOf('initial:secondLeft'),
+      ]),
+    );
+    expect(undoProjectHistory(rushed).present).toBe(bought.present);
+    // A rush never enters before its purchase.
+    expect(() =>
+      applyProjectCommand(bought.present, catalog, {
+        kind: 'SetHermesShrineRush',
+        occurrence: shrine,
+        generationKey: 'initial:secondLeft',
+        rushed: true,
+        index: order.length - 1,
+      }),
+    ).toThrow();
 
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'PurchaseHermesShrineOffer',
         occurrence: shrine,
         generationKey: 'initial:first',
-        rushed: false,
       }),
     ).toThrow(/already bought/);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'PurchaseHermesShrineOffer',
-        occurrence: shrine,
-        generationKey: 'initial:secondLeft',
-        rushed: false,
-        rewardType: 'MaxManaDrop',
-      }),
-    ).toThrow(/only the Travel Deal refill/);
-  });
-
-  it('stocks the Travel Deal refill with its purchase in one edit', () => {
-    const cleared = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: shrine,
-      generationKey: 'travelDealRefill',
-      purchased: false,
-    });
-    const refilled = applyProjectCommand(cleared, catalog, {
-      kind: 'PurchaseHermesShrineOffer',
-      occurrence: shrine,
-      generationKey: 'travelDealRefill',
-      rushed: false,
-      rewardType: 'MaxManaDrop',
-    });
-    expect(shrineRoom(refilled).hermesShrine?.travelDealRefill?.offer).toEqual({
-      rewardType: 'MaxManaDrop',
-      delay: shrineRoom(cleared).hermesShrine?.travelDealRefill?.offer?.delay,
-    });
-    expect(shrineRoom(refilled).roomActions.order.at(-1)).toEqual(
-      purchase('travelDealRefill', false),
-    );
   });
 
   it('keeps an item delay across a restock and retimes only a delayed purchase', () => {
@@ -1979,19 +2113,31 @@ describe('Hermes Shrine purchase actions', () => {
       'initial:secondLeft',
       true,
     );
-    const moved = applyProjectCommand(project, catalog, {
-      kind: 'MoveRoomAction',
-      action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
-      toIndex: 2,
-    });
-    expect(shrineRoom(moved).roomActions.order.slice(0, 5)).toEqual([
-      { kind: 'useFountain' },
-      rack,
-      purchase('initial:secondLeft', true),
-      purchase('initial:first', true),
-      purchase('travelDealRefill', false),
-    ]);
-    // The refill purchase now follows the new first rushed purchase.
+    const moved = applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
+        toIndex: 2,
+      }),
+      catalog,
+      {
+        kind: 'MoveRoomAction',
+        action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+        toIndex: 3,
+      },
+    );
+    expect(shrineRoom(moved).roomActions.order.slice(0, 7)).toEqual(
+      withItemContents(moved, shrine, [
+        { kind: 'useFountain' },
+        rack,
+        purchase('initial:secondLeft'),
+        rushOf('initial:secondLeft'),
+        purchase('initial:first'),
+        rushOf('initial:first'),
+        purchase('travelDealRefill'),
+      ]),
+    );
+    // The refill purchase now follows the new first rush.
     expect(
       roomActionDomainForOccurrence(
         moved,
@@ -1999,16 +2145,12 @@ describe('Hermes Shrine purchase actions', () => {
         surfaceNBiome,
         shrine.occurrenceId,
       )?.domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' &&
-          roomActionKey(entry.reference) === roomActionKey(purchase('travelDealRefill', false)),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(purchase('travelDealRefill')),
       ),
     ).toMatchObject({
       participation: 'optional',
-      window: { kind: 'postOutgoing' },
-      dependencies: [
-        { kind: 'afterAction', action: purchase('initial:secondLeft', true), authoringOnly: true },
-      ],
+      bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
+      dependencies: [{ action: rushOf('initial:secondLeft'), authoringOnly: true }],
     });
     expect(() =>
       applyProjectCommand(project, catalog, {
@@ -2020,10 +2162,16 @@ describe('Hermes Shrine purchase actions', () => {
       applyProjectCommand(project, catalog, {
         kind: 'InsertRoomAction',
         action: testHermesShrinePurchaseAction(shrine, 'initial:secondRight'),
-        reference: purchase('initial:secondRight', false),
+        reference: purchase('initial:secondRight'),
         index: 1,
       }),
     ).toThrow(/Shrine purchases use SetHermesShrinePurchase/);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'RemoveRoomAction',
+        action: testHermesShrineRushAction(shrine, 'initial:first'),
+      }),
+    ).toThrow(/Shrine rushes use SetHermesShrineRush/);
   });
 });
 

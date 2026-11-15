@@ -36,7 +36,7 @@ import type { TraitOfferEvent } from './shop-trait-purchase-support';
 import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
@@ -47,6 +47,7 @@ import {
   echoGoldIPrebossShopId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { withItemContent, withItemContents } from '@run-planner/test-fixtures/shared';
 
 describe('Gold Gold Gold Shop pickups', () => {
   it.each([
@@ -615,14 +616,18 @@ describe('Gold Gold Gold Shop pickups', () => {
         purchased: true,
         ...(index === undefined ? {} : { index }),
       });
-    const purchase = (offerKey: string) => ({ kind: 'interactShopOffer' as const, offerKey });
+    const shopRoom = createOccurrenceAddress(goldenFBiome, shopOccurrenceId);
+    const purchase = (offerKey: string) =>
+      withItemContent(project, shopRoom, { kind: 'interactShopOffer', offerKey });
     const bought = applyProjectCommand(
       applyProjectCommand(project, catalog, buy('Boon')),
       catalog,
       buy('Minor'),
     );
     expect(order(bought)).toEqual([purchase('Boon'), purchase('Minor')]);
-    expect(objectCommandInsertionIndexes(bought, catalog, buy('MajorNonBoon'))).toEqual([0, 1, 2]);
+    expect(positionedCommandInsertionIndexes(bought, catalog, buy('MajorNonBoon'))).toEqual([
+      0, 1, 2,
+    ]);
     expect(order(applyProjectCommand(bought, catalog, buy('MajorNonBoon', 1)))).toEqual([
       purchase('Boon'),
       purchase('MajorNonBoon'),
@@ -656,8 +661,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     const place = (index?: number) =>
       applyProjectCommand(bought, catalog, {
         kind: 'PlaceEchoGoldPickup',
-        site,
-        entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+        entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
         sourceOfferKey: 'Boon',
         ...(index === undefined ? {} : { index }),
       });
@@ -667,9 +671,11 @@ describe('Gold Gold Gold Shop pickups', () => {
       siteKey: 'roomExit',
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
     };
-    expect(order(place())).toEqual([purchase, pickup]);
-    expect(order(place(1))).toEqual([purchase, pickup]);
-    expect(order(place(0))).toEqual([pickup, purchase]);
+    const shopRoom = createOccurrenceAddress(goldenFBiome, shopOccurrenceId);
+    expect(order(place())).toEqual(withItemContents(place(), shopRoom, [purchase, pickup]));
+    expect(order(place(1))).toEqual(withItemContents(place(1), shopRoom, [purchase, pickup]));
+    // The duplicate spawns with the purchase it duplicates, so it cannot precede it.
+    expect(() => place(0)).toThrow('must follow ["interactShopOffer","Boon"]');
     expect(() => place(2)).toThrow('index must be an integer from 0 through 1');
   });
 
@@ -687,8 +693,7 @@ describe('Gold Gold Gold Shop pickups', () => {
         .topology!.occurrences.find((room) => room.occurrenceId === shopOccurrenceId)!;
     const placed = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'Boon',
     });
     expect(
@@ -752,8 +757,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     if (blindBox === undefined) throw new Error('missing Blind Box source');
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site: entry.site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(entry.site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'Boon',
     });
     history = applyProjectHistoryCommand(history, catalog, {
@@ -814,8 +818,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'travelDealRefill',
     });
     history = applyProjectHistoryCommand(history, catalog, {

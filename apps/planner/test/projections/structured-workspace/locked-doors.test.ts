@@ -33,6 +33,21 @@ function room(
   return node.room;
 }
 
+/** The live row's press of the room's one locked door. */
+function unlockPress(summary: WorkspaceOccurrenceWorkbenchNode['room']) {
+  const verb = summary.roomActions?.live?.items.find((item) => item.object === 'lockedDoors')
+    ?.verbs[0];
+  if (verb?.action.kind !== 'apply') throw new Error('no live unlock');
+  return verb.action.intent.commands[0]!;
+}
+
+const entryAfterAction = (summary: WorkspaceOccurrenceWorkbenchNode['room'], actionKey: string) => {
+  const entries = summary.roomActions!.timeline.entries;
+  return entries[
+    entries.findIndex((entry) => entry.kind === 'action' && entry.actionKey === actionKey) + 1
+  ];
+};
+
 const apply = (project: ProjectDocument, command: ProjectCommand) =>
   applyProjectCommand(project, catalog, command as ProjectCommand);
 
@@ -54,7 +69,7 @@ describe('locked doors in the structured workspace', () => {
     });
   });
 
-  it('presses a locked door from the Doors object and customizes its fight on the row', () => {
+  it('customizes a locked door’s fight on its press row only', () => {
     const project = createGoldenFGHIProject();
     const locked = apply(project, {
       kind: 'ReplaceLockedExit',
@@ -69,20 +84,20 @@ describe('locked doors in the structured workspace', () => {
     const lockedDoors = room(lockedWorkspace).lockedDoors!;
     expect(lockedDoors.doors[0]).toMatchObject({ locked: true });
     expect(lockedDoors.lockedAtLeave).toEqual(['exit2']);
-    expect(lockedDoors.unlocks?.options).toEqual([{ exitKey: 'exit2', label: 'Unlock Door 2' }]);
-    // The press is the Doors object's, never a generic Add action.
-    const press = lockedWorkspace.interactions.roomObjectEntries
-      .get(lockedDoors.unlocks!.interactionKey)!
-      .intentFor('exit2');
-    expect(press.command).toMatchObject({
+    // Before its press the fight has no customization entry.
+    expect(lockedWorkspace.interactions.unlockExitEncounters.size).toBe(0);
+    const press = unlockPress(room(lockedWorkspace));
+    expect(press).toMatchObject({
       kind: 'InsertRoomAction',
       reference: { kind: 'unlockExit', exitKey: 'exit2' },
     });
-    const pressed = apply(locked, press.command);
+    const pressed = apply(locked, press);
     const { workspace } = projectStructuredWorkspaceFixture(pressed);
     const summary = room(workspace);
     expect(summary.lockedDoors?.lockedAtLeave).toEqual([]);
-    expect(summary.lockedDoors?.unlocks?.options).toEqual([]);
+    expect(summary.roomActions?.live?.items.some((item) => item.object === 'lockedDoors')).toBe(
+      false,
+    );
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
     expect(row?.unlockExitEncounter).toMatchObject({
       definitionKey: 'GeneratedG_ExtraDoor',
@@ -92,9 +107,41 @@ describe('locked doors in the structured workspace', () => {
       row!.unlockExitEncounter!.interactionKey,
     );
     expect(customization?.intentFor('generatedComposition', null).command).toMatchObject({
-      kind: 'ReplaceUnlockExitCustomization',
+      kind: 'ReplaceLockedExitCustomization',
+      occurrence: { occurrenceId: HOST },
+      exitKey: 'exit2',
       decisionKey: 'generatedComposition',
       value: null,
+    });
+  });
+
+  it("marks a pressed door's fight with one Encounter marker right after its press", () => {
+    const project = createGoldenFGHIProject();
+    const locked = apply(project, {
+      kind: 'ReplaceLockedExit',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress(project.route.routeKey, 'G'),
+        createOccurrenceId(HOST),
+      ),
+      exitKey: 'exit2',
+      locked: true,
+    });
+    const lockedWorkspace = projectStructuredWorkspaceFixture(locked).workspace;
+    const pressed = apply(locked, unlockPress(room(lockedWorkspace)));
+    const summary = room(projectStructuredWorkspaceFixture(pressed).workspace);
+    const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
+    // Begun and started merge into one Encounter marker; its end follows with no Combat.
+    expect(entryAfterAction(summary, row!.key)).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterStarted', phaseKey: 'unlockExit:exit2' },
+      label: 'Encounter started',
+      beginsEncounter: true,
+    });
+    const entries = summary.roomActions!.timeline.entries;
+    expect(entries.at(-1)).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterEnd', phaseKey: 'unlockExit:exit2' },
+      label: 'Encounter ended',
     });
   });
 });

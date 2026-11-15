@@ -18,7 +18,8 @@ import {
 } from './persistence/communityEventHost';
 import { createApplication } from './composition/createApplication';
 import { viewChanged } from './state/librarySessionSlice';
-import { selectEditorShown } from './state/store';
+import { selectCanUndoProject, selectEditorShown } from './state/store';
+import { authoredProjectUndoRequested } from './state/projectWorkspaceSlice';
 import { createTauriCatalogFeedHost } from './persistence/catalogFeedHost';
 import { createBrowserRecordingPreference, createTauriRecordHost } from './persistence/recordHost';
 import { createWorkerRunImporter } from './workspace/run-recording/runImport';
@@ -145,6 +146,9 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
             globalThis.window.location.reload();
           });
         }}
+        savePlan={async () => (await application.projectOperations.flush()).status === 'success'}
+        canUndo={() => selectCanUndoProject(application.store.getState())}
+        undo={() => application.store.dispatch(authoredProjectUndoRequested())}
       >
         <App
           appScalePreference={appScalePreference}

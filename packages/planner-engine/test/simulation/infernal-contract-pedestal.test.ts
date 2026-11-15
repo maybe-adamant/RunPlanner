@@ -34,7 +34,11 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  settleTestEdit,
+  withItemContent,
+} from '@run-planner/test-fixtures/shared';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
 const peerId = createOccurrenceId('zagreus-contract-preboss-peer');
@@ -74,7 +78,9 @@ describe('Infernal Contract pedestal', () => {
       'MajorNonBoon',
       'Minor',
     ]);
-    expect(shop.roomActions.order).toContainEqual(collect);
+    expect(shop.roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenGBiome, shopId), collect),
+    );
     expect(peer.state.kind).toBe('freeReward');
     expect(peer.infernalContractPedestal).toEqual({ optionKey: null, reward: null });
   });
@@ -118,7 +124,9 @@ describe('Infernal Contract pedestal', () => {
       pedestal: peerPedestal,
       collected: true,
     });
-    expect(occurrence(project, peerId).roomActions.order).toContainEqual(collect);
+    expect(occurrence(project, peerId).roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenGBiome, peerId), collect),
+    );
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     expect(
       evaluation.findings.filter(
@@ -176,7 +184,7 @@ describe('Infernal Contract pedestal', () => {
     expect(occurrence(project, shopId).acquisitionSites?.infernalContractPedestal).toEqual({
       pickupEntries: { infernalContractReward: null },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: createAcquisitionEntryAddress(site, 'infernalContractReward'),
       value: { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -190,7 +198,9 @@ describe('Infernal Contract pedestal', () => {
       collected: false,
     });
     expect(occurrence(project, shopId).acquisitionSites?.infernalContractPedestal).toBeUndefined();
-    expect(occurrence(project, shopId).roomActions.order).not.toContainEqual(collect);
+    expect(occurrence(project, shopId).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(collect),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ClearInfernalContractPedestal',
       pedestal: shopPedestal,
@@ -227,7 +237,7 @@ describe('Infernal Contract pedestal', () => {
       applyProjectCommand(project, catalog, { kind: 'RemoveRoomAction', action }),
     ).toThrowError(expect.objectContaining({ commandKind: 'RemoveRoomAction' }));
     expect(() =>
-      applyProjectCommand(project, catalog, {
+      settleTestEdit(project, {
         kind: 'ReplaceInfernalContractPedestalOffer',
         pedestal: createInfernalContractPedestalAddress(
           goldenGBiome,
@@ -262,12 +272,12 @@ const gEntry = createAcquisitionEntryAddress(
 function contractShopProject(withHex = false): ProjectDocument {
   const midshop = goldenGOccurrenceId(5, 1);
   const returned = goldenGOccurrenceId(7, 1);
-  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+  let project = settleTestEdit(createCompleteFGProject(), {
     kind: 'AddZagreusContract',
     additional: createAdditionalExitAddress(goldenGBiome, midshop, 'zagreusContract'),
     occurrenceId: createOccurrenceId('contract-pedestal-witness'),
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenGBiome, {
       kind: 'occurrence',
@@ -275,30 +285,30 @@ function contractShopProject(withHex = false): ProjectDocument {
     }),
     value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenGBiome, returned),
     gameName: 'G_MiniBoss03',
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, returned),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   if (withHex) {
     const spell = createShopOfferAddress(goldenGBiome, midshop, 'Minor');
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShopOffer',
       offer: spell,
       value: { rewardType: 'SpellDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShopPurchaseParticipation',
       offer: spell,
       purchased: true,
     });
   }
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function collected(project: ProjectDocument, value: boolean): ProjectDocument {
@@ -312,10 +322,9 @@ function collected(project: ProjectDocument, value: boolean): ProjectDocument {
 describe('Infernal Contract pedestal acquisition and publication', () => {
   it('resolves a collected Mystery at its pedestal entry and publishes the same source', () => {
     let project = contractShopProject();
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
-      expect.objectContaining({ code: 'rewardMissing', origin: gPedestal }),
-    ]);
-    project = applyProjectCommand(project, catalog, {
+    // The edit that spawned the pedestal stocked it.
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
+    project = settleTestEdit(project, {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: gPedestal,
       value: { rewardType: 'BlindBoxLoot' },
@@ -333,8 +342,8 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
       expect.objectContaining({ code: 'rewardMissing', origin: gEntry }),
     ]);
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
+    project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(project, {
         kind: 'ReplaceAcquisitionEntryOffer',
         entry: gEntry,
         value: {
@@ -384,7 +393,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     if (selectedTraitKey === undefined) throw new Error('pedestal Pom has no eligible target');
     const value = { kind: 'choice', offeredTraitKeys, selectedTraitKey } as const;
     expect(capability?.evaluate(value).supported).toBe(true);
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceLevelResolution',
       levelResolution: resolution,
       value,
@@ -415,7 +424,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     ['TalentDrop', 3],
     ['TalentBigDrop', 5],
   ] as const)('accounts for collected %s points and their removal', (rewardType, points) => {
-    let project = applyProjectCommand(contractShopProject(true), catalog, {
+    let project = settleTestEdit(contractShopProject(true), {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: gPedestal,
       value: { rewardType },

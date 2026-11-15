@@ -63,12 +63,26 @@ export interface GorgonPhaseCandidateSupport {
   readonly suppressTemporaryBoonRarity?: boolean;
 }
 
-/** Exact pre-interaction domain for the one selected Nemesis random event. */
+export type NemesisRandomEventFamily =
+  'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest';
+
+/** Why her lines of one family cannot be queued from the state she reads them in. */
+export type NemesisRandomEventFamilyRefusal =
+  | { readonly kind: 'heldTrait'; readonly traitKey: string }
+  | { readonly kind: 'noSellableGodTrait' };
+
+/**
+ * One selected Nemesis random event: its families once its room is entered,
+ * as she queues her event on spawn from the entry state, and its domains once
+ * her interaction is reached.
+ */
 export interface NemesisRandomEventCandidateSupport {
   readonly origin: NemesisRandomEventAddress;
-  readonly familyKeys: readonly (
-    'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest'
-  )[];
+  readonly familyKeys: readonly NemesisRandomEventFamily[];
+  /** Families the entry state cannot queue, each with its reason. */
+  readonly unavailableFamilies: Readonly<
+    Partial<Record<NemesisRandomEventFamily, NemesisRandomEventFamilyRefusal>>
+  >;
   /** Declaration-owned closed controls; UI does not infer these policy values. */
   readonly goldTradeResponses: readonly ('accept' | 'decline')[];
   readonly damageTradeResponses: readonly ('accept' | 'decline')[];
@@ -76,7 +90,7 @@ export interface NemesisRandomEventCandidateSupport {
   readonly damageContestResults: readonly ('success' | 'failure')[];
   readonly traitTradeRewardType: string;
   readonly damageContestFailureRewardType: string;
-  /** The domains at the event's one reached state; absent where none is reached. */
+  /** The domains at her interaction's one reached state; absent until it is reached. */
   readonly assessment?: NemesisRandomEventAssessment;
 }
 
@@ -152,7 +166,7 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
-      /** Automatic RoomReward substitution evidence; the fixed Onion settles at its pickup. */
+      /** Forfeit replaced this reward as it spawned; its Onion settles at the pickup. */
       readonly kind: 'rewardForfeited';
       readonly rewardType: 'Boon' | 'HermesUpgrade';
       readonly replacementRewardType: 'RoomRewardConsolationPrize';
@@ -202,6 +216,11 @@ interface RewardSimulationBase {
   /** The one reached state the walk ended on; none when a block stopped it. */
   readonly frontier: RewardBranch | undefined;
   readonly findings: readonly SemanticFinding[];
+  /**
+   * Rewards whose latest preview, before they spawned, showed Forfeit would
+   * take them (the door's or wheel's Onion); absent when none did.
+   */
+  readonly forfeitPeeks?: readonly import('./biome/offer-lifecycle/spawned-trait-offers').ForfeitPeek[];
 }
 
 /** A start inside its biome, at its Preboss or completion Boss. */
@@ -370,10 +389,19 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly customization?: import('../encounters/model').ResolvedEncounterPhase['customization'];
     readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
   }[];
-  /** Exact room-entry Pool generation assessments, before any sale action. */
+  /** Exact room-entry Pool generation assessments, before any sale action, then its refresh's and each reroll's. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
     readonly assessment: import('../commerce/purging-pool').PurgingPoolAssessment;
+    readonly refresh?: import('../commerce/purging-pool').PurgingPoolAssessment;
+    readonly rolls?: Readonly<
+      Record<
+        string,
+        {
+          readonly offeredSlotKeys: readonly import('../../authored-project/model').PurgingPoolSlotKey[];
+        }
+      >
+    >;
   }[];
   /** Exact room-entry Shrine placement and inventory assessments. */
   readonly hermesShrineAssessments: readonly {

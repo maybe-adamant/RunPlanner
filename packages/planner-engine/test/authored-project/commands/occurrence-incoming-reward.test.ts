@@ -1,4 +1,5 @@
 import { ordinaryPositionFor } from '../../support/route-position';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -15,6 +16,8 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
+  createRoomActionAddress,
+  roomActionKey,
   seaStarDuplicateSiteKey,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateSourceIsActive,
@@ -23,6 +26,7 @@ import {
   encodeProjectDocument,
   undoProjectHistory,
   type AuthoredTraitOfferTraits,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -340,7 +344,7 @@ describe('authored-project incoming reward commands', () => {
     expect(state.reward.dispositionByAcquisitionRole).toEqual({ source: { kind: 'timePiece' } });
   });
 
-  it('authors one source-scoped Sea Star child and removes it again with one Undoable command', () => {
+  it('observes one source-scoped Sea Star child, left live, and removes it again with one Undoable command', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const acquisition = createAcquisitionRoleAddress(reward, 'self');
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -361,13 +365,18 @@ describe('authored-project incoming reward commands', () => {
     expect(occurrence?.acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
       SEA_STAR_DUPLICATE_ENTRY_KEY,
     );
-    expect(occurrence?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
+    // The proc is an observation: the duplicate lies live for its owner to pick up.
+    const duplicateAction = {
+      kind: 'interactAcquisitionEntry' as const,
       siteKey,
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
-    });
+    };
+    expect((occurrence?.roomActions.order ?? []).map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
+    );
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
@@ -376,41 +385,132 @@ describe('authored-project incoming reward commands', () => {
     });
     const source = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactIncomingReward' &&
         entry.reference.acquisitionRole === 'self',
     );
     const child = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
-        entry.reference.kind === 'interactAcquisitionEntry' &&
-        entry.reference.siteKey === siteKey,
+        entry.reference.kind === 'interactAcquisitionEntry' && entry.reference.siteKey === siteKey,
     );
     expect(child).toMatchObject({
-      kind: 'action',
-      participation: source?.kind === 'action' ? source.participation : undefined,
-      window: source?.kind === 'action' ? source.window : undefined,
+      participation: source?.participation,
+      bounds: source?.bounds,
+      // A dependency names its row by key, without the item's content.
       dependencies: [
         {
-          kind: 'afterAction',
-          action: source?.kind === 'action' ? source.reference : undefined,
+          action: {
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'self',
+          },
         },
       ],
     });
     expect(
       decodeProjectDocument(JSON.parse(encodeProjectDocument(procced.present)), catalog),
     ).toEqual(procced.present);
-    const cleared = applyProjectHistoryCommand(procced, catalog, {
+    const picked = applyProjectHistoryCommand(procced, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(1, 1),
+        roomActionKey(duplicateAction),
+      ),
+      reference: duplicateAction,
+      index: occurrence.roomActions.order.length,
+    });
+    const roomOf = (document: typeof project) =>
+      document.route!.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      );
+    expect(roomOf(picked.present)?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        picked.present,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        duplicateAction,
+      ),
+    );
+    // Proccing again keeps the owner's pickup where it stands.
+    expect(
+      applyProjectCommand(picked.present, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition,
+        procced: true,
+      }).route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )?.roomActions.order,
+    ).toEqual(roomOf(picked.present)?.roomActions.order);
+    // Clearing the proc takes the duplicate and its pickup in one step.
+    const cleared = applyProjectHistoryCommand(picked, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition,
       procced: false,
     });
-    expect(
-      cleared.present.route!.biomes[0]!.topology!.occurrences.find(
+    expect(roomOf(cleared.present)?.acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(roomOf(cleared.present)?.roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
+    );
+    expect(undoProjectHistory(cleared).present).toBe(picked.present);
+  });
+
+  it('discards a Sea Star duplicate and its pickup when its source is swapped, in one Undo step', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const siteKey = seaStarDuplicateSiteKey(acquisition);
+    const duplicateAction = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey,
+      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+    };
+    const roomOf = (document: ProjectDocument) =>
+      document.route.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
-      )?.acquisitionSites?.[siteKey],
-    ).toBeUndefined();
-    expect(undoProjectHistory(cleared).present).toBe(procced.present);
+      )!;
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(1, 1),
+        roomActionKey(duplicateAction),
+      ),
+      reference: duplicateAction,
+      index: roomOf(project).roomActions.order.length,
+    });
+    const room = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    expect(roomOf(project).roomActions.order).toContainEqual(
+      withItemContent(project, room, duplicateAction),
+    );
+    const history = createProjectHistory(project);
+    const swapped = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(roomOf(swapped.present).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(roomOf(swapped.present).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
+    );
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(swapped.present)), catalog),
+    ).toEqual(swapped.present);
+    expect(undoProjectHistory(swapped).present).toBe(project);
+    // An edit that leaves the source's offer alone keeps its duplicate.
+    const goldified = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'timePiece' },
+    });
+    expect(roomOf(goldified).acquisitionSites?.[siteKey]).toBeDefined();
   });
 
   it('keeps a retained Sea Star child dormant while its parent uses Time Piece', () => {
@@ -555,6 +655,7 @@ describe('authored-project incoming reward commands', () => {
       'self',
     );
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
@@ -563,7 +664,6 @@ describe('authored-project incoming reward commands', () => {
     });
     const child = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === siteKey &&
         entry.reference.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -572,7 +672,6 @@ describe('authored-project incoming reward commands', () => {
       participation: 'required',
       dependencies: [
         {
-          kind: 'afterAction',
           action: {
             kind: 'interactIncomingReward',
             acquisitionRole: 'self',

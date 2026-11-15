@@ -58,10 +58,10 @@ local function exclusionsWithout(names, planned, extra)
     return kept
 end
 
--- `generation` counts the native rerolls before this store fill. A roll pins only some
--- slots: the pinned rows come from one narrowed fill and every other slot from a native
--- filler fill, so a slot bought earlier, which native blanks afterwards, keeps the
--- positions of the slots after it.
+-- `generation` counts the native rerolls before this store fill. A plan publishes every slot
+-- a roll restocks; a slot bought earlier is not restocked, so the published rows come from one
+-- narrowed fill and the bought slot, which native blanks afterwards, from a native filler fill
+-- that keeps the positions of the slots after it.
 function wellInventory.prepare(well, storeData, args, generation)
     if well == nil then return nil end
     local offers = rollOffers(well, generation or 0)
@@ -109,7 +109,7 @@ function wellInventory.prepare(well, storeData, args, generation)
     return { kind = "well", expected = pinned, args = prepared, fillArgs = fillArgs }
 end
 
--- Places the native filler rows in the slots the roll does not pin, in native order.
+-- Places the native filler rows in the bought slots the roll does not restock, in native order.
 function wellInventory.merge(prepared, store, fillStore)
     if prepared == nil or prepared.fillArgs == nil or type(store) ~= "table"
         or type(store.StoreOptions) ~= "table" then return store end

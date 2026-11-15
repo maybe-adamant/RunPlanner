@@ -15,8 +15,6 @@ interface FieldsSpatialPointAssessment {
   readonly findings: readonly SemanticFinding[];
   readonly selectedPossible: boolean;
   readonly supportPointIds: readonly number[];
-  /** The active target's default point while it has no stored one. */
-  readonly defaultPointId?: number;
 }
 
 function activeSlots(
@@ -152,21 +150,22 @@ function family(target: FieldsSpatialTarget): 'cage' | 'optional' {
 }
 
 /**
- * Where an active Fields slot stands: its stored point (the owner's choice,
- * kept even where it is invalid) or its stable default.
+ * Where an active Fields slot stands: its stored point (kept even where it is
+ * invalid) or, while none is stored, its stable draw, which settlement stores
+ * once the walk reaches the room.
  */
 export interface FieldsSpatialPosition {
   readonly target: FieldsSpatialTarget;
   readonly pointId: number;
-  readonly source: 'chosen' | 'default';
+  readonly source: 'stored' | 'drawn';
 }
 
 /**
  * Every active slot's point. Slots without a stored point claim in the
- * game's spawn order (cages, optional rewards, then Nemesis), each taking its
- * stable-default best of its family's points that no active stored point or
- * earlier claim holds, Nemesis never on its excluded points; a slot left no
- * free point has none.
+ * game's spawn order (cages, optional rewards, then Nemesis), each drawing its
+ * stable best of its family's points that no active stored point or earlier
+ * claim holds, Nemesis never on its excluded points; a slot left no free
+ * point has none.
  */
 export function fieldsSpatialPositions(
   catalog: Catalog,
@@ -202,7 +201,7 @@ function claimFieldsSpatialPositions(
   for (const target of targets) {
     const chosen = selectedPoint(room, target);
     if (chosen !== null) {
-      positions.push(Object.freeze({ target, pointId: chosen, source: 'chosen' }));
+      positions.push(Object.freeze({ target, pointId: chosen, source: 'stored' }));
       continue;
     }
     const free = taken[family(target)];
@@ -215,7 +214,7 @@ function claimFieldsSpatialPositions(
     );
     if (pointId === undefined) continue;
     free.add(pointId);
-    positions.push(Object.freeze({ target, pointId, source: 'default' }));
+    positions.push(Object.freeze({ target, pointId, source: 'drawn' }));
   }
   return Object.freeze(positions);
 }
@@ -273,7 +272,7 @@ export function assessFieldsSpatialPoint(
     domain.filter((candidate) => !excluded.has(candidate) && !occupied.has(candidate)),
   );
   const findings: SemanticFinding[] = [];
-  // An unset point stands on its default, which raises nothing.
+  // An unset point raises nothing: settlement stores its draw once the room is reached.
   if (pointId !== null && !domain.includes(pointId)) {
     findings.push(
       finding('fieldsSpatialPointUnavailable', room, target, {
@@ -296,14 +295,8 @@ export function assessFieldsSpatialPoint(
       }),
     );
   }
-  const position = active
-    ? fieldsSpatialPositions(catalog, room).find((candidate) =>
-        sameTarget(candidate.target, target),
-      )
-    : undefined;
   return Object.freeze({
     active,
-    ...(position?.source === 'default' ? { defaultPointId: position.pointId } : {}),
     assignable: pointId === null || (domain.includes(pointId) && !excluded.has(pointId)),
     findings: Object.freeze(findings),
     selectedPossible: !active || pointId === null || supportPointIds.includes(pointId),

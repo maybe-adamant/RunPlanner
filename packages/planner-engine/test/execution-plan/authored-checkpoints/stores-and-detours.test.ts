@@ -12,6 +12,7 @@ import {
   createInfernalContractPedestalAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
+  publishProjectHistoryEdit,
   semanticAddressKey,
   undoProjectHistory,
 } from '../../../src/authored-project';
@@ -37,6 +38,7 @@ import {
   surfaceTravelDealRefillAnvilProject,
   surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { compileEligibleProject, reloadProject } from '../support/authored-checkpoints';
 
 it('exports the settled Ixion Chaos acquisition and reloads its edited selection', () => {
@@ -274,27 +276,22 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
   const gems = { consumableKey: 'GemPointsBigDrop', resourceKey: 'GemPoints', amount: 50 };
   expect(published.occurrences.find((room) => room.id === contract)).toMatchObject({
     gameName: 'C_Boss01',
-    overview: { requiredReward: gems },
+    overview: {
+      requiredReward: gems,
+      incomingReward: expect.objectContaining({ rewardType: 'InfernalContractBoon' }),
+    },
   });
+  // The Champion of Elysium is granted after combat with nothing to pick up; only the gems are.
   expect(
     published.occurrences
       .find((room) => room.id === contract)
       ?.roomGuide.map((row) => row.description),
-  ).toContainEqual({ kind: 'collectRequiredReward', drop: gems });
+  ).toEqual([{ kind: 'collectRequiredReward', drop: gems }]);
   expect(published.occurrences.find((room) => room.id === returned)).toMatchObject({
     gameName: 'G_MiniBoss03',
   });
-  expect(
-    published.occurrences.find((room) => room.id === contract)?.timeline.transactions,
-  ).toContainEqual(
-    expect.objectContaining({
-      kind: 'acquisition',
-      sourceOwner: semanticAddressKey(createIncomingRewardAddress(goldenGBiome, contract)),
-      reward: expect.objectContaining({ rewardType: 'InfernalContractBoon' }),
-      roles: expect.arrayContaining([
-        expect.objectContaining({ gameName: 'InfernalContractBoon' }),
-      ]),
-    }),
+  expect(published.occurrences.find((room) => room.id === contract)?.timeline.transactions).toEqual(
+    [],
   );
   expect(
     published.occurrences.find((room) => room.id === prebossShop)?.timeline.transactions,
@@ -315,10 +312,19 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
     published.occurrences.find((room) => room.id === prebossShop)?.overview
       .infernalContractPedestal,
   ).toEqual({ sourceOwner: semanticAddressKey(item), rewardType: 'StackUpgrade' });
-  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
-    kind: 'ReplaceInfernalContractPedestalOffer',
+  // Another pedestal item is a new item: its collection goes, and the owner collects it again.
+  const swapped = publishProjectHistoryEdit(
+    createProjectHistory(saved),
+    settleTestEdit(saved, {
+      kind: 'ReplaceInfernalContractPedestalOffer',
+      pedestal: item,
+      value: { rewardType: 'StackUpgradeBig' },
+    }),
+  );
+  const edited = applyProjectHistoryCommand(swapped, catalog, {
+    kind: 'SetInfernalContractPedestalCollected',
     pedestal: item,
-    value: { rewardType: 'StackUpgradeBig' },
+    collected: true,
   });
   const reloaded = reloadProject(edited.present);
   expect(reloaded).toEqual(edited.present);
@@ -339,5 +345,5 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
       },
     }),
   );
-  expect(undoProjectHistory(edited).present).toBe(saved);
+  expect(undoProjectHistory(undoProjectHistory(edited)).present).toBe(saved);
 });

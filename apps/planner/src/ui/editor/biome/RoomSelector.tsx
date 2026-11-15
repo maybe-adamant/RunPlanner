@@ -6,6 +6,10 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { roomKindIcon } from './roomIcon';
+import { RoomOptionFace } from './RoomNumberIcon';
+
+const badge = (number: string | undefined): { readonly triggerBadge?: string } =>
+  number === undefined ? {} : { triggerBadge: number };
 
 interface RoomSelectorProps {
   readonly findingTarget?: FindingTargetProps;
@@ -47,7 +51,13 @@ export function RoomSelector({
       {...(ariaLabel === undefined ? {} : { ariaLabel })}
       disabled={disabled}
       id={`${idPrefix}-room`}
-      itemIcon={(item) => roomKindIcon(interaction.roomIcon(item.value))}
+      itemFace={(item) => (
+        <RoomOptionFace
+          label={item.label}
+          number={interaction.roomNumber(item.value)}
+          room={interaction.roomIcon(item.value)}
+        />
+      )}
       label={label}
       layout="inline"
       loading={projection.pending}
@@ -60,6 +70,7 @@ export function RoomSelector({
       {...(interaction.selected === undefined
         ? {}
         : {
+            ...badge(interaction.roomNumber(interaction.selected)),
             triggerIcon: roomKindIcon(interaction.roomIcon(interaction.selected)),
             triggerLabel: interaction.selected.label,
           })}

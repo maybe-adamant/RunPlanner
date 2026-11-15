@@ -5,6 +5,7 @@ import {
 } from '../../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../../authored-project/model';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
+import { parseArtificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 
 function canonicalRewardState(reward: {
@@ -36,6 +37,8 @@ export function canonicalArtificerSource(
       readonly owner: TraitOfferOwnerAddress;
       readonly reward: AuthoredRewardState;
       readonly producerLifecycleKey?: string;
+      /** The source can never duplicate, which an Artificer replacement of it inherits. */
+      readonly blocksSeaStarDuplication?: true;
     }
   | undefined {
   const candidates: {
@@ -68,18 +71,27 @@ export function canonicalArtificerSource(
   for (const site of Object.values(room.acquisitionSites))
     for (const [entryKey, reward] of Object.entries(site.entries)) {
       if (reward === null) continue;
-      // A clocked trait pickup has no producer site; its declarations share one lifecycle.
+      // A clocked trait pickup has no producer site; its declarations share one
+      // lifecycle. The Artificer spawns its replacement as a room reward.
       const producerLifecycleKey =
         site.address.pointKey === 'roomExit' &&
         parseClockedTraitGeneratedPickupEntryKey(entryKey) !== undefined
           ? 'GeneratedTraitPickup'
-          : room.pickupProducers?.find((producer) => producer.siteKey === site.address.pointKey)
-              ?.producerLifecycleKey;
+          : parseArtificerReplacementEntryKey(entryKey) !== undefined
+            ? 'RoomReward'
+            : room.pickupProducers?.find((producer) => producer.siteKey === site.address.pointKey)
+                ?.producerLifecycleKey;
       candidates.push({
         owner: createAcquisitionEntryAddress(site.address, entryKey),
         reward,
         ...(producerLifecycleKey === undefined ? {} : { producerLifecycleKey }),
       });
     }
-  return candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  const found = candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  if (found === undefined) return undefined;
+  // Only a room reward is an Artificer source that can carry this block.
+  return found.owner.kind === 'incomingReward' &&
+    room.incomingReward?.blocksSeaStarDuplication === true
+    ? Object.freeze({ ...found, blocksSeaStarDuplication: true as const })
+    : found;
 }

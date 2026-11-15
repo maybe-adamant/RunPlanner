@@ -7,13 +7,16 @@ import {
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
   createRoomActionAddress,
+  hubRerollOwner,
+  rerollResult,
+  resolveRerollTarget,
   roomActionKey,
   screenRerollSupported,
   type BiomeAddress,
   type HubDecision,
   type OccurrenceId,
   type ProjectCommand,
-  type RerollTarget,
+  type ResolvedRerollTarget,
   type RoomOccurrence,
   type SemanticAddress,
   FIELDS_CAGE_GROUP_KEY,
@@ -228,14 +231,23 @@ export function roomPressTargets(
   if (topology === undefined || topology === null || source === undefined) return [];
   const address = createOccurrenceAddress(biome, sourceId);
   const current = () => occurrenceOf(context, biome.biomeKey, sourceId)!;
-  const sameTarget = (left: RerollTarget, right: RerollTarget) =>
+  // A press's target as it reads now, its cage slot from where the target holds its result.
+  const currentTopology = () =>
+    context.assembly().project.route.biomes.find((entry) => entry.biomeKey === biome.biomeKey)
+      ?.topology;
+  const sameTarget = (left: ResolvedRerollTarget | undefined, right: ResolvedRerollTarget) =>
     JSON.stringify(left) === JSON.stringify(right);
   const roomPress =
-    (target: RerollTarget, fallbackIndex: (occurrence: RoomOccurrence) => number) =>
+    (target: ResolvedRerollTarget, fallbackIndex: (occurrence: RoomOccurrence) => number) =>
     (reward: ResolvedRewardOffer): ProjectCommand => {
       const order = current().roomActions.order;
+      const now = currentTopology();
       const first = order.findIndex(
-        (action) => action.kind === 'reroll' && sameTarget(action.target, target),
+        (action) =>
+          action.kind === 'reroll' &&
+          now !== undefined &&
+          now !== null &&
+          sameTarget(resolveRerollTarget(now, action), target),
       );
       return {
         kind: 'InsertReroll',
@@ -385,7 +397,14 @@ function hubPressTargets(
     const target: PressTarget = {
       firstDraw: () => {
         const earlier = stayOf(slot.hubSlotKey).earlier;
-        if (earlier?.kind === 'reroll') return earlier.reward;
+        if (earlier?.kind === 'reroll') {
+          const topology = context
+            .assembly()
+            .project.route.biomes.find((entry) => entry.biomeKey === biome.biomeKey)?.topology;
+          return topology === undefined || topology === null
+            ? undefined
+            : rerollResult(topology, hubRerollOwner(biome, hub, earlier), earlier.rerollId);
+        }
         const state = occurrenceOf(context, biome.biomeKey, slot.occurrenceId)?.state;
         return state !== undefined && 'reward' in state ? state.reward?.offer : undefined;
       },

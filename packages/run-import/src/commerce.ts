@@ -1,5 +1,7 @@
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createInfernalContractPedestalAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
   createShopOfferAddress,
@@ -12,6 +14,7 @@ import {
   type HermesShrineDelay,
   type HermesShrineGenerationKey,
   type HermesShrineSlotKey,
+  type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
   roomActionKey,
@@ -26,6 +29,7 @@ import {
   parseStygianWellGenerationKey,
   purgingPoolRerolls,
   stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
 } from '@run-planner/engine/authored-project';
 import {
@@ -45,12 +49,12 @@ import type {
   RunRecordStore,
   RunRecordStoreKind,
 } from './run-record/model';
-import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions';
+import { collectedPast, insertRoomAction, placeLiveRoomAction, roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
-import { authorAcceptedAnswer } from './open-questions';
+import { authorAcceptedAnswer, shopOfferAnswers } from './open-questions';
 import { applyFeatureRerolls } from './rerolls';
 import { pickupUseCount } from './vocabulary';
 
@@ -217,22 +221,46 @@ function answerShopOffer(
     offer.occurrenceId,
   );
   const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (occurrence === undefined || shop === undefined) return false;
   if (offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
-    return occurrence !== undefined && shop !== undefined
-      ? answerTravelDealRefill(context, offer, occurrence, shop)
-      : false;
-  const profile =
-    shop === undefined ? undefined : context.catalog.rewards.shops.byKey[shop.profileKey];
+    return answerTravelDealRefill(context, offer, occurrence, shop);
+  if (restockShopSlot(context, offer, shop) === true) return true;
+  context.refuse();
+  return false;
+}
+
+/**
+ * Stocks a Shop slot with the record's item, over whatever the slot holds:
+ * settlement stocks a reached Shop with its own draws, and a recorded item
+ * always replaces them. Undefined when the record holds no item for the slot.
+ */
+function restockShopSlot(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  shop: ShopState,
+): boolean | undefined {
+  const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
   const position = profile?.slots.values.findIndex((slot) => slot.key === offer.offerKey) ?? -1;
   const visit = storeVisit(context, offer.occurrenceId, 'worldShop');
   const stock = visit?.store.stock.find((option) => option.slot === position + 1);
-  if (occurrence === undefined || shop === undefined || stock === undefined) return false;
-  const values = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
-    (value) =>
-      stockMatches(context, shop.profileKey, offer.offerKey, stock, value) &&
-      shopOptionSupported(context, offer, value),
+  if (visit === undefined || stock === undefined) return undefined;
+  const matches = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
+    (value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value),
   );
-  const at = record(visit!.roomIndex);
+  const values = matches.filter((value) => shopOptionSupported(context, offer, value));
+  const at = record(visit.roomIndex);
+  const holds = (value: ShopOptionSelection) => holdsShopOption(context, offer, value);
+  // The one recorded item a peer's draw rules out: the peer's own recorded item replaces that draw.
+  // A Mystery Boon matches once per god payload; its acquisition resolves the god.
+  if (
+    values.length === 0 &&
+    matches.length > 0 &&
+    new Set(matches.map((value) => value.optionKey)).size === 1
+  )
+    return (
+      matches.some(holds) ||
+      context.apply({ kind: 'ReplaceShopOfferOption', offer, value: matches[0]! })
+    );
   // A boon whose god the stock does not name is any god the room's next entry save accepts.
   const godOpen = (value: ShopOptionSelection) =>
     stock.lootName === undefined &&
@@ -246,7 +274,7 @@ function answerShopOffer(
   if (values.length > 1 && values.some(godOpen)) {
     const answer = authorAcceptedAnswer(
       context,
-      visit!.roomIndex,
+      visit.roomIndex,
       commands.map((command) => [command]),
       { area: 'shop', address: offer },
     );
@@ -264,9 +292,27 @@ function answerShopOffer(
     });
     return true;
   }
-  if (commands.some((command) => context.applyValid(command))) return true;
-  context.refuse();
-  return false;
+  return values.some(holds) || commands.some((command) => context.applyValid(command));
+}
+
+/** Whether the slot already holds the option, as settlement's draw or an earlier answer. */
+function holdsShopOption(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  value: ShopOptionSelection,
+): boolean {
+  const project = context.assembly().project;
+  try {
+    return (
+      applyProjectCommand(project, context.catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer,
+        value,
+      }) === project
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Whether the engine supports a Shop option there, leaving at most open questions. */
@@ -367,7 +413,7 @@ function answerTravelDealRefill(
     if (
       !context.transaction(
         () =>
-          context.apply(command) &&
+          (holdsShopOption(context, offer, value) || context.apply(command)) &&
           insertRoomAction(context, biomeKey, occurrence.occurrenceId, refill),
       )
     )
@@ -427,19 +473,20 @@ function placeRefillByStamp(
 /**
  * The Contract pedestal's item is the one pedestal option its room used beyond
  * the stock it bought, in either Preboss form; collecting it is that use. An
- * uncollected pedestal leaves no trace in the record.
+ * uncollected pedestal leaves no trace in the record: the options it may be,
+ * or undefined then.
  */
-function answerContractPedestal(
+function recordedPedestalItem(
   context: RunImportContext,
   pedestal: Origin<'infernalContractPedestal'>,
-): boolean {
+): { readonly roomIndex: number; readonly values: readonly ShopOptionSelection[] } | undefined {
   const occurrence = authoredOccurrence(
     context.assembly().project,
     pedestal.biomeKey,
     pedestal.occurrenceId,
   );
   const roomIndex = context.occurrences.visitsOf(pedestal.occurrenceId)[0];
-  if (occurrence === undefined || roomIndex === undefined) return false;
+  if (occurrence === undefined || roomIndex === undefined) return undefined;
   const room = context.record.rooms[roomIndex]!;
   const bought = new Map<string, number>();
   if (room.store?.kind === 'worldShop')
@@ -451,9 +498,20 @@ function answerContractPedestal(
   const unexplained = [...new Set(values.map((value) => value.offer.rewardType))].filter(
     (type) => (room.uses[type] ?? 0) > (bought.get(type) ?? 0),
   );
-  if (unexplained.length !== 1) return false;
-  for (const value of values) {
-    if (value.offer.rewardType !== unexplained[0]) continue;
+  if (unexplained.length !== 1) return undefined;
+  return {
+    roomIndex,
+    values: values.filter((value) => value.offer.rewardType === unexplained[0]),
+  };
+}
+
+/** Writes the record's pedestal item over its stock and collects it; false when none applies. */
+function authorContractPedestal(
+  context: RunImportContext,
+  pedestal: Origin<'infernalContractPedestal'>,
+  item: NonNullable<ReturnType<typeof recordedPedestalItem>>,
+): boolean {
+  for (const value of item.values) {
     const command: ProjectCommand = {
       kind: 'ReplaceInfernalContractPedestalOption',
       pedestal,
@@ -462,11 +520,14 @@ function answerContractPedestal(
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'infernalContractPedestalOption', pedestal, value });
+    const project = context.assembly().project;
     if (
       evaluation.kind !== 'infernalContractPedestal' ||
       !evaluation.result.supported ||
       !evaluation.result.findings.every(isQuestionFinding) ||
-      !context.applyValid(command)
+      // The stock may already hold the record's item.
+      (applyProjectCommand(project, context.catalog, command) !== project &&
+        !context.applyValid(command))
     )
       continue;
     if (
@@ -480,12 +541,95 @@ function answerContractPedestal(
         area: 'shop',
         reason: 'refused',
         address: pedestal,
-        record: record(roomIndex),
+        record: record(item.roomIndex),
       });
     return true;
   }
+  return false;
+}
+
+function answerContractPedestal(
+  context: RunImportContext,
+  pedestal: Origin<'infernalContractPedestal'>,
+): boolean {
+  const item = recordedPedestalItem(context, pedestal);
+  if (item === undefined) return false;
+  if (authorContractPedestal(context, pedestal, item)) return true;
   context.refuse();
   return false;
+}
+
+/**
+ * A spawned pedestal's recorded item, once its settlement has stocked it: the
+ * record's item replaces the draw, which stays when the record shows none.
+ */
+function importContractPedestal(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const used = `contractPedestal:${occurrence.occurrenceId}`;
+  if (context.used.has(used) || (occurrence.infernalContractPedestal?.reward ?? null) === null)
+    return;
+  context.used.add(used);
+  const pedestal = createInfernalContractPedestalAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  const item = recordedPedestalItem(context, pedestal);
+  if (item === undefined || authorContractPedestal(context, pedestal, item)) return;
+  context.note({
+    area: 'shop',
+    reason: 'refused',
+    address: pedestal,
+    record: record(item.roomIndex),
+  });
+}
+
+/** The Shrine's recorded option for each slot, by its slot's group. */
+function recordedShrineStock(context: RunImportContext, visit: StoreVisit) {
+  const profile = context.catalog.rewards.shops.byKey['SurfaceShop'];
+  return shrineSlots(context).map((slotKey, index) => {
+    const stock = visit.store.stock.find((option) => option.slot === index + 1);
+    const option = profile?.groups.byKey[
+      profile.slots.byKey[slotKey]?.groupKey ?? ''
+    ]?.options.values.find(
+      (candidate) => candidate.key === stock?.name || candidate.rewardType === stock?.name,
+    );
+    return { slotKey, rewardType: option?.rewardType };
+  });
+}
+
+/** Writes each recorded Shrine item over the item its slot was stocked with, in one edit. */
+function restockShrine(
+  context: RunImportContext,
+  address: OccurrenceAddress,
+  visit: StoreVisit,
+  shrine: NonNullable<RoomOccurrence['hermesShrine']>,
+): void {
+  const restock = recordedShrineStock(context, visit).filter(
+    ({ slotKey, rewardType }) =>
+      rewardType !== undefined && shrine.offerBySlot[slotKey]?.rewardType !== rewardType,
+  );
+  if (
+    restock.length > 0 &&
+    !context.transaction(() =>
+      restock.every(({ slotKey, rewardType }) =>
+        context.apply({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: address,
+          slotKey,
+          value: { rewardType: rewardType! },
+        }),
+      ),
+    )
+  )
+    context.note({
+      area: 'shop',
+      reason: 'refused',
+      address: createRoomFeatureAddress(address, { kind: 'hermesShrinePresence' }),
+      record: record(visit.roomIndex),
+    });
 }
 
 /** The Shrine's recorded stock, each authored into its slot in stock order. */
@@ -526,12 +670,24 @@ function answerShrineOffers(context: RunImportContext, feature: Origin<'roomFeat
 
 /**
  * The Shrine's Travel Deal refill is the option its first rush left in the
- * rushed slot, with that option's delayed purchase.
+ * rushed slot, with that option's delayed purchase: answered when the plan asks
+ * for it, or written over the item the rush's edit stocked.
  */
 function answerShrineRefill(context: RunImportContext, feature: Origin<'roomFeature'>): boolean {
-  const visit = storeVisit(context, feature.occurrenceId, 'hermesShrine');
+  if (restockShrineRefill(context, feature.biomeKey, feature.occurrenceId)) return true;
+  context.refuse();
+  return false;
+}
+
+function restockShrineRefill(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+): boolean {
+  const visit = storeVisit(context, occurrenceId, 'hermesShrine');
   const refill = visit?.store.refill;
-  if (visit === undefined || refill === undefined) return false;
+  const used = `shrineRefill:${occurrenceId}`;
+  if (visit === undefined || refill === undefined || context.used.has(used)) return false;
   const option = context.catalog.rewards.shops.byKey['SurfaceShop']?.groups.values
     .flatMap((group) => group.options.values)
     .find(
@@ -539,25 +695,27 @@ function answerShrineRefill(context: RunImportContext, feature: Origin<'roomFeat
         candidate.key === refill.option.name || candidate.rewardType === refill.option.name,
     );
   const address = createOccurrenceAddress(
-    createBiomeAddress(feature.routeKey, feature.biomeKey),
-    feature.occurrenceId,
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrenceId as OccurrenceId,
   );
+  const stocked = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId)
+    ?.hermesShrine?.travelDealRefill?.offer;
   if (
     option === undefined ||
-    !context.applyValid({
-      kind: 'ReplaceHermesShrineTravelDealRefill',
-      occurrence: address,
-      value: { rewardType: option.rewardType },
-    })
-  ) {
-    context.refuse();
+    (stocked?.rewardType !== option.rewardType &&
+      !context.applyValid({
+        kind: 'ReplaceHermesShrineTravelDealRefill',
+        occurrence: address,
+        value: { rewardType: option.rewardType },
+      }))
+  )
     return false;
-  }
+  context.used.add(used);
   if (refill.purchase !== undefined)
     importShrinePurchase(
       context,
-      feature.biomeKey,
-      feature.occurrenceId,
+      biomeKey,
+      occurrenceId,
       visit,
       refill.purchase,
       'travelDealRefill',
@@ -822,8 +980,16 @@ function answerAnvil(context: RunImportContext, acquisition: Origin<'acquisition
  */
 export function importCommerce(context: RunImportContext): void {
   for (const { biomeKey, occurrence } of pendingOccurrences(context)) {
-    importShopPurchases(context, biomeKey, occurrence);
+    importShopStock(context, biomeKey, occurrence);
+    // Purchases and the refill read the stock the record just wrote.
+    const current = () =>
+      authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId) ??
+      occurrence;
+    importShopPurchases(context, biomeKey, current());
+    importShopRefill(context, biomeKey, current());
+    importContractPedestal(context, biomeKey, current());
     importShrine(context, biomeKey, occurrence);
+    pickUpRushedItems(context, biomeKey, occurrence);
     importWell(context, biomeKey, occurrence);
     importPool(context, biomeKey, occurrence);
   }
@@ -850,6 +1016,65 @@ function noteOnce(
   });
 }
 
+/**
+ * A reached Shop's recorded stock, once its settlement has stocked every slot:
+ * each recorded item replaces the slot's draw, and an unrecorded slot takes the
+ * value its room's next entry save accepts, its draw kept when none is.
+ */
+function importShopStock(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const used = `shopStock:${occurrence.occurrenceId}`;
+  const visit = storeVisit(context, occurrence.occurrenceId, 'worldShop');
+  const initial = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  const slots = context.catalog.rewards.shops.byKey[initial?.profileKey ?? '']?.slots.values;
+  if (context.used.has(used) || initial === undefined || visit === undefined || slots === undefined)
+    return;
+  if (slots.some((slot) => (initial.offers[slot.key]?.reward ?? null) === null)) return;
+  context.used.add(used);
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  for (const slot of slots) {
+    const current = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    );
+    const shop = current?.state.kind === 'shop' ? current.state.shop : undefined;
+    if (shop === undefined) return;
+    const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
+    const restocked = restockShopSlot(context, offer, shop);
+    if (restocked === false)
+      context.note({
+        area: 'shop',
+        reason: 'refused',
+        address: offer,
+        record: record(visit.roomIndex),
+      });
+    if (restocked !== undefined) continue;
+    const answer = authorAcceptedAnswer(
+      context,
+      visit.roomIndex,
+      shopOfferAnswers(context, offer),
+      {
+        area: 'shop',
+        address: offer,
+      },
+    );
+    context.note({
+      area: 'shop',
+      reason: 'notInRecord',
+      address: offer,
+      ...(answer === undefined ? {} : { applied: answer.commands[0]! }),
+      ...(answer === undefined || answer.alternatives.length === 0
+        ? {}
+        : { alternatives: answer.alternatives }),
+      record: record(visit.roomIndex),
+    });
+  }
+}
+
 function importShopPurchases(
   context: RunImportContext,
   biomeKey: string,
@@ -862,9 +1087,9 @@ function importShopPurchases(
   const slots = context.catalog.rewards.shops.byKey[shop.profileKey]?.slots.values ?? [];
   // Purchases wait for the profile's whole inventory.
   if (slots.some((slot) => (shop.offers[slot.key]?.reward ?? null) === null)) return;
-  context.used.add(used);
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   if (visit.store.purchases === undefined) {
+    context.used.add(used);
     context.note({
       area: 'shop',
       reason: 'notInRecord',
@@ -873,7 +1098,42 @@ function importShopPurchases(
     });
     return;
   }
-  for (const purchase of purchaseOrder(context, shop, visit.room, visit.store.purchases)) {
+  const purchases = purchaseOrder(context, shop, visit.room, visit.store.purchases);
+  const placed = (offerKey: string) =>
+    authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.roomActions.order.some(
+      (action) => action.kind === 'interactShopOffer' && action.offerKey === offerKey,
+    ) === true;
+  for (const [index, purchase] of purchases.entries()) {
+    const bought = `${used}:${index}`;
+    if (context.used.has(bought)) continue;
+    // The item a purchase restocked comes before the next purchase, which waits for what it spawns.
+    if (
+      index > 0 &&
+      importShopRefill(
+        context,
+        biomeKey,
+        authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId) ??
+          occurrence,
+      )
+    )
+      return;
+    // The record's next purchase follows what the one before it spawned, so it waits until
+    // the walk passes that purchase and its required items are collected.
+    const previous = index === 0 ? undefined : slots[purchases[index - 1]!.slot - 1]?.key;
+    if (
+      previous !== undefined &&
+      placed(previous) &&
+      !collectedPast(context, biomeKey, occurrence.occurrenceId, {
+        kind: 'interactShopOffer',
+        offerKey: previous,
+      })
+    )
+      return;
+    context.used.add(bought);
     const offerKey = slots[purchase.slot - 1]?.key;
     const offer =
       offerKey === undefined
@@ -907,6 +1167,45 @@ function importShopPurchases(
       record: record(visit.roomIndex),
     });
   }
+  context.used.add(used);
+}
+
+/**
+ * Settlement stocks the Travel Deal item once the walk reaches the purchase
+ * that restocks it; a bought one is the record's, imported before the next
+ * recorded purchase. True when it was imported now.
+ */
+function importShopRefill(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): boolean {
+  const used = `shopRefill:${occurrence.occurrenceId}`;
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (
+    context.used.has(used) ||
+    shop === undefined ||
+    (shop.travelDealRefill?.reward ?? null) === null
+  )
+    return false;
+  context.used.add(used);
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  const offer = createShopOfferAddress(
+    biome,
+    occurrence.occurrenceId,
+    TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  );
+  // An unbought item leaves no trace: the refill keeps settlement's draw.
+  if (!answerTravelDealRefill(context, offer, occurrence, shop)) {
+    const visit = storeVisit(context, occurrence.occurrenceId, 'worldShop');
+    context.note({
+      area: 'shop',
+      reason: 'notInRecord',
+      address: offer,
+      ...(visit === undefined ? {} : { record: record(visit.roomIndex) }),
+    });
+  }
+  return true;
 }
 
 /** Each giver's stamped screen picks in a room, earliest first: an acquired trait, or the one a level-up raised. */
@@ -1034,6 +1333,13 @@ function importShrine(context: RunImportContext, biomeKey: string, occurrence: R
     biomeKey,
     occurrence.occurrenceId,
   )?.hermesShrine;
+  // The edit that reached the Shrine stocked it; the record's items replace the draws.
+  const stockKey = `shrineStock:${occurrence.occurrenceId}`;
+  if (shrine !== undefined && !context.used.has(stockKey)) {
+    context.used.add(stockKey);
+    restockShrine(context, address, visit, shrine);
+    return;
+  }
   const used = `shrinePurchases:${occurrence.occurrenceId}`;
   if (
     shrine === undefined ||
@@ -1134,7 +1440,6 @@ function importShrinePurchase(
       roomActionAddress(context, biomeKey, occurrenceId, {
         kind: 'purchaseHermesShrineOffer',
         generationKey,
-        rushed: false,
       }),
     ],
     { kind: 'SetHermesShrinePurchase', occurrence: address, generationKey, purchased: false },
@@ -1149,15 +1454,11 @@ function importShrinePurchase(
       record: record(visit.roomIndex),
     });
   if (purchase.delivery !== 'rushed') return;
-  const reference: RoomActionReference = {
-    kind: 'purchaseHermesShrineOffer',
-    generationKey,
-    rushed: false,
-  };
   if (
     !context.applyValid({
-      kind: 'SetHermesShrinePurchaseRush',
-      action: roomActionAddress(context, biomeKey, occurrenceId, reference),
+      kind: 'SetHermesShrineRush',
+      occurrence: address,
+      generationKey,
       rushed: true,
     })
   ) {
@@ -1169,23 +1470,48 @@ function importShrinePurchase(
     });
     return;
   }
-  // A rushed item left on the floor is not picked up.
+  // A rushed item left on the floor is not picked up; a collected one is, once it lies live.
   const rewardType = visit.store.stock.find((option) => option.slot === purchase.slot)?.name;
-  if (rewardType !== undefined && !collected(context, visit.room, rewardType)) {
-    const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
-    const pickup = occurrence?.roomActions.order.find(
-      (entry) =>
-        entry.kind === 'interactAcquisitionEntry' &&
-        entry.siteKey === 'hermesShrineDelivery' &&
-        entry.entryKey === hermesShrineDeliveryEntryKey(address, generationKey),
-    );
-    if (pickup !== undefined && !removeRoomAction(context, biomeKey, occurrenceId, pickup))
-      context.note({
-        area: 'shop',
-        reason: 'refused',
-        address: feature,
-        record: record(visit.roomIndex),
-      });
+  if (rewardType !== undefined && collected(context, visit.room, rewardType))
+    context.used.add(rushedPickupKey(occurrenceId, generationKey));
+  // The rush that restocked its slot stocked the refill with its edit; the record's item replaces it.
+  const shrine = authoredOccurrence(
+    context.assembly().project,
+    biomeKey,
+    occurrenceId,
+  )?.hermesShrine;
+  if (refill === undefined && (shrine?.travelDealRefill?.offer ?? null) !== null)
+    restockShrineRefill(context, biomeKey, occurrenceId);
+}
+
+const rushedPickupKey = (occurrenceId: string, generationKey: string) =>
+  `rushedPickup:${occurrenceId}:${generationKey}`;
+
+/**
+ * Picks up each collected rushed item of a Shrine room where the live room
+ * offers it: it spawns as its rush settles, which can wait on a Travel Deal
+ * refill the walk answers later.
+ */
+function pickUpRushedItems(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const address = createOccurrenceAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  for (const row of occurrence.roomActions.order) {
+    if (
+      row.kind !== 'rushHermesShrineOffer' ||
+      !context.used.has(rushedPickupKey(occurrence.occurrenceId, row.generationKey))
+    )
+      continue;
+    placeLiveRoomAction(context, biomeKey, occurrence.occurrenceId, {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(address, row.generationKey),
+    });
   }
 }
 
@@ -1219,20 +1545,42 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
         record: record(visit.roomIndex),
       });
     if (!opened) return;
-    // An opened Well's recorded opening stock is its initial roll.
+    // An opened Well's recorded opening stock is its initial roll. The edit that
+    // added the Well stocked every slot; each recorded item replaces its draw, and
+    // an unrecorded slot is drawn again past them.
     context.used.add(`wellOpened:${occurrence.occurrenceId}`);
     const known = roomShopItems(context);
-    for (const [index, slotKey] of wellSlots(context).entries()) {
+    const recorded = wellSlots(context).map((slotKey, index) => {
       const stock = visit.store.stock.find((option) => option.slot === index + 1);
-      if (stock === undefined || !known.has(stock.name)) continue;
-      if (
-        !context.applyValid({
-          kind: 'ReplaceStygianWellOffer',
-          occurrence: address,
-          slotKey,
-          itemKey: stock.name,
-        })
+      return {
+        slotKey,
+        itemKey: stock === undefined || !known.has(stock.name) ? null : stock.name,
+      };
+    });
+    const stocked = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.stygianWell?.offerKeyBySlot;
+    const items = new Set(recorded.flatMap((slot) => slot.itemKey ?? []));
+    const restock = [
+      ...recorded.filter(
+        (slot) => slot.itemKey !== null && stocked?.[slot.slotKey] !== slot.itemKey,
+      ),
+      // An unrecorded slot whose draw repeats a recorded item is drawn again.
+      ...recorded.filter(
+        (slot) => slot.itemKey === null && items.has(stocked?.[slot.slotKey] ?? ''),
+      ),
+    ];
+    if (
+      restock.length > 0 &&
+      !context.transaction(() =>
+        restock.every(({ slotKey, itemKey }) =>
+          context.apply({ kind: 'ReplaceStygianWellOffer', occurrence: address, slotKey, itemKey }),
+        ),
       )
+    )
+      for (const { slotKey } of recorded.filter((slot) => slot.itemKey !== null))
         context.note({
           area: 'well',
           reason: 'refused',
@@ -1242,7 +1590,6 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
           }),
           record: record(visit.roomIndex),
         });
-    }
     applyFeatureRerolls(context, visit.roomIndex, 'well', feature, () => ({
       kind: 'InsertStygianWellReroll',
       occurrence: address,
@@ -1274,8 +1621,11 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
       .order ?? [],
   ).at(-1);
   const rollKey = lastRoll?.rerollId ?? INITIAL_ROLL_KEY;
+  // A roll's edit stocked its slots; a recorded item replaces a different draw.
   const pin = (slotKey: StygianWellSlotKey, itemKey: string) =>
     lastRoll === undefined ||
+    authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)?.stygianWell
+      ?.rerollOfferKeyBySlot?.[lastRoll.rerollId]?.[slotKey] === itemKey ||
     context.applyValid({
       kind: 'ReplaceStygianWellRollOffer',
       action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, lastRoll),
@@ -1331,12 +1681,19 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
     kind: 'stygianWellOffer',
     generationKey: 'travelDealRefill',
   });
+  // The first purchase's edit stocked the refill; the recorded item replaces a different draw.
+  const stockedRefill = authoredOccurrence(
+    context.assembly().project,
+    biomeKey,
+    occurrence.occurrenceId,
+  )?.stygianWell?.travelDealRefillKey;
   if (
-    !context.applyValid({
-      kind: 'ReplaceStygianWellTravelDealRefill',
-      occurrence: address,
-      itemKey: refill,
-    }) ||
+    (stockedRefill !== refill &&
+      !context.applyValid({
+        kind: 'ReplaceStygianWellTravelDealRefill',
+        occurrence: address,
+        itemKey: refill,
+      })) ||
     !context.applyValid({
       kind: 'SetStygianWellPurchase',
       occurrence: address,
@@ -1358,9 +1715,9 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
   // takes a free slot of its group on the last roll; without one it is unowned.
   for (const itemKey of extra) {
     const taken = new Set(
-      (
+      stygianWellPurchasedGenerationKeys(
         authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)
-          ?.stygianWell?.purchasedGenerationKeys ?? []
+          ?.roomActions.order ?? [],
       ).flatMap((key) => {
         const parsed = parseStygianWellGenerationKey(key);
         return parsed?.rollKey === rollKey ? [parsed.slotKey] : [];
@@ -1454,7 +1811,17 @@ function importTwist(
           generationKey,
           itemKey: results[0],
         };
-  if (command === undefined || results.length > 1 || !context.applyValid(command))
+  // The purchase's edit stocked a result; the recorded one replaces a different draw.
+  const stocked = authoredOccurrence(
+    context.assembly().project,
+    address.biomeKey,
+    address.occurrenceId,
+  )?.stygianWell?.twistResultKeyByGeneration?.[generationKey];
+  if (
+    command === undefined ||
+    results.length > 1 ||
+    (stocked !== results[0] && !context.applyValid(command))
+  )
     context.note({
       area: 'well',
       reason: command === undefined || results.length > 1 ? 'notInRecord' : 'refused',
@@ -1548,13 +1915,35 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       );
     return sold;
   };
+  // The record's list is the one on show at opening: the regenerated one when
+  // the fountain use made the entry list stale.
+  const list = capability.refresh === undefined ? {} : { list: 'refresh' as const };
+  const listed = (): Readonly<Partial<Record<string, string | null>>> => {
+    const stocked = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.purgingPool;
+    return capability.refresh === undefined
+      ? (stocked?.traitKeyBySlot ?? {})
+      : (stocked?.refreshTraitKeyBySlot ?? {});
+  };
+  const recorded: {
+    readonly slotKey: (typeof POOL_SLOTS)[number];
+    readonly slot: number;
+    readonly traitKey: string;
+    readonly ambiguous: boolean;
+  }[] = [];
   for (const [index, slotKey] of POOL_SLOTS.entries()) {
     const slot = index + 1;
     const feature = createRoomFeatureAddress(address, { kind: 'purgingPoolOffer', slotKey });
     let traitKey = pool.slots.find((entry) => entry.slot === slot)?.name;
     let ambiguous = false;
     if (traitKey === undefined && pool.soldSlots.includes(slot)) {
-      const eligible = new Set(capability.candidateTraitKeysBySlot[slotKey]);
+      // Every trait the list on show could hold, whatever the slots were stocked with.
+      const eligible = new Set(
+        capability.refresh?.eligibleTraitKeys ?? capability.assessment.eligibleTraitKeys,
+      );
       const sold = room.traits.removed.filter((name) => eligible.has(name) && !claimed.has(name));
       traitKey = sold[0];
       ambiguous = sold.length > 1;
@@ -1571,14 +1960,47 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       }
       claimed.add(traitKey);
     }
-    if (traitKey === undefined) continue;
+    if (traitKey !== undefined) recorded.push({ slotKey, slot, traitKey, ambiguous });
+  }
+  const replace = (slotKey: (typeof POOL_SLOTS)[number], traitKey: string | null) =>
+    context.apply({
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: address,
+      slotKey,
+      traitKey,
+      ...list,
+    });
+  // The edit that reached the list stocked every slot: the recorded traits replace their
+  // slots' draws together, then a draw repeating one of them is drawn again past them.
+  const writtenTogether = context.transaction(
+    () =>
+      recorded.every(
+        ({ slotKey, traitKey }) => listed()[slotKey] === traitKey || replace(slotKey, traitKey),
+      ) &&
+      POOL_SLOTS.every(
+        (slotKey) =>
+          recorded.some((entry) => entry.slotKey === slotKey) ||
+          !recorded.some((entry) => entry.traitKey === listed()[slotKey]) ||
+          replace(slotKey, null),
+      ),
+  );
+  for (const { slotKey, slot, traitKey, ambiguous } of recorded) {
+    const feature = createRoomFeatureAddress(address, { kind: 'purgingPoolOffer', slotKey });
     const command: ProjectCommand = {
       kind: 'ReplacePurgingPoolSlot',
       occurrence: address,
       slotKey,
       traitKey,
+      ...list,
     };
-    if (!context.applyValid(command)) {
+    // Apart, each recorded trait still replaces its draw where the engine admits it.
+    const written = (): boolean => {
+      for (const other of POOL_SLOTS)
+        if (other !== slotKey && listed()[other] === traitKey && !replace(other, null))
+          return false;
+      return listed()[slotKey] === traitKey || context.apply(command);
+    };
+    if (!writtenTogether && !context.transaction(written)) {
       // A refused trait leaves its slot open; a sale from it cannot be authored.
       context.note({
         area: 'pool',

@@ -10,6 +10,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { replaceTestPlacedItem, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import {
   firstSupportedReroll,
   supportedRerollRewards,
@@ -54,7 +55,8 @@ export function underworldFRerollsProject(): ProjectDocument {
       ? exit.normal.targets.find((target) => target.exitKey === 'exit2')
       : undefined;
   if (door === undefined) throw new Error(`${source} has no exit2`);
-  apply({
+  // A press redraws the door's reward, so the edits settle as the editor's do.
+  project = settleTestEdit(project, {
     kind: 'InsertReroll',
     occurrence: createOccurrenceAddress(f, source as never),
     target: { kind: 'door', exitKey: 'exit2', occurrenceId: door.occurrenceId },
@@ -70,7 +72,7 @@ export function underworldFRerollsProject(): ProjectDocument {
   project =
     supportedRerollRewards(pressed, press, types)
       .map((reward) =>
-        applyProjectCommand(pressed, catalog, {
+        settleTestEdit(pressed, {
           kind: 'ReplaceRerollReward',
           action: press,
           reward,
@@ -85,12 +87,19 @@ export function underworldFRerollsProject(): ProjectDocument {
     occurrence: room,
     index: order(project, postboss).length,
   });
+  const action = (key: readonly unknown[]) =>
+    createRoomActionAddress(f, postboss as never, JSON.stringify(key));
+  apply({
+    kind: 'ReplaceStygianWellRollOffer',
+    action: action(['rerollStygianWell', 'r1']),
+    slotKey: 'healing',
+    itemKey: 'HealDropRange',
+  });
   apply({
     kind: 'SetStygianWellPurchase',
     occurrence: room,
     generationKey: 'r1:healing',
     purchased: true,
-    itemKey: 'HealDropRange',
   });
   apply({
     kind: 'InsertPurgingPoolReroll',
@@ -98,11 +107,16 @@ export function underworldFRerollsProject(): ProjectDocument {
     index: order(project, postboss).length,
   });
   apply({
-    kind: 'SellPurgingPoolRollSlot',
-    occurrence: room,
-    rollKey: 'r1',
+    kind: 'ReplacePurgingPoolRollSlot',
+    action: action(['rerollPurgingPool', 'r1']),
     slotKey: 'middle',
     traitKey: 'HeraCastBoon',
+  });
+  const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'middle', rollKey: 'r1' } as const;
+  apply({
+    kind: 'InsertRoomAction',
+    action: action(['sellPurgingPoolTrait', 'middle', 'r1']),
+    reference: sale,
     index: order(project, postboss).length,
   });
   return project;
@@ -128,15 +142,12 @@ export function surfaceNORerollsProject(): ProjectDocument {
     'surface-o-preboss:boss',
     ['LowManaDamageBonus', 'CastCount', 'SorceryRegenUpgrade', 'CastBuff', 'BonusHealth'],
   );
-  const apply = (command: ProjectCommand) => {
-    project = applyProjectCommand(project, catalog, command);
-  };
   // combat03 is never entered; one press in the first stay, one after the third visit.
   for (const [rerollId, index] of [
     ['r1', 1],
     ['r2', 5],
   ] as const) {
-    apply({
+    project = settleTestEdit(project, {
       kind: 'InsertHubReroll',
       hub,
       hubSlotKey: 'combat03',
@@ -144,14 +155,15 @@ export function surfaceNORerollsProject(): ProjectDocument {
       index,
     });
     const reroll = createHubRerollAddress(n, 'hub', rerollId);
-    apply({
+    project = settleTestEdit(project, {
       kind: 'ReplaceHubRerollReward',
       reroll,
       reward: firstSupportedReroll(project, reroll, 'HubRewards'),
     });
   }
   const ship = 'surface-o-combat04';
-  apply({
+  // The press redraws the wheel's offer, so its taken reward is picked up again after it.
+  project = settleTestEdit(project, {
     kind: 'InsertReroll',
     occurrence: createOccurrenceAddress(o, ship as never),
     target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
@@ -161,12 +173,15 @@ export function surfaceNORerollsProject(): ProjectDocument {
     )!.roomActions.order.findIndex((reference) => reference.kind === 'chooseRewardWheel'),
   });
   const press = createRoomActionAddress(o, ship as never, JSON.stringify(['reroll', 'r1']));
-  apply({
-    kind: 'ReplaceRerollReward',
-    action: press,
-    reward: firstSupportedReroll(project, press, 'RunProgress'),
-  });
-  return project;
+  return replaceTestPlacedItem(
+    project,
+    {
+      kind: 'ReplaceRerollReward',
+      action: press,
+      reward: firstSupportedReroll(project, press, 'RunProgress'),
+    },
+    createOccurrenceAddress(o, ship as never),
+  );
 }
 
 /**

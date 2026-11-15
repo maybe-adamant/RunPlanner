@@ -15,19 +15,26 @@ export function executionReroll(
   batch: CanonicalBatch | undefined,
   reroll: RerollRoomAction,
 ): Omit<ExecutionReroll, 'owner'> {
-  const target = reroll.target;
   const missing = (): never => {
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} reroll ${reroll.rerollId} lacks its target`,
     );
   };
+  const press = room.rerollPresses?.get(reroll.rerollId);
+  if (press === undefined) return missing();
+  const { target, result } = press;
+  if (result === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} reroll ${reroll.rerollId} lacks its result`,
+    );
   if (target.kind === 'wheelOffer') {
     const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
     if (wheel === undefined) return missing();
     return Object.freeze({
       target: Object.freeze({ ...target }),
-      reward: executionRewardFromOffer(reroll.reward, wheel.producerLifecycleKey, wheel.storeKey),
+      reward: executionRewardFromOffer(result, wheel.producerLifecycleKey, wheel.storeKey),
     });
   }
   const door = batch?.targets.find(
@@ -43,11 +50,7 @@ export function executionReroll(
     if (cage === undefined) return missing();
     return Object.freeze({
       target: Object.freeze({ kind: 'cage', exitKey: target.exitKey, cageIndex: index + 1 }),
-      reward: executionRewardFromOffer(
-        reroll.reward,
-        cage.producerLifecycleKey,
-        cage.resolvedStoreKey,
-      ),
+      reward: executionRewardFromOffer(result, cage.producerLifecycleKey, cage.resolvedStoreKey),
     });
   }
   const incoming = door.room.incomingReward;
@@ -55,7 +58,7 @@ export function executionReroll(
   return Object.freeze({
     target: Object.freeze({ kind: 'door', exitKey: target.exitKey }),
     reward: executionRewardFromOffer(
-      reroll.reward,
+      result,
       incoming.producerLifecycleKey,
       incoming.resolvedStoreKey,
     ),
@@ -103,6 +106,11 @@ export function executionHubRerolls(
         throw new CompilerError(
           'executionCoverageMissing',
           `Hub reroll ${reroll.origin.rerollId} lacks its slot`,
+        );
+      if (reroll.reward === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `Hub reroll ${reroll.origin.rerollId} lacks its result`,
         );
       return Object.freeze({
         owner: semanticAddressKey(reroll.origin),

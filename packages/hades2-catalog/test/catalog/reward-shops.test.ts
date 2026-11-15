@@ -151,6 +151,32 @@ describe('reward compiler Shop normalizer', () => {
     expect(holders).toEqual(['SurfaceShop.Second.SpellDrop']);
   });
 
+  it('marks exactly the Last Stand items as offered only while the hero is missing a Last Stand', () => {
+    const holders = rewardKernelCatalog.shops.values.flatMap((shop) =>
+      shop.groups.values.flatMap((group) =>
+        group.options.values.flatMap((entry) =>
+          entry.unmodeledOfferCondition === undefined
+            ? []
+            : [`${shop.key}.${group.key}.${entry.key}:${entry.unmodeledOfferCondition}`],
+        ),
+      ),
+    );
+    expect(holders.sort()).toEqual([
+      'I_WorldShop.Survival.LastStandDrop:missingLastStand',
+      'Q_WorldShop.Survival.LastStandDrop:missingLastStand',
+      'RoomShop.Healing.LastStandShopItem:missingLastStand',
+      'SurfaceShop.First.LastStandDrop:missingLastStand',
+    ]);
+    expect(() =>
+      createRewardKernelCatalog(
+        replaceShopOption('SurfaceShop', 'LastStandDrop', (option) => ({
+          ...option,
+          unmodeledOfferCondition: 'unknownCondition',
+        })),
+      ),
+    ).toThrow(CatalogContractError);
+  });
+
   it('normalizes World, Surface, I, and Q shop pools with their declared slot groups', () => {
     expect(rewardKernelCatalog.shops.byKey.SurfaceShop?.slotCount).toBe(3);
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.slotCount).toBe(3);

@@ -1,44 +1,29 @@
 import {
   INITIAL_ROLL_KEY,
-  createBiomeAddress,
-  createRoomActionAddress,
+  PURGING_POOL_REFRESH_ROLL_KEY,
   createRoomFeatureAddress,
   featureRerolls,
+  purgingPoolRerollPins,
   purgingPoolRollTraitKey,
-  roomActionKey,
   semanticAddressKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
+  stygianWellRerollPins,
   type FeatureRerollAction,
   type OccurrenceAddress,
+  type PurgingPoolSlotKey,
   type RollFeature,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
-  FeatureRerollOption,
   PurgingPoolCandidateCapability,
-  RerollSpendAllowance,
   StygianWellCandidateCapability,
 } from '@run-planner/engine/simulation';
 
-import type {
-  WorkspaceFeatureRollActions,
-  WorkspaceFeatureRollLock,
-  WorkspaceFeatureRollOption,
-  WorkspaceFeatureRollSlot,
-} from '../contracts/features';
-import type {
-  WorkspaceFeatureRollActionRequirement,
-  WorkspaceOccurrenceInteractionRequirement,
-} from '../interactions/interaction-requirements';
+import type { WorkspaceFeatureRollSlot, WorkspacePurgingPoolSlot } from '../contracts/features';
+import type {} from '../interactions/interaction-requirements';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
-import type { WorkspaceBiomeSource } from '../source-index';
-
-type RollActionsRequirement = Extract<
-  WorkspaceOccurrenceInteractionRequirement,
-  { readonly kind: 'featureRollActions' }
->;
 
 /** What a Well or Pool's labels read from the catalog. */
 export interface WorkspaceFeatureRollCatalog {
@@ -77,178 +62,6 @@ export function featureRollNumber(
   return index < 0 ? undefined : index + 2;
 }
 
-function rerollLock(
-  option: FeatureRerollOption,
-  allowance: RerollSpendAllowance,
-): WorkspaceFeatureRollLock | undefined {
-  if (allowance.kind === 'unreached') return 'unreached';
-  if (!option.enabled) return 'notEnabled';
-  if (!option.available) return 'nothingLeft';
-  if (allowance.allowed) return undefined;
-  if (option.poolRemaining <= 0) return 'poolEmpty';
-  return 'poolShort';
-}
-
-/**
- * The Interact picker of a Well or Pool: each slot on show where a new action
- * is appended, then the reroll with its cost. The reroll entry is hidden
- * without a held card unless the room already holds a reroll of the feature.
- */
-export function assembleFeatureRollActions(input: {
-  readonly catalog: Catalog;
-  readonly feature: RollFeature;
-  readonly owner: OccurrenceAddress;
-  readonly occurrence: RoomOccurrence;
-  readonly capability: StygianWellCandidateCapability | PurgingPoolCandidateCapability | undefined;
-  readonly allowance: WorkspaceBiomeSource['rerollSpendAllowance'];
-}): {
-  readonly actions: WorkspaceFeatureRollActions;
-  readonly requirement: RollActionsRequirement;
-} {
-  const { feature, occurrence, owner } = input;
-  const labels = featureRollCatalog(input.catalog, feature);
-  const interactionKey = `featureRollActions:${feature}:${semanticAddressKey(owner)}`;
-  const order = occurrence.roomActions.order;
-  const options: WorkspaceFeatureRollOption[] = [];
-  const bound: WorkspaceFeatureRollActionRequirement[] = [];
-  const interaction = input.capability?.interaction;
-  const roomHoldsRerolls = featureRerolls(order, feature).length > 0;
-  if (interaction !== undefined && feature === 'stygianWell') {
-    const well = input.capability as StygianWellCandidateCapability;
-    const wellInteraction = well.interaction!;
-    for (const offer of wellInteraction.offers) {
-      const key = `buy:${offer.generationKey}`;
-      const refill = offer.generationKey === 'travelDealRefill';
-      // A blank slot, the Travel Deal restock included, is bought with the item chosen then.
-      const blank = offer.itemKey === null;
-      const subject = blank
-        ? refill
-          ? 'Travel Deal'
-          : labels.slotLabel(offer.slotKey)
-        : `${labels.itemLabel(offer.itemKey!)}${refill ? ' · Travel Deal' : ''}`;
-      options.push(
-        Object.freeze({
-          key,
-          kind: 'offer' as const,
-          label: `Buy ${subject}${blank ? '…' : ''}`,
-          ...(blank ? { needsChoice: true as const } : { item: offer.itemKey! }),
-        }),
-      );
-      const candidates = !blank
-        ? []
-        : refill
-          ? (well.travelDealRefill?.candidateItemKeys ?? [])
-          : // Every bought slot but the refill is in the roll on show.
-            wellInteraction.rollKey === INITIAL_ROLL_KEY
-            ? well.candidateItemKeysBySlot[offer.slotKey]
-            : (well.rolls[wellInteraction.rollKey]?.candidateItemKeysBySlot[offer.slotKey] ?? []);
-      bound.push(
-        Object.freeze({
-          key,
-          kind: 'wellPurchase' as const,
-          generationKey: offer.generationKey,
-          ...(blank
-            ? {
-                choices: Object.freeze(
-                  candidates.map((itemKey) =>
-                    Object.freeze({ key: itemKey, label: labels.itemLabel(itemKey) }),
-                  ),
-                ),
-              }
-            : {}),
-        }),
-      );
-    }
-  }
-  if (interaction !== undefined && feature === 'purgingPool') {
-    const pool = input.capability as PurgingPoolCandidateCapability;
-    const poolInteraction = pool.interaction!;
-    for (const offer of poolInteraction.offers) {
-      const key = `sell:${roomActionKey(offer.sale)}`;
-      // A blank slot is sold with the trait chosen then, pinned on its list.
-      const blank = offer.traitKey === null;
-      const rollKey = offer.sale.rollKey;
-      options.push(
-        Object.freeze({
-          key,
-          kind: 'offer' as const,
-          label: `Sell ${
-            offer.traitKey === null
-              ? labels.slotLabel(offer.slotKey)
-              : labels.itemLabel(offer.traitKey)
-          }${blank ? '…' : ''}`,
-          ...(blank ? { needsChoice: true as const } : { item: offer.traitKey! }),
-        }),
-      );
-      const candidates = !blank
-        ? []
-        : rollKey === undefined
-          ? pool.candidateTraitKeysBySlot[offer.slotKey]
-          : (pool.rolls[rollKey]?.candidateTraitKeysBySlot[offer.slotKey] ?? []);
-      bound.push(
-        Object.freeze({
-          key,
-          kind: 'poolSale' as const,
-          sale: offer.sale,
-          action: createRoomActionAddress(
-            createBiomeAddress(owner.routeKey, owner.biomeKey),
-            owner.occurrenceId,
-            roomActionKey(offer.sale),
-          ),
-          ...(blank
-            ? {
-                choices: Object.freeze(
-                  candidates.map((traitKey) =>
-                    Object.freeze({ key: traitKey, label: labels.itemLabel(traitKey) }),
-                  ),
-                ),
-              }
-            : {}),
-        }),
-      );
-    }
-  }
-  if (interaction !== undefined && (interaction.reroll.enabled || roomHoldsRerolls)) {
-    const locked = rerollLock(
-      interaction.reroll,
-      input.allowance({ kind: 'featureReroll', occurrence: owner, feature }),
-    );
-    options.push(
-      Object.freeze({
-        key: 'reroll',
-        kind: 'reroll' as const,
-        label: 'Reroll Inventory',
-        status: `· ${interaction.reroll.poolRemaining} (−${interaction.reroll.cost})`,
-        ariaLabel: `Reroll Inventory, ${interaction.reroll.poolRemaining} rerolls left, costs ${interaction.reroll.cost}`,
-        ...(locked === undefined ? {} : { locked }),
-      }),
-    );
-    bound.push(Object.freeze({ key: 'reroll', kind: 'reroll' as const }));
-  }
-  const locked: WorkspaceFeatureRollLock | undefined =
-    interaction === undefined
-      ? 'unreached'
-      : options.every((option) => option.locked !== undefined)
-        ? (options[0]?.locked ?? (feature === 'stygianWell' ? 'allBought' : 'allSold'))
-        : undefined;
-  return Object.freeze({
-    actions: Object.freeze({
-      interactionKey,
-      feature,
-      options: Object.freeze(options),
-      ...(locked === undefined ? {} : { locked }),
-    }),
-    requirement: Object.freeze({
-      kind: 'featureRollActions' as const,
-      owner,
-      interactionKey,
-      feature,
-      appendIndex: order.length,
-      options: Object.freeze(bound),
-    }),
-  });
-}
-
 /**
  * The restocked slots of one Well or Pool reroll, each pinned or left native
  * on the reroll's Timeline row.
@@ -266,7 +79,9 @@ export function assembleFeatureRerollSlots(input: {
   const feature: RollFeature = reroll.kind === 'rerollStygianWell' ? 'stygianWell' : 'purgingPool';
   const labels = featureRollCatalog(input.catalog, feature);
   const pins: Readonly<Record<string, string>> =
-    reroll.kind === 'rerollStygianWell' ? reroll.offerKeyBySlot : reroll.traitKeyBySlot;
+    reroll.kind === 'rerollStygianWell'
+      ? stygianWellRerollPins(occurrence.stygianWell, reroll.rerollId)
+      : purgingPoolRerollPins(occurrence.purgingPool, reroll.rerollId);
   const roll =
     feature === 'stygianWell'
       ? input.wellCapability?.rolls[reroll.rerollId]
@@ -325,4 +140,60 @@ export function assembleFeatureRerollSlots(input: {
     });
   });
   return Object.freeze({ feature, slots: Object.freeze(slots) });
+}
+
+const POOL_SLOT_KEYS = ['left', 'middle', 'right'] as const;
+
+/**
+ * One Pool list's slots as the Pool control shows them: the entry list's three,
+ * or the slots the regenerated list shows or still stores.
+ */
+export function assemblePurgingPoolSlots(input: {
+  readonly catalog: Catalog;
+  readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
+  readonly owner: OccurrenceAddress;
+  readonly list: 'entry' | 'refresh';
+  readonly stored: Readonly<Partial<Record<PurgingPoolSlotKey, string | null>>>;
+  /** The list's candidates where the walk reached it. */
+  readonly candidatesBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>> | undefined;
+  /** Every trait a Pool can list, while the list is unreached. */
+  readonly declaredTraitKeys: readonly string[];
+  readonly offeredSlotKeys?: readonly PurgingPoolSlotKey[];
+}): readonly WorkspacePurgingPoolSlot[] {
+  const labels = featureRollCatalog(input.catalog, 'purgingPool');
+  const slotKeys =
+    input.list === 'entry'
+      ? POOL_SLOT_KEYS
+      : POOL_SLOT_KEYS.filter(
+          (slotKey) =>
+            (input.offeredSlotKeys ?? []).includes(slotKey) ||
+            (input.stored[slotKey] ?? null) !== null,
+        );
+  return Object.freeze(
+    slotKeys.map((slotKey) => {
+      const candidateTraitKeys = input.candidatesBySlot?.[slotKey] ?? input.declaredTraitKeys;
+      const traitKey = input.stored[slotKey] ?? null;
+      const address = createRoomFeatureAddress(input.owner, {
+        kind: 'purgingPoolOffer',
+        slotKey,
+        ...(input.list === 'refresh' ? { rollKey: PURGING_POOL_REFRESH_ROLL_KEY } : {}),
+      });
+      return Object.freeze({
+        address,
+        marker: input.markerDestinations.marker(address),
+        candidateTraitKeys,
+        candidateTraits: Object.freeze(
+          candidateTraitKeys.map((key) => Object.freeze({ key, label: labels.itemLabel(key) })),
+        ),
+        interactionKey:
+          input.list === 'entry'
+            ? `purgingPool:${semanticAddressKey(input.owner)}:${slotKey}`
+            : `purgingPool:${semanticAddressKey(input.owner)}:refresh:${slotKey}`,
+        key: slotKey,
+        label: labels.slotLabel(slotKey),
+        traitKey,
+        ...(traitKey === null ? {} : { traitLabel: labels.itemLabel(traitKey) }),
+      });
+    }),
+  );
 }

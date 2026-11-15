@@ -4,9 +4,16 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
-import { roomChoiceIcon } from '../roomIcon';
+import { roomKindIcon } from '../roomIcon';
+import { RoomOptionFace } from '../RoomNumberIcon';
 import { WordOutcomePicker } from '../NemesisEventEditor';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { anomalyIcon } from '@planner/ui/artwork/doors/doorArtwork';
+import { exitDoorIcon } from '@planner/ui/artwork/roomArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
+import type { ButtonHTMLAttributes } from 'react';
 
 /**
  * The workspace has already established this is an authored Anomaly and has
@@ -23,6 +30,7 @@ export function AnomalyRoomControl({
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
+  const picked = anomaly.mapChoices.find((choice) => choice.value === room.gameName);
   return (
     <ContextualPicker
       ariaLabel={ariaLabel}
@@ -34,8 +42,14 @@ export function AnomalyRoomControl({
         room.gameName,
       )}
       id={`anomaly-map-${room.occurrenceId}`}
-      itemIcon={(item) => roomChoiceIcon(anomaly.mapChoices, item.value)}
-      triggerIcon={roomChoiceIcon(anomaly.mapChoices, room.gameName)}
+      itemFace={(item) => {
+        const choice = anomaly.mapChoices.find((candidate) => candidate.value === item.value);
+        return (
+          <RoomOptionFace label={item.label} number={choice?.roomNumber} room={choice?.roomIcon} />
+        );
+      }}
+      {...(picked?.roomNumber === undefined ? {} : { triggerBadge: picked.roomNumber })}
+      triggerIcon={picked === undefined ? undefined : roomKindIcon(picked.roomIcon)}
       onSelect={(gameName) =>
         dispatch(
           authoredProjectCommandDispatched({
@@ -77,24 +91,65 @@ export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSu
   );
 }
 
-export function RevertAnomalyAction({
-  doorIndex,
-  room,
-}: {
-  /** The door the restored room stands behind, which names the action. */
-  readonly doorIndex: number;
-  readonly room: WorkspaceRoomSummary;
+/**
+ * A door's one-press change as an icon: what the door becomes, with an arrow
+ * badge saying it is an action. The icon alone does not say what it does, so
+ * its name is also its hint.
+ */
+export function DoorChangeAction({
+  badge,
+  icon,
+  name,
+  target,
+  ...button
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
+  readonly badge: '→' | '↺';
+  readonly icon: string | undefined;
+  readonly name: string;
+  readonly target?: FindingMarkProps;
 }) {
+  return (
+    <button
+      {...target}
+      {...hintProps(name, target?.['aria-description'], name)}
+      {...button}
+      aria-label={name}
+      className="door-change-action"
+      type="button"
+    >
+      <ArtworkIcon className="artwork-label-icon" source={icon} />
+      <span aria-hidden="true" className="corner-badge timeline-chip-badge">
+        {badge}
+      </span>
+    </button>
+  );
+}
+
+/** Turns a picked door's room into an Anomaly. */
+export function MakeAnomalyAction({ onMake }: { readonly onMake: () => void }) {
+  return (
+    <DoorChangeAction
+      badge="→"
+      data-command="SwitchTargetToAnomaly"
+      icon={anomalyIcon}
+      name="Make Anomaly"
+      onClick={onMake}
+    />
+  );
+}
+
+/** Restores the room an Anomaly replaced, shown as the biome's ordinary door. */
+export function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
   const dispatch = useAppDispatch();
   const findingMark = useFindingMark();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <button
-      {...findingMark(room.address, 'revertAnomaly')}
-      aria-label={`Restore ${anomaly.rememberedRoomLabel} on Door ${doorIndex}`}
-      className="danger-action action-compact"
+    <DoorChangeAction
+      badge="↺"
       data-command="RevertAnomaly"
+      icon={exitDoorIcon(room.address.biomeKey)}
+      name="Restore door"
       onClick={() =>
         dispatch(
           authoredProjectCommandDispatched({
@@ -103,9 +158,7 @@ export function RevertAnomalyAction({
           }),
         )
       }
-      type="button"
-    >
-      Restore
-    </button>
+      target={findingMark(room.address, 'revertAnomaly')}
+    />
   );
 }

@@ -22,8 +22,11 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateSteadyGrowthOutcomeCandidate } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
-import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
-import { loadSurfaceNNaturalSelectionCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  nBiome,
+  nOccurrenceId,
+  surfaceNNaturalSelectionProject,
+} from '@run-planner/test-fixtures/surface';
 import {
   createFGenerationProject,
   fGenerationBiome,
@@ -150,7 +153,7 @@ describe('run-impacting trait candidate contacts', () => {
   });
 
   it('re-edits a saved Natural Selection result after the route continues past it', () => {
-    const saved = loadSurfaceNNaturalSelectionCheckpoint();
+    const saved = surfaceNNaturalSelectionProject();
     const assembly = simulateProjectAssembly(catalog, saved);
     expect(assembly.evaluation.findings).toEqual([]);
     const trait = createTraitOfferAddress(

@@ -22,14 +22,20 @@ import {
   type SemanticAddress,
 } from '../addresses';
 import type { ResolvedRoutePosition } from '../route-context';
-import { authoredShopOffer } from '../shop';
+import {
+  authoredShopOffer,
+  authoredShopOfferFromState,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  echoShopDuplicateSourceEligible,
+} from '../shop';
 import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
   isDeliveryFlushHost,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -63,10 +69,16 @@ import {
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import { activeRoomActionReferences, roomActionKey } from './state';
+import { activeRoomActionReferences, roomActionKey, roomIncomingRewardOffer } from './state';
+import {
+  roomActionContentSource,
+  roomActionItemContent,
+  withRoomActionContent,
+} from './item-content';
 import { unlockExitAction } from '../locked-exits';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
+  parseHeraclesBountySiteKey,
   selectedPickupProducerForEntry,
 } from '../acquisition/pickup-producers';
 import {
@@ -74,91 +86,47 @@ import {
   type AcquisitionEntrySourceFamily,
 } from '../acquisition/entry-source-family';
 import {
-  assembleRoomLifecycleStructure,
-  authoredRoomLifecycleProfileKey,
-  type RoomActionWindow,
-  type RoomLifecycleStructure,
-} from './lifecycle-structure';
+  assembleRoomEventGraph,
+  fieldsRoom,
+  nextWheelsOpen,
+  phaseOfWheel,
+  roomFightsEnd,
+  type RoomActionBounds,
+  type RoomEventGraph,
+  type RoomEventPoint,
+} from './event-graph';
+import { roomLifecycleProfileKey } from './lifecycle-profile';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
-export type RoomActionDependency =
-  | {
-      readonly kind: 'afterAction';
-      readonly action: RoomActionReference;
-      /** Constrains planner authoring without publishing an execution dependency. */
-      readonly authoringOnly?: true;
-    }
-  | { readonly kind: 'afterCheckpoint'; readonly checkpointKey: string }
-  | { readonly kind: 'beforeCheckpoint'; readonly checkpointKey: string };
+export interface RoomActionDependency {
+  readonly action: RoomActionReference;
+  /** Constrains planner authoring without publishing an execution dependency. */
+  readonly authoringOnly?: true;
+}
 
 export interface RoomActionContribution {
-  readonly kind: 'action';
   readonly reference: RoomActionReference;
   readonly owner: SemanticAddress;
   readonly participation: RoomActionParticipation;
-  readonly window: RoomActionWindow;
+  readonly bounds: RoomActionBounds;
   readonly dependencies: readonly RoomActionDependency[];
-  /** Usable throughout the visit: the window follows the authored rank and never crosses another. */
-  readonly windowFollowsOrder?: true;
   /** What created an acquisition-entry pickup; absent for every other action. */
   readonly sourceFamily?: AcquisitionEntrySourceFamily;
-}
-
-export interface RoomActionCheckpointContribution {
-  readonly kind: 'checkpoint';
-  readonly checkpointKey: string;
-  readonly label: string;
-  readonly window: RoomActionWindow;
-}
-
-export type RoomActionDomainContribution =
-  RoomActionContribution | RoomActionCheckpointContribution;
-
-/** Active Fields cages and whether their authored order is one replaceable permutation. */
-export interface FieldsCageOrderState {
-  /** The exact cage phases a `ReplaceFieldsCageOrder` permutation must contain. */
-  readonly activePhaseKeys: readonly string[];
-  /** Authored order of the active cages present in the room action order. */
-  readonly phaseKeys: readonly string[];
-  /** False when no cage is active or an active cage action is missing from the order. */
-  readonly available: boolean;
 }
 
 export interface RoomActionDomain {
   readonly owner: ReturnType<typeof createOccurrenceAddress>;
   readonly declaration: RoomDeclaration;
   readonly lifecycleProfileKey: string;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly activeReferences: readonly RoomActionReference[];
-  readonly contributions: readonly RoomActionDomainContribution[];
+  readonly contributions: readonly RoomActionContribution[];
   /**
    * What created each authored acquisition-entry pickup with no active
    * contribution here, keyed by action key; only sources the engine can name.
    */
   readonly retainedSourceFamilies: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
-  /** Present only for a Fields combat room. */
-  readonly fieldsCageOrder?: FieldsCageOrderState;
-}
-
-function fieldsCageOrderState(
-  activeReferences: readonly RoomActionReference[],
-  order: readonly RoomActionReference[],
-): FieldsCageOrderState {
-  const activePhaseKeys = activeReferences.flatMap((reference) =>
-    reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
-  );
-  const active = new Set(activePhaseKeys);
-  const phaseKeys = order.flatMap((reference) =>
-    reference.kind === 'completeFieldsCage' && active.has(reference.phaseKey)
-      ? [reference.phaseKey]
-      : [],
-  );
-  return frozen({
-    activePhaseKeys: frozen(activePhaseKeys),
-    phaseKeys: frozen(phaseKeys),
-    available: activePhaseKeys.length > 0 && phaseKeys.length === activePhaseKeys.length,
-  });
 }
 
 function frozen<T>(value: T): T {
@@ -182,18 +150,122 @@ function contribution(
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
   participation: RoomActionParticipation,
-  window: RoomActionWindow,
+  bounds: RoomActionBounds,
   dependencies: readonly RoomActionDependency[] = [],
   owner: SemanticAddress = actionOwner(biome, occurrence, reference),
 ): RoomActionContribution {
   return frozen({
-    kind: 'action',
     reference,
     owner,
     participation,
-    window,
+    bounds,
     dependencies: frozen([...dependencies]),
   });
+}
+
+const ROOM_ENTERED = frozen({ kind: 'roomEntered' as const });
+const DOORS_OPENED = frozen({ kind: 'doorsOpened' as const });
+const LEAVE = frozen({ kind: 'leave' as const });
+
+function bounds(
+  spawn: RoomEventPoint,
+  deadline: RoomEventPoint,
+  enabler?: RoomEventPoint,
+): RoomActionBounds {
+  return frozen({ spawn, ...(enabler === undefined ? {} : { enabler }), deadline });
+}
+
+/** Usable once the doors open, until the room is left. */
+const AFTER_DOORS = bounds(ROOM_ENTERED, LEAVE, DOORS_OPENED);
+
+/**
+ * What a fight's end spawns is due as the doors open, or before the fight's
+ * end effects when its script waits for the room to be ready
+ * (`WaitForNextEncounterReady`).
+ */
+function spawnedAtEnd(graph: RoomEventGraph, spawn: RoomEventPoint): RoomActionBounds {
+  const waits =
+    spawn.kind === 'encounterEnd' &&
+    graph.phases.some(
+      (phase) => phase.phaseKey === spawn.phaseKey && phase.script?.waitReadyBeforeEnd === true,
+    );
+  return bounds(
+    spawn,
+    waits ? frozen({ kind: 'endEffects' as const, phaseKey: spawn.phaseKey }) : DOORS_OPENED,
+  );
+}
+
+/** From the room's last encounter end (room entry without one). */
+function afterCombat(graph: RoomEventGraph): RoomActionBounds {
+  return spawnedAtEnd(graph, roomFightsEnd(graph));
+}
+
+/** Taken in a Fields room, where the player starts each cage's encounter. */
+function fieldsBounds(graph: RoomEventGraph, phaseKey: string | undefined): RoomActionBounds {
+  return spawnedAtEnd(
+    graph,
+    phaseKey === undefined ? ROOM_ENTERED : frozen({ kind: 'encounterEnd' as const, phaseKey }),
+  );
+}
+
+/** Spawned by a phase's end effects; a Ship phase's wait for the next wheel's choice. */
+function afterEndEffects(graph: RoomEventGraph, phaseKey: string): RoomActionBounds {
+  const next = nextWheelsOpen(graph, phaseKey)?.phaseKey;
+  return bounds(
+    frozen({ kind: 'endEffects' as const, phaseKey }),
+    next === undefined ? DOORS_OPENED : frozen({ kind: 'gate' as const, phaseKey: next }),
+  );
+}
+
+/**
+ * A delivery or clocked drop arrives at the end effects of a phase the walk
+ * names, so structurally it stands after any end effects of the room and,
+ * required, before its doors open; optional, before it is left.
+ */
+function afterAnyEndEffects(
+  graph: RoomEventGraph,
+  participation: RoomActionParticipation,
+): RoomActionBounds {
+  const first = graph.phases[0]?.phaseKey;
+  return bounds(
+    first === undefined ? ROOM_ENTERED : frozen({ kind: 'endEffects' as const, phaseKey: first }),
+    participation === 'required' ? DOORS_OPENED : LEAVE,
+  );
+}
+
+/**
+ * Where a delivery or clocked drop stands once its due spawn is known: after
+ * the end effects of the phase it arrived at, or after the room's fights for
+ * a Preboss flush (no phase).
+ */
+export function timedPickupDueBounds(
+  graph: RoomEventGraph,
+  endedPhaseKey: string | undefined,
+): RoomActionBounds {
+  return endedPhaseKey === undefined ? afterCombat(graph) : afterEndEffects(graph, endedPhaseKey);
+}
+
+function wheelPhaseKey(graph: RoomEventGraph, wheelKey: string): string {
+  return phaseOfWheel(graph, wheelKey) ?? wheelKey;
+}
+
+/** A Ship wheel's choice and what stands with it: after its roll, before its phase's Combat. */
+function beforeWheelPhase(graph: RoomEventGraph, wheelKey: string): RoomActionBounds {
+  const phaseKey = wheelPhaseKey(graph, wheelKey);
+  return bounds(
+    frozen({ kind: 'wheelsOpen' as const, wheelKey }),
+    frozen({ kind: 'encounterStarted' as const, phaseKey }),
+    frozen({ kind: 'gate' as const, phaseKey }),
+  );
+}
+
+/** A Ship phase's spoils: from its encounter's end, before its end effects. */
+function afterWheelPhase(graph: RoomEventGraph, wheelKey: string): RoomActionBounds {
+  const phaseKey = wheelPhaseKey(graph, wheelKey);
+  return bounds(
+    frozen({ kind: 'encounterEnd' as const, phaseKey }),
+    frozen({ kind: 'endEffects' as const, phaseKey }),
+  );
 }
 
 /**
@@ -201,37 +273,33 @@ function contribution(
  * unlock. Where the room opens no outgoing doors (Preboss) they span the room;
  * elsewhere purchases follow outgoing generation.
  */
-function shopPurchaseWindow(catalog: Catalog, lifecycleProfileKey: string): RoomActionWindow {
-  return catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey]?.operations.some(
-    (operation) => operation.kind === 'generateOutgoingBatch',
-  ) === false
-    ? frozen({ kind: 'standard', phase: 'afterCombat' })
-    : frozen({ kind: 'postOutgoing' });
+export function shopPurchaseBounds(graph: RoomEventGraph): RoomActionBounds {
+  return graph.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing)
+    ? AFTER_DOORS
+    : afterCombat(graph);
 }
 
-function producerWindow(
-  catalog: Catalog,
-  lifecycleProfileKey: string,
-  producerPoint: string,
-): RoomActionWindow {
-  const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
-  const startIndex = profile?.operations.findIndex(
-    (operation) => operation.kind === 'startEncounter',
-  );
-  const producerIndex = profile?.operations.findIndex(
-    (operation) => operation.kind === 'advanceProducer' && operation.point === producerPoint,
-  );
-  return frozen({
-    kind: 'standard',
-    phase:
-      startIndex !== undefined &&
-      startIndex >= 0 &&
-      producerIndex !== undefined &&
-      producerIndex >= 0 &&
-      producerIndex < startIndex
-        ? 'beforeCombat'
-        : 'afterCombat',
-  });
+/**
+ * A gate pickup is taken before the combat its use starts; the reward before
+ * combat, before the room's first. Any other reward follows the room's fights.
+ */
+function incomingRewardBounds(graph: RoomEventGraph, producerPoint: string): RoomActionBounds {
+  const gated =
+    graph.events.flatMap((event) =>
+      event.kind === 'encounterStarted' &&
+      event.trigger.kind === 'action' &&
+      event.trigger.action.kind === 'interactIncomingReward' &&
+      event.trigger.action.producerPoint === producerPoint
+        ? [event.phaseKey]
+        : [],
+    )[0] ?? (producerPoint === 'beforeCombat' ? graph.phases[0]?.phaseKey : undefined);
+  return gated === undefined
+    ? afterCombat(graph)
+    : bounds(
+        ROOM_ENTERED,
+        frozen({ kind: 'encounterStarted' as const, phaseKey: gated }),
+        frozen({ kind: 'gate' as const, phaseKey: gated }),
+      );
 }
 
 function phaseRewardAttachment(
@@ -271,8 +339,9 @@ function travelDealSourceAction(
 }
 
 /**
- * A rushed Shrine pickup follows its purchase; the refill purchase follows the
- * first rushed initial purchase, the earliest rush that can create it.
+ * A rush follows its purchase, and a rushed Shrine pickup its rush, since the
+ * item spawns as the rush closes the Shrine; the refill purchase follows the
+ * first initial rush, the earliest rush that can create it.
  */
 function hermesShrinePurchaseDependencies(
   occurrence: RoomOccurrence,
@@ -282,14 +351,20 @@ function hermesShrinePurchaseDependencies(
   const order = occurrence.roomActions.order;
   const source =
     sameRoomDelivery !== undefined
-      ? hermesShrinePurchaseAction(order, sameRoomDelivery)
-      : reference.kind === 'purchaseHermesShrineOffer' &&
-          reference.generationKey === 'travelDealRefill'
-        ? firstRushedInitialPurchase(order)
-        : undefined;
-  return source === undefined
-    ? []
-    : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
+      ? hermesShrineRushAction(order, sameRoomDelivery)
+      : reference.kind === 'rushHermesShrineOffer'
+        ? hermesShrinePurchaseAction(order, reference.generationKey)
+        : reference.kind === 'purchaseHermesShrineOffer' &&
+            reference.generationKey === 'travelDealRefill'
+          ? firstInitialRush(order)
+          : undefined;
+  if (source === undefined) return [];
+  return [
+    frozen({
+      action: source,
+      authoringOnly: true as const,
+    }),
+  ];
 }
 
 /**
@@ -319,19 +394,52 @@ function rollDependencies(
       'rerollId' in candidate &&
       candidate.rerollId === roll.rollKey,
   );
-  return reroll === undefined
-    ? []
-    : [frozen({ kind: 'afterAction' as const, action: reroll, authoringOnly: true as const })];
+  return reroll === undefined ? [] : [frozen({ action: reroll, authoringOnly: true as const })];
 }
 
-function travelDealDependencies(
+/**
+ * Gold Gold Gold's duplicate spawns with the first purchase it duplicates: the
+ * room's first purchase, in order, of an offer it can duplicate.
+ */
+function echoDuplicateSourceAction(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+): RoomActionReference | undefined {
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (
+    shop === undefined ||
+    reference.kind !== 'interactAcquisitionEntry' ||
+    reference.siteKey !== 'roomExit' ||
+    reference.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+  )
+    return undefined;
+  return occurrence.roomActions.order.find((candidate) => {
+    const offerKey =
+      candidate.kind === 'interactShopOffer'
+        ? candidate.offerKey
+        : candidate.kind === 'interactAcquisitionEntry' &&
+            candidate.siteKey === 'roomExit' &&
+            candidate.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+          ? TRAVEL_DEAL_REFILL_ENTRY_KEY
+          : undefined;
+    const offer =
+      offerKey === undefined
+        ? undefined
+        : authoredShopOfferFromState(shop, offerKey)?.reward?.offer;
+    return offer !== undefined && echoShopDuplicateSourceEligible(catalog, offer);
+  });
+}
+
+function purchaseSourceDependencies(
+  catalog: Catalog,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): readonly RoomActionDependency[] {
-  const source = travelDealSourceAction(occurrence, reference);
-  return source === undefined
-    ? []
-    : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
+  const source =
+    travelDealSourceAction(occurrence, reference) ??
+    echoDuplicateSourceAction(catalog, occurrence, reference);
+  return source === undefined ? [] : [frozen({ action: source, authoringOnly: true as const })];
 }
 
 function baseContribution(
@@ -339,28 +447,16 @@ function baseContribution(
   biome: BiomeAddress,
   routePosition: ResolvedRoutePosition,
   declaration: RoomDeclaration,
-  lifecycleProfileKey: string,
+  graph: RoomEventGraph,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
   routeStartIncoming?: AuthoredRewardState,
 ): RoomActionContribution {
   switch (reference.kind) {
     case 'collectRequiredReward':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'required',
-        frozen({ kind: 'standard', phase: 'afterCombat' }),
-      );
     case 'useFountain':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'required',
-        frozen({ kind: 'standard', phase: 'afterCombat' }),
-      );
+    case 'interactEris':
+      return contribution(biome, occurrence, reference, 'required', afterCombat(graph));
     case 'interactKeepsakeRack': {
       // The rack is not a required room object: it neither holds the doors nor waits for them.
       const order = occurrence.roomActions.order;
@@ -368,66 +464,41 @@ function baseContribution(
       const afterDoors =
         fountainIndex >= 0 &&
         order.findIndex((candidate) => candidate.kind === 'interactKeepsakeRack') > fountainIndex;
-      return frozen({
-        ...contribution(
-          biome,
-          occurrence,
-          reference,
-          'optional',
-          afterDoors
-            ? frozen({ kind: 'postOutgoing' })
-            : frozen({ kind: 'standard', phase: 'afterCombat' }),
-        ),
-        windowFollowsOrder: true as const,
-      });
-    }
-    case 'interactEris':
       return contribution(
         biome,
         occurrence,
         reference,
-        'required',
-        frozen({ kind: 'standard', phase: 'afterCombat' }),
+        'optional',
+        afterDoors ? AFTER_DOORS : afterCombat(graph),
       );
+    }
     // The switch is usable only once the doors open (`DoUnlockRoomExits`).
     case 'interactChallengeSwitch':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'optional',
-        frozen({ kind: 'postOutgoing' }),
-      );
+      return contribution(biome, occurrence, reference, 'optional', AFTER_DOORS);
     case 'purchaseStygianWellOffer':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'optional',
-        frozen({ kind: 'postOutgoing' }),
-        [
-          ...travelDealDependencies(occurrence, reference),
-          ...rollDependencies(occurrence, reference),
-        ],
-      );
+      return contribution(biome, occurrence, reference, 'optional', AFTER_DOORS, [
+        ...purchaseSourceDependencies(catalog, occurrence, reference),
+        ...rollDependencies(occurrence, reference),
+      ]);
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return contribution(
         biome,
         occurrence,
         reference,
         'optional',
-        frozen({ kind: 'postOutgoing' }),
+        AFTER_DOORS,
         hermesShrinePurchaseDependencies(occurrence, reference, undefined),
       );
     case 'completeFieldsCage':
-      return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
+      return contribution(biome, occurrence, reference, 'required', fieldsBounds(graph, undefined));
     case 'interactIncomingReward':
       return contribution(
         biome,
         occurrence,
         reference,
         'required',
-        producerWindow(catalog, lifecycleProfileKey, reference.producerPoint),
+        incomingRewardBounds(graph, reference.producerPoint),
         [],
         createAcquisitionRoleAddress(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
@@ -447,15 +518,11 @@ function baseContribution(
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        frozen({
-          kind: 'fields',
-          ...(attachment === undefined ? {} : { phaseKey: attachment.key }),
-        }),
+        fieldsBounds(graph, attachment?.key),
         attachment === undefined
           ? []
           : [
               frozen({
-                kind: 'afterAction',
                 action: frozen({ kind: 'completeFieldsCage', phaseKey: attachment.key }),
               }),
             ],
@@ -473,14 +540,14 @@ function baseContribution(
         occurrence,
         reference,
         'required',
-        frozen({ kind: 'shipPreCombat', wheelKey: reference.wheelKey }),
+        beforeWheelPhase(graph, reference.wheelKey),
         [
           // Using the wheel ends its rerolls.
           ...occurrence.roomActions.order.flatMap((action) =>
             action.kind === 'reroll' &&
             action.target.kind === 'wheelOffer' &&
             action.target.wheelKey === reference.wheelKey
-              ? [frozen({ kind: 'afterAction' as const, action })]
+              ? [frozen({ action })]
               : [],
           ),
         ],
@@ -499,12 +566,14 @@ function baseContribution(
         'optional',
         // A wheel rerolls from its roll on; only its use waits on a loose pickup.
         target.kind === 'wheelOffer'
-          ? frozen({ kind: 'shipWheelsOpen', wheelKey: target.wheelKey })
-          : frozen({ kind: 'postOutgoing' }),
+          ? bounds(
+              frozen({ kind: 'wheelsOpen' as const, wheelKey: target.wheelKey }),
+              frozen({ kind: 'gate' as const, phaseKey: wheelPhaseKey(graph, target.wheelKey) }),
+            )
+          : AFTER_DOORS,
         locked
           ? [
               frozen({
-                kind: 'afterAction' as const,
                 action:
                   occurrence.roomActions.order.find(
                     (candidate) =>
@@ -523,8 +592,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        frozen({ kind: 'postOutgoing' }),
-        [frozen({ kind: 'afterCheckpoint' as const, checkpointKey: 'exitUsable' })],
+        bounds(ROOM_ENTERED, LEAVE, frozen({ kind: 'exitsReady' as const })),
       );
     case 'interactWheelReward': {
       const wheel =
@@ -533,25 +601,16 @@ function baseContribution(
           : undefined;
       const offerKey =
         wheel === undefined ? undefined : Object.keys(wheel.offers)[wheel.pickedOfferIndex - 1];
-      const phase = encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).find(
-        (candidate) =>
-          candidate.rewardAttachment?.kind === 'rewardWheel' &&
-          candidate.rewardAttachment.key === reference.wheelKey,
-      );
       return contribution(
         biome,
         occurrence,
         reference,
         'required',
-        frozen({ kind: 'shipPostCombat', wheelKey: reference.wheelKey }),
+        afterWheelPhase(graph, reference.wheelKey),
         [
           frozen({
-            kind: 'afterAction',
             action: frozen({ kind: 'chooseRewardWheel', wheelKey: reference.wheelKey }),
           }),
-          ...(phase === undefined
-            ? []
-            : [frozen({ kind: 'afterCheckpoint' as const, checkpointKey: `combat:${phase.key}` })]),
         ],
         offerKey === undefined
           ? createRewardWheelAddress(biome, occurrence.occurrenceId, reference.wheelKey)
@@ -585,7 +644,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, lifecycleProfileKey),
+        shopPurchaseBounds(graph),
         [],
         owner,
       );
@@ -610,7 +669,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, lifecycleProfileKey),
+        shopPurchaseBounds(graph),
         [],
         owner,
       );
@@ -621,18 +680,12 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        frozen({ kind: 'postOutgoing' }),
+        AFTER_DOORS,
         rollDependencies(occurrence, reference),
       );
     case 'rerollStygianWell':
     case 'rerollPurgingPool':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'optional',
-        frozen({ kind: 'postOutgoing' }),
-      );
+      return contribution(biome, occurrence, reference, 'optional', AFTER_DOORS);
     case 'interactEncounter':
     case 'interactGorgon': {
       const attachment = phaseRewardAttachment(
@@ -641,14 +694,9 @@ function baseContribution(
         occurrence,
         reference.phaseKey,
       );
-      const window: RoomActionWindow =
-        attachment?.kind === 'rewardWheel'
-          ? frozen({ kind: 'shipPostCombat', wheelKey: attachment.key })
-          : lifecycleProfileKey === 'FieldsCombatRoom'
-            ? frozen({ kind: 'fields', phaseKey: reference.phaseKey })
-            : frozen({ kind: 'standard', phase: 'afterCombat' });
+      const fields = fieldsRoom(graph);
       const cage =
-        lifecycleProfileKey === 'FieldsCombatRoom' && attachment?.kind === 'localReward'
+        fields && attachment?.kind === 'localReward'
           ? frozen({ kind: 'completeFieldsCage' as const, phaseKey: reference.phaseKey })
           : undefined;
       const encounterKey = selectedEncounterAuthoringProfileKey(
@@ -671,20 +719,25 @@ function baseContribution(
                 occurrence.gameName,
               ).kind
             : undefined;
+      // A contact waits on its fight's end; one whose phase the room no longer plays
+      // spawns at an end that never comes.
       const phaseIsCombatBearing = isCombatBearingEncounterPhaseKind(phaseKind ?? 'nonCombat');
-      const dependencies: RoomActionDependency[] = [
-        ...(cage === undefined ? [] : [frozen({ kind: 'afterAction' as const, action: cage })]),
-        ...(lifecycleProfileKey === 'FieldsCombatRoom' && attachment === undefined
-          ? []
-          : phaseIsCombatBearing
-            ? [
-                frozen({
-                  kind: 'afterCheckpoint' as const,
-                  checkpointKey: `combat:${reference.phaseKey}`,
-                }),
-              ]
-            : []),
-      ];
+      const unplayed =
+        phaseIsCombatBearing &&
+        !(fields && attachment === undefined) &&
+        !graph.phases.some((phase) => phase.phaseKey === reference.phaseKey);
+      const contactBounds = unplayed
+        ? bounds(
+            frozen({ kind: 'encounterEnd' as const, phaseKey: reference.phaseKey }),
+            DOORS_OPENED,
+          )
+        : attachment?.kind === 'rewardWheel'
+          ? afterWheelPhase(graph, attachment.key)
+          : fields
+            ? fieldsBounds(graph, reference.phaseKey)
+            : afterCombat(graph);
+      const dependencies: RoomActionDependency[] =
+        cage === undefined ? [] : [frozen({ action: cage })];
       const phaseOwner = createEncounterPhaseAddress(
         biome,
         { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
@@ -695,13 +748,14 @@ function baseContribution(
         occurrence,
         reference,
         'required',
-        window,
+        contactBounds,
         dependencies,
         reference.kind === 'interactGorgon' ? createGorgonPhaseAddress(phaseOwner) : phaseOwner,
       );
     }
     case 'interactAcquisitionEntry': {
       const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
+      const bountyPhase = parseHeraclesBountySiteKey(reference.siteKey);
       const hermesDelivery =
         reference.siteKey === 'hermesShrineDelivery'
           ? parseHermesShrineDeliveryEntryKey(reference.entryKey)
@@ -744,58 +798,37 @@ function baseContribution(
         reference.entryKey,
         producer,
       );
-      // A cage fight's end effects spawn its pickups while the cage reward is still caged;
-      // like that reward, they are taken any time after the cage, even past later cages.
-      const cageEndPhaseKey =
-        lifecycleProfileKey === 'FieldsCombatRoom' &&
-        reference.encounterPhaseKey !== undefined &&
-        (clockedTraitPickup !== undefined ||
-          (hermesDelivery !== undefined && !sameRoomShrineDelivery)) &&
-        encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).some(
-          (phase) =>
-            phase.key === reference.encounterPhaseKey &&
-            phase.rewardAttachment?.kind === 'localReward',
-        )
-          ? reference.encounterPhaseKey
-          : undefined;
       const action = contribution(
         biome,
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        cageEndPhaseKey !== undefined
-          ? frozen({ kind: 'fields', phaseKey: cageEndPhaseKey })
-          : clockedTraitPickup !== undefined && reference.encounterPhaseKey !== undefined
-            ? frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey })
-            : hermesDelivery !== undefined
-              ? sameRoomShrineDelivery
-                ? frozen({ kind: 'postOutgoing' })
-                : reference.encounterPhaseKey === undefined && finalPrebossHost
-                  ? // A flushed delivery is a required object that gates the exit.
-                    frozen({ kind: 'standard', phase: 'afterCombat' })
-                  : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
-              : producer?.placement === 'roomExit' ||
-                  producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
-                  (producer?.source.kind === 'traitOffer' &&
-                    producer.source.owner.kind === 'shopOffer') ||
-                  reference.siteKey === 'roomExit'
-                ? occurrence.state.kind === 'shop'
-                  ? shopPurchaseWindow(catalog, lifecycleProfileKey)
-                  : frozen({ kind: 'postOutgoing' })
-                : frozen({ kind: 'standard', phase: 'afterCombat' }),
+        clockedTraitPickup !== undefined
+          ? afterAnyEndEffects(graph, 'optional')
+          : hermesDelivery !== undefined
+            ? sameRoomShrineDelivery
+              ? AFTER_DOORS
+              : finalPrebossHost
+                ? // A flushed delivery is a required object that gates the exit.
+                  afterCombat(graph)
+                : afterAnyEndEffects(graph, 'required')
+            : producer?.placement === 'roomExit' ||
+                producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
+                (producer?.source.kind === 'traitOffer' &&
+                  producer.source.owner.kind === 'shopOffer') ||
+                reference.siteKey === 'roomExit'
+              ? occurrence.state.kind === 'shop'
+                ? shopPurchaseBounds(graph)
+                : AFTER_DOORS
+              : bountyPhase !== undefined
+                ? // Heracles drops it as his own encounter ends (`HeraclesPostCombat`).
+                  spawnedAtEnd(
+                    graph,
+                    frozen({ kind: 'encounterEnd' as const, phaseKey: bountyPhase }),
+                  )
+                : afterCombat(graph),
         [
-          ...(cageEndPhaseKey === undefined
-            ? []
-            : [
-                frozen({
-                  kind: 'afterAction' as const,
-                  action: frozen({
-                    kind: 'completeFieldsCage' as const,
-                    phaseKey: cageEndPhaseKey,
-                  }),
-                }),
-              ]),
-          ...travelDealDependencies(occurrence, reference),
+          ...purchaseSourceDependencies(catalog, occurrence, reference),
           ...hermesShrinePurchaseDependencies(
             occurrence,
             reference,
@@ -803,18 +836,9 @@ function baseContribution(
               ? hermesDelivery.generationKey
               : undefined,
           ),
-          ...(producer === undefined
+          ...(producer?.sourceAction === undefined
             ? []
-            : producer.sourceAction !== undefined
-              ? [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]
-              : producer.source.kind === 'encounterPhase'
-                ? [
-                    frozen({
-                      kind: 'afterCheckpoint' as const,
-                      checkpointKey: `combat:${producer.source.phaseKey}`,
-                    }),
-                  ]
-                : []),
+            : [frozen({ action: producer.sourceAction })]),
         ],
         occurrence.state.kind === 'shop' &&
           reference.siteKey === 'roomExit' &&
@@ -834,59 +858,6 @@ function baseContribution(
   }
 }
 
-function checkpoints(
-  catalog: Catalog,
-  declaration: RoomDeclaration,
-  occurrence: Pick<RoomOccurrence, 'gameName' | 'roomActions'>,
-  structure: RoomLifecycleStructure,
-): readonly RoomActionCheckpointContribution[] {
-  const envelopeByKey = new Map(
-    encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).map((phase) => [
-      phase.key,
-      phase,
-    ]),
-  );
-  const result: RoomActionCheckpointContribution[] = structure.phases.map((phase) => {
-    const attachment = envelopeByKey.get(phase.phaseKey)?.rewardAttachment;
-    return frozen({
-      kind: 'checkpoint',
-      checkpointKey: `combat:${phase.phaseKey}`,
-      label: `${phase.phaseKey} complete`,
-      window:
-        attachment?.kind === 'rewardWheel'
-          ? frozen({ kind: 'shipPostCombat', wheelKey: attachment.key })
-          : structure.profileKey === 'FieldsCombatRoom'
-            ? frozen({ kind: 'fields', phaseKey: phase.phaseKey })
-            : frozen({ kind: 'standard', phase: 'afterCombat' }),
-    });
-  });
-  const finalPhase = structure.phases.at(-1);
-  const finalWindow: RoomActionWindow =
-    structure.profileKey === 'WorldShopRoom'
-      ? frozen({ kind: 'postOutgoing' })
-      : finalPhase?.rewardWheelKey !== undefined
-        ? frozen({ kind: 'shipPostCombat', wheelKey: finalPhase.rewardWheelKey })
-        : frozen({ kind: 'standard', phase: 'afterCombat' });
-  if (structure.points.some((point) => point.kind === 'outgoingGeneration'))
-    result.push(
-      frozen({
-        kind: 'checkpoint',
-        checkpointKey: 'outgoingGeneration',
-        label: 'Outgoing generation',
-        window: finalWindow,
-      }),
-    );
-  result.push(
-    frozen({
-      kind: 'checkpoint',
-      checkpointKey: 'exitUsable',
-      label: 'Exit usable',
-      window: finalWindow,
-    }),
-  );
-  return frozen(result);
-}
-
 /** Pure authored structural Room Action domain consumed by commands and simulation. */
 export function assembleRoomActionDomain(options: {
   readonly catalog: Catalog;
@@ -896,6 +867,8 @@ export function assembleRoomActionDomain(options: {
   readonly occurrence: RoomOccurrence;
   readonly routePosition: ResolvedRoutePosition;
   readonly lifecycleProfileKey?: string;
+  /** Whether the room runs its reward's producer: its `roomRunsProducer` fact. */
+  readonly producer: boolean;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly activeRewardWheelKeys?: readonly string[];
   /** Evaluated producer disposition from canonical materialization. */
@@ -911,16 +884,9 @@ export function assembleRoomActionDomain(options: {
   if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
   const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
-    options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
-  const lifecycleStructure = assembleRoomLifecycleStructure({
-    catalog: options.catalog,
-    declaration,
-    occurrence: options.occurrence,
-    lifecycleProfileKey,
-    ...(options.activeEncounterSlotKeys === undefined
-      ? {}
-      : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
-  });
+    options.lifecycleProfileKey ??
+    roomLifecycleProfileKey(declaration, 'ordinary', options.occurrence);
+  const producer = options.producer;
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
@@ -976,13 +942,35 @@ export function assembleRoomActionDomain(options: {
       ...(options.entryActive === undefined ? {} : { entryActive: options.entryActive }),
     },
   );
+  const rewardType = roomIncomingRewardOffer(options.biome, options.topology, options.occurrence, {
+    ...(options.incomingRewardOffer === undefined
+      ? {}
+      : { incomingRewardOffer: options.incomingRewardOffer }),
+    ...(options.incomingRewardState === undefined
+      ? {}
+      : { incomingRewardState: options.incomingRewardState }),
+  })?.rewardType;
+  const eventGraph = assembleRoomEventGraph({
+    catalog: options.catalog,
+    declaration,
+    occurrence: options.occurrence,
+    lifecycleProfileKey,
+    producer,
+    ...(rewardType === undefined ? {} : { rewardType }),
+    incomingRewardPickups: structuralReferences.filter(
+      (reference) => reference.kind === 'interactIncomingReward',
+    ),
+    ...(options.activeEncounterSlotKeys === undefined
+      ? {}
+      : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
+  });
   let actions = structuralReferences.map((reference) =>
     baseContribution(
       options.catalog,
       options.biome,
       options.routePosition,
       declaration,
-      lifecycleProfileKey,
+      eventGraph,
       options.occurrence,
       reference,
       options.incomingRewardState ?? undefined,
@@ -1084,15 +1072,10 @@ export function assembleRoomActionDomain(options: {
       )
         return [];
       const dependencies = action.dependencies.some(
-        (dependency) =>
-          dependency.kind === 'afterAction' &&
-          roomActionKey(dependency.action) === roomActionKey(source.reference),
+        (dependency) => roomActionKey(dependency.action) === roomActionKey(source.reference),
       )
         ? action.dependencies
-        : frozen([
-            ...action.dependencies,
-            frozen({ kind: 'afterAction' as const, action: source.reference }),
-          ]);
+        : frozen([...action.dependencies, frozen({ action: source.reference })]);
       return [
         frozen({
           ...action,
@@ -1109,13 +1092,13 @@ export function assembleRoomActionDomain(options: {
                     : source.participation,
                 }
               : {}),
-          window: source.window,
+          bounds: source.bounds,
           dependencies,
         }),
       ];
     });
   }
-  if (lifecycleProfileKey === 'FieldsCombatRoom') {
+  if (fieldsRoom(eventGraph)) {
     const authoredOrder = new Map(
       options.occurrence.roomActions.order.map((reference, index) => [
         roomActionKey(reference),
@@ -1162,17 +1145,40 @@ export function assembleRoomActionDomain(options: {
         ...action,
         dependencies: frozen([
           ...action.dependencies,
-          ...barriers.map((barrier) =>
-            frozen({ kind: 'afterAction' as const, action: barrier.reference }),
-          ),
+          ...barriers.map((barrier) => frozen({ action: barrier.reference })),
         ]),
       });
     });
   }
-  const contributions = frozen([
-    ...actions,
-    ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
-  ]);
+  // Nothing holds an optional row, so it may be taken until the room is left, except a
+  // wheel's reroll: using the wheel ends its rerolls.
+  actions = actions.map((action) =>
+    action.participation === 'required' ||
+    action.bounds.deadline.kind === 'leave' ||
+    (action.reference.kind === 'reroll' && action.reference.target.kind === 'wheelOffer')
+      ? action
+      : frozen({ ...action, bounds: frozen({ ...action.bounds, deadline: LEAVE }) }),
+  );
+  // Each action names the content its item holds now, so a placed row is judged against it.
+  const contentSource = roomActionContentSource(
+    options.catalog,
+    options.biome,
+    options.topology,
+    options.incomingRewardState === undefined
+      ? undefined
+      : {
+          occurrenceId: options.occurrence.occurrenceId,
+          offer: options.incomingRewardState?.offer ?? null,
+        },
+  );
+  actions = actions.map((action) => {
+    const reference = withRoomActionContent(
+      action.reference,
+      roomActionItemContent(contentSource, options.occurrence, action.reference),
+    );
+    return reference === action.reference ? action : frozen({ ...action, reference });
+  });
+  const contributions = frozen(actions);
   const activeReferences = frozen(actions.map((action) => action.reference));
   const activeKeys = new Set(activeReferences.map(roomActionKey));
   const retainedSourceFamilies = new Map<string, AcquisitionEntrySourceFamily>();
@@ -1201,17 +1207,9 @@ export function assembleRoomActionDomain(options: {
     owner: createOccurrenceAddress(options.biome, options.occurrence.occurrenceId),
     declaration,
     lifecycleProfileKey,
-    lifecycleStructure,
+    eventGraph,
     activeReferences,
     contributions,
     retainedSourceFamilies,
-    ...(lifecycleProfileKey === 'FieldsCombatRoom'
-      ? {
-          fieldsCageOrder: fieldsCageOrderState(
-            activeReferences,
-            options.occurrence.roomActions.order,
-          ),
-        }
-      : {}),
   });
 }

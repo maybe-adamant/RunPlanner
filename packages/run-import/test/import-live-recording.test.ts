@@ -1,7 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { projectFromRunRecord, type RunImport } from '../src/import';
+import type { ProjectDocument, RoomOccurrence } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import { projectFromRunRecord, RunImportWalk, type RunImport } from '../src/import';
 import {
   fixture,
   describeEntry,
@@ -37,6 +39,10 @@ describe('run import of the live Underworld recording', () => {
       { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'G-r18' },
     ]);
     expect(occurrence(imported.project, 'G-r18').gameName).toBe('C_Boss01');
+    // The Contract trait is granted after the fight; the gems are the room's one pickup.
+    expect(occurrence(imported.project, 'G-r18').roomActions.order).toEqual([
+      { kind: 'collectRequiredReward' },
+    ]);
     // The Shop's two ordinary doors are still offered beside the contract.
     expect(occurrence(imported.project, 'G-r17-d561374').gameName).toBe('G_MiniBoss03');
   });
@@ -58,7 +64,9 @@ describe('run import of the live Underworld recording', () => {
     // The pedestal stands in the boon form of G's Preboss.
     const preboss = occurrence(imported.project, 'G-r22');
     expect(preboss.infernalContractPedestal).toMatchObject({ optionKey: 'StackUpgradeBig' });
-    expect(preboss.roomActions.order).toContainEqual({ kind: 'interactInfernalContractPedestal' });
+    expect(preboss.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactInfernalContractPedestal' }),
+    );
     expect(occurrence(imported.project, 'G-r22').state.kind).toBe('freeReward');
   });
 
@@ -78,7 +86,7 @@ describe('run import of the live Underworld recording', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 10 },
+      assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 9 },
       // H_Combat07's one switch press shows no claim, and no entry save judges what it started.
       // The record predates the locked-door fight count.
       notInRecord: { challengeSwitch: 1, lockedDoors: 1, traitOffer: 1 },
@@ -101,13 +109,21 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r10 occurrence@F-r10',
       'assumption roomActionOrder r11 occurrence@F-r11',
       'assumption roomActionOrder r13 occurrence@F-r11:postboss',
-      'assumption roomActionOrder r18 occurrence@G-r18',
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r27 occurrence@H-r27',
     ]);
   });
 });
+
+/** A Fields room's state with its first cage's Path of Stars nodes unchosen. */
+function withoutCage1Hex(state: RoomOccurrence['state']): RoomOccurrence['state'] {
+  const cage = state.kind === 'fieldsCombat' ? state.cages['cage1'] : undefined;
+  if (state.kind !== 'fieldsCombat' || cage == null) return state;
+  const { hexActivationsByAcquisitionRole: _hex, ...rest } = cage;
+  void _hex;
+  return { ...state, cages: { ...state.cages, cage1: rest } };
+}
 
 describe('run import of the Underworld attempt reset at H_Combat04', () => {
   const record = fixture('underworld-1010');
@@ -164,9 +180,11 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
 
   it("imports the racked Gorgon Amulet's Athena at H_Combat07's first cage", () => {
     // The passive encounter starts late (`DelayedStart`), so it never runs encounter-start effects.
+    // The cage opened first, Cage02, fights first: its Unlock row leads the room.
     expect(occurrence(imported.project, 'H-r26').encounters.gorgonResultByPhase).toMatchObject({
       Passive: { athenaTriggerConditionMet: false },
-      Cage01: {
+      Cage01: { athenaTriggerConditionMet: false },
+      Cage02: {
         athenaTriggerConditionMet: true,
         athenaOffer: {
           traitKeys: [
@@ -177,6 +195,78 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
           selectedOptionKey: 'option1',
         },
       },
+    });
+  });
+
+  it("imports Gorgon's Athena into a Fields room whose cage order is already authored", () => {
+    // The room as authored before its Athena screen: the cage order without the Gorgon's action.
+    const withoutAthena: ProjectDocument = {
+      ...imported.project,
+      route: {
+        ...imported.project.route,
+        biomes: imported.project.route.biomes.map((biome) => ({
+          ...biome,
+          topology: biome.topology && {
+            ...biome.topology,
+            occurrences: biome.topology.occurrences.map((entry) =>
+              entry.occurrenceId !== 'H-r26'
+                ? entry
+                : {
+                    ...entry,
+                    state: withoutCage1Hex(entry.state),
+                    encounters: {
+                      ...entry.encounters,
+                      gorgonResultByPhase: {
+                        ...entry.encounters.gorgonResultByPhase,
+                        Cage02: { athenaTriggerConditionMet: false },
+                      },
+                    },
+                    roomActions: {
+                      ...entry.roomActions,
+                      order: entry.roomActions.order.filter(
+                        (action) => action.kind !== 'interactGorgon',
+                      ),
+                    },
+                  },
+            ),
+          },
+        })),
+      },
+    };
+    const room = occurrence(withoutAthena, 'H-r26');
+    expect(room.encounters.gorgonResultByPhase?.['Cage02']?.athenaOffer).toBeUndefined();
+    expect(room.roomActions.order.some((action) => action.kind === 'interactGorgon')).toBe(false);
+    expect(room.roomActions.order.length).toBeGreaterThan(0);
+    const walk = new RunImportWalk(
+      catalog,
+      record,
+      simulateProjectAssembly(catalog, withoutAthena),
+      [],
+    );
+    walk.context.sweep();
+    // Athena follows the first cage in fight order, Cage02's Unlock row before Cage01's;
+    // its Gorgon row joins the authored order.
+    expect(
+      room.roomActions.order.flatMap((action) =>
+        action.kind === 'completeFieldsCage' ? [action.phaseKey] : [],
+      ),
+    ).toEqual(['Cage02', 'Cage01']);
+    const restored = occurrence(walk.assembly.project, 'H-r26');
+    const athena = Object.entries(restored.encounters.gorgonResultByPhase ?? {}).filter(
+      ([, result]) => result.athenaOffer != null,
+    );
+    expect(athena).toEqual([
+      [
+        'Cage02',
+        expect.objectContaining({
+          athenaTriggerConditionMet: true,
+          athenaOffer: expect.objectContaining({ selectedOptionKey: 'option1' }),
+        }),
+      ],
+    ]);
+    expect(restored.roomActions.order).toContainEqual({
+      kind: 'interactGorgon',
+      phaseKey: 'Cage02',
     });
   });
 
@@ -194,11 +284,13 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         },
       },
     });
-    expect(preboss.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
-      entryKey: 'travelDealRefill',
-    });
+    expect(preboss.roomActions.order).toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      }),
+    );
   });
 
   it("imports Aspect of Selene's rolled tree without its God Sent nodes", () => {

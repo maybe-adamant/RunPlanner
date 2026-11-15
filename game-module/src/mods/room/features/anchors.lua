@@ -1,9 +1,9 @@
 -- Room object anchors. HandleSecretSpawns places the Well, Pool, Shrine,
 -- challenge switch and Meta Reward Stand, in that order, each by one draw from
 -- the room's ChallengeSwitchBase pool (a Well-pinned room's Well takes its pin
--- without a draw). A published anchorId replaces its object's draw; every other
--- draw stays native over the pool without the anchors still planned, so native
--- never takes a planned anchor.
+-- without a draw). Every planned object publishes its anchorId, which replaces
+-- its draw, and a pinned Well's is its pin, which observe verifies; the Meta
+-- Reward Stand, drawing last, takes a native draw.
 local placement = type(import) == "function" and import("mods/room/features/placement.lua")
     or require("mods.room.features.placement")
 local anchors = {}
@@ -25,28 +25,26 @@ local function wellPin(nativeRoom)
     return type(declared) == "table" and declared.WellShopChallengeBaseId or nil
 end
 
+-- Each planned object's anchor; a Well on its room's pin publishes the pin.
 local function plannedAnchors(occurrence)
-    local result, any = {}, false
+    local result = {}
     for _, kind in ipairs(KINDS) do
         local object = occurrence.overview[kind]
-        if type(object) == "table" and object.anchorId ~= nil then
-            result[kind] = object.anchorId
-            any = true
-        end
+        if object ~= nil then result[kind] = object.anchorId end
     end
-    return any and result or nil
+    return next(result) ~= nil and result or nil
 end
 
 -- The object each anchor holds after spawning; differences are positional diagnostics.
 local function observe(state, session, occurrence, nativeRoom)
     local differs = false
     for _, kind in ipairs(KINDS) do
-        local object = occurrence.overview[kind]
-        if type(object) == "table" and object.anchorId ~= nil then
+        local expected = occurrence.overview[kind] and occurrence.overview[kind].anchorId
+        if expected ~= nil then
             local native = nativeRoom[FIELDS[kind]]
             local observed = type(native) == "table" and native.ObjectId or nil
-            if observed ~= object.anchorId then
-                session.diagnostic(state, "room-anchor", { object = kind, expected = object.anchorId, observed = observed })
+            if observed ~= expected then
+                session.diagnostic(state, "room-anchor", { object = kind, expected = expected, observed = observed })
                 differs = true
             end
         end
@@ -64,8 +62,6 @@ function anchors.attach(module, session, getState, report, room)
             and room.occurrence(state, nativeRoom) or nil
         local planned = occurrence and plannedAnchors(occurrence)
         if planned == nil then return base(currentRun, ...) end
-        -- A pinned Well takes its pin natively.
-        if planned.stygianWell ~= nil and wellPin(nativeRoom) ~= nil then planned.stygianWell = nil end
         local prior = scope
         scope = {
             state = state, planned = planned, room = nativeRoom, drawn = {},
@@ -106,16 +102,12 @@ function anchors.attach(module, session, getState, report, room)
         if kind == nil and not current.drawn.challengeSwitch then kind = "challengeSwitch" end
         if kind ~= nil then current.drawn[kind] = true end
         local wanted = kind and current.planned[kind]
-        if wanted ~= nil then
-            local taken = placement.take(values, wanted)
-            if taken ~= nil then return taken end
-            session.diagnostic(current.state, "room-anchor-unavailable", { object = kind, anchorId = wanted })
-        end
-        local reserved = {}
-        for other, anchorId in pairs(current.planned) do
-            if not current.drawn[other] then reserved[anchorId] = true end
-        end
-        return placement.drawExcluding(base, values, reserved, ...)
+        -- An object the plan does not hold or the Meta Reward Stand draws natively.
+        if wanted == nil then return base(values, ...) end
+        local taken = placement.take(values, wanted)
+        if taken ~= nil then return taken end
+        session.diagnostic(current.state, "room-anchor-unavailable", { object = kind, anchorId = wanted })
+        return base(values, ...)
     end)
 end
 

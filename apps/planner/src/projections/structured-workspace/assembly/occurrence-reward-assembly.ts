@@ -30,6 +30,7 @@ import {
   createTraitOfferAddress,
   materializeGorgonAthenaOffer,
   nemesisGeneratedPickupSiteKey,
+  rerolledRewardOf,
   semanticAddressKey,
   discoverAuthoredTraitCarrierChildren,
   type AcquisitionEntryAddress,
@@ -133,7 +134,13 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
-  readonly encounterPhaseKey?: string;
+  /** The row that places a due delivery or clocked drop, and how the editor names its timing. */
+  readonly reference?: import('@run-planner/engine/authored-project').RoomActionReference;
+  readonly label?: import('@run-planner/engine/simulation').RoomActionRowLabel;
+  /** A due delivery's or clocked drop's phase on the Timeline, as its placed row's. */
+  readonly phaseKey?: string;
+  /** The command placing a due delivery or clocked drop where it is live. */
+  readonly placement?: import('@run-planner/engine/simulation').TimedPickupPlacementCommand;
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
@@ -543,6 +550,7 @@ export function controlsForOccurrence(
       { readonly kind: 'anomaly' | 'counted' | 'ephyraCombat' | 'freeReward' }
     >,
   ) => {
+    const rerolled = rerolledRewardOf(occurrence, incoming);
     controls.push(
       withRerolledReward(
         rewardControl(
@@ -550,9 +558,9 @@ export function controlsForOccurrence(
           { kind: 'incomingReward', address: incoming },
           incomingRewardBinding(room, state),
           state.reward?.offer ?? null,
-          occurrence.rerolledIncomingReward ?? state.reward,
+          rerolled ?? state.reward,
         ),
-        occurrence.rerolledIncomingReward,
+        rerolled,
       ),
     );
   };
@@ -580,7 +588,7 @@ export function controlsForOccurrence(
           group.key,
           slotKey,
         );
-        const rerolled = occurrence.state.rerolledCages?.[slotKey];
+        const rerolled = rerolledRewardOf(occurrence, address);
         controls.push(
           withRerolledReward(
             rewardControl(
@@ -646,7 +654,7 @@ export function controlsForOccurrence(
             declaration.key,
             offerKey,
           );
-          const rerolled = wheel.rerolledOffers?.[offerKey];
+          const rerolled = rerolledRewardOf(occurrence, address);
           controls.push(
             withRerolledReward(
               rewardControl(
@@ -704,6 +712,9 @@ export function controlsForOccurrence(
                     key: option.key,
                     label: option.label,
                     rewardType: option.rewardType,
+                    ...(option.unmodeledOfferCondition === undefined
+                      ? {}
+                      : { offerCondition: option.unmodeledOfferCondition }),
                   }),
                 ),
               ),
@@ -794,7 +805,14 @@ function infernalContractPedestalControl(
       selectedOptionKey: pedestal.optionKey,
       options: Object.freeze(
         group.options.values.map((option) =>
-          Object.freeze({ key: option.key, label: option.label, rewardType: option.rewardType }),
+          Object.freeze({
+            key: option.key,
+            label: option.label,
+            rewardType: option.rewardType,
+            ...(option.unmodeledOfferCondition === undefined
+              ? {}
+              : { offerCondition: option.unmodeledOfferCondition }),
+          }),
         ),
       ),
     }),
@@ -836,7 +854,7 @@ export function shipPhaseLabels(
     envelope.slots.map((slot) => {
       if (slot.rewardAttachment?.kind !== 'rewardWheel') return [slot.key, slot.key] as const;
       combatOrdinal += 1;
-      return [slot.key, `Combat ${combatOrdinal}`] as const;
+      return [slot.key, `Phase ${combatOrdinal}`] as const;
     }),
   );
 }
@@ -1082,15 +1100,16 @@ export function activeEncounterPhasesForOwner(
         ...(fieldsPassive && nemesisEvent === undefined
           ? {}
           : {
-              // Nemesis keeps the exits locked until answered, so her event has its own start.
+              // Nemesis keeps the exits locked until answered: her talk row hosts her event.
               timelineAnchor:
-                nemesisEvent === undefined &&
-                (fieldsPassive ||
-                  (customizable &&
-                    selectedDefinition !== undefined &&
-                    !isCombatBearingEncounterPhaseKind(selectedDefinition.kind)))
-                  ? ('roomEntered' as const)
-                  : ('encounterStart' as const),
+                nemesisEvent !== undefined
+                  ? ('interaction' as const)
+                  : fieldsPassive ||
+                      (customizable &&
+                        selectedDefinition !== undefined &&
+                        !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+                    ? ('roomEntered' as const)
+                    : ('encounter' as const),
             }),
         ...(aetosWave !== undefined || (aetosSupport?.waves.length ?? 0) > 0
           ? {

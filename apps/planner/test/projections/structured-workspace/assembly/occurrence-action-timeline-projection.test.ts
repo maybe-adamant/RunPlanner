@@ -6,11 +6,14 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createTranscendentEmbryoOutcomeAddress,
   roomActionKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { goldLedgerForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadProjectDocument } from '@planner/persistence/projectDocumentLoader';
 import {
   loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFigLeafCheckpoint,
@@ -35,9 +38,11 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 import type {
+  WorkspaceNotReachedEntry,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
+import { collectTestRequiredItems, withItemContent } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
@@ -74,10 +79,15 @@ function banners(room: ReturnType<typeof roomOf>, kind: BoundaryEntry['boundary'
   );
 }
 
-function startIdentities(room: ReturnType<typeof roomOf>) {
-  return banners(room, 'encounterStart').map((entry) =>
-    entry.supplement?.kind === 'encounterStart' ? entry.supplement.identityLabel : undefined,
+/** The markers where each encounter begins: its Encounter, or its Combat shown as one. */
+function beginMarkers(room: ReturnType<typeof roomOf>) {
+  return (room.roomActions?.timeline.entries ?? []).filter(
+    (entry): entry is BoundaryEntry => entry.kind === 'boundary' && entry.beginsEncounter === true,
   );
+}
+
+function startIdentities(room: ReturnType<typeof roomOf>) {
+  return beginMarkers(room).map((entry) => entry.supplement?.identityLabel);
 }
 
 describe('encounter banner supplements', () => {
@@ -86,42 +96,42 @@ describe('encounter banner supplements', () => {
       entry.kind === 'boundary' ? [entry.boundary.kind] : [],
     );
 
-  it('hosts the identity on the start and the Anomaly capture point on its outcome', () => {
+  it('names the encounter where it begins and hosts the Anomaly capture point at its Combat', () => {
     const room = roomOf(
       loadUnderworldGAnomalyRosterCheckpoint(),
       createOccurrenceId('golden-g-b3-e2'),
     );
-    const [start] = banners(room, 'encounterStart');
-    const [outcome] = banners(room, 'encounterOutcome');
-    expect(start?.supplement).toMatchObject({
-      kind: 'encounterStart',
+    const [begun] = banners(room, 'encounterBegun');
+    const [combat] = banners(room, 'encounterStarted');
+    expect(begun).toMatchObject({ label: 'Encounter started', beginsEncounter: true });
+    expect(begun?.supplement).toMatchObject({
       identityLabel: 'Anomaly combat',
+      choices: [],
       phase: { address: { phaseKey: 'Encounter' } },
     });
-    expect(outcome?.supplement).toMatchObject({
-      kind: 'encounterOutcome',
-      choices: ['anomalyCleared'],
-    });
-    expect(outcome?.label).toBe('Encounter outcome');
+    expect(combat?.supplement).toMatchObject({ start: true, choices: ['anomalyCleared'] });
+    expect(combat?.supplement?.identityLabel).toBeUndefined();
+    expect(combat?.label).toBe('Combat started');
     // The end announces what spawns and hosts no choice.
     expect(banners(room, 'encounterEnd').every((entry) => entry.supplement === undefined)).toBe(
       true,
     );
     expect(shapeOf(room).slice(1, 4)).toEqual([
-      'encounterStart',
-      'encounterOutcome',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
     ]);
   });
 
-  it('keeps the Gorgon condition on the Encounter outcome, read as the fight ends', () => {
+  it('keeps the Gorgon condition on the one marker naming its encounter', () => {
     const room = roomOf(
       loadUnderworldGorgonAthenaCheckpoint(),
       createOccurrenceId('golden-g-b1-e1'),
     );
-    const [outcome] = banners(room, 'encounterOutcome');
+    expect(banners(room, 'encounterBegun')).toEqual([]);
+    const [outcome] = banners(room, 'encounterStarted');
+    expect(outcome?.beginsEncounter).toBe(true);
     expect(outcome?.supplement).toMatchObject({
-      kind: 'encounterOutcome',
       choices: expect.arrayContaining(['gorgonCondition']),
       phase: { gorgonCondition: { selected: true, supported: true } },
     });
@@ -130,27 +140,47 @@ describe('encounter banner supplements', () => {
     );
   });
 
-  it('shows no outcome where the fight hosts no choice', () => {
+  it('hosts no outcome choice where the fight has none', () => {
     const room = roomOf(loadUnderworldFigLeafCheckpoint(), createOccurrenceId('golden-f-start'));
-    expect(banners(room, 'encounterOutcome')).toEqual([]);
+    expect(banners(room, 'encounterStarted').map((entry) => entry.supplement?.choices)).toEqual([
+      [],
+    ]);
+  });
+
+  it('shows an ordinary fight as one Encounter marker hosting its identity and Fig Leaf', () => {
+    const room = roomOf(createGoldenFGHIProject(), createOccurrenceId('golden-f-b10-e1'));
+    expect(shapeOf(room)).toEqual([
+      'roomEntered',
+      'encounterStarted',
+      'encounterEnd',
+      'doorsOpened',
+    ]);
+    expect(banners(room, 'encounterStarted')[0]).toMatchObject({
+      label: 'Encounter started',
+      beginsEncounter: true,
+      supplement: { identityLabel: 'Combat', start: true, choices: [] },
+    });
     expect(room.roomActions?.timeline.boundaries.map((boundary) => boundary.kind)).not.toContain(
-      'encounterOutcome',
+      'encounterBegun',
     );
   });
 
-  it('hosts the Aetos wave and the Gorgon condition on one outcome', () => {
+  it('hosts the Aetos wave and the Gorgon condition on the one marker naming their encounter', () => {
     const entry = galleryCases.find((candidate) => candidate.id === 'outcome-aetos-gorgon')!;
     const room = roomOf(buildGalleryProject(entry), createOccurrenceId('surface-p-1-1-p_combat03'));
-    const outcomes = banners(room, 'encounterOutcome');
+    expect(banners(room, 'encounterBegun')).toEqual([]);
+    const outcomes = banners(room, 'encounterStarted').filter(
+      (banner) => (banner.supplement?.choices.length ?? 0) > 0,
+    );
     expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]?.beginsEncounter).toBe(true);
     expect(outcomes[0]?.supplement).toMatchObject({
-      kind: 'encounterOutcome',
       choices: ['aetos', 'gorgonCondition'],
       phase: { address: { phaseKey: 'Combat' } },
     });
   });
 
-  it('gives a Nemesis kill race its outcome beside its bet gold on the end', () => {
+  it('gives a Nemesis kill race its outcome at Combat beside its bet gold on the end', () => {
     const occurrenceId = goldenGOccurrenceId(4, 1);
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'SelectEncounter',
@@ -162,14 +192,10 @@ describe('encounter banner supplements', () => {
       encounterKey: 'NemesisCombatG',
     });
     const room = roomOf(project, occurrenceId);
-    const [start] = banners(room, 'encounterStart');
-    const [outcome] = banners(room, 'encounterOutcome');
-    expect(start?.supplement).toMatchObject({
-      kind: 'encounterStart',
-      identityLabel: 'Nemesis combat',
-    });
+    const [start] = banners(room, 'encounterBegun');
+    const [outcome] = banners(room, 'encounterStarted');
+    expect(start?.supplement).toMatchObject({ identityLabel: 'Nemesis combat' });
     expect(outcome?.supplement).toMatchObject({
-      kind: 'encounterOutcome',
       choices: ['nemesisBet'],
       phase: { address: { phaseKey: 'Encounter' }, nemesisBet: expect.any(Object) },
     });
@@ -192,7 +218,7 @@ describe('Nemesis interaction family', () => {
 
   function identityLabels(room: ReturnType<typeof roomOf>) {
     return (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
-      entry.kind === 'boundary' && entry.supplement?.kind === 'encounterStart'
+      entry.kind === 'boundary' && entry.supplement?.identityLabel !== undefined
         ? [entry.supplement.identityLabel]
         : [],
     );
@@ -215,6 +241,7 @@ describe('Nemesis interaction family', () => {
       event: createNemesisRandomEventAddress(phase),
       family: 'goldTrade',
     });
+    project = collectTestRequiredItems(project);
     const room = roomOf(project, occurrenceId);
     const order = (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
       entry.kind === 'boundary'
@@ -223,53 +250,43 @@ describe('Nemesis interaction family', () => {
           ? ['interaction']
           : [],
     );
-    // Answering her ends the encounter; until her offer is settled the room stops at her row.
-    const start = order.indexOf('encounterStart');
-    expect(order.slice(start)).toEqual(['encounterStart', 'interaction']);
+    // No encounter runs for her: her talk row hosts her event, with no marker of its own.
+    expect(order).not.toContain('encounterBegun');
+    expect(order).not.toContain('encounterStarted');
+    expect(order).toContain('interaction');
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
-        supplement: { kind: 'nemesisInteraction', owner: createNemesisRandomEventAddress(phase) },
+        supplement: {
+          kind: 'nemesisInteraction',
+          owner: createNemesisRandomEventAddress(phase),
+          // The trade's result is observed on that row.
+          events: expect.objectContaining({
+            choices: ['nemesisEvent'],
+            phase: expect.objectContaining({
+              nemesisEvent: expect.objectContaining({
+                value: expect.objectContaining({ kind: 'goldTrade' }),
+              }),
+            }),
+          }),
+        },
       }),
     ]);
     expect(banners(room, 'roomEntered')[0]?.supplement).toBeUndefined();
-    expect(identityLabels(room)).toEqual(['Nemesis event · Gold trade']);
-    // The trade's outcome, read as answering her ends the encounter, waits with that outcome.
-    expect(room.roomActions?.timeline.notReached).toContainEqual(
-      expect.objectContaining({
-        kind: 'events',
-        label: 'Encounter outcome',
-        supplement: expect.objectContaining({
-          kind: 'encounterOutcome',
-          choices: ['nemesisEvent'],
-          phase: expect.objectContaining({
-            nemesisEvent: expect.objectContaining({
-              value: expect.objectContaining({ kind: 'goldTrade' }),
-            }),
-          }),
-        }),
-      }),
-    );
+    expect(identityLabels(room)).toEqual([]);
   });
 
-  it('names the Fields Passive event on its start banner and keeps its interaction on its row', () => {
+  it("keeps the Fields Passive event on its row, beside the cages' markers", () => {
     const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
       candidate.encounterPhases.some(
         (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
       ),
     );
     const [entered] = banners(room, 'roomEntered');
-    expect(
-      entered?.supplement?.kind === 'encounterStart' ? entered.supplement.identityLabel : undefined,
-    ).toBeUndefined();
-    expect(identityLabels(room).filter((label) => label?.includes('Nemesis'))).toEqual([
-      expect.stringMatching(/Nemesis event · /),
-    ]);
-    // The event's start banner is not a cage: only the cages' banners carry a slot.
-    expect(
-      banners(room, 'encounterStart').map((entry) => [entry.label, entry.fieldsCage?.slot]),
-    ).toEqual([
-      ['Encounter started', undefined],
+    expect(entered?.supplement?.identityLabel).toBeUndefined();
+    expect(identityLabels(room).filter((label) => label.includes('Nemesis'))).toEqual([]);
+    // Only the cages' encounters have markers, each tagged with its slot.
+    expect(beginMarkers(room).map((entry) => [entry.label, entry.fieldsCage?.slot])).toEqual([
       ['Encounter started', 3],
       ['Encounter started', 2],
       ['Encounter started', 1],
@@ -279,6 +296,43 @@ describe('Nemesis interaction family', () => {
         supplement: expect.objectContaining({ kind: 'nemesisInteraction' }),
       }),
     ]);
+  });
+});
+
+describe('encounter marker triggers', () => {
+  it("hangs each Fields cage's marker on the Unlock row that starts it", () => {
+    const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
+      candidate.encounterPhases.some(
+        (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
+      ),
+    );
+    const entries = room.roomActions?.timeline.entries ?? [];
+    const markers = beginMarkers(room);
+    expect(markers).toHaveLength(3);
+    for (const marker of markers) {
+      if (marker.boundary.kind !== 'encounterStarted') throw new Error('a cage shows its Combat');
+      const unlock = roomActionKey({
+        kind: 'completeFieldsCage',
+        phaseKey: marker.boundary.phaseKey,
+      });
+      expect(marker.triggerActionKey).toBe(unlock);
+      expect(entries[entries.indexOf(marker) - 1]).toMatchObject({
+        kind: 'action',
+        actionKey: unlock,
+      });
+    }
+    expect(
+      banners(room, 'encounterEnd').filter((entry) => entry.triggerActionKey !== undefined),
+    ).toEqual([]);
+  });
+
+  it('names no trigger for a fight that starts with its room', () => {
+    const room = roomOf(createCompleteFGProject(), goldenGOccurrenceId(2, 1));
+    const boundaries = (room.roomActions?.timeline.entries ?? []).filter(
+      (entry): entry is BoundaryEntry => entry.kind === 'boundary',
+    );
+    expect(boundaries.some((entry) => entry.boundary.kind === 'encounterStarted')).toBe(true);
+    expect(boundaries.filter((entry) => entry.triggerActionKey !== undefined)).toEqual([]);
   });
 });
 
@@ -296,7 +350,7 @@ describe('encounter banner identity', () => {
     ).toEqual(['Pre-combat · Combat', 'Follow-up · Combat']);
     expect(startIdentities(roomOf(project, createOccurrenceId('surface-o-combat01')))).toEqual([
       'Intro · Ship intro',
-      'Combat 1 · Ship combat',
+      'Phase 1 · Ship combat',
     ]);
   });
 
@@ -381,20 +435,21 @@ describe('engine-published row facts', () => {
   it('shows the gold the ledger attributes to a row on that row', () => {
     const occurrenceId = createOccurrenceId('golden-f-b10-e1');
     const { room, assembly } = projected(createGoldenFGHIProject(), occurrenceId);
-    const priced = goldLedgerForProjectEvaluationAssembly(catalog, assembly).roomAt(
-      createOccurrenceAddress(goldenFBiome, occurrenceId),
-    );
+    const address = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const priced = goldLedgerForProjectEvaluationAssembly(catalog, assembly).roomAt(address);
     if (priced.availability !== 'available') throw new Error('The room is not priced');
     const gain = priced.room.gains.find((candidate) => candidate.kind === 'moneyPickup');
     if (gain?.roomAction === undefined) throw new Error('The money pickup names no row');
     const row = room.roomActions?.rows.find(
       (candidate) => candidate.key === gain.roomAction!.actionKey,
     );
-    expect(row?.reference).toEqual({
-      kind: 'interactIncomingReward',
-      producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'self',
-    });
+    expect(row?.reference).toEqual(
+      withItemContent(assembly.project, address, {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      }),
+    );
     expect(row?.key).toBe(roomActionKey(row!.reference));
     expect(row?.goldGained).toEqual({ label: '+100' });
   });
@@ -410,9 +465,8 @@ describe('boss defeat', () => {
       (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
         entry.kind === 'boundary' ? [entry.boundary.kind] : [],
       ),
-    ).toEqual(['roomEntered', 'encounterStart', 'bossDefeated', 'encounterEnd', 'cleanup']);
+    ).toEqual(['roomEntered', 'encounterStarted', 'bossDefeated', 'encounterEnd', 'doorsOpened']);
     expect(banners(room, 'bossDefeated')[0]?.label).toBe('Boss defeated');
-    expect(room.roomActions?.timeline.suppressedCheckpointKeys).toContain('bossDefeated:Encounter');
   });
 });
 
@@ -436,8 +490,9 @@ describe('a room whose walk stops in it', () => {
     const timeline = galleryTimeline('progressive-stop-encounter-end', 'surface-o-devotion');
     expect(shape(timeline.entries)).toEqual([
       'roomEntered',
+      'encounterBegun',
       'action',
-      'encounterStart',
+      'encounterStarted',
       'encounterEnd',
       'action',
     ]);
@@ -451,9 +506,20 @@ describe('a room whose walk stops in it', () => {
     expect(timeline.notReached).toEqual([]);
   });
 
+  it('shows its Timeline with the pickup live while its Overview waits only on that placement', () => {
+    const room = roomOf(
+      buildGalleryProject(galleryCases.find((entry) => entry.id === 'live-row-opening-unplaced')!),
+      createOccurrenceId('golden-f-start'),
+    );
+    const actions = room.roomActions!;
+    expect(actions.timeline.waitsOn).toBeUndefined();
+    expect(shape(actions.timeline.entries)[0]).toBe('roomEntered');
+    expect(actions.live?.items.some((item) => item.group === 'required')).toBe(true);
+  });
+
   it('ends before the doors open while a required pickup is not placed', () => {
-    const timeline = galleryTimeline('required-unplaced', 'golden-f-b1-e1');
-    expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStart', 'encounterEnd']);
+    const timeline = galleryTimeline('live-row-required', 'golden-f-b1-e1');
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStarted', 'encounterEnd']);
     expect(timeline.notReached).toEqual([]);
     expect(timeline.doorsWait).toBe(true);
     expect(timeline.waitsOn).toBeUndefined();
@@ -461,49 +527,135 @@ describe('a room whose walk stops in it', () => {
 
   it('keeps the doors opening as its stop when a door offer blocks', () => {
     const timeline = galleryTimeline('progressive-stop-door-offer', 'golden-f-start');
-    expect(shape(timeline.entries).at(-1)).toBe('cleanup');
+    expect(shape(timeline.entries).at(-1)).toBe('doorsOpened');
     expect(timeline.notReached).toBeDefined();
     expect(timeline.doorsWait).toBeUndefined();
   });
 
   it('holds its doors when it stops at a row after the doors open', () => {
-    const timeline = galleryTimeline('well-twist-unset', 'golden-f-preboss-shop:postboss');
-    expect(shape(timeline.entries)).toContain('cleanup');
+    const timeline = galleryTimeline(
+      'postboss-rack-result-unset',
+      'golden-f-preboss-shop:postboss',
+    );
+    expect(shape(timeline.entries)).toContain('doorsOpened');
     expect(shape(timeline.entries).at(-1)).toBe('action');
     expect(timeline.doorsWait).toBe(true);
   });
 
-  it('keeps its Encounter outcome with its controls when it stops there', () => {
+  it('keeps its Combat with its outcome controls when it stops there', () => {
     const room = roomOf(
       buildGalleryProject(galleryCases.find((entry) => entry.id === 'outcome-aetos-unavailable')!),
       createOccurrenceId('surface-p-1-1-p_combat03'),
     );
     const timeline = room.roomActions!.timeline;
-    expect(shape(timeline.entries).at(-1)).toBe('encounterOutcome');
+    expect(shape(timeline.entries).at(-1)).toBe('encounterStarted');
     const outcome = timeline.entries.at(-1);
     expect(
-      outcome?.kind === 'boundary' && outcome.supplement?.kind === 'encounterOutcome'
+      outcome?.kind === 'boundary' && outcome.supplement !== undefined
         ? outcome.supplement.phase.aetos
         : undefined,
     ).toMatchObject({ selectedWave: 9, contextReached: true });
   });
 
-  it('ends at the encounter end that owes an unplaced Shrine delivery', () => {
+  it('ends at the doors opening an unplaced Shrine delivery falls due at', () => {
     const timeline = galleryTimeline('shrine-delivery-unplaced', 'surface-o-devotion');
-    expect(shape(timeline.entries).at(-1)).toBe('encounterEnd');
-    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+    // The walk passes the encounter end the delivery spawns at and every row after it.
+    expect(shape(timeline.entries)).toEqual([
+      'roomEntered',
+      'encounterBegun',
+      'action',
+      'encounterStarted',
+      'encounterEnd',
+      'action',
+    ]);
+    expect(timeline.notReached).toEqual([]);
   });
 
   it('keeps the doors opening as its stop when the door store is unavailable', () => {
     const timeline = galleryTimeline('chaos-time-piece', 'fixture-chaos-room');
-    expect(shape(timeline.entries)).toEqual(['roomEntered', 'action', 'cleanup']);
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'action', 'doorsOpened']);
     expect(timeline.notReached).toEqual([]);
+  });
+
+  it('keeps the automatic effects of the encounter end it stops at, to choose their targets', () => {
+    const effects = (
+      entries: readonly (WorkspaceRoomLifecycleTimelineEntry | WorkspaceNotReachedEntry)[],
+    ) =>
+      entries.flatMap((entry) =>
+        entry.kind === 'automaticEffect' ? [[entry.effect, entry.phaseKey]] : [],
+      );
+    const raw = surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier'].raw as {
+      readonly route: Record<string, unknown>;
+    };
+    const growth = loadProjectDocument(
+      JSON.stringify({
+        ...raw,
+        route: { ...raw.route, itineraryBiomeKeys: catalog.routes.byKey.Surface!.biomeKeys },
+      }),
+      catalog,
+    ).project;
+    const growthTimeline = roomOf(
+      growth,
+      createOccurrenceId('59213773-32f1-4ccc-87a4-4eaf95e43b54'),
+    ).roomActions!.timeline;
+    expect(shape(growthTimeline.entries).at(-1)).toBe('encounterEnd');
+    expect(effects(growthTimeline.entries)).toEqual([['steadyGrowth', 'Combat']]);
+    expect(effects(growthTimeline.notReached ?? [])).toEqual([]);
+
+    const embryoCase = galleryCases.find((candidate) => candidate.id === 'transcendent-embryo')!;
+    const embryoProject = buildGalleryProject(embryoCase);
+    const embryoRoom = createOccurrenceId('surface-n-combat03');
+    const [outcome] = roomOf(embryoProject, embryoRoom).roomActions!.transcendentEmbryo!;
+    const embryoTimeline = roomOf(
+      applyProjectCommand(embryoProject, catalog, {
+        kind: 'ReplaceTranscendentEmbryoTransformation',
+        outcome: outcome!.address,
+        value: null,
+      }),
+      embryoRoom,
+    ).roomActions!.timeline;
+    expect(shape(embryoTimeline.entries).at(-1)).toBe('encounterEnd');
+    expect(effects(embryoTimeline.entries)).toEqual([['transcendentEmbryo', 'Encounter']]);
+    expect(effects(embryoTimeline.notReached ?? [])).toEqual([]);
+
+    // In a two-phase room a stop at the Intro's end keeps only the Intro's own effect.
+    type Engine = Parameters<typeof splitAtRoomStop>[1][number];
+    const boundary = (kind: string, phaseKey?: string) =>
+      ({
+        kind: 'boundary',
+        boundary: { kind, key: phaseKey === undefined ? kind : `${kind}:${phaseKey}`, phaseKey },
+        rank: 1,
+        placement: 'before',
+      }) as unknown as Engine;
+    const selection = createRouteStartKeepsakeSelectionAddress('Surface');
+    const effect = (cycle: number, phaseKey: string) =>
+      ({
+        kind: 'automaticEffect',
+        effect: 'transcendentEmbryo',
+        phaseKey,
+        address: createTranscendentEmbryoOutcomeAddress(selection, cycle),
+      }) as unknown as Engine;
+    const twoPhase = [
+      boundary('roomEntered'),
+      boundary('encounterEnd', 'Intro'),
+      effect(1, 'Intro'),
+      boundary('encounterStarted', 'Combat'),
+      boundary('encounterEnd', 'Combat'),
+      effect(2, 'Combat'),
+    ];
+    const split = splitAtRoomStop(
+      twoPhase as unknown as Parameters<typeof splitAtRoomStop>[0],
+      twoPhase,
+      { roomStop: { kind: 'timeline', entryIndex: 1, at: 'entry' } },
+    );
+    expect(effects(split?.reached ?? [])).toEqual([['transcendentEmbryo', 'Intro']]);
+    expect(effects(split?.notReached ?? [])).toEqual([['transcendentEmbryo', 'Combat']]);
   });
 
   it('shows every entry when it stops only in its exit work', () => {
     const timeline = galleryTimeline('side-visit-repeat', 'surface-n-combat05');
     expect(timeline.notReached).toBeUndefined();
-    expect(shape(timeline.entries)).toContain('cleanup');
+    expect(shape(timeline.entries)).toContain('doorsOpened');
   });
 
   it('keeps a reached stop only when it shows the engine entry', () => {
@@ -519,26 +671,37 @@ describe('a room whose walk stops in it', () => {
     const shown = (entry: Engine): Shown => entry as unknown as Shown;
     const keys = (split: ReturnType<typeof splitAtRoomStop>) =>
       split?.reached.map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind));
-    const stopAt = { kind: 'timeline', entryIndex: 1, at: 'entry' } as const;
-    // A stop at an Encounter outcome keeps that outcome to repair its choices there.
+    const stopAt = (entryIndex: number) => ({ kind: 'timeline', entryIndex, at: 'entry' }) as const;
+    // A stop at a Combat keeps that Combat to repair its outcome choices there.
     const fight = [
       engine('roomEntered'),
-      engine('encounterOutcome', 'Encounter'),
+      engine('encounterStarted', 'Encounter'),
       engine('encounterEnd', 'Encounter'),
-      engine('cleanup'),
+      engine('doorsOpened'),
     ];
-    expect(keys(splitAtRoomStop(fight.map(shown), fight, { roomStop: stopAt }))).toEqual([
-      'roomEntered',
-      'encounterOutcome:Encounter',
-    ]);
-    // A later entry shown in place of the stop entry is not reached.
-    const start = [engine('roomEntered'), engine('encounterStart', 'Encounter'), engine('cleanup')];
     expect(
-      keys(splitAtRoomStop([start[0]!, start[2]!].map(shown), start, { roomStop: stopAt })),
+      keys(
+        splitAtRoomStop(fight.map(shown), fight, {
+          roomStop: stopAt(1),
+        }),
+      ),
+    ).toEqual(['roomEntered', 'encounterStarted:Encounter']);
+    // A later entry shown in place of the stop entry is not reached.
+    const start = [
+      engine('roomEntered'),
+      engine('encounterBegun', 'Encounter'),
+      engine('doorsOpened'),
+    ];
+    expect(
+      keys(
+        splitAtRoomStop([start[0]!, start[2]!].map(shown), start, {
+          roomStop: stopAt(1),
+        }),
+      ),
     ).toEqual(['roomEntered']);
   });
 
-  it('leaves a Ship phase the walk has not reached waiting on the phase it stopped in', () => {
+  it('stops a Ship room at a wheel on the tab its wheels open on, before its combat', () => {
     const entry = galleryCases.find((candidate) => candidate.id === 'ship-phase-waiting')!;
     const workbench = roomOf(
       buildGalleryProject(entry),
@@ -547,13 +710,19 @@ describe('a room whose walk stops in it', () => {
     if (workbench.kind !== 'ship') throw new Error('Not a Ship room');
     expect(workbench.phases.map((phase) => [phase.label, phase.waitsOn])).toEqual([
       ['Intro', undefined],
-      ['Combat 1', { kind: 'phase', phaseLabel: 'Intro' }],
+      ['Phase 1', { kind: 'phase', phaseLabel: 'Intro' }],
     ]);
+    const intro = workbench.phases[0]!;
+    expect(intro.wheel?.key).toBe('wheel1');
+    expect(
+      intro.timeline.flatMap((entry) => (entry.kind === 'boundary' ? [entry.boundary.kind] : [])),
+    ).toContain('wheelsOpen');
+    expect(workbench.phases[1]!.timeline).toEqual([]);
   });
 
   it('shows every phase of a room the walk passes', () => {
     const timeline = galleryTimeline('boon-offer-picked', 'golden-f-start');
     expect(timeline.notReached).toBeUndefined();
-    expect(shape(timeline.entries)).toContain('cleanup');
+    expect(shape(timeline.entries)).toContain('doorsOpened');
   });
 });

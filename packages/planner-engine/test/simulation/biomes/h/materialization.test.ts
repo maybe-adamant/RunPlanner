@@ -57,8 +57,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 
 import {
   authorTestArtificerReplacement,
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  replaceTestPlacedItem,
   replaceTestRoomActionOrder,
+  scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
 import { initializeTestRewardBranchForRoute } from '../../../support/arcana-fear';
@@ -691,7 +693,7 @@ describe('H Fields materialization', () => {
     ]) {
       project = authorFieldsSpatialLayout(project, occurrenceId);
     }
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: createAcquisitionEntryAddress(
@@ -771,7 +773,7 @@ describe('H Fields materialization', () => {
   it('spends an Olympian provider only when an entered Fields cage creates its matching Boon', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
-    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    let project = replaceTestPlacedItem(createGoldenFGHProject(), {
       kind: 'ReplaceLocalReward',
       reward: cage,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -860,13 +862,13 @@ describe('H Fields materialization', () => {
     ) => {
       let project = createGoldenFGHProject();
       for (const [occurrenceId, slotKey, value] of rewards)
-        project = applyProjectCommand(project, catalog, {
+        project = replaceTestPlacedItem(project, {
           kind: 'ReplaceLocalReward',
           reward: cage(occurrenceId, slotKey),
           value,
         });
       const evaluated = evaluateWithOlympianContactSeed(
-        authorLegalTraitOffers(project),
+        authorTestTraitsAndRequiredItems(project),
         'ForceZeusBoonKeepsake',
       );
       return evaluated.findings
@@ -902,7 +904,14 @@ describe('H Fields materialization', () => {
 
   it('defaults each cage pickup after its encounter and before the next cage', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
-    const project = completeProject();
+    const unplaced = completeProject();
+    // Creating the rooms places nothing; the canonical schedule places each cage's rows.
+    expect(
+      plan(unplaced).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([]);
+    const project = scheduleTestRequiredRoomActions(unplaced, catalog, biome);
     const authored = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     );
@@ -937,15 +946,18 @@ describe('H Fields materialization', () => {
           }),
     );
     const cleanup = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
     );
     expect(cleanup).toBeGreaterThan(finalCageEnd);
     expect(firstPickup).toBeLessThan(cleanup);
     const firstCageEnd = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterEnd:Cage01',
     );
+    // The next cage's row begins its fight.
     const nextCageStart = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Cage02',
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.key === roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage02' }),
     );
     expect(firstCageEnd).toBeGreaterThanOrEqual(0);
     expect(firstPickup).toBeGreaterThan(firstCageEnd);
@@ -966,6 +978,7 @@ describe('H Fields materialization', () => {
       phase: createEncounterPhaseAddress(biome, occurrence, 'Cage01'),
       value: true,
     });
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const authored = plan(project).topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrenceId,
     );
@@ -982,21 +995,21 @@ describe('H Fields materialization', () => {
       .flatMap((batch) => batch.targets.map((target) => target.room))
       .find((candidate) => candidate.occurrenceId === occurrenceId);
     if (room === undefined) throw new Error('Fields blocker room is missing');
-    expect(room.roomActionRoster.lifecycleStructure).toBe(room.roomLifecycleTimeline.structure);
+    expect(room.roomActionRoster.eventGraph).toBe(room.roomLifecycleTimeline.graph);
     expect(
       room.roomLifecycleTimeline.boundaries.map((boundary) =>
         'phaseKey' in boundary ? `${boundary.kind}:${boundary.phaseKey}` : boundary.kind,
       ),
     ).toEqual([
       'roomEntered',
-      'encounterStart:Cage01',
-      // A cage fight can host the Gorgon condition at its outcome.
-      'encounterOutcome:Cage01',
+      // A cage fight can host the Gorgon condition at its Combat.
+      'encounterBegun:Cage01',
+      'encounterStarted:Cage01',
       'encounterEnd:Cage01',
-      'encounterStart:Cage02',
-      'encounterOutcome:Cage02',
+      'encounterBegun:Cage02',
+      'encounterStarted:Cage02',
       'encounterEnd:Cage02',
-      'cleanup',
+      'doorsOpened',
     ]);
   });
 
@@ -1023,6 +1036,7 @@ describe('H Fields materialization', () => {
       }),
       cageOutcome: 'max',
     });
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const occurrences = plan(project).topology?.occurrences;
     expect(
       occurrences?.find((occurrence) => occurrence.occurrenceId === selectedId)?.roomActions.order,
@@ -1313,9 +1327,11 @@ describe('H Fields materialization', () => {
     ['after its cage reward', 'afterReward', true],
     ['between the cages', 'betweenCages', true],
     ['after a later cage', 'afterLaterCage', true],
-    ['before its own cage completion', 'beforeCage', false],
+    // Structurally phase-free: the walk judges a row before its due spawn.
+    ['before its own cage completion', 'beforeCage', true],
   ] as const)('orders a delivery a cage fight matured %s', (_label, position, authorable) => {
-    // A cage fight's end effects spawn it while the cage reward is still caged.
+    // A cage fight's end effects spawn it while the cage reward is still caged; the walk,
+    // not the structure, names which cage.
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const context = roomActionDomainForOccurrence(
       createGoldenFGHProject(),
@@ -1337,12 +1353,9 @@ describe('H Fields materialization', () => {
         reference.groupKey === 'cages' &&
         context.domain.contributions.some(
           (entry) =>
-            entry.kind === 'action' &&
             roomActionKey(entry.reference) === roomActionKey(reference) &&
             entry.dependencies.some(
-              (dependency) =>
-                dependency.kind === 'afterAction' &&
-                roomActionKey(dependency.action) === roomActionKey(first),
+              (dependency) => roomActionKey(dependency.action) === roomActionKey(first),
             ),
         ),
     )!;
@@ -1356,17 +1369,18 @@ describe('H Fields materialization', () => {
         ),
         'initial:first',
       ),
-      encounterPhaseKey: first.phaseKey,
     });
     const withDelivery = fieldsDomainWithPlacedEntries(occurrenceId, [delivery]);
     const contribution = withDelivery.domain.contributions.find(
-      (entry) =>
-        entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(delivery),
+      (entry) => roomActionKey(entry.reference) === roomActionKey(delivery),
     );
     expect(contribution).toMatchObject({
       participation: 'required',
-      window: { kind: 'fields', phaseKey: first.phaseKey },
-      dependencies: [{ kind: 'afterAction', action: first }],
+      bounds: expect.objectContaining({
+        spawn: expect.objectContaining({ kind: 'endEffects' }),
+        deadline: { kind: 'doorsOpened' },
+      }),
+      dependencies: [],
     });
     const order = base.filter(
       (reference) =>
@@ -1385,7 +1399,7 @@ describe('H Fields materialization', () => {
       owner: createOccurrenceAddress(biome, occurrenceId),
       order: [...placed, ...order],
       contributions: withDelivery.domain.contributions,
-      lifecycleStructure: withDelivery.domain.lifecycleStructure,
+      eventGraph: withDelivery.domain.eventGraph,
     });
     const deliveryIssues = roster.issues.filter(
       (issue) =>
@@ -1397,14 +1411,14 @@ describe('H Fields materialization', () => {
       expect(deliveryIssues).toContainEqual(
         expect.objectContaining({
           kind: 'dependency',
-          dependency: { kind: 'afterAction', action: first },
+          dependency: { action: first },
         }),
       );
   });
 
   describe('a cage-end pickup', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const delivery = (phaseKey: string) =>
+    const delivery = () =>
       Object.freeze({
         kind: 'interactAcquisitionEntry' as const,
         siteKey: 'hermesShrineDelivery',
@@ -1415,7 +1429,6 @@ describe('H Fields materialization', () => {
           ),
           'initial:first',
         ),
-        encounterPhaseKey: phaseKey,
       });
     const firstCage = (which: 'first' | 'last' = 'first') => {
       const context = roomActionDomainForOccurrence(
@@ -1440,12 +1453,15 @@ describe('H Fields materialization', () => {
       contributions: [
         ...domain.contributions,
         {
-          kind: 'action',
           reference: unlock,
           owner: createOccurrenceAddress(biome, occurrenceId),
           participation: 'optional',
-          window: { kind: 'postOutgoing' },
-          dependencies: [{ kind: 'afterCheckpoint', checkpointKey: 'exitUsable' }],
+          bounds: {
+            spawn: { kind: 'roomEntered' },
+            enabler: { kind: 'exitsReady' },
+            deadline: { kind: 'leave' },
+          },
+          dependencies: [],
         },
       ],
     });
@@ -1457,14 +1473,14 @@ describe('H Fields materialization', () => {
         owner: createOccurrenceAddress(biome, occurrenceId),
         order,
         contributions: domain.contributions,
-        lifecycleStructure: domain.lifecycleStructure,
+        eventGraph: domain.eventGraph,
       }).issues.filter((issue) => issue.kind !== 'unrankedRequired');
 
     it.each(['first', 'last'] as const)(
-      'schedules a missing delivery of the %s cage into its slot, before a press after the doors open',
+      'schedules a missing delivery of the %s cage before a press after the doors open',
       (which) => {
-        const { base, cage } = firstCage(which);
-        const placed = delivery(cage.phaseKey);
+        const { base } = firstCage(which);
+        const placed = delivery();
         const domain = withPress(fieldsDomainWithPlacedEntries(occurrenceId, [placed]).domain);
         const scheduled = scheduleRequiredRoomActions({
           catalog,
@@ -1472,54 +1488,42 @@ describe('H Fields materialization', () => {
           order: [...base, unlock],
           requiredKeys: new Set([roomActionKey(placed)]),
         });
-        // Clear, collect: the delivery follows its cage's reward and precedes the next cage.
-        const reward = base[base.indexOf(cage) + 1]!;
-        expect(scheduled.indexOf(placed)).toBe(scheduled.indexOf(reward) + 1);
+        expect(scheduled.indexOf(placed)).toBeLessThan(scheduled.indexOf(unlock));
         expect(scheduled.at(-1)).toBe(unlock);
         expect(issuesOf(domain, scheduled)).toEqual([]);
       },
     );
 
     it('refuses a delivery after a press that follows the doors opening', () => {
-      const { base, cage } = firstCage();
-      const placed = delivery(cage.phaseKey);
+      const { base } = firstCage();
+      const placed = delivery();
       const domain = withPress(fieldsDomainWithPlacedEntries(occurrenceId, [placed]).domain);
       expect(issuesOf(domain, [...base, unlock, placed])).toContainEqual(
-        expect.objectContaining({ kind: 'window', reference: placed, precedingAction: unlock }),
+        expect.objectContaining({
+          kind: 'pastDeadline',
+          reference: placed,
+          precedingAction: unlock,
+        }),
       );
     });
 
-    it('keeps the encounter-end window for a delivery due at a phase with no cage', () => {
-      const placed = delivery('Passive');
-      const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
-        placed,
-      ]).domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(placed),
-      );
-      expect(contribution).toMatchObject({
-        window: { kind: 'encounterEnd', phaseKey: 'Passive' },
-        dependencies: [],
-      });
-    });
-
-    it('gives a clocked drop its cage window too', () => {
-      const { cage } = firstCage();
+    it('gives a clocked drop phase-free bounds, due as the room is left', () => {
       const drop = Object.freeze({
         kind: 'interactAcquisitionEntry' as const,
         siteKey: 'roomExit',
         entryKey: clockedTraitGeneratedPickupEntryKey('fields-clocked-trait', 'drop1'),
-        encounterPhaseKey: cage.phaseKey,
       });
       const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
         drop,
       ]).domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(drop),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(drop),
       );
       expect(contribution).toMatchObject({
-        window: { kind: 'fields', phaseKey: cage.phaseKey },
-        dependencies: [{ kind: 'afterAction', action: cage }],
+        bounds: expect.objectContaining({
+          spawn: expect.objectContaining({ kind: 'endEffects' }),
+          deadline: { kind: 'leave' },
+        }),
+        dependencies: [],
       });
     });
   });
@@ -1625,7 +1629,9 @@ describe('H Fields materialization', () => {
       route: createRouteAddress('Underworld'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    project = authorLegalTraitOffers(project);
+    // The third cage's rows take the canonical schedule.
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
+    project = authorTestTraitsAndRequiredItems(project);
     for (const [index, slotKey] of sources.entries()) {
       const owner = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey);
       project = applyProjectCommand(project, catalog, {
@@ -1709,7 +1715,7 @@ describe('H Fields materialization', () => {
       ...replacementReferences,
       ...order,
     ]);
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const simulation = simulateProject(catalog, project);
     const evaluated = simulation.route.biomes.find((candidate) => candidate.biomeKey === 'H');
     expect(evaluated?.authoring).toBe('complete');
@@ -1752,6 +1758,8 @@ describe('H Fields materialization', () => {
       createAcquisitionRoleAddress(cage, 'self'),
       replacement,
     );
+    // The owner places the replacement's pickup.
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const occurrence = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     );
@@ -1772,7 +1780,7 @@ describe('H Fields materialization', () => {
     expect(replacementRow).toMatchObject({
       participation: 'required',
       rank: expect.any(Number),
-      dependencies: [{ kind: 'afterAction', action: sourceReference }],
+      dependencies: [{ action: sourceReference }],
     });
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({
@@ -1812,7 +1820,6 @@ describe('H Fields materialization', () => {
     ).toMatchObject({
       dependencies: expect.arrayContaining([
         {
-          kind: 'afterAction',
           action: { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
         },
       ]),
@@ -2228,7 +2235,7 @@ describe('H Fields materialization', () => {
 
     expect(snapshot.entryRoom).toMatchObject({
       gameName: 'H_Intro',
-      lifecycleProfileKey: 'RewardlessRoom',
+      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
       entered: true,
     });
     expect(takeover.targets).toHaveLength(2);

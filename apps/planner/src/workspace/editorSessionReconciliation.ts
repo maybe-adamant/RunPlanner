@@ -21,6 +21,8 @@ export interface EditorSessionReconciliationInput {
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly session: EditorSessionState;
   readonly availableRunStateOwnerKeys?: ReadonlySet<string>;
+  /** Whether the bound trait offer's exact candidate context is reached; absent when unbound. */
+  readonly traitOfferContextReached?: (traitKey: string) => boolean | undefined;
 }
 
 function hasExactDestination(
@@ -67,9 +69,11 @@ export function deriveEditorSessionReconciliation(
     !hasExactDestination(focusByOwner, semanticAddressKey(focusedSemanticOwner));
   const clearSelectedFinding = selectedFinding !== null && !selectedFindingSurvives;
   const traitDialogTarget = session.traitDialogTarget ?? null;
+  // An unreached offer gets no dialog, so an edit that leaves it unreached closes it.
   const clearTraitDialogTarget =
     traitDialogTarget !== null &&
-    !hasExactDestination(focusByOwner, semanticAddressKey(traitDialogTarget));
+    (!hasExactDestination(focusByOwner, semanticAddressKey(traitDialogTarget)) ||
+      input.traitOfferContextReached?.(semanticAddressKey(traitDialogTarget)) === false);
   const levelResolutionDialogTarget = session.levelResolutionDialogTarget ?? null;
   const clearLevelResolutionDialogTarget =
     levelResolutionDialogTarget !== null &&
@@ -163,6 +167,8 @@ export function createEditorSessionReconciliationCoordinator(options: {
     );
     const reconciliation = deriveEditorSessionReconciliation({
       availableRunStateOwnerKeys,
+      traitOfferContextReached: (traitKey) =>
+        workspace.interactions.traitOffers.get(traitKey)?.contextReached,
       issue: assembly.evaluation.issue,
       focusByOwner: workspace.focusByOwner,
       session: state.editorSession,

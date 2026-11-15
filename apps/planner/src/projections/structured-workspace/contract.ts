@@ -15,21 +15,12 @@ export type {
   WorkspaceChallengeSwitchVariant,
   WorkspaceChaosExitControl,
   WorkspaceChaosSpawnControl,
-  WorkspaceFeatureRollActions,
-  WorkspaceFeatureRollActionsInteraction,
-  WorkspaceFeatureRollLock,
-  WorkspaceFeatureRollOption,
   WorkspaceFeatureRollSlot,
   WorkspaceFeatureRollSlotInteraction,
   WorkspaceLockedDoors,
   WorkspaceUnlockExitEncounter,
   WorkspaceRoomFeature,
-  WorkspaceRoomObject,
-  WorkspaceRoomObjectChoice,
-  WorkspaceRoomObjectEntry,
   WorkspaceRoomObjectEntryInteraction,
-  WorkspaceRoomObjectLock,
-  WorkspaceRoomObjectOption,
   WorkspaceRoomObjectSlots,
   WorkspaceRoomMap,
   WorkspaceRoomMapPoint,
@@ -38,7 +29,6 @@ export type {
   WorkspaceRoomEntryPair,
   WorkspaceRoomEntryState,
   WorkspaceAnchorObject,
-  WorkspaceAnchorObjectLock,
   WorkspaceRoomAnchorObject,
   WorkspaceRoomObjectAnchor,
   WorkspaceZagreusContractControl,
@@ -94,7 +84,6 @@ export type {
 } from './contracts/structure';
 export type {
   WorkspaceFieldsCageLabel,
-  WorkspaceFieldsCageOrderControl,
   WorkspaceFigurineArcanaInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityDomain,
@@ -116,6 +105,12 @@ export type {
   WorkspaceSpawnGroup,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
+  WorkspaceLiveChoice,
+  WorkspaceLiveGap,
+  WorkspaceLiveItem,
+  WorkspaceLiveVerb,
+  WorkspaceRoomLive,
+  WorkspaceRowChoice,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,
   WorkspaceSteadyGrowthInteraction,
@@ -265,8 +260,20 @@ export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
 export type WorkspaceFeatureAssessment = 'assessed' | 'unassessed';
 
 /** Closed application state for a structurally supported room feature. */
+/** Why an absent room feature cannot be switched on now. */
+export type WorkspaceFeatureLock =
+  /** The room's entry is not assessed yet. */
+  | { readonly reason: 'unreached' }
+  /** The rules refusing it here, each as one sentence. */
+  | { readonly reason: 'refused'; readonly sentences: readonly string[] };
+
 export type WorkspaceFeaturePresence =
-  | { readonly kind: 'optionalAbsent'; readonly enabled: boolean }
+  | {
+      readonly kind: 'optionalAbsent';
+      readonly enabled: boolean;
+      /** Why it cannot be switched on, while not enabled. */
+      readonly lock?: WorkspaceFeatureLock;
+    }
   | { readonly kind: 'optionalPresent' }
   | { readonly kind: 'forcedPresent' };
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
@@ -284,6 +291,8 @@ export interface WorkspaceInteractionChoice<T> {
 /** A room offered by game name, with the icon the rail shows for it. */
 export interface WorkspaceRoomChoice extends WorkspaceInteractionChoice<string> {
   readonly roomIcon: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
 }
 
 export interface WorkspaceCandidateInteraction<T> {
@@ -325,6 +334,8 @@ interface WorkspaceRoomInteractionBase {
   readonly load: () => ContextualPickerModel<RoomDeclaration>;
   /** The icon of a room this picker offers or holds, as the rail shows it. */
   readonly roomIcon: (room: RoomDeclaration) => WorkspaceRoomIcon;
+  /** That room's number where many rooms share its icon. */
+  readonly roomNumber: (room: RoomDeclaration) => string | undefined;
   readonly selected?: RoomDeclaration;
 }
 
@@ -442,10 +453,6 @@ export interface WorkspaceInteractionCatalog {
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly roomRerolls: ReadonlyMap<string, WorkspaceRoomRerollsInteraction>;
   /** Each Well and Pool's Interact picker. */
-  readonly featureRollActions: ReadonlyMap<
-    string,
-    import('./contracts/features').WorkspaceFeatureRollActionsInteraction
-  >;
   /** Each World Shop, Hermes Shrine and Pedestal entry. */
   readonly roomObjectEntries: ReadonlyMap<
     string,
@@ -561,24 +568,22 @@ export interface WorkspaceShipPhasePresentation {
     WorkspaceRoomTab,
     'shipIntroActions' | 'shipCombat1Actions' | 'shipCombat2Actions'
   >;
-  /** Active required actions owned by this phase but not yet inserted. */
-  readonly unplacedRows: readonly WorkspaceRoomActionRow[];
   readonly actionRows: readonly WorkspaceRoomActionRow[];
-  readonly checkpoints: WorkspaceRoomActions['checkpoints'];
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
   readonly label: string;
-  /** Engine-ordered lifecycle entries owned by this phase, including automatic effects. */
+  /**
+   * Engine-ordered lifecycle entries on this phase's tab, including automatic effects: from
+   * its Combat (the Intro from room entry) through the gate row of the next phase's Combat.
+   */
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** This phase's authored rows past the room's stop, waiting until the walk reaches them. */
   readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
   /** Where the walk stops before this phase: its room's Overview, or an earlier phase. */
   readonly waitsOn?: import('./contracts/timeline').WorkspaceTimelineWait;
-  /** Active optional actions owned by this phase but not yet inserted. */
-  readonly optionalRows: readonly WorkspaceRoomActionRow[];
-  /** The room objects' entries, on the last phase, where a new action is appended. */
-  readonly objectEntries?: readonly import('./contracts/features').WorkspaceRoomObjectEntry[];
-  /** The active wheel chosen after this phase, opened and taken at this phase's end. */
+  /** The phase the walk's frontier stands in, which shows the room's live row. */
+  readonly holdsLive?: true;
+  /** The active wheel the next phase's combat is chosen at, opened and taken on this tab. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
   /** The wheel's offer rerolls, where it can or did reroll. */
   readonly wheelRerolls?: import('./contracts/structure').WorkspaceRoomRerolls;
@@ -718,6 +723,8 @@ export interface WorkspaceRoomSummary {
     readonly action: 'add' | 'move' | 'remove';
     readonly interactionKey: string;
     readonly legal: boolean;
+    /** Why the success cannot be placed here, while it is not legal. */
+    readonly lock?: WorkspaceFeatureLock;
     /** Only present when selecting this room would replace another placement. */
     readonly currentPlacement?: {
       readonly address: import('@run-planner/engine/authored-project').OccurrenceAddress;

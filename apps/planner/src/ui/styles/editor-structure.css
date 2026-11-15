@@ -70,73 +70,6 @@
   font-size: 0.75rem;
 }
 
-.route-index-panel {
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid #3a3b45;
-  border-radius: 12px;
-  background: rgb(13 14 18 / 32%);
-}
-
-.route-index-panel > .panel-heading {
-  margin-bottom: 16px;
-}
-
-.route-npc-index-empty {
-  margin: 12px 0 0;
-  color: #aaa7af;
-  font-size: 0.9rem;
-}
-
-.route-npc-index-groups {
-  display: grid;
-  gap: 14px;
-}
-
-.route-npc-index-group {
-  padding: 12px;
-  border: 1px solid #393a44;
-  border-radius: 10px;
-  background: rgb(13 14 18 / 24%);
-}
-
-.route-npc-index-group h3 {
-  margin: 0;
-  color: #f1ece3;
-  font-size: 0.95rem;
-}
-
-.route-npc-index-group ol {
-  display: grid;
-  gap: 6px;
-  padding: 0;
-  margin: 10px 0 0;
-  list-style: none;
-}
-
-.route-npc-index-entry {
-  display: grid;
-  width: 100%;
-  min-height: 0;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid #3b3c46;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
-  text-decoration: none;
-}
-
-.route-npc-index-entry:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--selection-accent) 52%, transparent);
-  background: color-mix(in srgb, var(--selection-accent) 6%, transparent);
-}
-
-.route-npc-index-location {
-  color: #96939c;
-  font-size: 0.77rem;
-  font-weight: 500;
-}
-
 .room-card h3 {
   margin: 0;
   color: #f4efe7;
@@ -958,12 +891,6 @@ select {
   display: block;
 }
 
-.shop-family-offer-list {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
 .acquisition-entry-resolution {
   margin-top: 8px;
   padding-top: 8px;
@@ -980,39 +907,19 @@ select {
   border: 0;
 }
 
+/* A Fields batch's one line: its roll picker, then what the roll gives. */
 .fields-batch-editor {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
   padding: 12px 14px 0;
 }
 
 .fields-batch-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.fields-batch-summary div {
-  padding: 7px 9px;
-  border: 1px solid #3a3b45;
-  border-radius: 8px;
-  background: rgb(12 13 17 / 24%);
-}
-
-.fields-batch-summary dt {
-  color: #8e8b95;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.fields-batch-summary dd {
-  margin: 4px 0 0;
   color: #eee7dc;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .door-information-note {
@@ -1379,40 +1286,6 @@ select {
   color: var(--muted);
 }
 
-/* A kept-reward repair in a door row: the reroll die marked with its action. */
-.rerolled-repair-action {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.rerolled-repair-die {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.rerolled-repair-mark {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  display: grid;
-  width: 12px;
-  height: 12px;
-  place-items: center;
-  border-radius: 50%;
-  background: #1b1c22;
-  color: var(--text);
-}
-
-.rerolled-repair-mark > svg {
-  width: 10px;
-  height: 10px;
-}
-
-.rerolled-repair-action[data-repair='drop'] .rerolled-repair-mark {
-  color: #e0a0a0;
-}
-
 /* A rerolled reward's final draw: its icon, badged with the reroll die like a timeline slot. */
 .row-reward-rerolled {
   position: relative;
@@ -1443,6 +1316,12 @@ select {
   flex: 0 0 auto;
   width: 1.3rem;
   height: 1.3rem;
+}
+
+.fixed-value-chip-badged {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 /*
@@ -1551,37 +1430,13 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-/* The Fields roll and its facts read as one compact line under the pool. */
+/* In the doors' editor the Fields line sits flush under the pool. */
 .door-workbench .fields-batch-editor {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 18px;
   padding: 0;
 }
 
 .door-workbench .fields-batch-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-}
-
-/* Each fact keeps its label and value together; the facts wrap as wholes. */
-.door-workbench .fields-batch-summary div {
-  display: inline-flex;
-  white-space: nowrap;
-  align-items: baseline;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.door-workbench .fields-batch-summary :is(dt, dd) {
-  margin: 0;
   font-size: 0.84rem;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .door-workbench .fields-batch-editor > .door-information-note {

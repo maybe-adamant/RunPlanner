@@ -18,6 +18,7 @@ export function roomActionKey(reference: RoomActionReference): string {
       return JSON.stringify([reference.kind, reference.offerKey]);
     case 'purchaseStygianWellOffer':
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return JSON.stringify([reference.kind, reference.generationKey]);
     case 'sellPurgingPoolTrait':
       return reference.rollKey === undefined

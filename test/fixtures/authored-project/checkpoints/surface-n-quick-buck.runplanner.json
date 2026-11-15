@@ -113,17 +113,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "HermesUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-opening%5C%22%5D%22%2C%22self%22%5D:option1",
-                    "entryKey": "quickBuckGold"
+                    "entryKey": "quickBuckGold",
+                    "content": [
+                      "RoomMoneyDrop"
+                    ]
                   }
                 ]
               },
@@ -205,7 +207,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "AresUpgrade"
+                    ]
                   }
                 ]
               },
@@ -272,7 +279,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "AresUpgrade"
+                    ]
                   }
                 ]
               },
@@ -318,7 +330,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "EarthBoost"
+                    ]
                   }
                 ]
               },
@@ -370,7 +386,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "AphroditeUpgrade"
+                    ]
                   }
                 ]
               },
@@ -499,12 +520,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HestiaUpgrade"
+                    ]
                   }
                 ]
               },
@@ -675,7 +696,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "SpellDrop"
+                    ]
                   }
                 ]
               },
@@ -721,7 +746,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDropSmall"
+                    ]
                   }
                 ]
               },
@@ -767,7 +796,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDropSmall"
+                    ]
                   }
                 ]
               },
@@ -813,7 +846,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "EmptyMaxHealthSmallDrop"
+                    ]
                   }
                 ]
               },
@@ -861,7 +898,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "WeaponUpgrade"
+                    ]
                   }
                 ]
               },
@@ -937,7 +978,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDropBig"
+                    ]
                   }
                 ]
               },
@@ -983,7 +1028,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "RoomMoneyTinyDrop"
+                    ]
                   }
                 ]
               },
@@ -1029,7 +1078,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "AirBoost"
+                    ]
                   }
                 ]
               },
@@ -1075,7 +1128,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDropBig"
+                    ]
                   }
                 ]
               },
@@ -1140,7 +1197,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HephaestusUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1211,7 +1273,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ApolloUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1453,7 +1520,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 616862
               },
               "keepsakeRack": {
                 "keepsakeKey": null

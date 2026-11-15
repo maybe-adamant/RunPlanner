@@ -769,11 +769,14 @@ function TestRoomGuide.testShrinePurchaseAndRushRowsFollowNativeProgress()
     local progress = { ["initial:first"] = "pending", travelDealRefill = "pending" }
     local snapshot = room({
         row("purchaseHermesShrineOffer", nil, { generationKey = "initial:first",
-            rewardType = "LastStandDrop", rushed = true }),
+            rewardType = "LastStandDrop" }),
+        row("rushHermesShrineOffer", nil, { generationKey = "initial:first",
+            rewardType = "LastStandDrop" }),
         row("purchaseHermesShrineOffer", nil, { generationKey = "travelDealRefill",
-            rewardType = "ArmorBoost", rushed = false }),
+            rewardType = "ArmorBoost" }),
     })
-    snapshot.occurrence.roomGuide[2].key = "refill"
+    snapshot.occurrence.roomGuide[2].key = "rush"
+    snapshot.occurrence.roomGuide[3].key = "refill"
     snapshot.shrineProgress = function(generationKey) return progress[generationKey] end
     lu.assertEquals(guide.project(snapshot).rows, {
         { instruction = "Shrine: Death Defiance" }, { instruction = "Rush: Death Defiance" },
@@ -785,6 +788,27 @@ function TestRoomGuide.testShrinePurchaseAndRushRowsFollowNativeProgress()
     })
     progress["initial:first"], progress.travelDealRefill = "rushed", "purchased"
     lu.assertEquals(guide.project(snapshot).rows, {})
+end
+
+function TestRoomGuide.testShrineRushShowsAtItsOwnStep()
+    local progress = { ["initial:first"] = "pending", ["initial:secondLeft"] = "pending" }
+    local snapshot = room({
+        row("purchaseHermesShrineOffer", nil, { generationKey = "initial:first",
+            rewardType = "LastStandDrop" }),
+        row("purchaseHermesShrineOffer", nil, { generationKey = "initial:secondLeft",
+            rewardType = "ArmorBoost" }),
+        row("rushHermesShrineOffer", nil, { generationKey = "initial:first",
+            rewardType = "LastStandDrop" }),
+    })
+    snapshot.occurrence.roomGuide[2].key = "second"
+    snapshot.occurrence.roomGuide[3].key = "rush"
+    snapshot.shrineProgress = function(generationKey) return progress[generationKey] end
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Shrine: Death Defiance" }, { instruction = "Shrine: Armor" },
+        { instruction = "Rush: Death Defiance" },
+    })
+    progress["initial:first"], progress["initial:secondLeft"] = "purchased", "purchased"
+    lu.assertEquals(guide.project(snapshot).rows, { { instruction = "Rush: Death Defiance" } })
 end
 
 function TestRoomGuide.testDeliveryPickupIsARemindedDeliveryUnlessRushedHere()

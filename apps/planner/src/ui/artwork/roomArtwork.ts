@@ -5,6 +5,7 @@ import type {
 import type { ChallengeSwitchKind, ResourceFamily } from '@run-planner/engine/catalog-schema';
 
 import { biomeArtwork } from './biomes/biomeArtwork';
+import { doorArtwork } from './doors/doorArtwork';
 import { elementArtwork } from './elements/elementArtwork';
 import { fountainArtwork } from './fountains/fountainArtwork';
 import { hubFountainArtwork } from './hub-fountains/hubFountainArtwork';
@@ -24,7 +25,8 @@ export type RoomObjectKey =
   | 'moonMonument'
   | 'unseenSigil'
   | 'lockedDoors'
-  | 'doorLock';
+  | 'doorLock'
+  | 'rewardWheel';
 
 /** An in-world room object's icon. */
 export function roomObjectIcon(key: RoomObjectKey): string | undefined {
@@ -42,9 +44,27 @@ export function challengeSwitchIcon(kind: ChallengeSwitchKind): string | undefin
   return roomObjectIcon(challengeSwitchObjects[kind]);
 }
 
-/** A biome's fountain room icon; undefined where the biome has no fountain room. */
+/** A biome's fountain icon; Ephyra's rooms use its Hub fountain. Undefined without a fountain. */
 export function fountainIcon(biomeKey: string): string | undefined {
-  return fountainArtwork[biomeKey] ?? undefined;
+  return fountainArtwork[biomeKey] ?? hubFountainArtwork[biomeKey] ?? undefined;
+}
+
+/** Each biome's ordinary exit door. */
+const biomeExitDoors: Readonly<Record<string, string>> = Object.freeze({
+  F: 'ErebusExitDoor',
+  G: 'OceanusExitDoor',
+  H: 'FieldsExitDoor',
+  I: 'TartarusExitDoor',
+  N: 'EphyraExitDoor',
+  O: 'ShipsExitDoor',
+  P: 'OlympusIndoorExitDoor',
+  Q: 'TyphonExitDoor',
+});
+
+/** A biome's ordinary exit door icon. */
+export function exitDoorIcon(biomeKey: string): string | undefined {
+  const door = biomeExitDoors[biomeKey];
+  return door === undefined ? undefined : (doorArtwork[door] ?? undefined);
 }
 
 /** A Hub fountain's icon by its biome key. */
@@ -84,6 +104,7 @@ export function roomActionIcon(
     case 'rerollStygianWell':
       return roomObjectIcon('stygianWell');
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return roomObjectIcon('hermesShrine');
     case 'sellPurgingPoolTrait':
     case 'rerollPurgingPool':
@@ -98,6 +119,10 @@ export function roomActionIcon(
       return fountainIcon(biomeKey);
     case 'interactEris':
       return erisIcon;
+    case 'chooseRewardWheel':
+      return roomObjectIcon('rewardWheel');
+    case 'unlockExit':
+      return exitDoorIcon(biomeKey);
     default:
       return undefined;
   }
@@ -106,8 +131,15 @@ export function roomActionIcon(
 /** The icon of what produces a family's pickups: its trait, or the NPC who gives them. */
 export function sourceFamilyIcon(
   family: AcquisitionEntrySourceFamily | undefined,
+  challengeSwitchKind?: ChallengeSwitchKind,
 ): string | undefined {
   switch (family?.kind) {
+    case 'challengeSwitch':
+      return challengeSwitchKind === undefined
+        ? undefined
+        : challengeSwitchIcon(challengeSwitchKind);
+    case 'hermesShrineDelivery':
+      return roomObjectIcon('hermesShrine');
     case 'trait':
       return traitIcon(family.traitKey);
     case 'seaStar':

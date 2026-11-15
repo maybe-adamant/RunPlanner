@@ -72,7 +72,6 @@ describe('Shop trait acquisition processing', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
 

@@ -1,0 +1,481 @@
+# Part 2, step C5: the item model
+
+Temporary plan; delete at delivery after promoting durable results. Follows
+the live pickups plan's step C (delivered; plan removed).
+
+## Tracker (v5, 2026-11-12)
+
+One flat sequence, in execution order, with no sub-steps. A slice added in
+the middle shifts the rest, and the tracker version goes up, so "slice 3 of
+v1" always names one thing. Each version adds a line to the history below.
+
+| #   | Slice                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Status      | Result                                                                                                                                                                                                                                                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| —   | Item model (C5a–C5c): live product, items and verbs, observations and outcomes on items, thin rows, reroll results on the item, 102 → 103                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | done        | reviewed                                                                                                                                                                                                                                                                                                                                                                                   |
+| —   | Free Shrine rush                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | done        | rush row anywhere after its purchase                                                                                                                                                                                                                                                                                                                                                       |
+| —   | Lifecycle rewrite so far: baseline snapshots, encounter scripts as catalog data, event graph and Combat moment, catalog profile selection, one selector with the reward deciding the producer, cage Unlock rows (Combat Order picker removed), bounds instead of windows with an event-driven walk                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | done        | plan, candidates and fixtures identical throughout                                                                                                                                                                                                                                                                                                                                         |
+| 1   | Finish the event model: switch and locked-door fights as encounters, walk loops over graph events, findings in bound vocabulary, cleanup                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | done        | switch/door fights are encounters; walk from graph; one row contact; real deadlines; Shops start their encounter (fixes O intro window); plan identical except two sequence diagnostics; engine −40                                                                                                                                                                                        |
+| 2   | Delivery timing: drop the stored phase; a delivery is valid after its due spawn and before its deadline                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | done        | one required-object gate for walk and live; arrival walk-derived, phase field gone; rescheduled delivery a new item (30e0aa293 reverted); Heracles bounty by his phase; plan, candidates, fixtures identical; engine src +352                                                                                                                                                              |
+| 3   | Consolidation: one item-chain settlement path, one live query, Forfeit at spawn                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | done        | reviewed (accept); one settlement path, one live room product, Forfeit and keepsake use decided at spawn (Opening/Devotion fall back to pickup); dead cage-completion path removed; Onion previewed on doors, wheels, rerolls and the Hub board, refreshed on Hub return; plan and candidates identical except the accepted Forfeit timing; engine src net negative                        |
+| 4   | Docs and full check, including the Overview/Timeline rule: the Overview holds facts no in-room action can change; the Timeline holds what depends on in-room events or order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | done        | docs in line (59e9abf52): Overview/Timeline rule, bounds, one live room, Forfeit at spawn with the Opening/Devotion fallback; check green apart from known Draft/run-import failures (slice 6); 7 stale product-loop expectations since ae7c0406a/863f09e20 updated (2db28ddbb)                                                                                                            |
+| 5   | Live UI: Interact row, gap menu, chronology, copy; Aetos, Fig Leaf and Gorgon stay on the combat rows (icons, notices, Aetos wave range); Pool inventory moves to the fountain-use row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | done        | live row (card style) and gap menu with middle-gap verbs; action-spine Timeline with room-event dividers and caused lines (engine spawn causes, encounter triggers); doors and wheels moment popover; Hub spine; room numbers on shared icons; shop stock on maps; Preboss shop/free maps; Last Stand notice; bundled Inter font                                                           |
+| 6   | Draft and run import on the final engine                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | done        | Draft and run import green on the final engine (8334d32cb, fd58c4241); both use the engine's next required placement / collection, Draft reads Clockwork Goal doors (I Preboss included) from the engine, picks up Quick Buck and Buried Treasure drops, rolls essence per entered room; engine fix: doors wait for an unplaced required row only once its source is taken; corpus 440/440 |
+| 7   | Stock filled on first reach: the edit whose settlement first reaches a blank Stygian Well (rolls, rerolls, refill, Twist), Hermes Shrine, Purging Pool or World Shop slot fills it with a stable legal draw, stored like an authored value; later upstream conflicts raise the usual findings, except a stale Purging Pool list (a listed boon no longer held or its rarity changed), whose unsold slots settlement redraws as the game regenerates it; sold slots stay. The Pool keeps its entry list on the Overview; when a Phial at the fountain changes a listed boon's rarity, an automatic row after the fountain use carries a refreshed list (its own generation, filled and overridable like any stock); additive field. A Travel Deal refill whose triggering purchase or rush changes is a new item: the old refill and its chain go and the new one fills on first reach. Order: Well, Shrine, Pool, Shop | done        | Well, Shrine, Pool (entry list + Phial refresh row), World Shop and pedestal stocked on first reach with a stable draw; stale Pool lists redraw only when an edit makes them stale; changed Travel Deal trigger spawns a new refill; 103.0 plans stocked at load (schema revision 103.1); reviewed; npm run check green (e5d38825f)                                                        |
+| 8   | Release: check, corpus, merge, 103 with the game module                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | in progress | corpus rebaselined; full check green (9f5c0cc3b); release fixes landing on 103.3 (Nemesis entry gates, Champion of Elysium automatic, Shrine rush guide step, Story-room spacing, Heracles P, Sea Star fixes); then corpus + check, docs closure, merge to main                                                                                                                            |
+
+History: v1 (2026-11-11) replaced the C5a–C5d / step naming. v2 (2026-11-12) moved docs and the full check after consolidation (now 5), so the docs are rewritten once after the last engine reshaping; customization is 3 and consolidation 4. v3 (2026-11-12) ran consolidation (3) before customization (4) while the customization UI shape is still open. v4 (2026-11-12) folded encounter customization into the live UI slice (now 5): the game confirms Aetos, Fig Leaf and Gorgon are decided during combat, so they stay on the Timeline and the remaining work is presentation; boss stage picks stay in the Overview popup as fixed encounter script. Slices 5 and 6 run in parallel after 4 (UI work and consumer work do not wait for each other). v5 (2026-11-12) added stock filled on first reach (now 7) before release (8): stored stable draws instead of derived defaults, so stock never shifts silently mid-walk.
+
+Decisions and references live beside the slice that needs them; working
+notes and investigations are outside the repo under
+`/home/ayyatma/run-planner-investigations/live-pickups/` (reference only).
+
+## Owner model
+
+- A room is a set of **items**. An item's properties are either derived (by
+  engine rules) or observed (game rolls the planner is told).
+- **Outcomes** (player choices) live on items.
+- Timeline rows are thin: subject + verb, in order.
+- **Verbs** are distinct interactions: pick up, goldify, transform
+  (Artificer), talk to, buy, sell, reroll, choose, unlock (cage), use
+  (fountain, Well), and so on.
+- The live row lists things. Clicking a thing shows its verbs; choosing one
+  creates that interaction row.
+- When an item's source or content changes, the old item and its whole chain
+  go and the new item spawns live.
+
+## Slices
+
+- **C5a** items and verbs on the live product. No schema, no behaviour
+  change, equivalence unchanged.
+- **C5b** observations and outcomes onto items, thin rows, the 102 → 103
+  conversion.
+- **C5c** (delivered inside C5b) same-key swap: rows keyed by item, so a same-role swap (Zeus Boon
+  to Hera Boon) removes the old row like any other swap.
+- **C5d** lifecycle events as triggered consequences, with encounter begin
+  (depth) split from combat start (`StartEncounterEffects`).
+
+## C5a: what the live product publishes
+
+- One query, `liveRoomForProjectEvaluationAssembly`, publishes the room's
+  gaps, items and verbs. Its default `'interactions'` detail carries every
+  verb; Draft, Collect all required and the timed pickup placement read the
+  cheap `'placements'` detail, which keeps only the verb each row, placement
+  or purchase performs and never pays for conversions or pickers.
+- Every live item (pickup or object) carries `verbs`: kind, participation,
+  deadline, the row it stands as or places, and either the ordered commands
+  performing it at that gap (empty while standing) or a picker. A picker is
+  `before` (it supplies the commands: a reroll press's target and reward, the
+  offer a wheel's choice takes) or `after` (the commands apply as is and the
+  placed row opens the outcome it settles: Pom level, trait offer, Anvil
+  result, Path of Stars screen, Sea Star copy, Well or Pool rerolled list,
+  rack keepsake, Artificer replacement, Travel Deal item, Twist result,
+  Nemesis event item, Phial target, switch outcome, locked door's fight).
+- Each existing action maps to one verb by its row kind. A standing row
+  acquiring one reached role adds goldify and transform where the
+  conversion capability captured at its contact supports them (paid items
+  never), each a `ReplaceAcquisitionDisposition`; the row's own verb then
+  undoes a conversion. At the frontier an unplaced loose pickup offers the
+  same alternatives, each its placement plus the disposition, judged at the
+  state where the room's reached actions end.
+- Choice verbs the live product lacked: door, cage and wheel reroll presses
+  at the surface's append point; Well and Pool rerolls where the room's
+  reached actions end; each only while a held card enables it and the pool
+  pays. Each stocked Pool slot's sale and the rack are roster rows already.
+  Verbs at one gap are alternatives: each is one edit, and the product is
+  read again after it, so a sale and a reroll at the same gap never compose.
+- `progression` at the frontier: `leaveRoom` once the walk passes the room
+  with nothing required live; `chooseWheel` when the next wheel's choice is
+  the only required thing live. Leaving is the exit decision, not a row, so
+  it carries no command.
+- `leftBehind`: the optional pickups live at the room's last gap, once the
+  walk passes the room.
+
+Gaps left for C5b (the engine cannot derive them today):
+
+- Goldify and transform for a placed item at any gap but its own, or for an
+  unplaced one before the frontier: the state there is not captured.
+- Shared conversion capacity: a row's offer reads its own contact, which
+  counts only earlier conversions, so goldifying or transforming an earlier
+  row can starve a later standing conversion (its finding then shows). The
+  witness pins it; the item model fixes it by judging an item's conversion
+  against the whole room's.
+- An Artificer offer withheld at zero uses is not witnessed: no fixture
+  reaches a fourth eligible pickup without the replacement choices
+  rippling. The offer reads the same `supported` assessment as Time Piece,
+  whose zero-charge and Unfated cases are witnessed.
+- A new reroll press carries no `reference`: the picker allocates its row
+  id. (A Well or Pool reroll names its row since C5b-1.)
+- A row covering several roles (a caged Blind Box) gets no conversion verbs.
+- Well and Pool rerolls and door rerolls only at their append
+  point: no engine query answers their other legal indices. A wheel
+  reroll while its choice is unplaced appends past the frontier, so it is
+  not offered.
+- The keepsake rack's choice uses `ReplacePostbossKeepsake` after placing
+  the row; there is no placement command carrying the keepsake.
+- No new verb exports on `./simulation` yet; they land with the first
+  consumer (the planner's live row in D).
+
+## C5b contract changes
+
+What Draft and the run import adapt to, slice by slice.
+
+C5b-1, Well and Pool rolls on their objects (schema 103 shape):
+
+- `rerollStygianWell` and `rerollPurgingPool` rows are `{ kind, rerollId }`
+  only. Read a reroll's pins with `stygianWellRerollPins(well, rerollId)` or
+  `purgingPoolRerollPins(pool, rerollId)` (persisted as
+  `stygianWell.rerollOfferKeyBySlot` and `purgingPool.rerollTraitKeyBySlot`);
+  the existing `stygianWellGenerationItemKey` and `purgingPoolRollTraitKey`
+  are unchanged.
+- Fateful Twist results are `stygianWell.twistResultKeyByGeneration`, keyed
+  by generation (`initial:<slot>`, `<rerollId>:<slot>`, `travelDealRefill`);
+  read them with `stygianWellGenerationTwistResultKey`.
+- `stygianWell.purchasedGenerationKeys` is gone: a generation is bought when
+  the room's order holds its `purchaseStygianWellOffer`; read them with
+  `stygianWellPurchasedGenerationKeys(order)`. Run import
+  `commerce.ts` (the restock slot search) is re-pointed; its tests
+  `import-rerolls`, `import-synthetic-erebus` and `import-underworld-capture`
+  have their literals adapted but were compiled, not run.
+- Removing a Well or Pool reroll row removes its pins and Twist results.
+- A live Well or Pool reroll verb now carries the `reference` of the row its
+  command creates.
+
+C5b-2, locked-door fight on the door:
+
+- `UnlockExitRoomAction` is thin (`kind`, `exitKey`); the fight's decisions
+  live in `encounters.customizationByLockedExit[exitKey]`.
+  `ReplaceUnlockExitCustomization {action}` is replaced by
+  `ReplaceLockedExitCustomization {occurrence, exitKey, decisionKey, value}`,
+  accepted for any locked door, pressed or not.
+- `ReplaceLockedExit locked:false` drops that door's fight; removing the press
+  keeps it.
+- The live `lockedDoors.unlocks[].encounter` and
+  `unlockExitEncounterSupportForProjectEvaluationAssembly` now also answer for
+  an unpressed locked door, prepared where its press would append.
+- Run import (`locked-doors.ts`): no change; it locks and presses doors and
+  never authors the fight, so an imported fight stays native. A later fight
+  import authors it with `ReplaceLockedExitCustomization`, before or after the
+  press.
+
+C5b-3, Shrine rush as its own row (schema 103 shape):
+
+- `purchaseHermesShrineOffer` loses `rushed`; a rush is a
+  `rushHermesShrineOffer { generationKey }` row after its purchase
+  (authoring-only dependency, post-outgoing window), and a same-room pickup
+  follows the rush. `SetHermesShrinePurchaseRush` is replaced by
+  `SetHermesShrineRush { occurrence, generationKey, rushed, index? }`
+  (directly after the purchase); `PurchaseHermesShrineOffer` loses
+  `rushed` and only buys. The Shrine object interaction lists `offers` (Buy)
+  and `rushes` (Rush); the live product
+  offers `rush` on a bought, unrushed item. Gold prices the order on the
+  purchase row and the rush on the rush row. The rush settles with its
+  purchase, so the walk and the wire are unchanged.
+- The rush stayed directly after its purchase until C5d-1 freed it (see
+  C5d contract changes). Import: `commerce.ts` rushes with the new command;
+  `action-order.ts` reads the rush row.
+
+C5b-4, Sea Star proc as an observation (no schema change):
+
+- A procced `ReplaceSeaStarResult` only adds the duplicate's site; its pickup
+  lies live for the owner (or Collect all required) to place, and clearing the
+  proc still removes a placed pickup. Import: `features.ts`
+  `placeSeaStarDuplicate` must place the duplicate's pickup itself (an
+  `InsertRoomAction` right after its source) instead of moving a row the
+  command no longer appends. Today (`features.ts`, the `duplicateIndex < 0`
+  branch) it returns true without placing anything, so an imported proc
+  leaves its duplicate live; fix it in the consumer pass.
+
+C5b wave B, item content on rows (schema 103 shape):
+
+- Pickup, purchase and sale references carry an optional `content` (outside
+  the row key and the wire): build them from the roster or the live product,
+  which carry it, or leave it absent and let the command stamp it once the
+  item is observed; `InsertRoomAction` refuses a reference whose content its
+  item does not hold. `withItemContent` (engine test support) builds an
+  expected reference.
+- A value-to-value rewrite of an item (another reward at the same role, a
+  door, cage or wheel press, another Shop option, Well or Pool pin, Shrine
+  stock or wheel pick) removes its rows in settlement; the new item lies live
+  to be placed again. Run import's iterative rewrites (first draws after
+  rerolls, Artificer replacements) that change a placed item's value must
+  re-place the row from the live product; unknown-to-value is a refinement and
+  keeps it.
+- A row on a replaced item that an edit does not settle (an unsettled
+  `applyProjectCommand`, a hand-edited file) stays ranked as an
+  item-replaced row: not executed, `roomActionItemReplaced` at the walk.
+  Builders that swap a reward after placing its pickup must swap first or
+  settle.
+
+Wave B review fixes and notes for later slices:
+
+- OD7: removing a Well or Pool reroll (`RemoveRoomAction`, a reset, a stale
+  removal in settlement) removes the purchases and sales of its list in the
+  same edit; a pin changed to another value removes them as item-replaced.
+- Commands stamp absent content on the touched biomes' rows before applying as
+  well as after, so a never-stamped row records the item it was placed for.
+- The content tuple layout is fixed: `[press, ...token]` for door and cage
+  rewards, `[pickedOfferKey, press, ...token]` for a wheel (the offer key by the
+  wheel's declared order), `[optionKey, ...token]` for Shop, Pedestal and
+  refill, `[itemKey]`, `[rewardType]`, `[traitKey]` for Well, Shrine and Pool,
+  `[...token]` or `[eventKind, ...token]` or `[variantKey]` for entries; a token
+  is `[rewardType, source]`, `[rewardType, chosen, spurned]` or `[rewardType]`.
+- C5b-4 (OD3 adopt): the transform that adopts an entered reward as a press's
+  result must strip and restamp the content of every row on each owner whose
+  result it adopts; the checked-in 103 fixtures already carry content.
+- A derived entry whose payload is redrawn as another item (Sea Star,
+  delivery, Artificer, Nemesis result) loses its pickup through the replaced
+  pass as well as the existing passes; intended and witnessed.
+
+C5b wave C, walk-based settlement repairs:
+
+- `RemovedStaleRoomActions` gains `discarded`: the replaced items (by
+  address) whose observations and outcomes a room lost, beside its removed
+  actions and doors. Every row a removal takes in another room is announced
+  too (a purchase's deliveries).
+- A row on a replaced item keeps its acquisition entry's payload when it goes:
+  the payload is the new item's observation (a delivery or clocked drop
+  payload change no longer loses the new payload). Consumers no longer
+  re-apply a payload after settling its change.
+- A delivery whose Shrine slot stocks another reward, whose source no longer
+  produces it (purchase gone, or for a pickup in the Shrine's room its rush
+  gone, or the Shrine with them; OD6, 2026-11-11), or whose payload lies
+  unplaced at a host while the walk has it due elsewhere, is discarded with
+  its pickup (`strandedDeliveryPayloads` is folded into this repair). An
+  unbought or unrushed delivery's choices no longer come back on a rebuy.
+- A rerolled reward records `pressId` (the minimal structural part of
+  C5b-4's move: optional on `rerolledIncomingReward`, `rerolledCages[slot]`
+  and `rerolledOffers[offer]`; commands record it and stamp an unknown one
+  while it holds its effective press's reward). Once that press is no longer
+  effective, settlement resets the outcomes to the effective press's
+  unresolved acquisition, or drops them with no press left, announced in the
+  target room. A removed door or Hub press therefore no longer keeps its
+  pick with a `rerolledRewardMismatch` finding; the finding remains for a
+  same-press mismatch until C5b-4 deletes it. C5b-4 moves `pressId` onto the
+  rerolled record's `acquisition`.
+- An Echo replay the walk reaches holding another reward than the walk's
+  last is unobserved again (`null`), with its derived items and its pickup,
+  unless the same edit placed that pickup (Collect all required): it then
+  takes the new replay. A builder that authors a stale replay and settles
+  loses it; author the replay after the last settled edit to keep a stale
+  witness.
+
+Wave C review fixes (2026-11-11):
+
+- The removal notice counts reset items apart from removed actions and doors
+  ("1 action removed and 1 item reset at"): a delivery, rerolled reward or
+  Echo replay stays or returns; only its old rolls and choices go.
+- A stale row records no item content, by commands or by the 103 lift (the
+  lift reads the decoded plan's action domain, a role check when the plan does
+  not decode yet).
+- For Wave E: editing a press's result in place keeps its `pressId`, so the
+  effective item's outcomes survive a changed result today. The results
+  storage must reset the acquisition when the effective press's result
+  changes.
+
+C5b-4 wave E, reroll results on the rerolled item (schema 103 shape):
+
+- A door, cage or wheel `reroll` row is `{ kind, rerollId, target }`; a cage
+  target loses `slotKey`, and a Hub `reroll` action loses `reward`. What a
+  press drew is the rerolled item's `results[rerollId]`, on
+  `rerolledIncomingReward`, `rerolledCages[slot]` or `rerolledOffers[offer]`,
+  beside the required `pressId` and the optional `acquisition`
+  (`Omit<AuthoredRewardState, 'offer'>`, held while a press is effective and
+  the owner draws the recorded press's reward).
+- `InsertReroll` still takes the cage's `slotKey` (`ResolvedRerollTarget`);
+  `ReplaceRerollReward` and the Hub commands write `results`.
+  `DropRerolledReward`, `AdoptRerolledReward` and the
+  `rerolledRewardMismatch` finding are gone.
+- Read a press's result and target with `rerollResult(topology, owner,
+rerollId)`, `resolveRerollTarget(topology, press)`, `roomRerollOwner` and
+  `hubRerollOwner`; the reward an owner acquires with `effectiveRewardAt` (or
+  `rerolledRewardOf` for its rerolled item alone). Run import `rerolls.ts`
+  (press targets, a Hub press's earlier result) and `occurrences.ts`
+  (`deliveredIncomingReward` and `deliveredCageReward`, which now take the
+  biome) are re-pointed; compiled, not run.
+- A press's result changed in place, or another press made effective,
+  replaces the item: its outcomes reset (announced), so a consumer that
+  rewrites a press's reward after authoring its outcomes re-authors them.
+- `CloseHubSlot` removes the slot's presses.
+- A live door, cage or wheel press verb carries the `rerollId` its row takes.
+
+Wave A review follow-ups:
+
+- A Well or Pool reroll never takes an id the room's rows still name (a
+  removed reroll's purchase, sale, Twist result or pins), so a new reroll
+  cannot adopt an orphaned purchase; the live verb's `reference` and index
+  come from the authored order, as the command's do. Door, cage, wheel and
+  Hub reroll ids are named only by their own rows, so their allocation is
+  unchanged.
+- An edit that changes an item's source discards its same-room derived items
+  with their pickups in the same Undo step: a Sea Star duplicate when its
+  source is no longer produced or its offer changes, an Artificer replacement
+  also when the edit takes its source off the Artificer (no longer kept
+  dormant; the 102 → 103 upgrade drops dormant ones once), and a
+  Nemesis result with its chain when the event's kind or contest result
+  changes. Consumers that swap a source and re-proc must re-author the
+  duplicate after the swap.
+- The plan's Shrine `rushed` and the Well's bought generations read the rows
+  the walk performs (ranked, non-stale), the walk's own input.
+- Run import test literal: `packages/run-import/test/import-surface-capture.test.ts`
+  still expects `{ kind: 'purchaseHermesShrineOffer', …, rushed: true }`; it
+  must expect the purchase followed by its `rushHermesShrineOffer` row.
+
+## C5d contract changes
+
+C5d-1, the Shrine rush at any gap after its purchase (no schema change):
+
+- `SetHermesShrineRush` takes an `index` at any structurally authorable gap
+  after its purchase in the same room; without one it still enters directly
+  after the purchase. The rush is an ordinary `afterAction` dependency on its
+  purchase: a moved purchase no longer carries its rush, moves that part the
+  pair are no longer refused, and a rush before its purchase is refused at a
+  chosen index and keeps its ordering finding when preserved.
+- The rush settles at its own row (`hermesShrineRushReached`): its item
+  spawns there, so the rushed pickup follows the rush row, and the first
+  initial rush made with Travel Deal realizes the refill there.
+  `firstInitialRush` is now the earliest initial rush row, so the refill's
+  purchase follows that row. The rush price is unchanged: it reads its
+  purchase's price context and pays at the rush row.
+- The live product offers the rush verb at every legal gap after the
+  purchase; spawned loot lists the rushed item under its rush. The Shrine
+  interaction's rush command still carries no index.
+- Execution plan unchanged: the rush stays folded into its purchase's guide
+  entry and `purchase.rushed`.
+- Draft and run import: no compile change. An imported rush still enters
+  directly after its purchase; `action-order.ts` may later order it from the
+  record with `index`.
+
+Step 3a, one lifecycle per room (no schema change):
+
+- A room's producer presence is one engine fact: the canonical room's
+  `runsProducer`, from `roomRunsProducer`; command-time defaults derive it the
+  same way (`occurrenceLifecycle`). A reward not chosen yet runs its producer;
+  a Clockwork Goal is the door's forced reward (`forcedRewardType`), derived on
+  the selected spine by `clockworkDoors`, and suppresses only a counted choice.
+- `assembleRoomActionDomain` requires `producer`; structural commands build
+  through `roomActionDomainForOccurrence`. The normalized `RoomDeclaration` no
+  longer carries `lifecycleProfileKey`; read `lifecycleProfile`.
+- Draft: `packages/draft/src/walk.ts` (`clockworkGoal`, near line 100) still
+  derives "a Clockwork room without a reward is a Goal" from the occurrence
+  state. It compiles unchanged; the consumer pass reads the room's
+  `forcedRewardType` instead.
+
+Shed the Fields Combat Order picker (no schema change):
+
+- `ReplaceFieldsCageOrder` is gone, with the room-action domain's and the
+  canonical room's `fieldsCageOrder`. Cage order is the order of the
+  cage-unlock rows; reorder cages with ordinary `MoveRoomAction`s of their
+  `completeFieldsCage` rows.
+- Run import: `packages/run-import/src/fields.ts` (`moveCagesInto`) now moves
+  the cage rows into the recorded opening order, in one transaction, with the
+  insertion moves the command made. One difference: a room whose rows are
+  already in the recorded order is no longer noted `refused`. The run-import
+  lane's results match the commit before.
+- Draft: no use; no change.
+
+## Slice 2 contract changes (delivery timing)
+
+- A delivery's or clocked drop's row is `interactAcquisitionEntry` with its
+  site and entry only; `encounterPhaseKey` is gone from the row, from
+  `PlaceHermesShrineDelivery` and from `PlaceClockedTraitPickup` (the 103
+  lift strips it). Draft and the run import place these pickups through the
+  live product's commands or `timedPickupPlacementForProjectEvaluationAssembly`
+  (the command at the last index the item may take) and never pass a phase.
+  A derived entry's capability carries the row's `reference` and the
+  `label` of where it falls due.
+- One rule, `requiredObjectDeadline` / `waitsForRequiredObjects`
+  (`authored-project/room-actions/required-object-gate.ts`): a required item
+  on the ground is due before the next row that waits for required objects (a
+  wheel's choice, anything the doors enable), else before Doors open. The
+  walk and the live product both call it.
+- A delivery whose arrival host changes is a new item: settlement discards
+  the payload kept at a host the walk no longer has it due at, announced, and
+  `PlaceHermesShrineDelivery` adopts a payload only from the host it places
+  at. (Briefly reversed in 30e0aa293, reverted.)
+- Heracles's bounty spawns at his own phase's end and is due by his end
+  effects where his encounter waits ready (O); a scoped roster anchors rows
+  that follow an unplayed fight after the last played one.
+
+Consolidation (slice 5), partly dead after slice 2:
+
+- The displaced-placement pass and the `dueContactMismatch` /
+  `sourceInactive` mismatch reasons now cover only a delivery due at another host or a
+  clock drop maturing elsewhere; the phase case is gone. Fold with the
+  item-chain settlement path.
+- `clockedTraitPickupPlacementForProjectEvaluationAssembly` (base command,
+  settlement attestation) and `timedPickupPlacementForProjectEvaluationAssembly`
+  (index) overlap: one placement query.
+- A displaced delivery is a new item: its payload at the old host is
+  discarded by `replacedDeliveryPayloads`; fold that case into the item-chain
+  path with the rest.
+- The Echo Gold deadline keeps its own later-window picker in
+  `placementDeadline`; decide whether it is a required-object case.
+
+## Inventory (summary of existence-vs-interaction)
+
+Item identity today is (reward owner address, acquisition role); every
+outcome map is keyed by role. The pickup verb (normal, Time Piece,
+Artificer) is the item's `dispositionByAcquisitionRole`, not a row kind.
+
+| Kind                                                                                               | Verbs                         | Outcome lives on                                                   |
+| -------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------ |
+| Boss forced drop, room, cage, optional, wheel reward                                               | pick up, goldify, transform   | the reward state, by role                                          |
+| Generated entries (delivery, clocked drop, Echo, Artificer, Sea Star, Nemesis, Eris, switch claim) | pick up (+ conversions)       | the acquisition site entry; existence needs the source row settled |
+| NPC contact, Gorgon, Eris                                                                          | talk to                       | the phase (Nemesis, Gorgon, bet) or the occurrence                 |
+| Fields cage                                                                                        | unlock (starts its fight)     | none                                                               |
+| Ship wheel                                                                                         | choose, reroll                | `pickedOfferIndex` on the wheel, no row                            |
+| Fountain, keepsake rack                                                                            | use                           | the occurrence (Phial target, rack keepsake)                       |
+| Challenge switch, locked door                                                                      | press, unlock (start a fight) | observation; door customization on the door                        |
+| World Shop, Shrine, Well, Pedestal                                                                 | buy, rush, take               | the stock slot; membership = bought                                |
+| Pool                                                                                               | sell, reroll                  | sale presence; the rolled list on the row                          |
+| Door, cage, wheel reroll                                                                           | reroll                        | the reward on the row, mirrored into the target                    |
+
+Mixing hot spots, where a row is the item's existence or holds its outcome:
+
+- Commerce membership: Shop, Pedestal, Pool sale exist as contributions only
+  with their row; the Well keeps a second membership list
+  (`purchasedGenerationKeys`).
+- Reroll rows (`reroll`, Well, Pool) are the new roll's existence and carry
+  its result; door rerolls duplicate it into the target.
+- Generated pickups exist only once their source row settles; Sea Star's
+  proc is an observation stored as a row.
+- Row-owned outcomes: reroll rewards, Well and Pool restocks,
+  `unlockExit.customization`, Shrine `rushed`, a delivery's
+  `encounterPhaseKey`.
+- The incoming reward row key embeds the role; that alone made the W8 rekey
+  necessary (deleted in C2).
+
+## Lifecycle triggers (summary of lifecycle-triggers)
+
+Owner corrections, binding:
+
+1. A required delivery is always placed before Doors open. In a non-final
+   Ship phase it sits after Wheels open but before the wheels are
+   interactable; no after-doors fix is needed (confirmed in six cases).
+2. Encounter depth matters for depth-gated room eligibility (read at Doors
+   open) and the budget baked at entry. Begin-vs-gate increment timing
+   matters only for rolls inside the room between an encounter's begin and
+   its gate (Ship next-wheel rolls, per-encounter budgets). C5d audits
+   `BiomeEncounterDepth` readers against those cases; the Q1 audit found no
+   observable difference today.
+
+| Event                           | Game trigger                                                                | Engine today                   | Fit                            |
+| ------------------------------- | --------------------------------------------------------------------------- | ------------------------------ | ------------------------------ |
+| Room prepared, entered          | previous door use                                                           | profile ops                    | clean                          |
+| Encounter begun (depth++)       | automatic, or an interaction (cage, switch, locked door)                    | folded into encounter started  | fused                          |
+| Combat starts                   | automatic, or a gate: Opening reward, Devotion choice, wheel use, intro end | point + windows, C1/C4 patches | slot + patches                 |
+| Encounter outcome               | observation (Aetos, Gorgon, Nemesis, Anomaly)                               | outcome point                  | clean                          |
+| Encounter end / end effects     | event list returns; Ship waits for required objects                         | point, Ship deferral           | slot + 1 exception             |
+| Reward spawn                    | event-list step; Opening first; cages at entry                              | spawn moments                  | clean                          |
+| Wheels open                     | next encounter's first event                                                | point (not the first wheel)    | asymmetry                      |
+| Doors open                      | readiness predicate: last required removal or encounter end                 | fixed point + required-first   | derivable                      |
+| Delivery arrival                | end effects tier B; Preboss flush at entry                                  | windows per room shape         | clean concept, patched windows |
+| Switch press, locked door press | interaction starts a fight                                                  | rows                           | target shape already           |
+| Leave                           | door use                                                                    | commit, exit                   | clean                          |
+
+Target shape (C5d): items with verbs; each verb has an enabler and
+consequences; events have declared triggers (a verb, an event, a predicate
+becoming true, an observation). The windows, C1 and C4 patches, the Ship
+deferral and Doors open as a slot collapse into "deadline = the first event
+that needs the item". Nemesis event boundaries, observations, and
+topology stay outside that shape.

@@ -1,5 +1,6 @@
--- Installs each planned list once, after native stale-inventory refresh: the
--- initial list at the first opening, then each reroll's pins after its native reroll.
+-- Installs each planned list once, after native stale-inventory refresh: the list on
+-- show at the first opening (the regenerated one when the plan publishes it), then
+-- each reroll's list after its native reroll.
 local poolInventory = type(import) == "function"
     and import("mods/room/features/inventory/purging_pool.lua")
     or require("mods.room.features.inventory.purging_pool")
@@ -33,8 +34,9 @@ function hooks.attach(module, session, getState, report, room, highlights)
     module.hooks.wrap("OpenSellTraitMenu", "run-planner-pool-open", function(_, runtime, base, ...)
         local nativeRoom = _G.CurrentRun and _G.CurrentRun.CurrentRoom
         local opening = plannedPool(getState(runtime), nativeRoom)
-        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)
-            or #opening.pool.traits == 0) then opening = nil end
+        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)) then
+            opening = nil
+        end
         if opening ~= nil then opening.roll = 0 end
         local thread = currentThread()
         local prior = openings[thread]
@@ -59,8 +61,7 @@ function hooks.attach(module, session, getState, report, room, highlights)
             report(runtime)
             return base(...)
         end
-        local entry = planned.pool.rerolls[rerolls]
-        if #entry.traits == 0 or handled(nativeRoom, rerolls) then planned = nil end
+        if handled(nativeRoom, rerolls) then planned = nil end
         if planned ~= nil then planned.roll = rerolls end
         local thread = currentThread()
         local prior = openings[thread]
@@ -81,9 +82,8 @@ function hooks.attach(module, session, getState, report, room, highlights)
             and not handled(opening.nativeRoom, opening.roll)
             and (poolRerolls[opening.nativeRoom] or 0) == opening.roll then
             markHandled(opening.nativeRoom, opening.roll)
-            -- Phial may change a planned trait outside the native random three;
-            -- that does not trigger OpenSellTraitMenu's stale-row regeneration.
-            -- A reroll's random exclusion of an earlier row is refreshed away too.
+            -- The native candidates are refreshed from the held traits first, so a
+            -- stale-row regeneration or a reroll's random exclusion cannot narrow them.
             _G.GenerateSellTraitValues(opening.nativeRoom)
             local ok, errorValue = poolInventory.steer(opening.occurrence, opening.nativeRoom, opening.roll)
             if not ok then

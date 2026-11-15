@@ -13,13 +13,16 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   rerollAppendIndex,
+  rerolledRewardOf,
+  roomActionKey,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type BiomeAddress,
   type ProjectCommand,
   type ProjectDocument,
   type RerollRoomAction,
-  type RerollTarget,
+  type ResolvedRerollTarget,
+  type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import {
   countedRewardTypeDomain,
@@ -27,12 +30,9 @@ import {
   rerollSettlementForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  locallyValidRewardOffers,
-  storeEntryOnRoute,
-  type ResolvedRewardOffer,
-} from '@run-planner/engine/reward-kernel';
+import { storeEntryOnRoute, type ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   loadNemesisFieldsCheckpoint,
   loadUnderworldFGCheckpoint,
@@ -45,12 +45,14 @@ import {
   forceApolloRerolledStartProject,
   forceApolloStartTrait,
   firstSupportedReroll,
+  placedPressRewards,
   supportedRerollRewards,
   withArcana,
   withGoldenUnderworldJudgments,
   withJudgment,
   withGuessedRerolledScreens,
 } from '../support/rerolls';
+import { collectTestRequiredItems, withItemContent } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';
@@ -67,6 +69,24 @@ function occurrence(project: ProjectDocument, id: string, biomeIndex = 0) {
   )!;
 }
 
+/** The effective item a rerolled owner's room holds: its press's reward and outcomes. */
+function rerolledOf(room: RoomOccurrence, owner: Parameters<typeof rerolledRewardOf>[1]) {
+  return rerolledRewardOf(room, owner);
+}
+
+/** A door target's effective rerolled item. */
+function rerolledDoor(
+  project: ProjectDocument,
+  id: string,
+  biome: BiomeAddress = f,
+  biomeIndex = 0,
+) {
+  return rerolledOf(
+    occurrence(project, id, biomeIndex),
+    createIncomingRewardAddress(biome, id as never),
+  );
+}
+
 function rerolls(project: ProjectDocument, from = source): readonly RerollRoomAction[] {
   return occurrence(project, from).roomActions.order.flatMap((reference) =>
     reference.kind === 'reroll' ? [reference] : [],
@@ -76,7 +96,7 @@ function rerolls(project: ProjectDocument, from = source): readonly RerollRoomAc
 /** Appends a press to a room's action order, after its doors unlock. */
 function insertReroll(
   project: ProjectDocument,
-  target: RerollTarget,
+  target: ResolvedRerollTarget,
   reward: ResolvedRewardOffer = { rewardType: 'RoomMoneyDrop' },
   from = source,
   biome: BiomeAddress = f,
@@ -91,14 +111,14 @@ function insertReroll(
   };
 }
 
-const door = (exitKey: string, occurrenceId: string): RerollTarget => ({
+const door = (exitKey: string, occurrenceId: string): ResolvedRerollTarget => ({
   kind: 'door',
   exitKey,
   occurrenceId: occurrenceId as never,
 });
 
 /** The door of a room's exit decision into its authored target. */
-function doorOf(project: ProjectDocument, from: string, exitKey: string): RerollTarget {
+function doorOf(project: ProjectDocument, from: string, exitKey: string): ResolvedRerollTarget {
   const decision = project.route.biomes[0]!.topology!.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
@@ -122,8 +142,7 @@ function rerollFindings(project: ProjectDocument) {
     (finding) =>
       finding.origin.kind === 'roomAction' ||
       finding.origin.kind === 'hubReroll' ||
-      finding.code.startsWith('reroll') ||
-      finding.code === 'rerolledRewardMismatch',
+      finding.code.startsWith('reroll'),
   );
 }
 
@@ -151,7 +170,7 @@ function supportedTypes(
 /** Applies a press and gives it the first reward the candidate session accepts. */
 function press(
   project: ProjectDocument,
-  target: RerollTarget,
+  target: ResolvedRerollTarget,
   from = source,
   biome: BiomeAddress = f,
   biomeIndex = 0,
@@ -214,22 +233,42 @@ describe('door rerolls', () => {
       'golden-f-preboss-shop:boss',
       ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
     );
-    const first = settle(
-      base,
-      insertReroll(base, door('exit1', pickedTarget), { rewardType: 'RoomMoneyDrop' }),
-    );
+    const targetRoom = createOccurrenceAddress(f, pickedTarget as never);
+    const pickup = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+    } as const;
+    const firstDraw = withItemContent(base, targetRoom, pickup);
+    const pressed = settleProjectEdit({
+      catalog,
+      before: evaluate(base),
+      command: insertReroll(base, door('exit1', pickedTarget), { rewardType: 'RoomMoneyDrop' }),
+      evaluate,
+    });
+    // The press redraws the target's reward as a new item: its first draw's pickup goes, announced there.
+    expect(occurrence(base, pickedTarget).roomActions.order).toEqual([firstDraw]);
+    expect(pressed.removedStaleActions).toEqual([{ occurrence: targetRoom, actions: [firstDraw] }]);
+    const first = pressed.assembly.project;
+    expect(occurrence(first, pickedTarget).roomActions.order).toEqual([]);
     expect(rerolls(first).map((reroll) => reroll.rerollId)).toEqual(['r1']);
     const reward = firstSupportedReroll(first, pressAt('r1'), 'RunProgress');
-    const project = settle(first, {
-      kind: 'ReplaceRerollReward',
-      action: pressAt('r1'),
-      reward,
-    });
+    // The new item is picked up once the reward is final.
+    const project = collectTestRequiredItems(
+      settle(first, {
+        kind: 'ReplaceRerollReward',
+        action: pressAt('r1'),
+        reward,
+      }),
+    );
+    expect(occurrence(project, pickedTarget).roomActions.order).toEqual([
+      withItemContent(project, targetRoom, pickup),
+    ]);
     const target = occurrence(project, pickedTarget);
     expect(target.state.kind === 'counted' && target.state.reward?.offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
-    expect(target.rerolledIncomingReward?.offer).toEqual(reward);
+    expect(rerolledDoor(project, pickedTarget)?.offer).toEqual(reward);
     expect(rerollFindings(project)).toEqual([]);
     expect(
       rerollSettlementForProjectEvaluationAssembly(evaluate(project), pressAt('r1')),
@@ -298,19 +337,22 @@ describe('door rerolls', () => {
 describe('reroll settlement', () => {
   const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
 
-  function rerolledTo(from: string, target: RerollTarget, rewardType: string): ProjectDocument {
-    const inserted = applyProjectCommand(
-      base,
-      catalog,
-      insertReroll(base, target, undefined, from),
-    );
+  function rerolledTo(
+    from: string,
+    target: ResolvedRerollTarget,
+    rewardType: string,
+  ): ProjectDocument {
+    const inserted = settle(base, insertReroll(base, target, undefined, from));
     const reward = supportedRerollRewards(inserted, pressAt('r1', from), [rewardType])[0];
     if (reward === undefined) throw new Error(`${rewardType} is not supported`);
-    return applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: pressAt('r1', from),
-      reward,
-    });
+    // The press removed the target's first draw; its new item is picked up.
+    return collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: pressAt('r1', from),
+        reward,
+      }),
+    );
   }
 
   it('removes the redrawn reward from its store', () => {
@@ -371,23 +413,19 @@ describe('reroll settlement', () => {
     expect(countedRewardTypeDomain(catalog, assembly, owner, binding)).not.toContain(
       fallback.rewardType,
     );
-    const session = createPreparedProjectCandidateSession(catalog, assembly);
-    const pendingSupported = countedRewardTypeDomain(catalog, assembly, owner, binding, 'reroll')
-      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
-      .filter((value) => {
-        const result = session.evaluate({
-          kind: 'pendingRerollReward',
-          surface,
-          target: exit1,
-          value,
-        });
-        return result.kind === 'rerollReward' && result.result.supported;
-      });
-    expect(pendingSupported).toEqual([fallback]);
+    const placed = placedPressRewards(
+      gift,
+      surface,
+      exit1,
+      countedRewardTypeDomain(catalog, assembly, owner, binding, 'reroll'),
+    );
+    expect(placed?.rewards).toEqual([fallback]);
 
-    const pressed = settle(gift, insertReroll(gift, exit1, fallback, from));
+    const pressed = collectTestRequiredItems(
+      settle(gift, insertReroll(gift, exit1, fallback, from)),
+    );
     expect(rerollFindings(pressed)).toEqual([]);
-    expect(occurrence(pressed, targetId).rerolledIncomingReward?.offer).toEqual(fallback);
+    expect(rerolledOf(occurrence(pressed, targetId), owner)?.offer).toEqual(fallback);
     // The fallback draws nothing, so both appended sets stay in the bag.
     const store = catalog.rewards.stores.byKey.MetaProgress!;
     const appended = store.entries.filter((entry) => storeEntryOnRoute(entry, 'Underworld')).length;
@@ -426,87 +464,219 @@ describe('reroll settlement', () => {
 });
 
 describe('rerolled reward repair', () => {
-  const owner = createIncomingRewardAddress(f, otherTarget as never);
+  /** A press of the door into `target` drawing Zeus, with an authored screen on its reward. */
+  function authoredZeusPress(exitKey: string, target: string) {
+    const owner = createIncomingRewardAddress(f, target as never);
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, door(exitKey, target), {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }),
+    );
+    // An authored screen makes the rerolled reward more than its unresolved default.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner,
+        acquisitionRole: 'source',
+      },
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    expect(occurrence(project, target).rerolledIncomingReward).toMatchObject({ pressId: 'r1' });
+    return { owner, project };
+  }
 
-  function mismatched(project: ProjectDocument): ProjectDocument {
+  /** A topology edit by hand: the plan as a file would hold it. */
+  function edited(
+    project: ProjectDocument,
+    change: (occurrences: Record<string, unknown>[]) => void,
+  ): ProjectDocument {
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
       route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
     };
-    const room = encoded.route.biomes[0]!.topology.occurrences.find(
-      (entry) => entry.occurrenceId === otherTarget,
-    )!;
-    (room.rerolledIncomingReward as { offer: unknown }).offer = { rewardType: 'MaxManaDrop' };
+    change(encoded.route.biomes[0]!.topology.occurrences);
     return decodeProjectDocument(encoded as never, catalog);
   }
 
-  it('reports a rerolled reward that does not match until it is adopted', () => {
+  // The rerolled reward's outcomes were the removed press's item: they go with it, announced.
+  it.each([
+    ['an offered', 'exit2', otherTarget],
+    ['an entered', 'exit1', pickedTarget],
+  ] as const)('drops %s rerolled reward whose last press is removed', (_door, exitKey, target) => {
+    const { owner, project } = authoredZeusPress(exitKey, target);
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(project),
+      command: { kind: 'RemoveRoomAction', action: pressAt('r1') },
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    const dropped = settled.assembly.project;
+    expect(rerolls(dropped)).toEqual([]);
+    expect(occurrence(dropped, target).rerolledIncomingReward).toBeUndefined();
+    expect(rerollFindings(dropped)).toEqual([]);
+    expect(settled.removedStaleActions).toEqual([
+      expect.objectContaining({
+        occurrence: createOccurrenceAddress(f, target as never),
+        discarded: [{ item: owner }],
+      }),
+    ]);
+  });
+
+  it('resets the item when its press draws another reward in place, announced', () => {
+    const { owner, project } = authoredZeusPress('exit2', otherTarget);
+    const hera: ResolvedRewardOffer = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+    };
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(project),
+      command: { kind: 'ReplaceRerollReward', action: pressAt('r1'), reward: hera },
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    const reset = rerolledDoor(settled.assembly.project, otherTarget);
+    expect(reset?.offer).toEqual(hera);
+    expect(reset?.traitOffersByAcquisitionRole.source).toBeNull();
+    expect(settled.removedStaleActions).toEqual([
+      expect.objectContaining({
+        occurrence: createOccurrenceAddress(f, otherTarget as never),
+        discarded: [{ item: owner }],
+      }),
+    ]);
+  });
+
+  it('resets the item when a move makes another press effective, announced', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(
       project,
       catalog,
       insertReroll(project, door('exit2', otherTarget)),
     );
-    expect(rerollFindings(project)).toEqual([]);
-    const broken = mismatched(project);
-    expect(
-      rerollFindings(broken).map((finding) => [finding.code, semanticAddressKey(finding.origin)]),
-    ).toEqual([['rerolledRewardMismatch', semanticAddressKey(owner)]]);
-    expect(
-      rerollFindings(applyProjectCommand(broken, catalog, { kind: 'AdoptRerolledReward', owner })),
-    ).toEqual([]);
+    const authored = authoredZeusPress('exit2', otherTarget);
+    // r1 drew money; r2 drew Zeus, whose screen is authored.
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, door('exit2', otherTarget), {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }),
+    );
+    project = edited(project, (occurrences) => {
+      const room = occurrences.find((entry) => entry.occurrenceId === otherTarget)!;
+      const zeus = occurrence(authored.project, otherTarget).rerolledIncomingReward!;
+      (room.rerolledIncomingReward as Record<string, unknown>).acquisition = JSON.parse(
+        JSON.stringify(zeus.acquisition),
+      );
+    });
+    expect(rerolledDoor(project, otherTarget)?.traitOffersByAcquisitionRole.source).toMatchObject({
+      giverKey: 'Zeus',
+    });
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(project),
+      command: {
+        kind: 'MoveRoomAction',
+        action: pressAt('r2'),
+        toIndex: occurrence(project, source).roomActions.order.findIndex(
+          (reference) => reference.kind === 'reroll' && reference.rerollId === 'r1',
+        ),
+      },
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    const moved = settled.assembly.project;
+    expect(rerolls(moved).map((press) => press.rerollId)).toEqual(['r2', 'r1']);
+    expect(occurrence(moved, otherTarget).rerolledIncomingReward).toMatchObject({
+      pressId: 'r1',
+      results: { r1: { rewardType: 'RoomMoneyDrop' } },
+    });
+    expect(rerolledDoor(moved, otherTarget)?.offer).toEqual({ rewardType: 'RoomMoneyDrop' });
+    expect(settled.removedStaleActions).toEqual([
+      expect.objectContaining({ discarded: [{ item: authored.owner }] }),
+    ]);
   });
 
-  // The entered door's room keeps its Boon pickup row, dormant beside its first draw's.
-  it.each([
-    ['an offered', 'exit2', otherTarget],
-    ['an entered', 'exit1', pickedTarget],
-  ] as const)(
-    'reports %s rerolled reward that outlived its rerolls until it is dropped',
-    (_door, exitKey, target) => {
-      const owner = createIncomingRewardAddress(f, target as never);
-      let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-      project = applyProjectCommand(
-        project,
-        catalog,
-        insertReroll(project, door(exitKey, target), {
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-        }),
-      );
-      // An authored screen makes the rerolled reward more than its unresolved default.
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceTraitOffer',
-        trait: {
-          kind: 'traitOffer',
-          routeKey: 'Underworld',
-          biomeKey: 'F',
-          owner,
-          acquisitionRole: 'source',
-        },
-        value: {
-          kind: 'traits',
-          giverKey: 'Zeus',
-          options: [
-            { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-            { traitKey: 'ZeusCastBoon', rarity: 'Common' },
-            { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
-          ],
-          selectedOptionKey: 'option1',
-          rarificationActions: [],
-        },
+  it('resets a loaded item whose press is not effective at the next edit of its room', () => {
+    const { owner, project } = authoredZeusPress('exit2', otherTarget);
+    // A saved plan whose later press r2 drew money while the outcomes stay on r1's Zeus.
+    const loaded = edited(project, (occurrences) => {
+      const from = occurrences.find((entry) => entry.occurrenceId === source)!;
+      const order = (from.roomActions as { order: unknown[] }).order;
+      order.push({
+        kind: 'reroll',
+        rerollId: 'r2',
+        target: { kind: 'door', exitKey: 'exit2', occurrenceId: otherTarget },
       });
-      const dormant = settle(project, { kind: 'RemoveRoomAction', action: pressAt('r1') });
-      expect(rerolls(dormant)).toEqual([]);
-      expect(rerollFindings(dormant).map((finding) => finding.code)).toEqual([
-        'rerolledRewardMismatch',
-      ]);
-      expect(
-        rerollFindings(
-          applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner }),
-        ),
-      ).toEqual([]);
-    },
-  );
+      const room = occurrences.find((entry) => entry.occurrenceId === otherTarget)!;
+      (room.rerolledIncomingReward as { results: Record<string, unknown> }).results.r2 = {
+        rewardType: 'RoomMoneyDrop',
+      };
+    });
+    expect(occurrence(loaded, otherTarget).rerolledIncomingReward?.pressId).toBe('r1');
+    expect(rerollFindings(loaded)).toEqual([]);
+    // Its room's own edit resets it to the effective press's item.
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(loaded),
+      command: {
+        kind: 'ReplaceRerollReward',
+        action: pressAt('r2'),
+        reward: { rewardType: 'MaxManaDrop' },
+      },
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(occurrence(settled.assembly.project, otherTarget).rerolledIncomingReward).toMatchObject({
+      pressId: 'r2',
+      results: { r2: { rewardType: 'MaxManaDrop' } },
+    });
+    expect(settled.removedStaleActions).toEqual([
+      expect.objectContaining({ discarded: [{ item: owner }] }),
+    ]);
+  });
+
+  it('resets a rerolled reward to the unresolved draw of a later press, announced', () => {
+    const { owner, project } = authoredZeusPress('exit2', otherTarget);
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(project),
+      command: insertReroll(project, door('exit2', otherTarget)),
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(occurrence(settled.assembly.project, otherTarget).rerolledIncomingReward).toMatchObject({
+      pressId: 'r2',
+    });
+    const reset = rerolledDoor(settled.assembly.project, otherTarget);
+    expect(reset?.offer).toEqual({ rewardType: 'RoomMoneyDrop' });
+    expect(reset?.traitOffersByAcquisitionRole).toEqual({});
+    expect(rerollFindings(settled.assembly.project)).toEqual([]);
+    expect(settled.removedStaleActions).toEqual([
+      expect.objectContaining({
+        occurrence: createOccurrenceAddress(f, otherTarget as never),
+        discarded: [{ item: owner }],
+      }),
+    ]);
+  });
 });
 
 describe('Fields cage rerolls', () => {
@@ -514,7 +684,7 @@ describe('Fields cage rerolls', () => {
   const base = withGoldenUnderworldJudgments(
     withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']),
   );
-  const cage = (exitKey: string, occurrenceId: string, slotKey: string): RerollTarget => ({
+  const cage = (exitKey: string, occurrenceId: string, slotKey: string): ResolvedRerollTarget => ({
     kind: 'cage',
     exitKey,
     occurrenceId: occurrenceId as never,
@@ -524,22 +694,24 @@ describe('Fields cage rerolls', () => {
   it('redraw one cage of a door into a Fields room', () => {
     const from = 'golden-h-miniboss01';
     const target = 'golden-h-combat05';
-    const inserted = applyProjectCommand(
+    const inserted = settle(
       base,
-      catalog,
       insertReroll(base, cage('exit1', target, 'cage1'), undefined, from, h, 2),
     );
     const reroll = pressAt('r1', from, h);
     const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
-    const project = applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: reroll,
-      reward,
-    });
-    const room = occurrence(project, target, 2);
-    expect(room.state.kind === 'fieldsCombat' && room.state.rerolledCages?.cage1?.offer).toEqual(
-      reward,
+    // The press removed the cage's first draw; its new item is picked up.
+    const project = collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: reroll,
+        reward,
+      }),
     );
+    const room = occurrence(project, target, 2);
+    expect(
+      rerolledOf(room, createLocalRewardAddress(h, target as never, 'cages', 'cage1'))?.offer,
+    ).toEqual(reward);
     expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       target: createLocalRewardAddress(h, target as never, 'cages', 'cage1'),
@@ -591,11 +763,14 @@ describe('Hub board rerolls', () => {
       reroll,
       reward,
       inserted,
-      project: applyProjectCommand(inserted, catalog, {
-        kind: 'ReplaceHubRerollReward',
-        reroll,
-        reward,
-      }),
+      // The owner picks up the reward the press drew.
+      project: collectTestRequiredItems(
+        applyProjectCommand(inserted, catalog, {
+          kind: 'ReplaceHubRerollReward',
+          reroll,
+          reward,
+        }),
+      ),
     };
   }
 
@@ -609,14 +784,17 @@ describe('Hub board rerolls', () => {
 
     // combat05 is the first visit: once entered its door is closed for the run.
     const actions = hubActions(project);
-    const late = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHubActionOrder',
-      hub,
-      actions: [...actions.slice(1), actions[0]!],
-    });
+    // The visit enters its first draw again, which the owner picks up.
+    const late = collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: [...actions.slice(1), actions[0]!],
+      }),
+    );
     expect(hubFindings(late)).toEqual([['rerollTargetUnavailable', 'slotEntered']]);
     // The refused press redraws nothing the visit entered.
-    expect(occurrence(late, 'surface-n-combat05').rerolledIncomingReward).toBeUndefined();
+    expect(rerolledDoor(late, 'surface-n-combat05', n)).toBeUndefined();
   });
 
   it('redraw an unentered door on a restored board against the doors still open', () => {
@@ -644,26 +822,18 @@ describe('Hub board rerolls', () => {
     ).toMatchObject({ reward: later.reward, poolRemainingAfter: 2 });
     expect(rerollFindings(later.project)).toEqual([]);
     // The visit enters the reward the restored board's press drew.
-    expect(occurrence(later.project, 'surface-n-combat09').rerolledIncomingReward?.offer).toEqual(
-      later.reward,
-    );
+    expect(rerolledDoor(later.project, 'surface-n-combat09', n)?.offer).toEqual(later.reward);
   });
 
-  /** Appends a press of one slot to a stay with the first reward the session accepts there. */
+  /** Appends a press of one slot to a stay with the first reward a placed press accepts there. */
   function pressInStay(project: ProjectDocument, hubSlotKey: string, precedingVisitCount: number) {
     const surface = { kind: 'hubStay', hub, precedingVisitCount } as const;
-    const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
-    const reward = ['MaxHealthDropBig', 'MaxManaDropBig', 'Boon']
-      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
-      .find((value) => {
-        const result = session.evaluate({
-          kind: 'pendingRerollReward',
-          surface,
-          target: { kind: 'hubSlot', hubSlotKey },
-          value,
-        });
-        return result.kind === 'rerollReward' && result.result.supported;
-      });
+    const [reward] =
+      placedPressRewards(project, surface, { kind: 'hubSlot', hubSlotKey }, [
+        'MaxHealthDropBig',
+        'MaxManaDropBig',
+        'Boon',
+      ])?.rewards ?? [];
     if (reward === undefined) throw new Error(`no reward is supported for ${hubSlotKey}`);
     return {
       reward,
@@ -700,9 +870,7 @@ describe('Hub board rerolls', () => {
       ['MaxHealthDropBig', 'MaxManaDropBig', 'Boon'],
     ).map((offer) => JSON.stringify(offer));
     expect(supported).not.toContain(JSON.stringify(first.reward));
-    expect(occurrence(second.project, 'surface-n-combat03').rerolledIncomingReward?.offer).toEqual(
-      second.reward,
-    );
+    expect(rerolledDoor(second.project, 'surface-n-combat03', n)?.offer).toEqual(second.reward);
     expect(rerollFindings(second.project)).toEqual([]);
   });
 
@@ -759,9 +927,11 @@ describe('Hub board rerolls', () => {
     ['a restored board', 'combat09', 5],
     ['the first entry', 'combat05', 0],
   ] as const)(
-    'keep a visited Boon pick when its press on %s leaves, and report it',
+    'drop a visited Boon pick with its item when its press on %s leaves',
     (_stay, hubSlotKey, index) => {
       const occurrenceId = `surface-n-${hubSlotKey}`;
+      const room = createOccurrenceAddress(n, occurrenceId as never);
+      const incoming = createIncomingRewardAddress(n, occurrenceId as never);
       const ares: ResolvedRewardOffer = {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'AresUpgrade' },
@@ -773,12 +943,9 @@ describe('Hub board rerolls', () => {
         reward: ares,
         index,
       });
-      const picked = settle(pressed, {
+      const offered = settle(pressed, {
         kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(
-          createIncomingRewardAddress(n, occurrenceId as never),
-          'source',
-        ),
+        trait: createTraitOfferAddress(incoming, 'source'),
         value: {
           kind: 'traits',
           giverKey: 'Ares',
@@ -791,27 +958,164 @@ describe('Hub board rerolls', () => {
           rarificationActions: [],
         },
       });
+      // The owner picks up the drawn Boon.
+      const picked = collectTestRequiredItems(offered);
       const sourceRow = {
         kind: 'interactIncomingReward',
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
-      };
-      expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(sourceRow);
+      } as const;
+      const pickedRow = withItemContent(picked, room, sourceRow);
+      expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(pickedRow);
 
-      // The visit enters the first draw again; the Boon pick and its pickup stay for repair.
-      const removed = settle(picked, {
-        kind: 'RemoveHubReroll',
-        reroll: createHubRerollAddress(n, 'hub', 'r1'),
+      // The visit enters the first draw again: the Boon pick and its item go with their press.
+      const settlement = settleProjectEdit({
+        catalog,
+        before: evaluate(picked),
+        command: { kind: 'RemoveHubReroll', reroll: createHubRerollAddress(n, 'hub', 'r1') },
+        evaluate,
       });
-      expect(occurrence(removed, occurrenceId).rerolledIncomingReward).toEqual(
-        occurrence(picked, occurrenceId).rerolledIncomingReward,
+      const removed = settlement.assembly.project;
+      expect(occurrence(picked, occurrenceId).rerolledIncomingReward).toMatchObject({
+        pressId: 'r1',
+      });
+      expect(occurrence(removed, occurrenceId).rerolledIncomingReward).toBeUndefined();
+      expect(occurrence(removed, occurrenceId).roomActions.order.map(roomActionKey)).not.toContain(
+        roomActionKey(sourceRow),
       );
-      expect(occurrence(removed, occurrenceId).roomActions.order).toContainEqual(sourceRow);
-      expect(rerollFindings(removed).map((finding) => [finding.code, finding.origin])).toEqual([
-        ['rerolledRewardMismatch', createIncomingRewardAddress(n, occurrenceId as never)],
+      // A Hub edit addresses no single room, so the removal is announced.
+      expect(settlement.removedStaleActions).toEqual([
+        { occurrence: room, actions: [pickedRow], discarded: [{ item: incoming }] },
+      ]);
+      // The first draw lies live again, not yet picked up: no mismatch is left to repair.
+      expect(rerollFindings(removed).map((finding) => finding.code)).toEqual([
+        'roomActionPlacementRequired',
+      ]);
+      const state = occurrence(picked, occurrenceId).state;
+      const firstDraw = state.kind === 'ephyraCombat' ? state.reward?.offer : undefined;
+      expect(firstDraw).toBeDefined();
+      expect(firstDraw?.rewardType).not.toBe('Boon');
+      const items = spawnedLootForProjectEvaluationAssembly(
+        catalog,
+        evaluate(removed),
+        room,
+      )?.moments.flatMap((moment) => moment.items);
+      expect(items).toEqual([
+        expect.objectContaining({
+          reward: { kind: 'offer', offer: firstDraw },
+          reference: withItemContent(removed, room, { ...sourceRow, acquisitionRole: 'self' }),
+          placement: expect.objectContaining({ kind: 'unplaced' }),
+        }),
       ]);
     },
   );
+
+  /** combat05's board door pressed into Ares before its visit, with the Ares screen authored. */
+  function aresOffered() {
+    const incoming = createIncomingRewardAddress(n, 'surface-n-combat05' as never);
+    const pressed = settle(base(), {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat05',
+      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+      index: 0,
+    });
+    return settle(pressed, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(incoming, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Ares',
+        options: [
+          { traitKey: 'AresWeaponBoon', rarity: 'Common' },
+          { traitKey: 'AresSpecialBoon', rarity: 'Common' },
+          { traitKey: 'AresCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+  }
+
+  it.each([
+    [
+      'its press draws another in place',
+      (): ProjectCommand => ({
+        kind: 'ReplaceHubRerollReward',
+        reroll: createHubRerollAddress(n, 'hub', 'r1'),
+        reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      }),
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    ],
+    [
+      'a later press draws again',
+      (): ProjectCommand => ({
+        kind: 'InsertHubReroll',
+        hub,
+        hubSlotKey: 'combat05',
+        reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+        index: 1,
+      }),
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    ],
+  ] as const)('reset a board reward when %s, announced', (_change, command, drawn) => {
+    const room = createOccurrenceAddress(n, 'surface-n-combat05' as never);
+    const incoming = createIncomingRewardAddress(n, 'surface-n-combat05' as never);
+    const offered = aresOffered();
+    expect(
+      rerolledDoor(offered, 'surface-n-combat05', n)?.traitOffersByAcquisitionRole.source,
+    ).toMatchObject({ giverKey: 'Ares' });
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(offered),
+      command: command(),
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    const reset = rerolledDoor(settled.assembly.project, 'surface-n-combat05', n);
+    // The Ares pick belonged to the press's former item.
+    expect(reset?.offer).toEqual(drawn);
+    expect(reset?.traitOffersByAcquisitionRole.source ?? null).toBeNull();
+    // A Hub edit addresses no single room, so the reset is announced in the slot's room.
+    expect(settled.removedStaleActions).toContainEqual(
+      expect.objectContaining({ occurrence: room, discarded: [{ item: incoming }] }),
+    );
+  });
+
+  it("drop a board reward's outcomes when its press moves past the slot's visit, announced", () => {
+    const room = createOccurrenceAddress(n, 'surface-n-combat05' as never);
+    const incoming = createIncomingRewardAddress(n, 'surface-n-combat05' as never);
+    const offered = aresOffered();
+    const actions = hubActions(offered);
+    // combat05 is the first visit: moved after it, the press no longer redraws what it enters.
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(offered),
+      command: { kind: 'ReplaceHubActionOrder', hub, actions: [...actions.slice(1), actions[0]!] },
+      evaluate,
+    });
+    expect(settled.fault).toBeUndefined();
+    const moved = occurrence(settled.assembly.project, 'surface-n-combat05').rerolledIncomingReward;
+    expect(moved).toMatchObject({ pressId: 'r1' });
+    expect(moved?.acquisition).toBeUndefined();
+    expect(rerolledDoor(settled.assembly.project, 'surface-n-combat05', n)).toBeUndefined();
+    expect(settled.removedStaleActions).toContainEqual(
+      expect.objectContaining({ occurrence: room, discarded: [{ item: incoming }] }),
+    );
+    // A file holding outcomes for an item no press makes effective is refused.
+    const encoded = JSON.parse(encodeProjectDocument(settled.assembly.project)) as {
+      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const held = encoded.route.biomes[0]!.topology.occurrences.find(
+      (entry) => entry.occurrenceId === 'surface-n-combat05',
+    )!.rerolledIncomingReward as Record<string, unknown>;
+    held.acquisition = JSON.parse(
+      JSON.stringify(occurrence(offered, 'surface-n-combat05').rerolledIncomingReward!.acquisition),
+    );
+    expect(() => decodeProjectDocument(encoded as never, catalog)).toThrow(
+      'holds outcomes no effective press draws',
+    );
+  });
 
   it('need a door-reroll card held when a restored board is assigned', () => {
     const project = pressHub(base(), 'combat09', 2).project;
@@ -831,7 +1135,7 @@ describe('ship wheel rerolls', () => {
       ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
     );
     const ship = occurrence(base, 'surface-o-combat04', 1);
-    const inserted = applyProjectCommand(base, catalog, {
+    const inserted = settle(base, {
       kind: 'InsertReroll',
       occurrence: createOccurrenceAddress(o, ship.occurrenceId),
       target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
@@ -842,11 +1146,14 @@ describe('ship wheel rerolls', () => {
     });
     const reroll = pressAt('r1', ship.occurrenceId, o);
     const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
-    const project = applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: reroll,
-      reward,
-    });
+    // The press redrew the picked offer, so the wheel's pickup went; the new item is picked up.
+    const project = collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: reroll,
+        reward,
+      }),
+    );
     expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       // Door 3, Screen 3 and the Fates 4 at Epic, less this press.

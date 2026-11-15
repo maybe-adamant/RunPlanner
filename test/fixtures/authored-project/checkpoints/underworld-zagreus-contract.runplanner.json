@@ -1,5 +1,6 @@
 {
   "schemaVersion": 103,
+  "schemaRevision": 3,
   "projectId": "golden-fg",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -113,7 +114,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ApolloUpgrade"
+                    ]
                   }
                 ]
               },
@@ -157,7 +163,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyDrop"
+                    ]
                   }
                 ]
               },
@@ -226,11 +236,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ZeusUpgrade"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b2-e2",
@@ -270,7 +288,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   }
                 ]
               },
@@ -314,7 +336,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   }
                 ]
               },
@@ -358,7 +384,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
@@ -412,11 +442,18 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "StackUpgrade"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-f-b4-e2",
@@ -456,7 +493,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   }
                 ]
               },
@@ -500,7 +541,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCardPointsCommonDrop"
+                    ]
                   }
                 ]
               },
@@ -544,7 +589,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyDrop"
+                    ]
                   }
                 ]
               },
@@ -605,7 +654,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -647,7 +701,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "PoseidonUpgrade"
+                    ]
                   }
                 ]
               },
@@ -691,11 +750,18 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b8-e1",
@@ -753,7 +819,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "WeaponUpgrade"
+                    ]
                   }
                 ]
               },
@@ -799,7 +869,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "HermesUpgrade"
+                    ]
                   }
                 ]
               },
@@ -843,7 +917,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCardPointsCommonDrop"
+                    ]
                   }
                 ]
               },
@@ -893,7 +971,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "GiftDrop"
+                    ]
                   }
                 ]
               },
@@ -937,7 +1019,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   }
                 ]
               },
@@ -1020,7 +1106,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "SpellDrop"
+                    ]
                   }
                 ]
               },
@@ -1144,7 +1234,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "StackUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1203,17 +1297,18 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "LimitedSwapTraitDrop",
+                  "secondRight": "MemPointsCommonRange"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
-                }
+                  "left": "ApolloWeaponBoon",
+                  "middle": "ZeusSpecialBoon",
+                  "right": "HeraCastBoon"
+                },
+                "anchorId": 755023
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -1610,11 +1705,18 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyBigDrop"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b2-e1",
@@ -1654,11 +1756,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyBigDrop"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 568557
+              }
             },
             {
               "occurrenceId": "golden-g-b2-e2",
@@ -1698,7 +1808,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCardPointsCommonBigDrop"
+                    ]
                   }
                 ]
               },
@@ -1817,7 +1931,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCardPointsCommonBigDrop"
+                    ]
                   }
                 ]
               },
@@ -1861,7 +1979,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyBigDrop"
+                    ]
                   }
                 ]
               },
@@ -1905,11 +2027,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 569272
+              }
             },
             {
               "occurrenceId": "golden-g-b5-e1",
@@ -1990,7 +2120,10 @@
                   "key": "zagreusContract",
                   "occurrenceId": "zagreus-contract-showcase"
                 }
-              ]
+              ],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b5-e2",
@@ -2037,7 +2170,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "StackUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2098,11 +2235,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HestiaUpgrade"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 568922
+              }
             },
             {
               "occurrenceId": "golden-g-b6-e2",
@@ -2140,7 +2285,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ZeusUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2175,11 +2325,6 @@
                 "order": [
                   {
                     "kind": "collectRequiredReward"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
                   }
                 ]
               },
@@ -2240,7 +2385,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ApolloUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2316,7 +2466,11 @@
               "roomActions": {
                 "order": [
                   {
-                    "kind": "interactInfernalContractPedestal"
+                    "kind": "interactInfernalContractPedestal",
+                    "content": [
+                      "StackUpgrade",
+                      "StackUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2425,25 +2579,23 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "LimitedSwapTraitDrop",
+                  "secondRight": "TemporaryImprovedDefenseTrait"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
-                }
+                  "left": "ApolloSpecialBoon",
+                  "middle": "HeraCastBoon",
+                  "right": "ApolloWeaponBoon"
+                },
+                "anchorId": 637448
               },
               "keepsakeRack": {
                 "keepsakeKey": null

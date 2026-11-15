@@ -53,13 +53,13 @@ function biomes(project: ProjectDocument) {
 
 /** Each route family, a practice start, an incomplete route, forced Chaos and resource placements. */
 const representativeCorpus = new Set([
-  'execution/underworld-fghi',
+  'checkpoint/underworld-fghi',
   'execution/surface-nopq',
-  'execution/dream-mixed-prefix',
+  'checkpoint/dream-mixed-handoff',
   'execution/fresh-file-fghi',
   'execution/underworld-start-i-preboss',
   'underworld/hammerBridgeRoute',
-  'execution/fg-ixion-chaos',
+  'checkpoint/underworld-ixion-chaos',
   'checkpoint/underworld-twist-scylla',
   'checkpoint/surface-p-steady-growth-shrine-frontier',
 ]);

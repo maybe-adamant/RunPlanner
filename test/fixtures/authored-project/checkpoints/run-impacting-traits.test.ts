@@ -29,8 +29,8 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '../item-content';
 
-import { loadSurfaceNNaturalSelectionCheckpoint } from './surface';
 import {
   createSurfaceNNaturalSelectionFrontier,
   createSurfaceNBuriedTreasureCheckpoint,
@@ -38,7 +38,7 @@ import {
   createSurfaceNQueensRansomCheckpoint,
   createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
-import { nBiome, nOccurrenceId } from '../routes/surface';
+import { nBiome, nOccurrenceId, surfaceNNaturalSelectionProject } from '../routes/surface';
 import { nOccurrenceIds } from '../routes/surface';
 
 describe('run-impacting trait checkpoint workflows', () => {
@@ -96,6 +96,7 @@ describe('run-impacting trait checkpoint workflows', () => {
         topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
         occurrence,
         routePosition,
+        producer: routeStartIncoming !== undefined && routeStartIncoming !== null,
         ...(routeStartIncoming === undefined || routeStartIncoming === null
           ? {}
           : {
@@ -115,20 +116,17 @@ describe('run-impacting trait checkpoint workflows', () => {
       if (sourceAction === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(
         (contribution) =>
-          contribution.kind === 'action' &&
           contribution.reference.kind === 'interactAcquisitionEntry' &&
           contribution.reference.entryKey === entryKey,
       );
-      expect(child).toMatchObject({ kind: 'action', participation: 'optional' });
+      expect(child).toMatchObject({ participation: 'optional' });
       const dependency =
-        child?.kind === 'action'
+        child !== undefined
           ? child.dependencies.find(
-              (candidate) =>
-                candidate.kind === 'afterAction' &&
-                roomActionKey(candidate.action) === roomActionKey(sourceAction),
+              (candidate) => roomActionKey(candidate.action) === roomActionKey(sourceAction),
             )
           : undefined;
-      expect(dependency).toEqual({ kind: 'afterAction', action: sourceAction });
+      expect(dependency).toEqual({ action: sourceAction });
     }
   });
 
@@ -179,8 +177,14 @@ describe('run-impacting trait checkpoint workflows', () => {
       siteKey,
       entryKey: 'smallGold',
     });
-    // Taking Buried Treasure took its small Gold.
-    expect(occurrence().roomActions.order).toContainEqual(sourceReference);
+    // Taking Buried Treasure took its small Gold, with the content the engine records for it.
+    const placedSource = withItemContent(
+      project,
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preHub),
+      sourceReference,
+    );
+    expect(placedSource).toMatchObject({ content: expect.any(Array) });
+    expect(occurrence().roomActions.order).toContainEqual(placedSource);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: source,
@@ -196,30 +200,29 @@ describe('run-impacting trait checkpoint workflows', () => {
       topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
       occurrence: occurrence(),
       routePosition: resolveRoutePosition(catalog, project.route, 'N'),
+      producer: true,
     });
     const sourceAction = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === siteKey &&
         entry.reference.entryKey === 'smallGold',
     );
     const childAction = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === duplicateSite,
     );
+    // The source row the duplicate follows is the small Gold taken above.
+    expect(sourceAction).toBeDefined();
+    expect(sourceAction && roomActionKey(sourceAction.reference)).toBe(
+      roomActionKey(sourceReference),
+    );
     expect(childAction).toMatchObject({
-      kind: 'action',
-      participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
-      window: sourceAction?.kind === 'action' ? sourceAction.window : undefined,
-      dependencies: [
-        {
-          kind: 'afterAction',
-          action: sourceAction?.kind === 'action' ? sourceAction.reference : undefined,
-        },
-      ],
+      participation: sourceAction?.participation,
+      bounds: sourceAction?.bounds,
+      // A dependency names its row by key, without the item's content.
+      dependencies: [{ action: sourceReference }],
     });
   });
 
@@ -236,7 +239,7 @@ describe('run-impacting trait checkpoint workflows', () => {
   });
 
   it('settles the selected Natural Selection result from its reached candidate domain', () => {
-    const saved = loadSurfaceNNaturalSelectionCheckpoint();
+    const saved = surfaceNNaturalSelectionProject();
     const assembly = simulateProjectAssembly(catalog, saved);
     expect(assembly.evaluation.findings).toEqual([]);
     expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);

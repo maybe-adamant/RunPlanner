@@ -1,17 +1,14 @@
 import type { Catalog } from '../../catalog-schema';
+import { roomActionContentMatches, roomActionReferenceContent } from '../room-actions/item-content';
 import type { ProjectDocument, RoomActionReference } from '../model';
 import { roomActionKey } from '../room-actions/state';
+import { parseStygianWellGenerationKey } from '../feature-rolls';
 import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
 } from '../room-actions/defaults';
-import {
-  createBiomeAddress,
-  createOccurrenceAddress,
-  createRoomActionAddress,
-  createShopOfferAddress,
-} from '../addresses';
+import { createBiomeAddress, createOccurrenceAddress, createRoomActionAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
 import {
@@ -24,12 +21,12 @@ import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
-import { reconcileRemovedOrMovedReroll } from './rerolls';
 import {
+  movedRoomActionOrder,
   roomActionInsertionRefusal,
   roomActionOrderContextForOccurrence,
 } from '../room-actions/order-assessment';
-import { applyShopOccurrenceCommand } from './occurrence/shop';
+import { withoutFeatureRerollObservations } from './occurrence/feature-rolls';
 import { withChosenIndex } from './chosen-index';
 
 function requireIndex(
@@ -43,7 +40,7 @@ function requireIndex(
   }
 }
 
-/** One pick: stocks a blank Travel Deal item, then appends its purchase. */
+/** Appends the purchase of the stocked Travel Deal item. */
 function purchaseShopTravelDealRefill(
   document: ProjectDocument,
   catalog: Catalog,
@@ -51,20 +48,7 @@ function purchaseShopTravelDealRefill(
   command: Extract<RoomActionCommand, { readonly kind: 'PurchaseShopTravelDealRefill' }>,
 ): ProjectDocument {
   const biome = createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey);
-  const stocked =
-    command.value === undefined
-      ? document
-      : applyShopOccurrenceCommand(document, catalog, located, {
-          kind: 'ReplaceShopOfferOption',
-          offer: createShopOfferAddress(
-            biome,
-            command.occurrence.occurrenceId,
-            TRAVEL_DEAL_REFILL_ENTRY_KEY,
-          ),
-          value: command.value,
-        });
-  const relocated = { ...located, plan: stocked.route.biomes[located.biomeIndex]! };
-  const occurrence = requireOccurrence(relocated.plan, command.occurrence.occurrenceId, command);
+  const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   if (authoredShopOffer(occurrence, TRAVEL_DEAL_REFILL_ENTRY_KEY)?.reward == null)
     failCommand(command, 'Travel Deal item is unresolved');
   const reference = Object.freeze({
@@ -72,7 +56,7 @@ function purchaseShopTravelDealRefill(
     siteKey: 'roomExit',
     entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
   });
-  const bought = applyRoomActionCommand(stocked, catalog, relocated, {
+  const bought = applyRoomActionCommand(document, catalog, located, {
     kind: 'InsertRoomAction',
     action: createRoomActionAddress(
       biome,
@@ -83,6 +67,24 @@ function purchaseShopTravelDealRefill(
     index: occurrence.roomActions.order.length,
   });
   return withChosenIndex(bought, catalog, command);
+}
+
+/**
+ * Whether a row buys or sells from the list a removed Well or Pool reroll
+ * drew: that list is gone with its reroll, so its purchases and sales go too.
+ */
+function boughtFromRemovedRoll(
+  removed: RoomActionReference,
+  reference: RoomActionReference,
+): boolean {
+  if (removed.kind === 'rerollStygianWell')
+    return (
+      reference.kind === 'purchaseStygianWellOffer' &&
+      parseStygianWellGenerationKey(reference.generationKey)?.rollKey === removed.rerollId
+    );
+  if (removed.kind === 'rerollPurgingPool')
+    return reference.kind === 'sellPurgingPoolTrait' && reference.rollKey === removed.rerollId;
+  return false;
 }
 
 export function applyRoomActionCommand(
@@ -97,17 +99,11 @@ export function applyRoomActionCommand(
   const occurrenceId =
     command.kind === 'ReplaceShopPurchaseParticipation'
       ? command.offer.occurrenceId
-      : command.kind === 'ReplaceFieldsCageOrder'
-        ? command.occurrence.occurrenceId
-        : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
+      : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const occurrenceIsActive = structurallyActiveOccurrenceIds(topology).has(occurrenceId);
   const commandAddress =
-    command.kind === 'ReplaceShopPurchaseParticipation'
-      ? command.offer
-      : command.kind === 'ReplaceFieldsCageOrder'
-        ? command.occurrence
-        : command.action;
+    command.kind === 'ReplaceShopPurchaseParticipation' ? command.offer : command.action;
   const domain = roomActionDomainForOccurrence(
     document,
     catalog,
@@ -115,51 +111,6 @@ export function applyRoomActionCommand(
     occurrenceId,
   )?.domain;
   const order = occurrence.roomActions.order;
-  if (command.kind === 'ReplaceFieldsCageOrder') {
-    const cageOrder = domain?.fieldsCageOrder;
-    if (cageOrder === undefined) {
-      failCommand(command, 'occurrence does not own Fields cage order');
-    }
-    const activePhases = new Set(cageOrder.activePhaseKeys);
-    if (
-      activePhases.size === 0 ||
-      command.phaseKeys.length !== activePhases.size ||
-      new Set(command.phaseKeys).size !== activePhases.size ||
-      command.phaseKeys.some((phaseKey) => !activePhases.has(phaseKey))
-    ) {
-      failCommand(command, 'phaseKeys must contain each active Fields cage exactly once');
-    }
-    if (!cageOrder.available) {
-      failCommand(command, 'restore missing cage actions before changing their order');
-    }
-    if (cageOrder.phaseKeys.every((phaseKey, index) => phaseKey === command.phaseKeys[index]))
-      return document;
-    const activeCagePositions = (references: readonly RoomActionReference[]) =>
-      references.flatMap((reference, index) =>
-        reference.kind === 'completeFieldsCage' && activePhases.has(reference.phaseKey)
-          ? [{ index, phaseKey: reference.phaseKey }]
-          : [],
-      );
-    const nextOrder = [...order];
-    // Resolve the prefix with ordinary insertion moves, without publishing or
-    // reconciling an intermediate permutation. Other actions retain their sequence.
-    for (let slot = 0; slot < command.phaseKeys.length - 1; slot += 1) {
-      const current = activeCagePositions(nextOrder);
-      const target = current[slot]!;
-      const source = current.find((position) => position.phaseKey === command.phaseKeys[slot])!;
-      if (source.index === target.index) continue;
-      const [reference] = nextOrder.splice(source.index, 1);
-      nextOrder.splice(target.index, 0, reference!);
-    }
-    return updateOccurrence(
-      document,
-      located,
-      Object.freeze({
-        ...occurrence,
-        roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-      }),
-    );
-  }
   if (command.kind === 'ReplaceShopPurchaseParticipation') {
     if (command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
       failCommand(command, 'Travel Deal uses its roomExit acquisition entry participation');
@@ -217,11 +168,11 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'purchaseHermesShrineOffer') {
         failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
       }
+      if (command.reference.kind === 'rushHermesShrineOffer') {
+        failCommand(command, 'Shrine rushes use SetHermesShrineRush');
+      }
       if (command.reference.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
-      }
-      if (command.reference.kind === 'interactKeepsakeRack') {
-        failCommand(command, 'the keepsake rack uses ReplacePostbossKeepsake');
       }
       if (command.reference.kind === 'interactInfernalContractPedestal') {
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
@@ -240,37 +191,52 @@ export function applyRoomActionCommand(
         failCommand(command, 'reference does not match the addressed room action');
       }
       const contribution = domain?.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === command.action.actionKey,
+        (entry) => roomActionKey(entry.reference) === command.action.actionKey,
       );
-      if (!occurrenceIsActive || domain === undefined || contribution?.kind !== 'action') {
+      if (!occurrenceIsActive || domain === undefined || contribution === undefined) {
         failCommand(command, 'room action is not active for this occurrence');
       }
-      if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
+      if (
+        !roomActionContentMatches(
+          command.reference,
+          roomActionReferenceContent(contribution.reference) ?? null,
+        )
+      )
+        failCommand(command, 'reference names content its item does not hold');
+      // A row on a replaced item gives its place to the item it holds now.
+      const replacing =
+        existingIndex >= 0 &&
+        !roomActionContentMatches(
+          order[existingIndex]!,
+          roomActionReferenceContent(contribution.reference) ?? null,
+        );
+      if (existingIndex >= 0 && !replacing) failCommand(command, 'room action is already ordered');
       requireIndex(command, command.index, order.length, 'index');
+      const rest = replacing ? order.filter((_, index) => index !== existingIndex) : order;
+      const index = replacing && command.index > existingIndex ? command.index - 1 : command.index;
       if (contribution.participation === 'required') {
         // Any structurally legal index; the canonical default is always accepted.
         const canonical = scheduleRequiredRoomActions({
           catalog,
           domain,
-          order,
+          order: rest,
           requiredKeys: new Set([command.action.actionKey]),
         });
         const canonicalIndex = canonical.findIndex(
           (reference) => roomActionKey(reference) === command.action.actionKey,
         );
-        if (command.index !== canonicalIndex) {
+        if (index !== canonicalIndex) {
           const refusal = roomActionInsertionRefusal(
-            order,
+            rest,
             command.reference,
-            command.index,
+            index,
             roomActionOrderContextForOccurrence(domain, occurrence),
           );
           if (refusal !== undefined) failCommand(command, refusal);
         }
       }
-      nextOrder = [...order];
-      nextOrder.splice(command.index, 0, command.reference);
+      nextOrder = [...rest];
+      nextOrder.splice(index, 0, command.reference);
       break;
     }
     case 'UnplaceGeneratedDelivery': {
@@ -305,38 +271,27 @@ export function applyRoomActionCommand(
       if (order[existingIndex]?.kind === 'purchaseHermesShrineOffer') {
         failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
       }
+      if (order[existingIndex]?.kind === 'rushHermesShrineOffer') {
+        failCommand(command, 'Shrine rushes use SetHermesShrineRush');
+      }
       if (order[existingIndex]?.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
       }
       if (order[existingIndex]?.kind === 'interactInfernalContractPedestal') {
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
-      if (order[existingIndex]?.kind === 'interactKeepsakeRack') {
-        failCommand(command, 'the keepsake rack is permanent; ReplacePostbossKeepsake clears it');
-      }
-      if (
-        occurrenceIsActive &&
-        domain?.contributions.some(
-          (entry) =>
-            entry.kind === 'action' &&
-            entry.participation === 'required' &&
-            roomActionKey(entry.reference) === command.action.actionKey,
-        )
-      ) {
-        failCommand(command, 'active required room action cannot be removed');
-      }
-      nextOrder = order.filter((_, index) => index !== existingIndex);
+      // A required row may leave too: its item is live again and the walk shows its finding.
+      nextOrder = order.filter(
+        (reference, index) =>
+          index !== existingIndex && !boughtFromRemovedRoll(order[existingIndex]!, reference),
+      );
       break;
     case 'MoveRoomAction':
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       requireIndex(command, command.toIndex, order.length - 1, 'toIndex');
       if (existingIndex === command.toIndex) return document;
-      nextOrder = [...order];
-      {
-        const [reference] = nextOrder.splice(existingIndex, 1);
-        if (reference === undefined) failCommand(command, 'room action disappeared while moving');
-        nextOrder.splice(command.toIndex, 0, reference);
-      }
+      nextOrder = [...movedRoomActionOrder(order, existingIndex, command.toIndex)];
+      if (nextOrder.every((reference, index) => reference === order[index])) return document;
       break;
   }
 
@@ -349,6 +304,9 @@ export function applyRoomActionCommand(
       ? order[existingIndex]
       : undefined;
   const inserted = command.kind === 'InsertRoomAction' ? command.reference : undefined;
+  // The rack's keepsake is chosen at its use; without the use the held keepsake stays.
+  if (removed?.kind === 'interactKeepsakeRack' && nextOccurrence.keepsakeRack !== undefined)
+    nextOccurrence = { ...nextOccurrence, keepsakeRack: Object.freeze({ keepsakeKey: null }) };
   const travelParticipation =
     removed?.kind === 'interactAcquisitionEntry' &&
     removed.siteKey === 'roomExit' &&
@@ -386,13 +344,12 @@ export function applyRoomActionCommand(
     if (Object.keys(acquisitionSites).length === 0) delete nextOccurrence.acquisitionSites;
     else nextOccurrence.acquisitionSites = Object.freeze(acquisitionSites);
   }
-  const updated = updateOccurrence(document, located, Object.freeze(nextOccurrence));
-  // Removing or moving a reroll can change its target's effective reward.
-  const reroll =
-    command.kind === 'RemoveRoomAction' || command.kind === 'MoveRoomAction'
-      ? order[existingIndex]
-      : undefined;
-  return reroll?.kind === 'reroll'
-    ? reconcileRemovedOrMovedReroll(updated, catalog, located, occurrence, reroll)
-    : updated;
+  const updated = updateOccurrence(
+    document,
+    located,
+    removed?.kind === 'rerollStygianWell' || removed?.kind === 'rerollPurgingPool'
+      ? withoutFeatureRerollObservations(Object.freeze(nextOccurrence), removed)
+      : Object.freeze(nextOccurrence),
+  );
+  return updated;
 }

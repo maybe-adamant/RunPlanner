@@ -1,6 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
-import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
 
 /**
  * The Overview in game order: what the room's entry decides, what stands in
@@ -53,17 +52,13 @@ export function OverviewRow({
   children,
   icon,
   label,
-  preview,
 }: {
   readonly children: ReactNode;
   readonly icon?: ArtworkSource | undefined;
   readonly label: string;
-  /** The map point hovering the row previews. */
-  readonly preview?: RoomMapHighlight | undefined;
 }) {
-  const mapLinks = useRoomMapLinks();
   return (
-    <div aria-label={label} className="room-layout-row" role="group" {...mapLinks(preview)}>
+    <div aria-label={label} className="room-layout-row" role="group">
       <span aria-hidden="true" className="room-layout-label">
         {icon === undefined ? null : <ArtworkIcon className="artwork-label-icon" source={icon} />}
         {label}

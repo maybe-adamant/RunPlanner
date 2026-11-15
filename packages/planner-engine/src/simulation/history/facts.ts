@@ -1,7 +1,7 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
-import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../encounters/challenge-switch-phase';
+import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../../authored-project/acquisition/challenge-switch';
 import type { EncounterHistoryEntry, HistoryStateView } from './model';
 
 export interface RecentEncounterEnvelopeSlotFact {
@@ -79,6 +79,19 @@ export function projectBiomeEncounterKeyCounts(
         encounter.origin.routeKey === routeKey && encounter.origin.biomeKey === biomeKey,
     ),
   );
+}
+
+/**
+ * A native `SumPrevRooms = n` window read at a host's entry (StartRoom). The
+ * host is not yet in RoomHistory, so the window is its n - 1 predecessors,
+ * oldest first; the entry ledger's last appearance is the host itself.
+ */
+export function priorHostEntryRooms<T>(
+  appearances: readonly T[],
+  nativeSumPrevRooms: number,
+): readonly T[] {
+  const predecessors = nativeSumPrevRooms - 1;
+  return Object.freeze(predecessors <= 0 ? [] : appearances.slice(0, -1).slice(-predecessors));
 }
 
 /**

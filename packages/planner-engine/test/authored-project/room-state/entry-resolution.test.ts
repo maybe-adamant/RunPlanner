@@ -16,8 +16,11 @@ import {
   resolveEntryDeclaration,
   resolveEntryRoom,
   routeStartIncomingReward,
+  createRoomActionAddress,
+  roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 function room(gameName: string) {
   const declaration = catalog.rooms.byKey[gameName];
@@ -106,7 +109,7 @@ describe('contextual entry resolution', () => {
     );
   });
 
-  it('binds opening lifecycle/store authority only at a route-first entry', () => {
+  it('binds the run-start reward and its store only at a route-first entry', () => {
     expect(resolveEntryDeclaration(room('G_Intro'), dreamPosition('G', true))).toMatchObject({
       incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'resolvedOffer' },
@@ -114,7 +117,7 @@ describe('contextual entry resolution', () => {
     expect(
       resolveEntryRoom(catalog, room('G_Intro'), dreamPosition('G', true), true),
     ).toMatchObject({
-      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+      runStartReward: true,
       incomingRewardBinding: { kind: 'countedChoice' },
       incomingRewardStoreKey: 'RunProgress',
       enteredRewardStoreKey: 'RunProgress',
@@ -209,12 +212,27 @@ describe('contextual entry resolution', () => {
       producerPoint: 'roomRewardPickup',
       acquisitionRole: 'source',
     });
-    expect(occurrence.roomActions.order).toContainEqual(producer.sourceAction);
+    // The drops' site is reconciled with the offer; its source pickup is the owner's to place.
+    expect(occurrence.roomActions.order).toEqual([]);
     expect(occurrence.acquisitionSites?.[producer.siteKey]?.pickupEntries).toHaveProperty(
       'smallGold',
     );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
+    );
+    const sourceAction = producer.sourceAction;
+    if (sourceAction === undefined) throw new Error('missing Buried Treasure source action');
+    const placed = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(sourceAction)),
+      reference: sourceAction,
+      index: 0,
+    });
+    expect(placed.route.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual([
+      withItemContent(placed, createOccurrenceAddress(biome, occurrenceId), sourceAction),
+    ]);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog)).toEqual(
+      placed,
     );
   });
 });

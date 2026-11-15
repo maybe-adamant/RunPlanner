@@ -2,9 +2,13 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createNaturalSelectionResultAddress,
+  createRoomActionAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
+  roomActionKey,
+  traitGeneratedPickupSiteKey,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -15,6 +19,12 @@ import {
 
 import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
 import { applyRewardStoreRepair, rewardStoreRepairPlans } from '../checkpoints/reward-store-repair';
+import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  placeTestLivePickupsAtSite,
+  replaceTestPlacedItem,
+} from '../settled-edit';
 import { nBiome, nOccurrenceId, nOccurrenceIds } from './surface';
 
 function replaceBoon(
@@ -25,9 +35,8 @@ function replaceBoon(
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
   const value = { rewardType: 'Boon' as const, payload: { kind: 'BoonSource' as const, source } };
-  const withReward = applyProjectCommand(
+  const withReward = replaceTestPlacedItem(
     project,
-    catalog,
     occurrenceId === nOccurrenceIds.opening
       ? {
           kind: 'ReplaceStartingReward',
@@ -35,6 +44,7 @@ function replaceBoon(
           value,
         }
       : { kind: 'ReplaceIncomingReward', reward, value },
+    createOccurrenceAddress(nBiome, occurrenceId),
   );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -50,9 +60,8 @@ function replaceDirectTrait(
   offer: AuthoredTraitOfferTraits,
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
-  const withReward = applyProjectCommand(
+  const withReward = replaceTestPlacedItem(
     project,
-    catalog,
     occurrenceId === nOccurrenceIds.opening
       ? {
           kind: 'ReplaceStartingReward',
@@ -60,6 +69,7 @@ function replaceDirectTrait(
           value: { rewardType },
         }
       : { kind: 'ReplaceIncomingReward', reward, value: { rewardType } },
+    createOccurrenceAddress(nBiome, occurrenceId),
   );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -73,7 +83,7 @@ function replaceUnvisitedBoonSource(
   occurrenceId: ReturnType<typeof nOccurrenceId>,
   source: string,
 ): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+  return replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
@@ -90,6 +100,22 @@ function replaceExistingSourceOffer(
     trait: createTraitOfferAddress(createIncomingRewardAddress(nBiome, occurrenceId), 'source'),
     value: offer,
   });
+}
+
+/** Collects the room's required items, then picks up every drop its selected trait spawned. */
+function pickUpTraitDrops(
+  project: ProjectDocument,
+  occurrenceId: ReturnType<typeof nOccurrenceId>,
+  role: 'source' | 'self',
+): ProjectDocument {
+  return placeTestLivePickupsAtSite(
+    collectTestRequiredItems(project),
+    createOccurrenceAddress(nBiome, occurrenceId),
+    traitGeneratedPickupSiteKey(
+      createTraitOfferAddress(createIncomingRewardAddress(nBiome, occurrenceId), role),
+      'option1',
+    ),
+  );
 }
 
 function traitOffer(value: AuthoredTraitOfferTraits): AuthoredTraitOfferTraits {
@@ -220,7 +246,7 @@ export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
   );
   // Combat01 is assigned first, so Combat05 repeats Demeter after four distinct board gods.
   project = replaceUnvisitedBoonSource(project, nOccurrenceId('combat01'), 'ApolloUpgrade');
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
     value: { rewardType: 'MaxHealthDropBig' },
@@ -237,7 +263,7 @@ export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
     'DemeterUpgrade',
     naturalSelectionOffer(),
   );
-  return project;
+  return collectTestRequiredItems(project);
 }
 
 /** Completes Natural Selection through the actual candidate domain at the saved N frontier. */
@@ -314,7 +340,7 @@ export function createSurfaceNQueensRansomCheckpoint(): ProjectDocument {
     ],
     selectedOptionKey: 'option1',
   });
-  return project;
+  return collectTestRequiredItems(project);
 }
 
 export function createSurfaceNSteadyGrowthFrontier(): ProjectDocument {
@@ -348,18 +374,49 @@ export function createSurfaceNQuickBuckCheckpoint(): ProjectDocument {
   // The opening Hermes pick leaves combat05's own HermesUpgrade unsupported in
   // the run-wide Hub bag, so the route carries the same repair its saved
   // checkpoint does — the one owner for that command list.
-  return applyRewardStoreRepair(quickBuck, rewardStoreRepairPlans['surface-n-quick-buck'] ?? []);
+  return authorTestTraitsAndRequiredItems(
+    applyRewardStoreRepair(
+      pickUpTraitDrops(quickBuck, nOccurrenceIds.opening, 'self'),
+      rewardStoreRepairPlans['surface-n-quick-buck'] ?? [],
+    ),
+  );
 }
 
 export function createSurfaceNBuriedTreasureCheckpoint(): ProjectDocument {
-  return replaceBoon(loadSurfaceNCheckpoint(), nOccurrenceIds.preHub, 'PoseidonUpgrade', {
-    kind: 'traits',
-    giverKey: 'Poseidon',
-    options: [
-      { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
-      { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
-      { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
-    ],
-    selectedOptionKey: 'option1',
-  });
+  const buriedTreasure = replaceBoon(
+    loadSurfaceNCheckpoint(),
+    nOccurrenceIds.preHub,
+    'PoseidonUpgrade',
+    {
+      kind: 'traits',
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  );
+  // The walk stops at this offer's rarity mismatch, so the drops are taken by
+  // explicit rows after the Boon pickup rather than from the live row.
+  const siteKey = traitGeneratedPickupSiteKey(
+    createTraitOfferAddress(createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub), 'source'),
+    'option1',
+  );
+  const prehub = buriedTreasure.route.biomes
+    .find((biome) => biome.biomeKey === 'N')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preHub);
+  const entryKeys = Object.keys(prehub?.acquisitionSites?.[siteKey]?.pickupEntries ?? {});
+  if (prehub === undefined || entryKeys.length === 0)
+    throw new Error('Buried Treasure drops are missing');
+  return entryKeys.reduce((project, entryKey, offset) => {
+    const reference = { kind: 'interactAcquisitionEntry' as const, siteKey, entryKey };
+    return applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(nBiome, nOccurrenceIds.preHub, roomActionKey(reference)),
+      reference,
+      index: prehub.roomActions.order.length + offset,
+    });
+  }, buriedTreasure);
 }

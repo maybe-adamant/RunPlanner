@@ -1,5 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import { Fragment } from 'react';
 
 import type {
   WorkspaceRoomActionRow,
@@ -8,78 +7,20 @@ import type {
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
-import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon, sourceFamilyIcon } from '@planner/ui/artwork/roomArtwork';
-import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
-import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggleLock } from '@planner/ui/controls/IconToggle';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
-import { useAppSelector } from '@planner/state/store';
 import { TimelineRow } from './TimelineRow';
-
-function actionRowElement(from: HTMLElement, actionKey: string): HTMLElement | null {
-  const selector = `[data-room-action-key="${CSS.escape(actionKey)}"]`;
-  return (
-    from.closest('.room-actions-workbench')?.querySelector<HTMLElement>(selector) ??
-    from.ownerDocument.querySelector<HTMLElement>(selector)
-  );
-}
-
-/** Brings a collect action's Timeline row into view and focuses it. */
-function focusActionRow(row: HTMLElement): void {
-  row.focus({ preventScroll: true });
-  row.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-}
-
-/** A newly placed row's first unfinished choice opens; otherwise the row is focused. */
-function openPlacedRow(row: HTMLElement): void {
-  const choice = [
-    ...row.querySelectorAll<HTMLElement>('.timeline-cell-editors button[data-has-findings="true"]'),
-  ].find((button) => !button.matches(':disabled') && button.ariaDisabled !== 'true');
-  if (choice === undefined) {
-    focusActionRow(row);
-    return;
-  }
-  choice.focus({ preventScroll: true });
-  row.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  choice.click();
-}
-
-/** A polite announcement that speaks again when the same message repeats. */
-function useAnnouncement(): readonly [string, (message: string) => void] {
-  const [announcement, setAnnouncement] = useState('');
-  const announce = useCallback(
-    (message: string) =>
-      setAnnouncement((previous) => (previous === message ? `${message}\u00a0` : message)),
-    [],
-  );
-  return [announcement, announce];
-}
-
-/** The item it spawns as, drawn from the engine's product rather than its row's label. */
-function spawnedRewardIcon(
-  reward: NonNullable<WorkspaceSpawnedItem['reward']>,
-): ArtworkSource | undefined {
-  switch (reward.kind) {
-    case 'offer':
-      return offerIcon(reward.offer);
-    case 'pickup':
-      return rewardIcon(reward.gameName);
-    case 'requiredDrop':
-      return rewardIcon(reward.consumableKey);
-  }
-}
+import { actionRowElement, focusActionRow } from './placedRow';
 
 function SpawnedItemChip({
-  announce,
   copy,
   item,
   row,
   source,
 }: {
-  readonly announce: (message: string) => void;
   /** A copy's chip shows its source and the doubled count instead of the item. */
   readonly copy?: WorkspaceSpawnSource;
   readonly item: WorkspaceSpawnedItem;
@@ -87,14 +28,6 @@ function SpawnedItemChip({
   /** What created the item, as a badge on the chip's bottom corner. */
   readonly source?: WorkspaceSpawnSource | undefined;
 }) {
-  const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
-  const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const revision = useAppSelector((state) => state.editorSession.semanticNavigationRevision);
-  const chip = useRef<HTMLButtonElement>(null);
-  const opening = useRef(false);
-  const navigatedAt = useRef<number>(undefined);
-  const placement = item.placement;
   const shown =
     copy !== undefined
       ? `${copy.name} copy of ${item.label}`
@@ -107,64 +40,15 @@ function SpawnedItemChip({
     source === undefined
       ? undefined
       : pickupSourceBadgeIcon(source.family, source.challengeSwitchKind);
-  const unavailable = placement.kind === 'unavailable';
-  // Placed from this chip, the new row opens its choice once it is on the Timeline.
-  useEffect(() => {
-    if (!opening.current || placement.kind !== 'placed' || chip.current === null) return;
-    opening.current = false;
-    const placed = actionRowElement(chip.current, item.actionKey);
-    if (placed !== null) openPlacedRow(placed);
-  }, [item.actionKey, placement.kind]);
-  // Navigation to an unplaced item's action lands on its chip.
-  const navigated =
-    placement.kind !== 'placed' &&
-    row !== undefined &&
-    focusedOwner !== null &&
-    semanticAddressKey(focusedOwner) === semanticAddressKey(row.address);
-  useEffect(() => {
-    if (!navigated || navigatedAt.current === revision || chip.current === null) return;
-    navigatedAt.current = revision;
-    chip.current.focus({ preventScroll: true });
-    chip.current.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  }, [navigated, revision]);
-  const mark =
-    placement.kind === 'placed' || row === undefined
-      ? undefined
-      : findingMark(row.address, 'place');
-  return (
-    <button
-      {...mark}
-      {...hintProps(item.hint, mark?.['aria-description'], name)}
-      aria-disabled={unavailable || undefined}
-      aria-label={name}
-      className={copy === undefined ? 'timeline-chip' : 'timeline-chip spawn-copy-chip'}
-      data-spawn-locked={item.locked}
-      data-spawn-participation={item.participation}
-      data-spawn-placed={placement.kind === 'placed' || undefined}
-      onClick={(event) => {
-        if (placement.kind === 'placed') {
-          const placed = actionRowElement(event.currentTarget, item.actionKey);
-          if (placed !== null) focusActionRow(placed);
-        } else if (placement.kind === 'unplaced') {
-          opening.current = true;
-          executeIntent(placement.intent);
-          // A placement that did not land leaves nothing to open later.
-          setTimeout(() => {
-            opening.current = false;
-          }, 0);
-          announce(`${item.label} added to the timeline.`);
-        }
-      }}
-      ref={chip}
-      type="button"
-    >
+  const face = (
+    <>
       <ArtworkIcon
         className="artwork-label-icon"
         source={
           copy !== undefined
             ? sourceFamilyIcon(copy.family)
             : item.reward !== undefined
-              ? spawnedRewardIcon(item.reward)
+              ? offerIcon(item.reward.offer)
               : row === undefined
                 ? undefined
                 : (roomActionIcon(
@@ -172,7 +56,7 @@ function SpawnedItemChip({
                     row.address.biomeKey,
                     row.sourceFamily,
                     row.challengeSwitchKind,
-                  ) ?? sourceFamilyIcon(row.sourceFamily))
+                  ) ?? sourceFamilyIcon(row.sourceFamily, row.challengeSwitchKind))
         }
       />
       {copy === undefined ? null : (
@@ -194,22 +78,49 @@ function SpawnedItemChip({
         </span>
       )}
       {item.locked ? <IconToggleLock /> : null}
+    </>
+  );
+  const className = copy === undefined ? 'timeline-chip' : 'timeline-chip spawn-copy-chip';
+  // Still on the ground, it is taken from the live row.
+  if (!item.placed)
+    return (
+      <span
+        aria-label={name}
+        className={className}
+        data-spawn-locked={item.locked}
+        data-spawn-participation={item.participation}
+        role="img"
+      >
+        {face}
+      </span>
+    );
+  return (
+    <button
+      aria-label={name}
+      className={className}
+      data-spawn-locked={item.locked}
+      data-spawn-participation={item.participation}
+      data-spawn-placed
+      onClick={(event) => {
+        const placed = actionRowElement(event.currentTarget, item.actionKey);
+        if (placed !== null) focusActionRow(placed);
+      }}
+      type="button"
+    >
+      {face}
     </button>
   );
 }
 
 function SpawnGroup({
-  announce,
   group,
   rows,
 }: {
-  readonly announce: (message: string) => void;
   readonly group: WorkspaceSpawnGroup;
   readonly rows: readonly WorkspaceRoomActionRow[];
 }) {
   const items = group.items.map((item) => (
     <SpawnedItemChip
-      announce={announce}
       item={item}
       key={item.key}
       row={rows.find((candidate) => candidate.key === item.actionKey)}
@@ -231,6 +142,7 @@ export function SpawnedLootRow({
   label,
   rows,
   source,
+  underCause,
   unlocks,
 }: {
   readonly groups: readonly WorkspaceSpawnGroup[];
@@ -240,13 +152,15 @@ export function SpawnedLootRow({
   readonly source?: true;
   /** Lists locked loot as it becomes takeable. */
   readonly unlocks?: true;
+  /** Stands right under the marker that caused it. */
+  readonly underCause?: true;
 }) {
-  const [announcement, announce] = useAnnouncement();
   return (
     <TimelineRow
       aria-label={label}
       notice
       data-spawned-loot={source ? 'action' : unlocks ? 'unlocks' : 'moment'}
+      hooked={source === true || underCause === true}
       editors={
         <span className="timeline-chip-group spawned-loot-groups">
           {groups.map((group, index) => (
@@ -256,12 +170,9 @@ export function SpawnedLootRow({
                   ·
                 </span>
               )}
-              <SpawnGroup announce={announce} group={group} rows={rows} />
+              <SpawnGroup group={group} rows={rows} />
             </Fragment>
           ))}
-          <span aria-live="polite" className="visually-hidden">
-            {announcement}
-          </span>
         </span>
       }
       kind="continuation"
@@ -278,22 +189,17 @@ export function SpawnCopyChips({
   readonly copies: readonly WorkspaceSpawnCopy[];
   readonly rows: readonly WorkspaceRoomActionRow[];
 }) {
-  const [announcement, announce] = useAnnouncement();
   if (copies.length === 0) return null;
   return (
     <span className="spawn-copies">
       {copies.map((copy) => (
         <SpawnedItemChip
-          announce={announce}
           copy={copy.source}
           item={copy.item}
           key={copy.key}
           row={rows.find((candidate) => candidate.key === copy.item.actionKey)}
         />
       ))}
-      <span aria-live="polite" className="visually-hidden">
-        {announcement}
-      </span>
     </span>
   );
 }

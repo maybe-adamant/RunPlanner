@@ -35,7 +35,12 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { routePanelSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenHBiome,
@@ -45,9 +50,11 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { doorsEditor, expandDoors } from '@planner-test/support/biome-workbench';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
-import { timelineRow } from '@planner-test/support/timeline-rows';
+import { takeLive } from '@planner-test/support/live-row';
+import { queryTimelineRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(() => {
   cleanup();
@@ -91,17 +98,17 @@ async function pickExit(user: { click: (element: Element) => Promise<void> }, do
 describe('underworld product loop', () => {
   it('shows Moon Beam banked Path progress in Run State without inventing a Hex-node editor', async () => {
     const application = createApplication();
-    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+    let project = settleTestEdit(createGoldenFGHIProject(), {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'SpellTalentKeepsake',
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceStartingReward',
       reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'SpellDrop' },
     });
-    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
+    application.store.dispatch(authoredProjectReplaced(authorTestTraitsAndRequiredItems(project)));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
@@ -125,17 +132,17 @@ describe('underworld product loop', () => {
   it('projects the reached forced Zeus Boon and its still-active ordinary source in Run State', async () => {
     const application = createApplication();
     const openingReward = createStartingRewardAddress('Underworld');
-    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+    let project = settleTestEdit(createGoldenFGHIProject(), {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'ForceZeusBoonKeepsake',
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceStartingReward',
       reward: openingReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
-    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
+    application.store.dispatch(authoredProjectReplaced(authorTestTraitsAndRequiredItems(project)));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
@@ -164,7 +171,7 @@ describe('underworld product loop', () => {
     application.dispose();
   });
 
-  it('creates a required pickup atomically and opens its move-only Room Timeline workflow without evaluation work', async () => {
+  it('creates a room with its required pickup live and restores it in one edit without evaluation work', async () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');
     const occurrenceId = createOccurrenceId('mandatory-default-product');
@@ -201,13 +208,8 @@ describe('underworld product loop', () => {
       currentProject(application)
         .route.biomes.find((plan) => plan.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
-    expect(authoredOccurrence()?.roomActions.order).toEqual([
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-    ]);
+    // A new room places no row; its required pickup lies live until the owner places it.
+    expect(authoredOccurrence()?.roomActions.order).toEqual([]);
     expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 1);
 
     const view = renderPlannerForInteraction({ application });
@@ -219,20 +221,33 @@ describe('underworld product loop', () => {
     );
     const evaluationBefore = currentEvaluation(application);
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(currentEvaluation(application)).toBe(evaluationBefore);
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const requiredRow = timelineRow('Collect Apollo', actions);
-    expect(within(requiredRow).queryByText('Position')).toBeNull();
-    // A required pickup only moves, through its reorder handle.
+    expect(queryTimelineRow('Collect Apollo', actions)).toBeNull();
+    await takeLive(view.user, 'Apollo', 'Pick up');
+    expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 2);
+    expect(authoredOccurrence()?.roomActions.order).toEqual([
+      expect.objectContaining({
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      }),
+    ]);
+
+    // A placed required pickup moves through its reorder handle and can be taken back.
+    const requiredRow = timelineRow(
+      'Collect Apollo',
+      screen.getByRole('region', { name: 'Room Timeline' }),
+    );
     expect(
       within(requiredRow).getByRole('button', { name: 'Reorder Collect Apollo' }),
     ).toBeTruthy();
     const deleteButton = within(requiredRow).getByRole('button', {
       name: 'Remove Collect Apollo from timeline',
     });
-    expect((deleteButton as HTMLButtonElement).disabled).toBe(true);
-    expect(deleteButton.classList.contains('quiet-action')).toBe(true);
-    expect(currentEvaluation(application)).toBe(evaluationBefore);
+    expect((deleteButton as HTMLButtonElement).disabled).toBe(false);
 
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toBe(beforeEntry);
   });
@@ -280,7 +295,7 @@ describe('underworld product loop', () => {
       createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
       replayKey,
     );
-    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+    let project = settleTestEdit(createGoldenFGHIProject(), {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
         kind: 'occurrence',
@@ -288,7 +303,7 @@ describe('underworld product loop', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
       value: {
@@ -303,12 +318,7 @@ describe('underworld product loop', () => {
         rarificationActions: [],
       },
     });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: replayEntry,
-      value: { rewardType: 'WeaponUpgrade' },
-    });
-    project = applyProjectCommand(project, application.catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceLocalReward',
       reward: createLocalRewardAddress(
         goldenHBiome,
@@ -318,10 +328,17 @@ describe('underworld product loop', () => {
       ),
       value: { rewardType: 'WeaponUpgrade' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceLocalReward',
       reward: createLocalRewardAddress(goldenHBiome, combat09, 'cages', 'cage2'),
       value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = collectTestRequiredItems(project);
+    // A loaded plan keeps a replay outcome authored before the replay changed.
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: replayEntry,
+      value: { rewardType: 'WeaponUpgrade' },
     });
     const roomActionOrderBefore = project.route.biomes
       .find((biome) => biome.biomeKey === 'H')
@@ -501,7 +518,7 @@ describe('underworld product loop', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
 
@@ -567,10 +584,11 @@ describe('underworld product loop', () => {
       'Chaos 06',
     );
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
-      'Chaos 01',
-    );
-    await view.user.click(within(gate).getByRole('button', { name: 'Chaos gate room' }));
+    const restoredGate = within(expandDoors()).getByRole('article', { name: 'Chaos gate exit' });
+    expect(
+      within(restoredGate).getByRole('button', { name: 'Chaos gate room' }).textContent,
+    ).toContain('Chaos 01');
+    await view.user.click(within(restoredGate).getByRole('button', { name: 'Chaos gate room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
     await pickExit(view.user, 'Chaos gate');
     // The rail opens the room the exit leads to.
@@ -605,7 +623,7 @@ describe('underworld product loop', () => {
       selection: { kind: 'additional', additionalExitKey: 'chaos' },
     });
     application.store.dispatch(
-      authoredProjectReplaced(authorLegalTraitOffers(currentProject(application))),
+      authoredProjectReplaced(authorTestTraitsAndRequiredItems(currentProject(application))),
     );
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const erebusRail = screen
@@ -633,8 +651,11 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
-    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const rewardPool = screen.getByRole('button', { name: /Reward Pool/ });
+    // The next step opens its source room's doors on its Timeline.
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const rewardPool = within(doorsEditor()).getByRole('button', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     const nextPool = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
@@ -1009,7 +1030,9 @@ describe('underworld product loop', () => {
     );
     await pickExit(view.user, 'Infernal Contract');
     expect(
-      screen.getByRole('article', { name: 'Infernal Contract exit' }).getAttribute('data-picked'),
+      within(expandDoors())
+        .getByRole('article', { name: 'Infernal Contract exit' })
+        .getAttribute('data-picked'),
     ).toBe('true');
     const oceanusRail = screen
       .getByRole('region', { name: 'Oceanus route structure' })

@@ -3,9 +3,10 @@ import { sourceOfferPointStoreKey } from '../../authored-project/batchState';
 import type { BiomeTopology, ExitDecision, OccurrenceId } from '../../authored-project/model';
 import {
   additionalExitsForDecision,
+  orderedTargets,
   selectedExitContinuation,
 } from '../../authored-project/topology/query';
-import { lastForcedSharedRewardStore, orderedTargets } from './batch';
+import { lastForcedSharedRewardStore } from './batch';
 import { enteredRewardStore, type EnteredRewardStore } from './rooms/templates';
 import type { CanonicalBatch } from './model';
 

@@ -4,6 +4,7 @@ import {
   createOccurrenceAddress,
   roomActionKey,
   type AuthoredRewardState,
+  type BiomeAddress,
   type RoomActionReference,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
@@ -45,20 +46,21 @@ function rewardTraits(
 
 /** The traits one room action grants, read from the authored payload it settles. */
 function actionTraits(
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): { readonly gained: readonly string[]; readonly upgraded: readonly string[] } {
   const state = occurrence.state;
   switch (reference.kind) {
     case 'interactIncomingReward':
-      return rewardTraits(deliveredIncomingReward(occurrence), reference.acquisitionRole);
+      return rewardTraits(deliveredIncomingReward(biome, occurrence), reference.acquisitionRole);
     case 'collectRequiredReward':
-      return rewardTraits(deliveredIncomingReward(occurrence));
+      return rewardTraits(deliveredIncomingReward(biome, occurrence));
     case 'interactLocalReward':
       return state.kind === 'fieldsCombat'
         ? rewardTraits(
             reference.groupKey === 'cages'
-              ? deliveredCageReward(occurrence, reference.slotKey)
+              ? deliveredCageReward(biome, occurrence, reference.slotKey)
               : state.optionalRewards[reference.slotKey],
           )
         : rewardTraits(undefined);
@@ -80,8 +82,15 @@ function actionTraits(
       const key = occurrence.keepsakeRack?.keepsakeKey;
       return { gained: key === undefined || key === null ? [] : [key], upgraded: [] };
     }
-    case 'purchaseHermesShrineOffer':
-      return { gained: reference.rushed ? [] : ['StorePendingDeliveryItem'], upgraded: [] };
+    case 'purchaseHermesShrineOffer': {
+      // A rushed purchase is delivered in the room; only a delayed one is pending.
+      const rushed = occurrence.roomActions.order.some(
+        (candidate) =>
+          candidate.kind === 'rushHermesShrineOffer' &&
+          candidate.generationKey === reference.generationKey,
+      );
+      return { gained: rushed ? [] : ['StorePendingDeliveryItem'], upgraded: [] };
+    }
     case 'interactEncounter': {
       const offers = occurrence.encounters.traitOffersByPhase?.[reference.phaseKey] ?? {};
       return {
@@ -140,7 +149,12 @@ export function orderRoomActions(
   const visits = context.occurrences.visitsOf(occurrenceId);
   if (original === undefined || visits.length === 0 || original.roomActions.order.length < 2)
     return undefined;
-  const timed = timedActions(context, original, visits);
+  const timed = timedActions(
+    context,
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    original,
+    visits,
+  );
   const order = original.roomActions.order;
   const timedPositions = order.flatMap((reference, index) =>
     timed.has(roomActionKey(reference)) ? [index] : [],
@@ -173,6 +187,7 @@ export function orderRoomActions(
 /** Each action's earliest stamped trait time across the occurrence's record visits. */
 function timedActions(
   context: RunImportContext,
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   visits: readonly number[],
 ): Map<string, number> {
@@ -181,7 +196,7 @@ function timedActions(
   const claimed = new Set<object>();
   const times = new Map<string, number>();
   for (const reference of occurrence.roomActions.order) {
-    const traits = actionTraits(occurrence, reference);
+    const traits = actionTraits(biome, occurrence, reference);
     const stamps = [
       ...traits.gained.map((name) =>
         gained.find((entry) => entry.name === name && !claimed.has(entry)),

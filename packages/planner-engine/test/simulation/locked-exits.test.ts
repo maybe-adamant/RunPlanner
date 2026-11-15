@@ -13,6 +13,7 @@ import {
   encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
+  type AuthoredEncounterCustomization,
   type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
@@ -166,33 +167,12 @@ describe('Oceanus locked door authoring', () => {
     expect(occurrence(restore(order.indexOf(reward))).roomActions.order).toEqual(order);
     expect(occurrence(restore(0)).roomActions.order).toEqual([reward, ...without]);
     expect(() => restore(without.length)).toThrow(
-      /is not a legal position for .*unlockExit.* afterCheckpoint exitUsable/,
+      /is not a legal position for .*unlockExit.* must follow the last required action/,
     );
   });
 
-  it('round-trips locks and a customized press, and refuses a press without its lock', () => {
-    const pressed = pressAt(lock(golden()));
-    const assembly = simulateProjectAssembly(catalog, pressed);
-    const action = createRoomActionAddress(
-      g(pressed),
-      createOccurrenceId(HOST),
-      roomActionKey(press('exit2')),
-    );
-    const capability = unlockExitEncounterSupportForProjectEvaluationAssembly(assembly, action);
-    expect(capability).toMatchObject({ waveCount: { min: 1, max: 1 } });
-    const value = capability!.initialize()!;
-    const customized = apply(pressed, {
-      kind: 'ReplaceUnlockExitCustomization',
-      action,
-      decisionKey: 'generatedComposition',
-      value,
-    });
-    expect(occurrence(customized).roomActions.order.at(-1)).toEqual({
-      kind: 'unlockExit',
-      exitKey: 'exit2',
-      customization: { generatedComposition: value },
-    });
-    const encoded = encodeProjectDocument(customized);
+  it('round-trips locks and a press, and refuses a press without its lock', () => {
+    const encoded = encodeProjectDocument(pressAt(lock(golden())));
     expect(encodeProjectDocument(decodeProjectDocument(JSON.parse(encoded), catalog))).toBe(
       encoded,
     );
@@ -204,6 +184,108 @@ describe('Oceanus locked door authoring', () => {
     expect(() => decodeProjectDocument(raw, catalog)).toThrow(/presses a door that is not locked/);
     (rawHost as { lockedExits?: unknown }).lockedExits = ['exit1'];
     expect(() => decodeProjectDocument(raw, catalog)).toThrow(/first door never locks/);
+  });
+});
+
+describe('Oceanus locked door fight', () => {
+  const pressAddress = (project: ProjectDocument) =>
+    createRoomActionAddress(g(project), createOccurrenceId(HOST), roomActionKey(press('exit2')));
+  const customize = (project: ProjectDocument, value: AuthoredEncounterCustomization | null) =>
+    apply(project, {
+      kind: 'ReplaceLockedExitCustomization',
+      occurrence: host(project),
+      exitKey: 'exit2',
+      decisionKey: 'generatedComposition',
+      value,
+    });
+  const fightOf = (project: ProjectDocument) =>
+    occurrence(project).encounters.customizationByLockedExit?.['exit2'];
+
+  it('authors a locked door’s fight before its press, and keeps it on the door', () => {
+    const locked = lock(golden());
+    // Unpressed, the fight is prepared where the press would append.
+    const capability = unlockExitEncounterSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, locked),
+      pressAddress(locked),
+    );
+    expect(capability).toMatchObject({ waveCount: { min: 1, max: 1 } });
+    const value = capability!.initialize()!;
+    const customized = customize(locked, value);
+    expect(fightOf(customized)).toEqual({ generatedComposition: value });
+    expect(occurrence(customized).roomActions.order).toEqual(occurrence(locked).roomActions.order);
+    const product = roomObjectInteractionsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, customized),
+      host(customized),
+    )?.lockedDoors?.unlocks?.[0];
+    expect(product?.append).toBeDefined();
+    expect(product?.encounter?.customization[0]).toMatchObject({
+      key: 'generatedComposition',
+      value,
+      reset: {
+        kind: 'ReplaceLockedExitCustomization',
+        exitKey: 'exit2',
+        decisionKey: 'generatedComposition',
+        value: null,
+      },
+    });
+    // Pressing reads the door's fight; removing the press keeps it.
+    const pressed = pressAt(customized);
+    expect(occurrence(pressed).roomActions.order.at(-1)).toEqual(press('exit2'));
+    expect(fightOf(pressed)).toEqual({ generatedComposition: value });
+    const removed = apply(pressed, { kind: 'RemoveRoomAction', action: pressAddress(pressed) });
+    expect(fightOf(removed)).toEqual({ generatedComposition: value });
+    // Opening the door ends it as an item: its fight goes.
+    const opened = lock(pressed, 'exit2', false);
+    expect(occurrence(opened).encounters.customizationByLockedExit).toBeUndefined();
+    expect(occurrence(opened).encounters).toEqual(occurrence(golden()).encounters);
+    // Null restores the native roll.
+    expect(customize(customized, null)).toEqual(locked);
+    expect(customize(locked, null)).toBe(locked);
+  });
+
+  it('refuses the fight of a door that is not locked', () => {
+    expect(() => customize(golden(), { kind: 'generated' })).toThrow(/exit2 is not locked/);
+  });
+
+  it('round-trips a door’s fight and closes it over the locked doors', () => {
+    const locked = lock(golden());
+    const value = unlockExitEncounterSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, locked),
+      pressAddress(locked),
+    )!.initialize()!;
+    const encoded = encodeProjectDocument(customize(locked, value));
+    expect(encodeProjectDocument(decodeProjectDocument(JSON.parse(encoded), catalog))).toBe(
+      encoded,
+    );
+    const rawHost = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((plan) => plan.biomeKey === 'G')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === HOST)! as unknown as {
+        lockedExits?: unknown;
+        encounters: { customizationByLockedExit?: Record<string, unknown> };
+        roomActions: { order: unknown[] };
+      };
+    const unlocked = JSON.parse(encoded) as ProjectDocument;
+    delete rawHost(unlocked).lockedExits;
+    expect(() => decodeProjectDocument(unlocked, catalog)).toThrow(
+      /customizes the fight of a door that is not locked/,
+    );
+    const empty = JSON.parse(encoded) as ProjectDocument;
+    rawHost(empty).encounters.customizationByLockedExit = { exit2: {} };
+    expect(() => decodeProjectDocument(empty, catalog)).toThrow(/must not be empty/);
+    const undeclared = JSON.parse(encoded) as ProjectDocument;
+    rawHost(undeclared).encounters.customizationByLockedExit = { exit2: { other: value } };
+    expect(() => decodeProjectDocument(undeclared, catalog)).toThrow(
+      /not a declared decision of the locked door's fight/,
+    );
+    // The press no longer carries the fight.
+    const onRow = JSON.parse(encodeProjectDocument(pressAt(locked))) as ProjectDocument;
+    rawHost(onRow).roomActions.order.push({
+      ...press('exit2'),
+      customization: { generatedComposition: value },
+    });
+    rawHost(onRow).roomActions.order.splice(-2, 1);
+    expect(() => decodeProjectDocument(onRow, catalog)).toThrow(/customization/);
   });
 });
 

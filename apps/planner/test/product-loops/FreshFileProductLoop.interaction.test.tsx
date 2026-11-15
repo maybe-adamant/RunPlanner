@@ -14,6 +14,8 @@ import {
   freshFileGIntroId,
 } from '@run-planner/test-fixtures/fresh-file';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { expandDoors } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(() => {
   cleanup();
@@ -44,6 +46,7 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
     expect(project().route.biomes[0]?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expandDoors();
     await user.click(screen.getByLabelText('Reward Pool'));
     await user.click(within(screen.getByRole('listbox')).getByText('Minor Reward'));
     const decisions = () => project().route.biomes[0]!.topology!.decisions;
@@ -81,6 +84,8 @@ describe('Fresh File product loop', () => {
         name: 'Encounter started: Intro combat',
       }),
     ).toBeTruthy();
+    // The boon is live until the owner places its pickup; its offer is reached once picked up.
+    await takeLive(user, 'Apollo', 'Pick up');
     await user.click(screen.getByRole('button', { name: 'Edit Trait · Pick trait' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));

@@ -1,3 +1,4 @@
+import { effectiveRewardAt, rerolledRewardOf } from '../rerolls';
 import type { AcquisitionRoleAddress, BiomeAddress, TraitOfferOwnerAddress } from '../addresses';
 import {
   createAcquisitionEntryAddress,
@@ -10,7 +11,7 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '../addresses';
-import { acquisitionSiteFromStorageKey } from './artificer';
+import { acquisitionSiteFromStorageKey, acquisitionSiteStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
@@ -69,8 +70,10 @@ function sourceAction(
         return reference.kind === 'interactInfernalContractPedestal';
       case 'acquisitionEntry':
         return (
+          // A row names its site by storage key, which for an Artificer
+          // replacement's site is the full site address, not its point.
           (reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === owner.site.pointKey &&
+            reference.siteKey === acquisitionSiteStorageKey(owner.site) &&
             reference.entryKey === owner.entryKey) ||
           (owner.site.pointKey === 'roomExit' &&
             reference.kind === 'interactShopOffer' &&
@@ -125,14 +128,20 @@ export function authoredAcquisitionSources(
       if (routeStartIncoming === undefined)
         add(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
-          occurrence.rerolledIncomingReward ?? occurrence.state.reward,
+          effectiveRewardAt(
+            occurrence,
+            createIncomingRewardAddress(biome, occurrence.occurrenceId),
+          ),
         );
       break;
     case 'fieldsCombat':
       for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
         add(
           createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
-          occurrence.state.rerolledCages?.[slotKey] ?? reward,
+          rerolledRewardOf(
+            occurrence,
+            createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
+          ) ?? reward,
         );
       for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
         add(
@@ -145,7 +154,10 @@ export function authoredAcquisitionSources(
         for (const [offerKey, reward] of Object.entries(wheel.offers))
           add(
             createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            wheel.rerolledOffers?.[offerKey] ?? reward,
+            rerolledRewardOf(
+              occurrence,
+              createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
+            ) ?? reward,
           );
       break;
     case 'shop':

@@ -53,6 +53,11 @@ import {
   type StygianWellRunState,
 } from '../../src/simulation/commerce/stygian-well';
 import { reachedFrontier } from '../support/reward-frontier';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
+import {
+  repinBoughtStygianWellSlot,
+  restockAndBuyStygianWellRefill,
+} from '../support/stygian-well';
 
 /** Assesses one purchase of the authored Well; the first purchase restocks under Travel Deal. */
 function assessPurchase(
@@ -123,8 +128,8 @@ describe('Stygian Well generation slot', () => {
   it('names the slot and the roll number a generation was stocked by', () => {
     const roomActions = {
       order: [
-        { kind: 'rerollStygianWell' as const, rerollId: 'a', offerKeyBySlot: {} },
-        { kind: 'rerollStygianWell' as const, rerollId: 'b', offerKeyBySlot: {} },
+        { kind: 'rerollStygianWell' as const, rerollId: 'a' },
+        { kind: 'rerollStygianWell' as const, rerollId: 'b' },
       ],
     };
     const slot = (generationKey: StygianWellGenerationKey) =>
@@ -369,10 +374,17 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = createUnderworldFWellCheckpoint(false);
-    project = applyProjectCommand(project, catalog, {
+    // Another refill item removes the bought refill's purchase; the owner buys it again.
+    project = settleTestEdit(project, {
       kind: 'ReplaceStygianWellTravelDealRefill',
       occurrence: well,
       itemKey: 'TemporaryForcedSecretDoorTrait',
+    });
+    project = settleTestEdit(project, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'travelDealRefill',
+      purchased: true,
     });
     const gTopology = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     expect(
@@ -431,6 +443,33 @@ describe('Stygian Well consequential purchase state', () => {
     expect(forcedFindings).not.toContainEqual(
       expect.objectContaining({ code: 'ixionChaosMissing' }),
     );
+    // A plan that lost the forced gate misses a required input: the game spawns it.
+    const gateless = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'H' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId === goldenHStartId
+                      ? { ...occurrence, additionalExits: [] }
+                      : occurrence,
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const missing = simulateProjectAssembly(catalog, gateless).evaluation;
+    expect(missing.issue).toMatchObject({
+      kind: 'incomplete',
+      reasons: [expect.objectContaining({ code: 'ixionChaosMissing' })],
+    });
     expect(forcedFindings).not.toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
@@ -883,12 +922,9 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = loadUnderworldFStygianWellCheckpoint();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondLeft',
-      itemKey: 'RandomStoreItem',
-    });
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
+    // Repinning the first purchase replaced the refill it triggers: restock and buy it again.
+    project = restockAndBuyStygianWellRefill(project, well, 'ExtendedShopTrait');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellTwistResult',
       occurrence: well,
@@ -923,25 +959,17 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = createUnderworldFWellCheckpoint(false);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondLeft',
-      itemKey: 'TemporaryImprovedCastTrait',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondRight',
-      itemKey: 'TemporaryDiscountTrait',
-    });
-    project = applyProjectCommand(project, catalog, {
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'TemporaryImprovedCastTrait');
+    project = repinBoughtStygianWellSlot(project, well, 'secondRight', 'TemporaryDiscountTrait');
+    // Repinning the first purchase replaced the refill it triggers: restock and buy it again.
+    project = restockAndBuyStygianWellRefill(project, well, 'ExtendedShopTrait');
+    project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
       generationKey: 'initial:secondRight',
       purchased: false,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
       generationKey: 'initial:secondRight',
@@ -987,9 +1015,8 @@ describe('Stygian Well consequential purchase state', () => {
         secondLeft: 'RandomStoreItem',
         secondRight: 'LimitedSwapTraitDrop',
       },
-      purchasedGenerationKeys: ['initial:secondLeft'],
       travelDealRefillKey: 'TemporaryImprovedCastTrait',
-      twistResultKeyBySlot: { secondLeft: 'TemporaryDiscountTrait' },
+      twistResultKeyByGeneration: { 'initial:secondLeft': 'TemporaryDiscountTrait' },
     } as const;
     const assessment = assessPurchase(
       catalog,
@@ -1090,13 +1117,8 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = createUnderworldFWellCheckpoint(false);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondLeft',
-      itemKey: 'RandomStoreItem',
-    });
-    project = applyProjectCommand(project, catalog, {
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
+    project = settleTestEdit(project, {
       kind: 'ReplaceStygianWellTwistResult',
       occurrence: well,
       generationKey: 'initial:secondLeft',
@@ -1115,7 +1137,7 @@ describe('Stygian Well consequential purchase state', () => {
       ['secondLeft', 'TemporaryDiscountTrait'],
       ['secondRight', 'LimitedSwapTraitDrop'],
     ] as const) {
-      refillProject = applyProjectCommand(refillProject, catalog, {
+      refillProject = settleTestEdit(refillProject, {
         kind: 'ReplaceStygianWellOffer',
         occurrence: well,
         slotKey,
@@ -1127,31 +1149,31 @@ describe('Stygian Well consequential purchase state', () => {
       'initial:secondLeft',
       'initial:secondRight',
     ] as const) {
-      refillProject = applyProjectCommand(refillProject, catalog, {
+      refillProject = settleTestEdit(refillProject, {
         kind: 'SetStygianWellPurchase',
         occurrence: well,
         generationKey,
         purchased: false,
       });
     }
-    refillProject = applyProjectCommand(refillProject, catalog, {
+    refillProject = settleTestEdit(refillProject, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
-    refillProject = applyProjectCommand(refillProject, catalog, {
+    refillProject = settleTestEdit(refillProject, {
       kind: 'ReplaceStygianWellTravelDealRefill',
       occurrence: well,
       itemKey: 'RandomStoreItem',
     });
-    refillProject = applyProjectCommand(refillProject, catalog, {
+    refillProject = settleTestEdit(refillProject, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
       generationKey: 'travelDealRefill',
       purchased: true,
     });
-    refillProject = applyProjectCommand(refillProject, catalog, {
+    refillProject = settleTestEdit(refillProject, {
       kind: 'ReplaceStygianWellTwistResult',
       occurrence: well,
       generationKey: 'travelDealRefill',
@@ -1175,9 +1197,8 @@ describe('Stygian Well consequential purchase state', () => {
         secondLeft: 'TemporaryImprovedCastTrait',
         secondRight: 'LimitedSwapTraitDrop',
       },
-      purchasedGenerationKeys: ['initial:healing'],
     } as const;
-    // An unpinned restock stays native.
+    // A blank restock is missing until the edit that reaches it stocks it.
     const missing = assessPurchase(
       catalog,
       'Underworld',
@@ -1187,7 +1208,7 @@ describe('Stygian Well consequential purchase state', () => {
       { ...createTraitHistoryState(), equippedTraits: { RestockBoon: {} as never } },
       'initial:healing',
     );
-    expect(missing.issues).toEqual([]);
+    expect(missing.issues).toEqual([{ kind: 'refillMissing', generationKey: 'travelDealRefill' }]);
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
     const withoutTravel = assessPurchase(
       catalog,
@@ -1202,7 +1223,7 @@ describe('Stygian Well consequential purchase state', () => {
     expect(withoutTravel.issues).toEqual([]);
   });
 
-  it('leaves a blank initial slot native, separate from dormant purchase-owned children', () => {
+  it('reports a blank initial slot missing, separate from dormant purchase-owned children', () => {
     const assessment = assessStygianWell(
       catalog,
       'Underworld',
@@ -1214,16 +1235,14 @@ describe('Stygian Well consequential purchase state', () => {
           secondLeft: null,
           secondRight: 'LimitedSwapTraitDrop',
         },
-        purchasedGenerationKeys: ['initial:secondLeft', 'travelDealRefill'],
         travelDealRefillKey: null,
-        twistResultKeyBySlot: { secondLeft: 'HealDropRange' },
+        twistResultKeyByGeneration: { 'initial:secondLeft': 'HealDropRange' },
       },
       empty(),
       undefined,
     );
     expect(assessment.candidateItemKeysBySlot.secondLeft).toContain('RandomStoreItem');
-    expect(assessment.issues).toEqual([]);
-    expect(assessment.complete).toBe(true);
+    expect(assessment.issues).toEqual([{ kind: 'missing', generationKey: 'initial:secondLeft' }]);
   });
 
   it('ignores dormant refill and Twist detail at initial inventory assessment', () => {
@@ -1234,7 +1253,7 @@ describe('Stygian Well consequential purchase state', () => {
         secondRight: 'LimitedSwapTraitDrop',
       },
       travelDealRefillKey: 'RandomStoreItem',
-      twistResultKeyBySlot: { travelDealRefill: 'HealDropRange' },
+      twistResultKeyByGeneration: { travelDealRefill: 'HealDropRange' },
     } as const;
     const dormant = assessStygianWell(
       catalog,

@@ -24,7 +24,10 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -318,11 +321,13 @@ describe('keepsake selection candidates', () => {
       project.route.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
-    ).toEqual([
-      { kind: 'useFountain' },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' },
-      { kind: 'interactKeepsakeRack' },
-    ]);
+    ).toEqual(
+      withItemContents(project, completion, [
+        { kind: 'useFountain' },
+        { kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' },
+        { kind: 'interactKeepsakeRack' },
+      ]),
+    );
     const f = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
       (biome) => biome.biomeKey === 'F',
     );
@@ -507,7 +512,7 @@ describe('keepsake selection candidates', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const assembled = simulateProjectAssembly(catalog, project);
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembled, phase)

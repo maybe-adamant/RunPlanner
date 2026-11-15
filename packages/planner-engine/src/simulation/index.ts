@@ -100,12 +100,15 @@ export {
 export {
   assessRoomActionPlacements,
   assembleRoomActionRoster,
+  type RoomActionContact,
+  type TimedPickupDueContact,
   type RoomActionProposal,
   type RoomActionRoster,
-  type RoomActionRosterContribution,
   type RoomActionRosterIssue,
   type RoomActionRow,
-  type RoomActionWindow,
+  type RoomActionRowLabel,
+  type RoomActionBounds,
+  type RoomEventPoint,
 } from './room-actions';
 export {
   appendSteadyGrowthTimelineEffects,
@@ -138,6 +141,7 @@ export {
   type GeneratedEncounterCandidateCapability,
   type InfiniteRosterCandidateCapability,
   type ResolvedEncounterPhase,
+  playedEncounterPhaseKeys,
 } from './encounters';
 export {
   observedEncounterCustomizationForProjectEvaluationAssembly,
@@ -178,6 +182,8 @@ export {
   type GorgonPhaseCandidateSupport,
   type NemesisRandomEventAssessment,
   type NemesisRandomEventCandidateSupport,
+  type NemesisRandomEventFamily,
+  type NemesisRandomEventFamilyRefusal,
   type CountedRewardDraw,
   type CountedRewardOwnerAddress,
   type RewardBranch,
@@ -224,8 +230,10 @@ export {
 export {
   type FindingCode,
   type FindingEvidenceValue,
+  type RoomActionOrderEvidence,
   type SemanticFinding,
   isRequiredMissingInputFinding,
+  roomActionOrderEvidence,
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition/artifacts';
 export { type HexActivationCandidateCapability } from './hex-activation';
@@ -290,6 +298,7 @@ export {
 } from './evaluation/project-evaluation-assembly';
 export {
   hubStaysForProjectEvaluationAssembly,
+  rerollPressForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
   type HubBoardPress,
@@ -349,11 +358,13 @@ export {
   encounterOutcomesForProjectEvaluationAssembly,
   type EncounterOutcome,
   type EncounterOutcomeChoice,
+  type EncounterOutcomeHost,
 } from './evaluation/encounter-outcome';
 export {
   spawnedLootForProjectEvaluationAssembly,
   type ActionSpawn,
   type RoomSpawnedLoot,
+  type SpawnCause,
   type SpawnMoment,
   type SpawnUnlock,
   type SpawnMomentKind,
@@ -362,6 +373,15 @@ export {
   type SpawnedLootReward,
   type SpawnedLootSource,
 } from './evaluation/spawned-loot';
+export {
+  liveRoomForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
+  type TimedPickupPlacementCommand,
+  type LiveRoom,
+  type LiveVerb,
+  type LiveVerbChoice,
+  type LiveWheelPick,
+} from './evaluation/live-room';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {
   GoldBalance,
@@ -412,6 +432,8 @@ export type {
   ProjectEvaluation,
   ProjectEvaluationAssembly,
   ProjectRouteEvaluation,
+  RoomStopAnchor,
+  RoomStopCoverage,
 } from './evaluation/evaluation-products';
 export { transcendentEmbryoBlessingValues } from './keepsakes/trait-effects';
 export {
@@ -468,9 +490,28 @@ export { assessmentRepairOwner, findingsAddedSince } from './finding-regions';
 export {
   settleProjectEdit,
   type ProjectEditSettlement,
+  type RemovedHubRerolls,
   type RemovedStaleRoomActions,
   type SettlementFault,
 } from './edit-settlement';
+export {
+  collectRequiredItems,
+  nextRequiredPlacement,
+  type CollectedRequiredItems,
+  type CollectRequiredOptions,
+  type CollectRequiredStop,
+  type NextRequiredPlacement,
+  type RequiredPlacement,
+} from './collect-required';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
 export type { PhantomPlaceholderExclusion } from './generation/phantom-exit';
+export { chaosGateHosted } from './generation/additional-exits';
+export type {
+  ChaosGateHostRefusal,
+  ChaosGateRefusal,
+  PurgingPoolPlacementRefusal,
+  ResourcePlacementRefusal,
+  RoomFeatureRefusal,
+  ZagreusContractRefusal,
+} from './room-feature-refusals';

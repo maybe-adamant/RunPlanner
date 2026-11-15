@@ -5,6 +5,7 @@ import {
   createOccurrenceAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type HubFountainAddress,
   type HubVisitAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
@@ -215,30 +216,35 @@ export function compareAuthoringBoundaries(
 }
 
 /**
- * Readiness while a Hub's next visit is the missing outgoing decision. The
- * Hub-owned frontier (board, action order, stay rerolls and fountain) and every
- * settled visit with its side rooms stay editable; later visits, board rooms no
- * settled visit entered and everything after the Hub are locked.
+ * Readiness while a Hub's next visit or its fountain use is the missing
+ * outgoing decision. The Hub-owned frontier (board, action order, stay rerolls
+ * and fountain) and every visit settled before it with its side rooms stay
+ * editable; later visits, board rooms no settled visit entered and everything
+ * after the Hub are locked.
  */
-export function hubNextVisitReadiness(
+export function hubFrontierReadiness(
   prefix: BiomeMaterialization,
   owner: SemanticAddress,
-  nextVisit: HubVisitAddress,
-  nextVisitLocation: OwnerLocation,
+  frontier: HubVisitAddress | HubFountainAddress,
+  frontierLocation: OwnerLocation,
 ): 'editable' | 'locked' {
+  const lastEditableVisit =
+    frontier.kind === 'hubVisit'
+      ? frontier.visitIndex
+      : frontierLocation.hubFountainPrecedingVisitCount;
   if (
     owner.kind === 'hubVisit' &&
-    owner.hubKey === nextVisit.hubKey &&
-    owner.visitIndex > nextVisit.visitIndex
+    owner.hubKey === frontier.hubKey &&
+    (lastEditableVisit === undefined || owner.visitIndex > lastEditableVisit)
   )
     return 'locked';
   const boundary = resolveAuthoringBoundary(prefix, owner);
-  const hub = createHubDecisionAddress(biome(prefix), nextVisit.hubKey);
+  const hub = createHubDecisionAddress(biome(prefix), frontier.hubKey);
   if (semanticAddressKey(boundary) === semanticAddressKey(hub)) return 'editable';
   const ownerLocation = locateOwner(prefix, boundary);
   if (ownerLocation === undefined || ownerLocation.hubBoardTargetIndex !== undefined)
     return 'locked';
-  return compareOwnerLocations(coarseLocation(ownerLocation), coarseLocation(nextVisitLocation)) < 0
+  return compareOwnerLocations(coarseLocation(ownerLocation), coarseLocation(frontierLocation)) < 0
     ? 'editable'
     : 'locked';
 }

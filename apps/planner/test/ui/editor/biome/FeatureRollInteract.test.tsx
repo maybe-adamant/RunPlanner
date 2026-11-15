@@ -4,19 +4,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { applyProjectCommand, createOccurrenceId } from '@run-planner/engine/authored-project';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine/authored-project';
 
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
-import {
-  completionOccurrenceById,
-  occurrenceById,
-  openNotReached,
-  openRoomTab,
-} from '@planner-test/support/occurrence-workbench';
-import { hintOf } from '@planner-test/support/hints';
+import { completionOccurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(cleanup);
 
@@ -50,15 +43,19 @@ function withScreenRerolls(
   });
 }
 
-function roomOrder(application: PlannerApplication) {
+function postbossRoom(application: PlannerApplication) {
   return application.store
     .getState()
     .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
       (room) => room.occurrenceId === postbossId,
-    )!.roomActions.order;
+    )!;
 }
 
-it('rerolls the Well from its Timeline entry and buys a restocked slot with its item', async () => {
+function roomOrder(application: PlannerApplication) {
+  return postbossRoom(application).roomActions.order;
+}
+
+it('rerolls the Well from the live row', async () => {
   const view = renderOccurrenceWorkbench(
     withScreenRerolls(),
     'Underworld',
@@ -68,113 +65,12 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
   openRoomTab('Room Overview');
   const well = screen.getByRole('group', { name: 'Stygian Well configuration' });
   expect(within(well).queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
-  // The Well's entry above the optional actions opens what it can do next.
   openRoomTab('Room Timeline');
-  const interact = () => screen.getByRole('button', { name: 'Stygian Well' });
-
-  await view.user.click(interact());
-  await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', {
-      name: /^Reroll Inventory, \d+ rerolls left, costs 1/,
-    }),
-  );
+  await takeLive(view.user, 'Stygian Well', 'Reroll');
   await waitFor(() =>
     expect(roomOrder(view.application).at(-1)).toMatchObject({ kind: 'rerollStygianWell' }),
   );
-
-  // An unpinned restocked slot is bought with the item chosen next.
-  await view.user.click(interact());
-  await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Buy Offer 1…/ }),
-  );
-  // The empty item picker's name says what it picks for.
-  await view.user.click(screen.getByRole('button', { name: 'Pick item for Offer 1' }));
-  const [item] = within(await screen.findByRole('listbox')).getAllByRole('option');
-  await view.user.click(item!);
-  await waitFor(() =>
-    expect(roomOrder(view.application).at(-1)).toEqual({
-      kind: 'purchaseStygianWellOffer',
-      generationKey: 'r1:healing',
-    }),
-  );
-
-  // The item is pinned on its reroll in the same edit.
-  expect(
-    roomOrder(view.application).find((reference) => reference.kind === 'rerollStygianWell'),
-  ).toMatchObject({ offerKeyBySlot: { healing: expect.any(String) } });
-  openNotReached();
-  expect(screen.getAllByRole('img', { name: 'Roll 2' })).toHaveLength(2);
   expect(
     screen.getByRole('button', { name: /^Remove Reroll Well from timeline$/ }),
   ).not.toHaveProperty('disabled', true);
-});
-
-it('drops an abandoned blank-slot pick and disables the entry once everything is bought', async () => {
-  const view = renderOccurrenceWorkbench(
-    withScreenRerolls(),
-    'Underworld',
-    'F',
-    completionOccurrenceById(postbossId),
-  );
-  openRoomTab('Room Timeline');
-  const interact = () => screen.getByRole('button', { name: 'Stygian Well' });
-  await view.user.click(interact());
-  await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', {
-      name: /^Reroll Inventory, \d+ rerolls left, costs 1/,
-    }),
-  );
-  await view.user.click(interact());
-  await view.user.click(
-    within(await screen.findByRole('listbox')).getByRole('option', { name: /^Buy Offer 1…/ }),
-  );
-  expect(interact().textContent).toContain('Buy Offer 1…');
-  await view.user.click(screen.getByRole('button', { name: 'Pick item for Offer 1' }));
-  await screen.findByRole('listbox');
-  await view.user.keyboard('{Escape}');
-  await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Pick item for Offer 1' })).toBeNull(),
-  );
-  expect(interact().textContent).toContain('Stygian Well ▸');
-  cleanup();
-
-  // Without the card no reroll is offered; once the only offer is bought nothing is left.
-  const room = createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), postbossId);
-  const bought = applyProjectCommand(
-    withScreenRerolls(['CastCount', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff']),
-    catalog,
-    {
-      kind: 'SetStygianWellPurchase',
-      occurrence: room,
-      generationKey: 'initial:healing',
-      purchased: true,
-    },
-  );
-  renderOccurrenceWorkbench(bought, 'Underworld', 'F', completionOccurrenceById(postbossId));
-  openRoomTab('Room Timeline');
-  const entry = interact() as HTMLButtonElement;
-  expect(entry.disabled).toBe(true);
-  expect(hintOf(entry)).toBe('Everything here is bought.');
-});
-
-it("waits on the room's Overview before the Well can be interacted with", () => {
-  // A duplicate offer keeps the host's Overview unsettled, so its Timeline is unreached.
-  const hostId = createOccurrenceId('golden-f-b2-e1');
-  const host = createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), hostId);
-  let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
-    kind: 'AddStygianWell',
-    occurrence: host,
-  });
-  for (const slotKey of ['secondLeft', 'secondRight'] as const)
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: host,
-      slotKey,
-      itemKey: 'TemporaryForcedSecretDoorTrait',
-    });
-  renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(hostId));
-  openRoomTab('Room Timeline');
-  const entry = screen.getByRole('button', { name: 'Stygian Well' }) as HTMLButtonElement;
-  expect(entry.disabled).toBe(true);
-  expect(hintOf(entry)).toBe('Waits on an earlier choice.');
 });

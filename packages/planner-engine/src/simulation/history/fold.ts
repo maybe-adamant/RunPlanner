@@ -1,11 +1,6 @@
 import type { BiomeTransitionCounterAxis } from '../../catalog-schema';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { biomeEncounterDepthAfterStart } from '../encounters/biome-encounter-depth';
-import {
-  CHALLENGE_SWITCH_ENVELOPE_KEY,
-  CHALLENGE_SWITCH_PHASE_KEY,
-} from '../encounters/challenge-switch-phase';
-import { UNLOCK_EXIT_ENVELOPE_KEY, unlockExitPhaseKey } from '../encounters/unlock-exit';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,
@@ -145,8 +140,6 @@ function roomName(
   namesByOrigin: ReadonlyMap<string, string>,
   event: Extract<
     HistoryEvent,
-    | { readonly kind: 'challengeSwitchInteracted' }
-    | { readonly kind: 'exitUnlocked' }
     | { readonly kind: 'encounterCompleted' }
     | { readonly kind: 'encounterRecorded' }
     | { readonly kind: 'encounterStarted' }
@@ -192,7 +185,7 @@ function encounterEntry(
     slotKey: event.phaseKey,
     encounterKey: event.encounterKey,
     phaseKind: event.phaseKind,
-    ...(event.kind !== 'encounterRecorded' || event.generatedCustomization === undefined
+    ...(event.generatedCustomization === undefined
       ? {}
       : { knownEnemyBlacklistAdditions: event.generatedCustomization.knownRunBlacklistAdditions }),
   });
@@ -209,6 +202,7 @@ function requireEncounterEnvelope(
   envelopesByOrigin: ReadonlyMap<string, string>,
   event: Extract<HistoryEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
 ): void {
+  if (event.pressFight === true) return;
   const ownerEnvelope = envelopesByOrigin.get(semanticAddressKey(event.origin));
   if (ownerEnvelope === undefined || ownerEnvelope !== event.encounterEnvelopeKey) {
     throw new HistoryFoldContractError(
@@ -306,6 +300,7 @@ function foldHistoryEventStream(
   const encounterEnvelopesByOrigin = new Map<string, string>();
   const recordedEncounters = new Map<string, EncounterHistoryEntry>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
+  const pressFights = new Set<string>();
   const completedEncounters = new Map<
     string,
     Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>
@@ -564,7 +559,11 @@ function foldHistoryEventStream(
       }
       case 'encounterRecorded': {
         const views = requireRoomViews(viewsByOrigin, event);
-        if (views.preparation === undefined || views.entry !== undefined) {
+        if (
+          event.pressFight === true
+            ? views.entry === undefined || views.exit !== undefined
+            : views.preparation === undefined || views.entry !== undefined
+        ) {
           throw new HistoryFoldContractError(
             `${event.phaseKey} was recorded outside its room preparation checkpoint`,
           );
@@ -590,11 +589,13 @@ function foldHistoryEventStream(
         requireEncounterEnvelope(encounterEnvelopesByOrigin, event);
         const key = encounterKey(event);
         const recorded = recordedEncounters.get(key);
+        // A locked door's fight starts unrecorded.
         if (
-          recorded === undefined ||
-          recorded.encounterEnvelopeKey !== entry.encounterEnvelopeKey ||
-          recorded.encounterKey !== entry.encounterKey ||
-          recorded.phaseKind !== entry.phaseKind
+          (recorded === undefined && event.pressFight !== true) ||
+          (recorded !== undefined &&
+            (recorded.encounterEnvelopeKey !== entry.encounterEnvelopeKey ||
+              recorded.encounterKey !== entry.encounterKey ||
+              recorded.phaseKind !== entry.phaseKind))
         ) {
           throw new HistoryFoldContractError(
             `${event.phaseKey} started without its matching preparation record`,
@@ -613,6 +614,7 @@ function foldHistoryEventStream(
           }),
         );
         activeEncounters.set(key, entry);
+        if (event.pressFight === true) pressFights.add(key);
         ledgers.encounterStarts.push(entry);
         break;
       }
@@ -927,93 +929,13 @@ function foldHistoryEventStream(
         );
         break;
       }
-      case 'challengeSwitchInteracted': {
-        const run = event.encounter;
-        if (run === undefined) break;
-        const views = requireRoomViews(viewsByOrigin, event);
-        if (views.entry === undefined || views.exit !== undefined)
-          throw new HistoryFoldContractError(
-            `${semanticAddressKey(event.origin)} ran its switch encounter outside the room`,
-          );
-        const key = encounterKey({ origin: event.origin, phaseKey: CHALLENGE_SWITCH_PHASE_KEY });
-        if (recordedEncounters.has(key))
-          throw new HistoryFoldContractError(
-            `${semanticAddressKey(event.origin)} ran its switch encounter more than once`,
-          );
-        // RecordEncounter and StartEncounter at the press, and its completion once fought out.
-        const entry: EncounterHistoryEntry = Object.freeze({
-          sequence: event.sequence,
-          origin: event.origin,
-          gameName: roomName(namesByOrigin, event),
-          encounterEnvelopeKey: CHALLENGE_SWITCH_ENVELOPE_KEY,
-          slotKey: CHALLENGE_SWITCH_PHASE_KEY,
-          encounterKey: run.encounterKey,
-          phaseKind: run.phaseKind,
-          ...(run.generatedCustomization === undefined
-            ? {}
-            : {
-                knownEnemyBlacklistAdditions: run.generatedCustomization.knownRunBlacklistAdditions,
-              }),
-        });
-        recordedEncounters.set(key, entry);
-        ledgers.encounterRecords.push(entry);
-        ledgers.encounterStarts.push(entry);
-        if (run.countsEncounterDepth) {
-          ledgers.counters.biomeEncounterDepth = biomeEncounterDepthAfterStart(
-            ledgers.counters.biomeEncounterDepth,
-          );
-          ledgers.counters.routeEncounterDepth += 1;
-        }
-        // Leaving mid-fight ends it early: never completed (RoomLogic.lua:4213-4216).
-        if (run.completed) ledgers.encounterCompletions.push(entry);
-        break;
-      }
-      case 'exitUnlocked': {
-        const run = event.encounter;
-        if (run === undefined) break;
-        const views = requireRoomViews(viewsByOrigin, event);
-        if (views.entry === undefined || views.exit !== undefined)
-          throw new HistoryFoldContractError(
-            `${semanticAddressKey(event.origin)} fought a locked door outside the room`,
-          );
-        const slotKey = unlockExitPhaseKey(event.exitKey);
-        const originKey = semanticAddressKey(event.origin);
-        if (
-          ledgers.encounterStarts.some(
-            (entry) => entry.slotKey === slotKey && semanticAddressKey(entry.origin) === originKey,
-          )
-        )
-          throw new HistoryFoldContractError(`${originKey} fought ${event.exitKey}'s lock twice`);
-        // StartEncounter at the press and its completion once fought out; the
-        // press never calls RecordEncounter.
-        const entry: EncounterHistoryEntry = Object.freeze({
-          sequence: event.sequence,
-          origin: event.origin,
-          gameName: roomName(namesByOrigin, event),
-          encounterEnvelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
-          slotKey,
-          encounterKey: run.encounterKey,
-          phaseKind: run.phaseKind,
-          ...(run.generatedCustomization === undefined
-            ? {}
-            : {
-                knownEnemyBlacklistAdditions: run.generatedCustomization.knownRunBlacklistAdditions,
-              }),
-        });
-        ledgers.encounterStarts.push(entry);
-        if (run.countsEncounterDepth) {
-          ledgers.counters.biomeEncounterDepth = biomeEncounterDepthAfterStart(
-            ledgers.counters.biomeEncounterDepth,
-          );
-          ledgers.counters.routeEncounterDepth += 1;
-        }
-        ledgers.encounterCompletions.push(entry);
-        break;
-      }
+      case 'challengeSwitchInteracted':
+      case 'exitUnlocked':
       case 'producerRoleAdvanced':
       case 'producerPointReached':
       case 'hermesShrineDeliveriesScheduled':
       case 'hermesShrinePurchaseReached':
+      case 'hermesShrineRushReached':
       case 'encounterInteractionReached':
       case 'roomCommitted':
         break;
@@ -1024,7 +946,8 @@ function foldHistoryEventStream(
   if (!biomeStarted) {
     throw new HistoryFoldContractError('history has no biome start event');
   }
-  if (activeEncounters.size !== 0) {
+  // A switch left mid-fight ends early, never completed (RoomLogic.lua:4213-4216).
+  if ([...activeEncounters.keys()].some((key) => !pressFights.has(key))) {
     throw new HistoryFoldContractError('history ended with an active encounter');
   }
   if (mode === 'complete' && activeRequiredObjects.size !== 0) {

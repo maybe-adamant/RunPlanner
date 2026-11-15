@@ -29,7 +29,11 @@ import {
   matureCombat01Id as matureIntroId,
   matureCombat01StartId as matureStartId,
 } from '@run-planner/test-fixtures/fresh-file';
-import { authorLegalTraitOffers, traitCandidateSession } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  collectTestRequiredItems,
+  traitCandidateSession,
+} from '@run-planner/test-fixtures/shared';
 
 const apolloBoon: ResolvedRewardOffer = {
   rewardType: 'Boon',
@@ -341,11 +345,13 @@ describe('Fresh File first sequence', () => {
     expect(
       simulateProject(
         catalog,
-        applyProjectCommand(mature, catalog, {
-          kind: 'ReplaceIncomingReward',
-          reward: createIncomingRewardAddress(matureBiome, matureIntroId),
-          value: { rewardType: 'MaxHealthDrop' },
-        }),
+        collectTestRequiredItems(
+          applyProjectCommand(mature, catalog, {
+            kind: 'ReplaceIncomingReward',
+            reward: createIncomingRewardAddress(matureBiome, matureIntroId),
+            value: { rewardType: 'MaxHealthDrop' },
+          }),
+        ),
       ).findings.map((finding) => finding.code),
     ).toEqual(['batchRewardStoreMissing']);
   });

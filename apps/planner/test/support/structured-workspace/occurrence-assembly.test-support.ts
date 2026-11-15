@@ -30,7 +30,7 @@ import {
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  encounterOutcomesForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
@@ -74,7 +74,10 @@ import {
 import { assembleWorkspaceOccurrence } from '@planner/projections/structured-workspace/assembly/occurrence-assembly';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from '@planner/projections/structured-workspace/assembly/occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '@planner/projections/structured-workspace/navigation/marker-builder';
-import { createWorkspaceProjectSourceIndex } from '@planner/projections/structured-workspace/source-index';
+import {
+  createWorkspaceProjectSourceIndex,
+  workspaceDerivedAcquisitionEntries,
+} from '@planner/projections/structured-workspace/source-index';
 /* eslint-enable no-restricted-imports */
 
 function biomeSource(
@@ -94,7 +97,7 @@ function biomeSource(
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
     undefined,
     gorgonSupport,
-    (site) => derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site),
+    (site) => workspaceDerivedAcquisitionEntries(sourceCatalog, assembly, site),
     (address) => traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined,
     (occurrence) => blockedOccurrenceRoomForProjectEvaluationAssembly(assembly, occurrence),
     undefined,
@@ -105,6 +108,20 @@ function biomeSource(
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => isInventoryOfferActiveForProjectEvaluationAssembly(assembly, address),
     (address) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, address),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    (occurrence) =>
+      encounterOutcomesForProjectEvaluationAssembly(sourceCatalog, assembly, occurrence),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;

@@ -40,8 +40,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   hubVisitActions,
+  replaceTestPlacedItem,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
@@ -245,11 +248,13 @@ function echoReplayProject(child?: {
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1' as const,
   });
-  document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait,
-    value,
-  });
+  document = collectTestRequiredItems(
+    applyProjectCommand(document, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value,
+    }),
+  );
   const entry = createAcquisitionEntryAddress(
     createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
     echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
@@ -273,7 +278,7 @@ function echoReplayProject(child?: {
         (candidate) => roomActionKey(candidate) === roomActionKey(reference),
       )
     ) {
-      throw new Error(`Echo activation did not rank ${roomActionKey(reference)}`);
+      throw new Error(`Echo activation did not collect ${roomActionKey(reference)}`);
     }
   }
   if (child !== undefined) {
@@ -334,7 +339,7 @@ function staleTravelDealShopProject(): {
       selectedOptionKey: 'option1',
     },
   });
-  document = applyProjectCommand(document, catalog, {
+  document = replaceTestPlacedItem(document, {
     kind: 'ReplaceIncomingReward',
     reward: incoming,
     value: { rewardType: 'HermesUpgrade' },
@@ -540,7 +545,8 @@ describe('workspace inspector destinations', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let document = createUnderworldFWellCheckpoint(false);
-    document = applyProjectCommand(document, catalog, {
+    // The restocked slot's purchase goes with its old item; the new item is bought below.
+    document = settleTestEdit(document, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: owner,
       slotKey: 'secondLeft',
@@ -1458,7 +1464,7 @@ describe('workspace inspector destinations', () => {
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
-    const sideProject = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    const sideProject = replaceTestPlacedItem(loadSurfaceNOPQProject(), {
       kind: 'ReplaceIncomingReward',
       reward: sideReward,
       value: { rewardType: 'StackUpgrade' },

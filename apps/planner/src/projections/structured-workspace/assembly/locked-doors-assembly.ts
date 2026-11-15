@@ -77,60 +77,37 @@ export function assembleLockedDoors(input: {
       ),
     ),
   });
-  const unlockKey = `doorUnlocks:${semanticAddressKey(input.address)}`;
-  const appendable = (product?.unlocks ?? []).flatMap((unlock) =>
-    unlock.append === undefined ? [] : [{ exitKey: unlock.exitKey, command: unlock.append }],
-  );
-  const unlocks: EntryRequirement = Object.freeze({
-    kind: 'roomObjectActions' as const,
-    owner: input.address,
-    interactionKey: unlockKey,
-    options: Object.freeze(
-      appendable.map((unlock) => Object.freeze({ key: unlock.exitKey, command: unlock.command })),
-    ),
-  });
   return Object.freeze({
     lockedDoors: Object.freeze({
       address,
       marker: input.markerDestinations.marker(address),
       interactionKey,
       doors: Object.freeze(doors),
-      ...(product?.unlocks === undefined
-        ? {}
-        : {
-            unlocks: Object.freeze({
-              interactionKey: unlockKey,
-              options: Object.freeze(
-                appendable.map((unlock) =>
-                  Object.freeze({
-                    exitKey: unlock.exitKey,
-                    label: `Unlock ${doorLabel(unlock.exitKey)}`,
-                  }),
-                ),
-              ),
-            }),
-          }),
       lockedAtLeave: product?.lockedAtLeave ?? Object.freeze([]),
     }),
-    requirements: Object.freeze([toggles, unlocks]),
+    requirements: Object.freeze([toggles]),
   });
 }
 
-/** Each pressed door's fight, as the engine prepared it at the press, by its press's action key. */
+/** Each pressed locked door's fight as the engine prepared it, by its press's action key. */
 export function assembleUnlockExitEncounters(
   catalog: Catalog,
+  address: OccurrenceAddress,
   occurrence: RoomOccurrence,
   product: LockedDoorsInteraction | undefined,
 ): ReadonlyMap<string, WorkspaceUnlockExitEncounter> {
   const encounters = new Map<string, WorkspaceUnlockExitEncounter>();
   for (const unlock of product?.unlocks ?? []) {
     const encounter = unlock.encounter;
-    if (encounter === undefined) continue;
+    // A door's fight is customized on its press row, so an unpressed door shows none.
+    if (encounter === undefined || unlock.append !== undefined) continue;
     const view = encounterCompositionView(catalog, encounter);
     encounters.set(
       unlock.action.actionKey,
       Object.freeze({
         address: unlock.action,
+        occurrence: address,
+        exitKey: unlock.exitKey,
         interactionKey: semanticAddressKey(unlock.action),
         definitionKey: encounter.selectedEncounterDefinitionKey,
         label: encounter.label,

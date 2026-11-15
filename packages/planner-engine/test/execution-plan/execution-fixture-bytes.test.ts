@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
@@ -16,7 +16,8 @@ import { currentSchemaWire, withoutSchemaStamp } from './support/current-schema-
  * fixtures in place, so formatting and key-order drift matter. A fixture keeps
  * the schema pair it was generated under, so the pair and fingerprint are masked.
  *
- * `npm run fixtures:execution` rewrites them through the same one code path.
+ * `npm run fixtures:execution` rewrites them through the same one code path,
+ * writing only a fixture whose content beyond that stamp changed.
  */
 const rewrite = process.env.RUN_PLANNER_WRITE_EXECUTION_FIXTURES === '1';
 
@@ -27,7 +28,10 @@ describe('committed execution fixtures', () => {
       const built = await buildExecutionFixture(fixture);
       const path = executionFixturePath(name);
       if (rewrite) {
-        writeFileSync(path, built.bytes);
+        const unchanged =
+          existsSync(path) &&
+          withoutSchemaStamp(readFileSync(path, 'utf8')) === withoutSchemaStamp(built.bytes);
+        if (!unchanged) writeFileSync(path, built.bytes);
         return;
       }
       expect(withoutSchemaStamp(readFileSync(path, 'utf8'))).toBe(withoutSchemaStamp(built.bytes));

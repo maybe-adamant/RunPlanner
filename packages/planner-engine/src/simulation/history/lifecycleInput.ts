@@ -1,8 +1,9 @@
-import type { RoomDeclaration } from '../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { scopeRoomActionRoster } from '../room-actions';
+import { encounterFreeRoomEventGraph } from '../../authored-project/room-actions/event-graph';
 import { declaredEnteredStoreKey } from '../rewards/biome/reward-store-support';
 import type {
   CanonicalAuthoredRoom,
@@ -23,15 +24,16 @@ export class HistoryLifecycleInputContractError extends Error {
 /**
  * The one owner of "which store did entering this room count with". Callers
  * that only hold a materialized room and its declaration use
- * `declaredEnteredStoreKey`; this wrapper adds the lifecycle-only Clockwork
- * goal exclusion and the contract error, which the support reader cannot
- * raise because it evaluates rooms that were never entered.
+ * `declaredEnteredStoreKey`; this wrapper adds the lifecycle-only forced-reward
+ * exclusion and the contract error, which the support reader cannot raise
+ * because it evaluates rooms that were never entered.
  */
 function enteredStoreKey(
   policy: EnteredRewardStoreHistoryPolicy,
   room: CanonicalLifecycleRoom,
 ): string | undefined {
-  if (room.kind === 'authored' && room.clockworkReward === 'goal') {
+  // A forced reward is chosen before any store draw.
+  if (room.kind === 'authored' && room.forcedRewardType !== undefined) {
     return undefined;
   }
   if (room.kind !== 'authored') return policy.kind === 'fixed' ? policy.storeKey : undefined;
@@ -64,17 +66,28 @@ export function lacksEnteredStoreProvenance(
   const policy = declaration.enteredRewardStoreHistory;
   if (policy.kind !== 'resolvedOffer') return false;
   if (room.kind !== 'authored') return false;
-  if (room.clockworkReward === 'goal') return false;
+  if (room.forcedRewardType !== undefined) return false;
   return declaredEnteredStoreKey(room, policy) === undefined;
 }
 
 export function createRoomLifecycleInput(
+  catalog: Catalog,
   room: CanonicalLifecycleRoom,
   encounterPhases: readonly ResolvedEncounterPhase[],
   declaration: RoomDeclaration,
 ): RoomLifecycleExecutionInput {
   const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
+  // The walk runs the room's producer exactly when the room publishes one, and
+  // reaches it only once its reward is chosen.
+  if (room.runsProducer && incomingReward === undefined)
+    throw new HistoryLifecycleInputContractError(
+      `${room.gameName} walks its producer without a chosen reward`,
+    );
+  if (!room.runsProducer && incomingReward !== undefined)
+    throw new HistoryLifecycleInputContractError(
+      `${room.gameName} runs no producer but carries a reward`,
+    );
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
   const rewardWheels = 'rewardWheels' in room ? room.rewardWheels : undefined;
   const activePhaseKeys = new Set(encounterPhases.map((phase) => phase.slotKey));
@@ -90,7 +103,17 @@ export function createRoomLifecycleInput(
         );
   const roomActionRoster =
     room.kind !== 'authored'
-      ? undefined
+      ? Object.freeze({
+          eventGraph: encounterFreeRoomEventGraph(
+            room.lifecycleProfileKey,
+            catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey]?.generatesOutgoing ===
+              true,
+          ),
+          rows: Object.freeze([]),
+          issues: Object.freeze([]),
+          proposals: Object.freeze([]),
+          valid: true,
+        })
       : scopeRoomActionRoster(
           room.roomActionRoster,
           encounterPhases.map((phase) => phase.slotKey),
@@ -98,6 +121,7 @@ export function createRoomLifecycleInput(
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
+    roomDeclaration: declaration,
     encounterEnvelopeKey: room.encounterEnvelopeKey,
     encounterPhases,
     counterEffects: room.counterEffects,
@@ -112,7 +136,7 @@ export function createRoomLifecycleInput(
       : {}),
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
-    ...(roomActionRoster === undefined ? {} : { roomActionRoster }),
+    roomActionRoster,
     ...(room.kind === 'authored' && room.hermesShrine !== undefined
       ? { hermesShrine: room.hermesShrine }
       : {}),

@@ -9,13 +9,13 @@ export function roomEntryOptions(settlement: RoomLayoutSettlement): readonly Roo
 }
 
 /**
- * The layout that picks an entry (null leaves it to the game): an entry that
+ * The layout that picks an entry: an entry that
  * needs one flip of a roll sets that flip, else the authored roll is kept.
  */
 export function layoutWithEntry(
   settlement: RoomLayoutSettlement,
   authored: RoomLayout | undefined,
-  entryStartPointId: number | null,
+  entryStartPointId: number,
 ): RoomLayout {
   const roll = settlement.flip.kind === 'roll';
   const needed = roomEntryOptions(settlement).find(
@@ -24,7 +24,7 @@ export function layoutWithEntry(
   const flipped = roll ? (needed ?? authored?.flipped) : undefined;
   return Object.freeze({
     ...(flipped === undefined ? {} : { flipped }),
-    ...(entryStartPointId === null ? {} : { entryStartPointId }),
+    entryStartPointId,
   });
 }
 

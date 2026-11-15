@@ -92,30 +92,46 @@ information the runtime consumes:
 
 ### Room content
 
-Every entered room publishes the layout the runtime steers: the flip and the
-entry (start and end point) where the room or its arrival door fixes them, or
-the authored or default value where the game rolls or picks among eligible
-entries ([position defaults](SIMULATION_AND_VALIDATION.md#position-defaults)).
-A value the game derives from the previous room's exit is absent and stays
-native. A Well, Pool, Shrine or challenge switch publishes its authored or
-default `anchorId`; the Well on its room's pin publishes none. A Chaos gate
-publishes its authored or default `spawnPointIndex`.
+Every entered room, and no other, publishes its layout: the flip, and the
+entry (start and end point) unless the room has no entry points. Each is the
+value the room fixes, the stored one where the game rolls or picks among
+eligible entries
+([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)),
+or the one the game derives from the previous room's exit, which the layout
+lists as `derived`. The module steers every value except a derived one, which
+it leaves native and compares with the result, raising the same positional
+diagnostic as a steered value it could not hold. Object positions and stock are required, since publication accepts
+only plans whose reached positions and slots are filled: every Pool, Shrine,
+challenge switch and Well publishes its `anchorId`, its stored anchor or, for
+a Well, its room's pin, which the module verifies after spawning rather than
+steering. A Chaos gate always publishes its stored `spawnPointIndex`; a
+Zagreus Contract exit has none. Publication refuses an object or gate left
+without one, which only a room carrying a finding can reach.
 
 Fields door targets carry cage rewards even when unpicked. Cage,
 optional-reward and Nemesis points are entered-room facts published only for
-selected Fields occurrences, each slot's authored or default point.
+selected Fields occurrences, each slot's stored point: drawn on first reach,
+then kept until the owner changes it. A selected Fields occurrence publishes
+one point for each active cage in cage order and one for each optional reward,
+and a Nemesis point exactly when it plans the Nemesis.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.
 
 A native room field locked by `BlockedByRequirements`, such as the H Postboss
 Pool on a fresh profile, is unusable natively and counts as absent. A present
-Stygian Well or Pool of Purging is emitted with its initial roll's pinned
-slots only; the native adapter realizes the object, installs each pinned slot
-and leaves the others to vanilla generation. It also lists its rerolls in
-action order with only their pinned slots: the k-th native reroll installs the k-th entry, an unpinned slot
-stays native, and a Well slot bought earlier in the room stays blank. Each
-purchase and sale names its roll.
+Stygian Well or Pool of Purging is emitted with every slot of its initial
+roll, which a decoder requires: all three Well slots, and as many Pool traits
+as are eligible, up to three, a count the module checks against the live
+eligible set. The native adapter realizes the object and installs each slot.
+A Pool also emits the list it regenerates at its first opening when the
+fountain use changed a listed boon, which the adapter installs in place of the
+entry list.
+Both list their rerolls in action order, slot by slot: the k-th native reroll
+installs the k-th entry, and a Well slot bought earlier in the room is not
+restocked and stays blank: a Well roll lists such slots as `boughtSlots`, so
+its offers and bought slots are exactly the three slots, which a decoder
+requires. Each purchase and sale names its roll.
 
 A rerolled trait, Chaos or Pom level screen lists its earlier screens, oldest
 first, beside its final one. The adapter installs the first when the screen
@@ -193,12 +209,15 @@ completion can hide its associated row, while informational rows remain
 visible unless native Shrine progress completes them. Guide rows neither add
 transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
-A Shrine purchase row is informational on the wire and carries its generation,
-reward type and rush. The module shows it as `Shrine: X` and, when rushed, a
-following `Rush: X`, and hides each step from the native Shrine options
-(`Purchased` marks a purchase; a rush removes the option). A delivered Shrine
-pickup is the ordinary acquisition row; outside its rushed purchase room it
-reads `Delivery: X`.
+Shrine purchase and rush rows are informational on the wire, each carrying its
+generation and reward type; an authored rush publishes as its own row at its
+own Timeline position, which may be later than its purchase. A purchase counts
+as rushed, and a Well generation as bought, exactly when the walk performs that
+row (a ranked, non-stale row), the same input the simulation settles them from.
+The module shows a purchase as `Shrine: X` and a rush as `Rush: X`, and hides
+each from the native Shrine options (`Purchased` marks a purchase; a rush
+removes the option). A delivered Shrine pickup is the ordinary acquisition row;
+outside its rushed purchase room it reads `Delivery: X`.
 
 The guide's header, each row and the footer share one 24-character budget. The
 module owns that wording: a guide-owned name for every catalog reward type,
@@ -637,9 +656,8 @@ records only whether Ixion inserted the gate so removing that purchase can
 remove its generated topology. A visible Chaos gate consumes one pending Ixion
 regardless of how the gate originated.
 
-A Chaos entry in `overview.additional` may publish `spawnPointIndex`, a positive
-one-based index into numerically sorted native SecretPoint IDs. Omission leaves
-random placement unchanged. The scoped SecretDoor spawn adapter substitutes
+A Chaos entry in `overview.additional` publishes `spawnPointIndex`, a positive
+one-based index into numerically sorted native SecretPoint IDs. The scoped SecretDoor spawn adapter substitutes
 only its destination, preserving native gate creation, destination-room choice,
 health cost and Ixion consumption. An unavailable point produces a diagnostic
 and leaves the native destination unchanged, not a placement-only mismatch.

@@ -268,6 +268,7 @@ describe('stale room-action row source family', () => {
     ];
     const retained = { ...occurrence, roomActions: { ...occurrence.roomActions, order } };
     const domain = assembleRoomActionDomain({
+      producer: startingReward !== undefined,
       catalog,
       biome: nBiome,
       topology,
@@ -280,7 +281,7 @@ describe('stale room-action row source family', () => {
       order,
       contributions: domain.contributions,
       retainedSourceFamilies: domain.retainedSourceFamilies,
-      lifecycleStructure: domain.lifecycleStructure,
+      eventGraph: domain.eventGraph,
     });
     const row = (reference: (typeof order)[number]) =>
       roster.rows.find((candidate) => candidate.key === roomActionKey(reference));

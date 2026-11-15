@@ -1,7 +1,6 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { HermesShrineDelay, HermesShrineGenerationKey } from '../../authored-project/model';
-import type { ShopOptionSelection } from '../../reward-kernel';
 
 type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
   ProjectCommand,
@@ -19,34 +18,50 @@ export interface WorldShopInteraction {
     readonly offerKey: string;
     readonly command: CommandOf<'ReplaceShopPurchaseParticipation'>;
   }[];
+  /**
+   * Travel Deal is held and no purchase has restocked yet: the next item bought
+   * restocks its slot, and that purchase settles the restocked item.
+   */
+  readonly travelDealRestocksNextPurchase: boolean;
   /** The Travel Deal item, once its first purchase made it live and while it is unbought. */
   readonly travelDealRefill?: {
-    /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
     readonly rewardType: string | null;
     readonly optionKey: string | null;
-    /** The items the reached state can stock there, each ready as the command's `value`. */
-    readonly values: readonly ShopOptionSelection[];
     readonly command: CommandOf<'PurchaseShopTravelDealRefill'>;
   };
 }
 
-/** One Hermes Shrine item that can be bought or rushed there. */
+/** One unbought Hermes Shrine item that can be bought there. */
 export interface HermesShrineInteractionOffer {
   readonly generationKey: HermesShrineGenerationKey;
-  /** Null only for a blank Travel Deal refill; the pick then adds its chosen `rewardType`. */
   readonly rewardType: string | null;
   readonly delay: HermesShrineDelay | null;
   readonly buy: CommandOf<'PurchaseHermesShrineOffer'>;
-  readonly rush: CommandOf<'PurchaseHermesShrineOffer'>;
 }
 
-/** What can be bought at the end of a Hermes Shrine's authored sequence. */
+/** One bought, unrushed Hermes Shrine item that can be rushed there. */
+export interface HermesShrineInteractionRush {
+  readonly generationKey: HermesShrineGenerationKey;
+  readonly rewardType: string;
+  readonly delay: HermesShrineDelay;
+  /** Rushes the item directly after its purchase; an `index` places the rush later. */
+  readonly rush: CommandOf<'SetHermesShrineRush'>;
+}
+
+/** What can be bought or rushed at the end of a Hermes Shrine's authored sequence. */
 export interface HermesShrineInteraction {
   readonly historySequence: number;
   /** Each stocked initial item not yet bought, in slot order. */
   readonly offers: readonly HermesShrineInteractionOffer[];
+  /** Each bought item not yet rushed, initial slots in slot order then the refill. */
+  readonly rushes: readonly HermesShrineInteractionRush[];
   /** A rush made with Travel Deal has refilled its slot at the reached state. */
   readonly travelDealRefillLive: boolean;
+  /**
+   * Travel Deal is held and no rush has refilled yet: the next initial item
+   * rushed refills its slot, and that rush settles the refilled item.
+   */
+  readonly travelDealRefillsNextRush: boolean;
   /** The live refill while it is unbought, with the rewards the reached state can stock. */
   readonly travelDealRefill?: HermesShrineInteractionOffer & {
     readonly candidateRewardTypes: readonly string[];
@@ -184,12 +199,15 @@ export interface LockedDoorsInteraction {
     readonly action: import('../../authored-project/addresses').RoomActionSemanticAddress;
     /** Appends the press where the room's actions end; absent once it is pressed. */
     readonly append?: CommandOf<'InsertRoomAction'>;
-    /** The pressed door's fight, generated at its press; absent while unreached. */
+    /**
+     * The door's fight: generated at its press once pressed, or where its
+     * press would append before then; absent while that point is unreached.
+     */
     readonly encounter?: UnlockExitEncounterInteraction;
   }[];
 }
 
-/** A pressed locked door's fight and each declared decision with its authored value. */
+/** A locked door's fight and each declared decision with the door's authored value. */
 export interface UnlockExitEncounterInteraction {
   readonly selectedEncounterDefinitionKey: string;
   readonly label: string;
@@ -200,7 +218,7 @@ export interface UnlockExitEncounterInteraction {
     readonly value?: import('../../authored-project/model').AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
     /** Restores the native roll; present while a value is authored. */
-    readonly reset?: CommandOf<'ReplaceUnlockExitCustomization'>;
+    readonly reset?: CommandOf<'ReplaceLockedExitCustomization'>;
   }[];
 }
 
@@ -221,7 +239,7 @@ export interface RoomObjectInteractionArtifacts {
   readonly challengeSwitchEncounterAt: (
     occurrence: OccurrenceAddress,
   ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;
-  /** A pressed locked door's fight generation capability at its press. */
+  /** A locked door's fight generation capability at its press, or where an unplaced press would append. */
   readonly unlockExitEncounterAt: (
     action: import('../../authored-project/addresses').RoomActionSemanticAddress,
   ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;

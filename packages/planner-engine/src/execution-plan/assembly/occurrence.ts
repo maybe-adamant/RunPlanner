@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../../simulation/encounters/model';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import type { Catalog } from '../../catalog-schema';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
@@ -50,8 +51,7 @@ export function executionOccurrence(
   const anomaly = assembleGAnomalyReplacement(room);
   const rerolls = selected ? executionRoomRerolls(room, batch) : undefined;
   // A Ship room's earliest Run State is its first phase start, before any wheel press.
-  const firstShipPhase =
-    room.lifecycleProfileKey === 'ShipCombatRoom' ? room.encounterPhases[0]?.slotKey : undefined;
+  const firstShipPhase = roomOpensRewardWheels(room) ? room.encounterPhases[0]?.slotKey : undefined;
   const entrySnapshot = snapshots.get(
     semanticAddressKey(
       createRoomRunStateCheckpointAddress(

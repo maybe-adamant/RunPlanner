@@ -1,10 +1,14 @@
 import { generatedPickupPlacementRepairLabel } from './assembly/occurrence-action-label';
-import { assessRoomActionPlacements } from '@run-planner/engine/simulation';
+import {
+  assessRoomActionPlacements,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import {
   structurallyInvalidGeneratedPickupPlacements,
   roomActionKey,
   createBiomeAddress,
-  createAcquisitionSiteAddress,
   resolveRoutePosition,
   type ResolvedRoutePosition,
   createEncounterPhaseAddress,
@@ -34,6 +38,7 @@ import {
   type HubRoomAddress,
   type OccurrenceId,
   type OccurrenceAddress,
+  type ProjectCommand,
   type ProjectDocument,
   type RoomOccurrence,
   type AuthoredRewardState,
@@ -86,6 +91,23 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
+
+/** A site's derived entries, each due delivery or clocked drop with the engine's placement command. */
+export function workspaceDerivedAcquisitionEntries(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  site: AcquisitionSiteAddress,
+) {
+  return derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site).map((entry) => {
+    if (entry.reference === undefined) return entry;
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      entry.address,
+    );
+    return placement === undefined ? entry : Object.freeze({ ...entry, placement });
+  });
+}
 import { compareAuthoredTargetsInPhysicalOrder, compareCodeUnitStrings } from './assembly/ordering';
 
 export interface WorkspaceEvaluatedBatchOverlay {
@@ -96,10 +118,12 @@ export interface WorkspaceEvaluatedBatchOverlay {
 /** Where the walk stopped inside the room an assessment blocks in, as the engine publishes it. */
 export interface WorkspaceRoomStop {
   readonly kind: 'overview' | 'timeline' | 'exit';
-  /** The room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
+  /** The index of the room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
   readonly entryIndex: number;
   /** `entry`: the walk reached that entry and blocks on its own contact; `before`: it did not. */
   readonly at: 'entry' | 'before';
+  /** An Overview stop that waits only for a required pickup placed before the first fight. */
+  readonly placement?: true;
 }
 
 export interface WorkspaceBiomeSource {
@@ -207,10 +231,24 @@ export interface WorkspaceBiomeSource {
   readonly roomLayout: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
+  /** Where an authored Chaos gate spawns as stored, with the points it can take. */
+  readonly chaosGatePosition: (
+    gate: import('@run-planner/engine/authored-project').AdditionalExitAddress,
+  ) => import('@run-planner/engine/simulation').ChaosGatePositionAuthoring | undefined;
   /** The loot a room spawns on its own, by moment and source action; undefined while unentered. */
   readonly spawnedLoot: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomSpawnedLoot | undefined;
+  /** What is live at each gap of a reached room's actions; undefined while unreached. */
+  readonly roomLive: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').LiveRoom | undefined;
+  /** Reset from here for each entry of a room's lifecycle Timeline; undefined while unentered. */
+  readonly roomActionResets: (
+    occurrence: OccurrenceAddress,
+  ) =>
+    | readonly (Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }> | undefined)[]
+    | undefined;
   /** Each phase's Encounter outcome that hosts a choice; undefined while unentered. */
   readonly encounterOutcomes: (
     occurrence: OccurrenceAddress,
@@ -270,7 +308,13 @@ export interface WorkspaceBiomeSource {
     readonly rewardTypes?: readonly string[];
     readonly fixedReward?: import('@run-planner/engine/authored-project').AuthoredRewardState;
     readonly producerLifecycleKey?: string;
-    readonly encounterPhaseKey?: string;
+    /** The row that places a due delivery or clocked drop, and how the editor names its timing. */
+    readonly reference?: import('@run-planner/engine/authored-project').RoomActionReference;
+    readonly label?: import('@run-planner/engine/simulation').RoomActionRowLabel;
+    /** A due delivery's or clocked drop's phase on the Timeline, as its placed row's. */
+    readonly phaseKey?: string;
+    /** The command placing a due delivery or clocked drop where it is live. */
+    readonly placement?: import('@run-planner/engine/simulation').TimedPickupPlacementCommand;
     readonly participation?: 'required' | 'optional';
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
@@ -815,6 +859,9 @@ function createWorkspaceBiomeSource(
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
+  chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'],
+  roomLive: WorkspaceBiomeSource['roomLive'],
+  roomActionResets: WorkspaceBiomeSource['roomActionResets'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1089,7 +1136,6 @@ function createWorkspaceBiomeSource(
         evaluation !== undefined && 'rewards' in evaluation
           ? (evaluation.rewards.generatedPickupPlacements ?? [])
           : [],
-        derivedAcquisitionEntries(createAcquisitionSiteAddress(owner, 'roomExit')),
       ),
     exitDecision: (source: ExitDecisionSourceAddress) =>
       exitDecisionsByOwner.get(semanticAddressKey(createExitDecisionAddress(biome, source))),
@@ -1111,9 +1157,19 @@ function createWorkspaceBiomeSource(
     roomStop: (owner: OccurrenceAddress) => {
       const stop =
         evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomStop : undefined;
-      if (stop === undefined || semanticAddressKey(stop.room) !== semanticAddressKey(owner))
+      const entryIndex = evaluation?.roomStopEntryIndex;
+      if (
+        stop === undefined ||
+        entryIndex === undefined ||
+        semanticAddressKey(stop.room) !== semanticAddressKey(owner)
+      )
         return undefined;
-      return Object.freeze({ kind: stop.kind, entryIndex: stop.entryIndex, at: stop.at });
+      return Object.freeze({
+        kind: stop.kind,
+        entryIndex,
+        at: stop.at,
+        ...(stop.placement === true ? { placement: true as const } : {}),
+      });
     },
     walkReached,
     walkStopsBefore: evaluation === undefined && !pastPlanEnd,
@@ -1132,6 +1188,9 @@ function createWorkspaceBiomeSource(
     roomLayout,
     spawnedLoot,
     encounterOutcomes,
+    chaosGatePosition,
+    roomLive,
+    roomActionResets,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1231,6 +1290,9 @@ export function createWorkspaceProjectSourceIndex(
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
+  chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'] = () => undefined,
+  roomLive: WorkspaceBiomeSource['roomLive'] = () => undefined,
+  roomActionResets: WorkspaceBiomeSource['roomActionResets'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1247,6 +1309,27 @@ export function createWorkspaceProjectSourceIndex(
         : [],
     ),
   );
+  // A Ship room publishes its state at its first encounter rather than on entry.
+  const firstEncounterRunDepths = new Map<string, number>();
+  for (const biome of routeEvaluation?.biomes ?? []) {
+    if (!('rewards' in biome)) continue;
+    for (const snapshot of biome.rewards.runStateSnapshots) {
+      const owner = snapshot.owner;
+      if (
+        owner.kind !== 'roomRunStateCheckpoint' ||
+        owner.checkpoint.kind !== 'beforeEncounterStart'
+      )
+        continue;
+      const room = semanticAddressKey(
+        createOccurrenceAddress(
+          createBiomeAddress(owner.routeKey, owner.biomeKey),
+          owner.occurrenceId,
+        ),
+      );
+      if (!firstEncounterRunDepths.has(room))
+        firstEncounterRunDepths.set(room, snapshot.counters.runDepthCache);
+    }
+  }
   const horizon = evaluation.authoringHorizon;
   const planEnd: WorkspaceRoutePlanEndSource = Object.freeze({
     ...(horizon.kind === 'ended' && horizon.blockedAfter.routeKey === route.routeKey
@@ -1269,9 +1352,9 @@ export function createWorkspaceProjectSourceIndex(
       (planEnd.endRoom?.biomeKey === room.biomeKey && planEnd.readiness(room) === 'locked');
     const runDepth = pastEnd
       ? undefined
-      : enteredRunDepths.get(
+      : (enteredRunDepths.get(
           semanticAddressKey(createRoomRunStateCheckpointAddress(room, { kind: 'roomEntered' })),
-        );
+        ) ?? firstEncounterRunDepths.get(semanticAddressKey(room)));
     return Object.freeze({ gameName, ...(runDepth === undefined ? {} : { runDepth }) });
   };
   const hubRunDepth = (hub: HubRoomAddress) =>
@@ -1322,6 +1405,9 @@ export function createWorkspaceProjectSourceIndex(
             roomLayout,
             spawnedLoot,
             encounterOutcomes,
+            chaosGatePosition,
+            roomLive,
+            roomActionResets,
           ),
         ),
       ),

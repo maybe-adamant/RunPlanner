@@ -59,6 +59,19 @@ function twoOfferProject(
 
 const raw = (project: ProjectDocument): unknown => JSON.parse(encodeProjectDocument(project));
 
+/** The plan as the schema this exchange lifts saved it: its rows record no item content. */
+function rawWithoutContent(project: ProjectDocument): unknown {
+  const document = raw(project) as {
+    route: {
+      biomes: { topology: { occurrences: { roomActions: { order: object[] } }[] } | null }[];
+    };
+  };
+  for (const biome of document.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? [])
+      for (const row of occurrence.roomActions.order) delete (row as { content?: unknown }).content;
+  return document;
+}
+
 function wheelState(project: ProjectDocument) {
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? [])
@@ -168,7 +181,7 @@ describe('blocked wheel offer exchange judged by the plan evaluation', () => {
     expect(block?.owner).toEqual(offer('offer1'));
 
     const migrated = decodeProjectDocument(
-      exchangeBlockedWheelOffers(raw(saved), catalog, judge),
+      exchangeBlockedWheelOffers(rawWithoutContent(saved), catalog, judge),
       catalog,
     );
     const state = wheelState(migrated);

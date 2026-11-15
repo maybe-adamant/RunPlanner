@@ -45,6 +45,9 @@ function hIntroduction(
     // BaseIntroEncounter with GeneratedH (EncounterData_Intro.lua): the GeneratedH store.
     moneyStore: fieldsMoneyStore,
     fixedRoster,
+    // Only Fields cages draw an introduction; using the cage starts it (StartFieldsEncounter,
+    // EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     kind: 'combat',
     countsEncounterDepth: true,
     hostsGorgon: true,
@@ -75,6 +78,8 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH',
+    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     moneyStore: fieldsMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH],
     label: 'Combat',
@@ -85,6 +90,8 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Treant2',
+    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     moneyStore: fieldsMoneyStore,
     requirements: {
       kind: 'all',
@@ -107,6 +114,8 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Screamer2',
+    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     moneyStore: fieldsMoneyStore,
     requirements: {
       kind: 'all',
@@ -182,6 +191,8 @@ export const hEncounterDefinitions = [
   ),
   {
     key: 'NemesisCombatH',
+    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).

@@ -5,24 +5,8 @@ export const fieldsRoomLifecycleProfiles = [
     key: 'FieldsCombatRoom',
     encounterEnvelopeKeys: ['FieldsEncounter'],
     producer: { kind: 'none' },
-    operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
-      { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'materializeOfferPoint',
-        offerPoint: 'fieldsOptionalRewards',
-        effects: ['recordOfferPoint'],
-      },
-      {
-        kind: 'runEncounterSequence',
-        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
-      },
-      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
-      {
-        kind: 'commitRoom',
-        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
-      },
-      { kind: 'exitRoom', effects: ['recordExit'] },
-    ],
+    offerPoint: { key: 'fieldsOptionalRewards', at: 'afterEntry' },
+    requiredObjects: false,
+    generatesOutgoing: true,
   },
 ] as const satisfies readonly RawRoomLifecycleProfileDeclaration[];

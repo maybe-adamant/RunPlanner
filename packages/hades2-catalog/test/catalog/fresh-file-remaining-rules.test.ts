@@ -70,7 +70,10 @@ describe('Fresh File remaining-rule declarations', () => {
 
   it('overlays H_Bridge01 as the WorldShop on Fresh File, keeping its force and caps', () => {
     const bridge = catalog.rooms.byKey.H_Bridge01!;
-    expect(bridge).toMatchObject({ kind: 'Story', lifecycleProfileKey: 'StoryPickupRoom' });
+    expect(bridge).toMatchObject({
+      kind: 'Story',
+      lifecycleProfile: { kind: 'fixed', profileKey: 'StoryPickupRoom' },
+    });
     expect(bridge.routeOverlays).toEqual([
       {
         routeKey: 'FreshFile',
@@ -87,6 +90,7 @@ describe('Fresh File remaining-rule declarations', () => {
         encounterSlotBindings: [
           { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BridgeShop' },
         ],
+        lifecycleProfile: { kind: 'fixed', profileKey: 'WorldShopRoom' },
       },
     ]);
     expect(bridge.force).toEqual({ kind: 'always' });

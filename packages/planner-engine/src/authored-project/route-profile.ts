@@ -65,8 +65,7 @@ const routeOverlaidRooms = new WeakMap<RoomDeclaration, Map<string, RoomDeclarat
 
 /**
  * The room this route's save profile realizes: the declaration with its route
- * overlay's kind, template, reward binding and encounter, and no lifecycle
- * profile. Every consumer of those facts reads them through this lookup.
+ * overlay's kind, template, reward binding, encounter and lifecycle. Every consumer of those facts reads them through this lookup.
  */
 export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
   room: Room,
@@ -77,8 +76,8 @@ export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
   const cached = routeOverlaidRooms.get(room as RoomDeclaration)?.get(routeKey);
   if (cached !== undefined) return cached as Room;
   const declared: RoomDeclaration = room;
-  const { lifecycleProfileKey: _lifecycle, routeOverlays: _overlays, ...base } = declared;
-  void _lifecycle;
+  const { roleLifecycleProfileKeys: _roles, routeOverlays: _overlays, ...base } = declared;
+  void _roles;
   void _overlays;
   const routed: RoomDeclaration = Object.freeze({
     ...base,
@@ -88,6 +87,10 @@ export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
     incomingReward: overlay.incomingReward,
     offerRewardBinding: overlay.offerRewardBinding,
     encounterSlotBindings: overlay.encounterSlotBindings,
+    lifecycleProfile: overlay.lifecycleProfile,
+    ...(overlay.roleLifecycleProfileKeys === undefined
+      ? {}
+      : { roleLifecycleProfileKeys: overlay.roleLifecycleProfileKeys }),
   });
   const byRoute = routeOverlaidRooms.get(declared) ?? new Map<string, RoomDeclaration>();
   byRoute.set(routeKey, routed);

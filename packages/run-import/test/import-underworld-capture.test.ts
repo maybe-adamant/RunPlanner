@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { stygianWellPurchasedGenerationKeys } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { projectFromRunRecord, type RunImport } from '../src/import';
@@ -81,32 +82,38 @@ describe('run import of the Underworld capture', () => {
 
   it('imports World Shop, Well and Pool purchases and the Anvil of Fates', () => {
     const shop = occurrence(imported.project, 'F-r6');
-    expect(shop.roomActions.order).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
+    expect(shop.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactShopOffer', offerKey: 'Boon' }),
+    );
     expect(occurrence(imported.project, 'F-r3').stygianWell).toMatchObject({
       offerKeyBySlot: {
         healing: 'TemporaryDoorHealTrait',
         secondLeft: 'TemporaryEmptySlotDamageTrait',
         secondRight: 'TemporaryMoveSpeedTrait',
       },
-      purchasedGenerationKeys: ['initial:secondLeft', 'initial:secondRight'],
     });
+    expect(
+      stygianWellPurchasedGenerationKeys(occurrence(imported.project, 'F-r3').roomActions.order),
+    ).toEqual(['initial:secondLeft', 'initial:secondRight']);
     // Travel Deal restocked the H Postboss Well with the item bought unstocked.
-    expect(occurrence(imported.project, 'H-r30:postboss').stygianWell).toMatchObject({
-      travelDealRefillKey: 'TemporaryMoveSpeedTrait',
-      purchasedGenerationKeys: ['initial:secondRight', 'travelDealRefill'],
-    });
+    const restocked = occurrence(imported.project, 'H-r30:postboss');
+    expect(restocked.stygianWell).toMatchObject({ travelDealRefillKey: 'TemporaryMoveSpeedTrait' });
+    expect(stygianWellPurchasedGenerationKeys(restocked.roomActions.order)).toEqual([
+      'initial:secondRight',
+      'travelDealRefill',
+    ]);
     const pool = occurrence(imported.project, 'F-r11:postboss');
     expect(pool.purgingPool).toEqual({
+      anchorId: expect.any(Number),
       traitKeyBySlot: {
         left: 'BoonDecayBoon',
         middle: 'AphroditeManaBoon',
         right: 'AresCastBoon',
       },
     });
-    expect(pool.roomActions.order).toContainEqual({
-      kind: 'sellPurgingPoolTrait',
-      slotKey: 'left',
-    });
+    expect(pool.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
     const anvil = occurrence(imported.project, 'I-r40');
     expect(
       anvil.state.kind === 'shop' &&

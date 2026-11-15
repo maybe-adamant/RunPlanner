@@ -155,6 +155,28 @@ describe('editor-session reconciliation', () => {
     });
   });
 
+  it('closes a trait dialog whose offer is no longer reached, keeping it while reached', () => {
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(owner, createOccurrenceId('swapped-owner')),
+      'source',
+    );
+    const open = session({ traitDialogTarget: trait });
+    const reconcile = (reached: boolean | undefined) =>
+      deriveEditorSessionReconciliation({
+        issue: undefined,
+        focusByOwner: destinations(trait),
+        session: open,
+        traitOfferContextReached: () => reached,
+      });
+    expect(reconcile(true)).toBeNull();
+    expect(reconcile(undefined)).toBeNull();
+    expect(reconcile(false)).toEqual({
+      clearFocusedSemanticOwner: false,
+      clearSelectedFinding: false,
+      clearTraitDialogTarget: true,
+    });
+  });
+
   it('closes a nested Circe target with its trait dialog, not by its own destination', () => {
     const trait = createTraitOfferAddress(
       createIncomingRewardAddress(owner, createOccurrenceId('circe-owner')),

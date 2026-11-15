@@ -170,9 +170,6 @@ export function occurrenceInteractionRequirements(
         kind: 'roomActions' as const,
         owner: room.roomActions.owner,
         proposals: room.roomActions.proposals,
-        ...(room.roomActions.timeline.fieldsCageOrder === undefined
-          ? {}
-          : { fieldsCageOrder: true as const }),
       }),
     );
   }
@@ -277,6 +274,30 @@ export function occurrenceInteractionRequirements(
     );
   }
 
+  // The fountain use that makes the Pool's entry list stale hosts the list it regenerates.
+  for (const row of room.roomActions?.rows ?? []) {
+    if (row.purgingPoolRefresh === undefined) continue;
+    requirements.push(
+      Object.freeze({
+        assessment: 'assessed' as const,
+        kind: 'purgingPoolSlots' as const,
+        owner: room.address,
+        list: 'refresh' as const,
+        slots: Object.freeze(
+          row.purgingPoolRefresh.slots.map((slot) =>
+            Object.freeze({
+              interactionKey: slot.interactionKey,
+              slotKey: slot.key,
+              traitKey: slot.traitKey,
+              ...(slot.traitLabel === undefined ? {} : { traitLabel: slot.traitLabel }),
+              candidateTraits: slot.candidateTraits,
+            }),
+          ),
+        ),
+      }),
+    );
+  }
+
   // Each Well or Pool reroll pins its restocked slots on its Timeline row.
   for (const row of room.roomActions?.rows ?? []) {
     if (row.featureRoll === undefined) continue;
@@ -345,8 +366,8 @@ export function occurrenceInteractionRequirements(
         Object.freeze({
           combatPhaseCount: room.roomLocal.combatPhaseCount,
           combatPhaseCountChoices: Object.freeze([
-            Object.freeze({ label: 'Intro + 1 combat', value: 2 as const }),
-            Object.freeze({ label: 'Intro + 2 combats', value: 3 as const }),
+            Object.freeze({ label: 'Intro + 1 phase', value: 2 as const }),
+            Object.freeze({ label: 'Intro + 2 phases', value: 3 as const }),
           ]),
           kind: 'shipCombatPhaseCount' as const,
           owner: room.address,

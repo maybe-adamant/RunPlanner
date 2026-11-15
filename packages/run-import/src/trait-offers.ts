@@ -1,4 +1,5 @@
 import {
+  createBiomeAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
@@ -292,13 +293,18 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
     owner.kind === 'localReward'
       ? state?.kind === 'fieldsCombat'
         ? (owner.groupKey === 'cages'
-            ? deliveredCageReward(occurrence!, owner.slotKey)
+            ? deliveredCageReward(
+                createBiomeAddress(owner.routeKey, owner.biomeKey),
+                occurrence!,
+                owner.slotKey,
+              )
             : state.optionalRewards[owner.slotKey]
           )?.offer
         : undefined
       : occurrence === undefined
         ? undefined
-        : deliveredIncomingReward(occurrence)?.offer;
+        : deliveredIncomingReward(createBiomeAddress(owner.routeKey, owner.biomeKey), occurrence)
+            ?.offer;
   if (offer === undefined) return undefined;
   const loot =
     offer.payload?.kind === 'BoonSource'

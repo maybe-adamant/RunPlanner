@@ -47,7 +47,7 @@ import {
   selectProjectEvaluation,
   selectProjectHistory,
 } from '@planner/state/store';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, withItemContent } from '@run-planner/test-fixtures/shared';
 import {
   createEchoGoldIAnvilDuplicateProject,
   createCompleteFGProject,
@@ -116,7 +116,6 @@ describe('project workspace application state', () => {
           createAcquisitionSiteAddress(occurrence, 'roomExit'),
           clockedTraitGeneratedPickupEntryKey('fabricated', 'pom1'),
         ),
-        encounterPhaseKey: 'Encounter',
         producerLifecycleKey: 'GeneratedTraitPickup',
         rewardType: 'StoreRewardRandomStack',
       }),
@@ -401,10 +400,27 @@ describe('project workspace application state', () => {
     }
   });
 
-  it('reschedules one delayed Shrine delivery through simulation as one undo step', () => {
+  it('moves one delayed Shrine delivery due host through simulation as one undo step', () => {
     const { store } = createStore();
     const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const dueFinding = () =>
+      store
+        .getState()
+        .projectWorkspace.assembly!.evaluation.findings.find(
+          (finding) =>
+            finding.code === 'hermesShrineDeliveryPlacementRequired' &&
+            finding.origin.kind === 'acquisitionEntry' &&
+            finding.origin.entryKey === entryKey,
+        );
+    const holders = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.filter(
+          (occurrence) =>
+            occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !==
+            undefined,
+        );
     // The checkpoint's item already has delay 2, so start from another delay.
     store.dispatch(
       authoredProjectReplaced(
@@ -425,14 +441,23 @@ describe('project workspace application state', () => {
         delay: 2,
       }),
     );
-    const delayTwo = presentProject(store.getState());
-    const nPlanAtDelayTwo = delayTwo.route.biomes.find((biome) => biome.biomeKey === 'N');
-    const delayTwoHost = nPlanAtDelayTwo?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat09'),
+    // The delivery arrives in Combat 09; picking it up is the owner's own row.
+    const dueAtTwo = dueFinding();
+    if (dueAtTwo?.origin.kind !== 'acquisitionEntry')
+      throw new Error('the delay-2 delivery has no due finding');
+    expect(dueAtTwo.origin.site.owner).toMatchObject({ occurrenceId: nOccurrenceId('combat09') });
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'PlaceHermesShrineDelivery',
+        entry: dueAtTwo.origin,
+      }),
     );
-    const retained =
-      delayTwoHost?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey];
+    const delayTwo = presentProject(store.getState());
+    const retained = holders(delayTwo)?.find(
+      (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat09'),
+    )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey];
     expect(retained).toMatchObject({ offer: { rewardType: 'MaxHealthDrop' } });
+    expect(dueFinding()).toBeUndefined();
 
     store.dispatch(
       authoredProjectCommandDispatched({
@@ -442,32 +467,51 @@ describe('project workspace application state', () => {
         delay: 3,
       }),
     );
+    // Displaced, the delivery is unplaced and now falls due in the Boss room.
     const delayThree = presentProject(store.getState());
-    const nPlanAtDelayThree = delayThree.route.biomes.find((biome) => biome.biomeKey === 'N');
-    const deliveryOwners = nPlanAtDelayThree?.topology?.occurrences.filter(
-      (occurrence) =>
-        occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !== undefined,
-    );
-    expect(deliveryOwners).toHaveLength(1);
-    expect(deliveryOwners?.[0]).toMatchObject({ gameName: 'N_Boss01' });
     expect(
-      deliveryOwners?.[0]?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
-    ).toEqual(retained);
-    expect(deliveryOwners?.[0]?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-      encounterPhaseKey: 'Encounter',
-    });
-    expect(
-      store
-        .getState()
-        .projectWorkspace.assembly!.evaluation.findings.some(
-          (finding) =>
-            finding.origin.kind === 'acquisitionEntry' && finding.origin.entryKey === entryKey,
+      delayThree.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.some((occurrence) =>
+          occurrence.roomActions.order.some(
+            (reference) =>
+              reference.kind === 'interactAcquisitionEntry' && reference.entryKey === entryKey,
+          ),
         ),
     ).toBe(false);
+    const dueAtThree = dueFinding();
+    expect(
+      dueAtThree?.origin.kind === 'acquisitionEntry' && dueAtThree.origin.site.owner,
+    ).toMatchObject({
+      occurrenceId: delayThree.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'N_Boss01')
+        ?.occurrenceId,
+    });
+    if (dueAtThree?.origin.kind !== 'acquisitionEntry')
+      throw new Error('the delay-3 delivery has no due finding');
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'PlaceHermesShrineDelivery',
+        entry: dueAtThree.origin,
+      }),
+    );
+    const placed = presentProject(store.getState());
+    const boss = holders(placed)?.find((occurrence) => occurrence.gameName === 'N_Boss01');
+    expect(boss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toEqual(
+      retained,
+    );
+    expect(boss?.roomActions.order).toContainEqual(
+      withItemContent(placed, createOccurrenceAddress(nBiome, boss!.occurrenceId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
+    );
+    expect(dueFinding()).toBeUndefined();
 
+    store.dispatch(authoredProjectUndoRequested());
+    expect(presentProject(store)).toBe(delayThree);
     store.dispatch(authoredProjectUndoRequested());
     expect(presentProject(store)).toBe(delayTwo);
     for (const purchased of [false, true]) {
@@ -703,7 +747,7 @@ describe('project workspace application state', () => {
     expect(presentProject(store.getState())).toBe(edited);
   });
 
-  it('undoes and redoes an Echo replay selection with its required generated row', () => {
+  it('undoes and redoes an Echo replay selection with its generated pickup entry', () => {
     const { store } = createStore();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     let project = createGoldenFGHProject();
@@ -764,14 +808,13 @@ describe('project workspace application state', () => {
     const editedBridge = edited
       .route!.biomes.find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    expect(editedBridge.roomActions.order).toEqual([
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'roomExit',
+    // The replay spawns its pickup; collecting it is the owner's own row.
+    expect(editedBridge.roomActions.order).toEqual(bridge.roomActions.order);
+    expect(editedBridge.roomActions.order).not.toContainEqual(
+      expect.objectContaining({
         entryKey: echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
-      },
-    ]);
+      }),
+    );
     expect(
       editedBridge.acquisitionSites?.roomExit?.pickupEntries?.[
         echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1')

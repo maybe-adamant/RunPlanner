@@ -31,7 +31,7 @@ import {
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
@@ -158,13 +158,16 @@ describe('Stygian Well workbench', () => {
     const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    const well = view.application.store
+    const room = view.application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
         (room) => room.occurrenceId === postbossId,
-      )?.stygianWell;
-    expect(well?.purchasedGenerationKeys ?? []).not.toContain('travelDealRefill');
-    expect(well?.travelDealRefillKey).toBe('ArmorBoostStore');
+      );
+    expect(room?.roomActions.order).not.toContainEqual({
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'travelDealRefill',
+    });
+    expect(room?.stygianWell?.travelDealRefillKey).toBe('ArmorBoostStore');
   });
 
   it('authors the refill under the first purchase row and hides it when that purchase is cleared', async () => {
@@ -230,7 +233,8 @@ describe('Stygian Well workbench', () => {
       const inventory =
         generationKey === 'initial:secondLeft'
           ? authoredWell()
-          : applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+          : // The restocked refill's purchase goes with its old item; it is bought again below.
+            settleTestEdit(createUnderworldFWellCheckpoint(false), {
               kind: 'ReplaceStygianWellTravelDealRefill',
               occurrence: owner,
               itemKey: 'RandomStoreItem',
@@ -285,7 +289,7 @@ describe('Stygian Well workbench', () => {
     },
   );
 
-  it('clears an incompatible retained Twist result when its parent item is replaced', async () => {
+  it('draws a new Twist result when its cleared parent item is picked again', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
     let project = applyProjectCommand(authoredWell(), catalog, {
       kind: 'SetStygianWellPurchase',
@@ -309,18 +313,18 @@ describe('Stygian Well workbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
     openOverview();
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
-    expect(hintOf(offer)).toContain('Unresolved');
     expect(screen.queryByRole('button', { name: /Twist result$/ })).toBeNull();
 
     await view.user.click(offer);
     await view.user.click(screen.getByRole('option', { name: 'Fateful Twist' }));
+    // The purchase reaches a new Twist, which its edit stocks.
     expect(
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === postbossId,
-        )?.stygianWell?.twistResultKeyBySlot?.secondLeft,
-    ).toBeUndefined();
+        )?.stygianWell?.twistResultKeyByGeneration?.['initial:secondLeft'],
+    ).toEqual(expect.any(String));
   });
 
   it("shows each Well purchase row with its item's own icon", () => {

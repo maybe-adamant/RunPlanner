@@ -14,6 +14,8 @@ import { ephyraMoneyStore, godCombatMoneyStore, minibossMoneyStore } from './mon
 export const nEncounterDefinitions = [
   {
     key: 'OpeningGeneratedN',
+    // Combat starts once its room reward is used (SpawnRoomReward WaitUntilPickup, BeginOpeningEncounter, EncounterData_Opening.lua:28-29).
+    script: { gate: { kind: 'useItemRole', role: 'self' } },
     moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedN],
     label: 'Opening combat',

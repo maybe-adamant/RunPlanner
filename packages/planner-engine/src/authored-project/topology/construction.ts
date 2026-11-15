@@ -12,7 +12,7 @@ import type { BiomeTopology, OccurrenceId, RoomOccurrence, RouteLoadout } from '
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
-import { createDefaultRoomActionState } from '../room-actions/state';
+import { createEmptyRoomActionState } from '../room-actions/state';
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
@@ -22,8 +22,6 @@ import {
   roomHasInfernalContractPedestal,
 } from '../infernal-contract-pedestal';
 import { createDefaultPhantomExit, roomHasPhantomExit } from '../phantom-exit';
-
-const RACK_ACTION = Object.freeze({ kind: 'interactKeepsakeRack' as const });
 
 export function defaultOccurrence(
   catalog: Catalog,
@@ -46,7 +44,6 @@ export function defaultOccurrence(
     ...(activeCageCount === undefined ? {} : { activeCageCount }),
   });
   const hasRack = routeHasKeepsakeRack(room, routeKey);
-  const defaultActions = createDefaultRoomActionState(room);
   const encounters = createDefaultRoomEncounterState(
     catalog,
     room,
@@ -61,9 +58,8 @@ export function defaultOccurrence(
       : {}),
     encounters,
     ...(hasRack ? { keepsakeRack: Object.freeze({ keepsakeKey: null }) } : {}),
-    roomActions: hasRack
-      ? Object.freeze({ order: Object.freeze([...defaultActions.order, RACK_ACTION]) })
-      : defaultActions,
+    // A room is born with no actions placed; the owner places each interaction.
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
     ...(routePurgingPool(room, routeKey) === undefined
       ? {}

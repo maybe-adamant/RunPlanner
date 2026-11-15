@@ -44,12 +44,11 @@ import { batchTakesOverNormalDoors } from './decision-facts';
 import {
   BiomeMaterializationContractError,
   canonicalPhysicalExits,
-  initialClockworkState,
   materializeAdditionalContinuations,
   materializeBatch,
   selectedBatchContinuation,
-  type ClockworkState,
 } from './batch';
+import { clockworkDoors, type ClockworkBatchDoors } from '../../authored-project/clockwork-doors';
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type {
@@ -476,7 +475,7 @@ function materializeContiguousBatchPrefix(
   parent: CanonicalDecisionParent,
   sourceRoom: RoomDeclaration | undefined,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
-  clockwork: ClockworkState | undefined,
+  clockwork: ClockworkBatchDoors | undefined,
   loadout?: RouteWeaponAspectLoadout,
 ): CanonicalBatch | undefined {
   if (decision === undefined || sourceRoom === undefined) return undefined;
@@ -520,7 +519,7 @@ function materializeContiguousBatchPrefix(
     clockwork,
     { allowUnselected: true, physicalExits },
     loadout,
-  ).batch;
+  );
 }
 
 /**
@@ -557,10 +556,7 @@ export function materializeBiomePrefix(
   const decisions: CanonicalDecision[] = [];
   const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let current = entryRoom;
-  let clockwork =
-    layout.progression.kind === 'generated'
-      ? initialClockworkState(layout.progression, biomeState)
-      : undefined;
+  const clockwork = clockworkDoors(catalog, layout, topology, plan.state);
   const traversed = new Set<OccurrenceId>();
   while (!traversed.has(current.occurrenceId)) {
     traversed.add(current.occurrenceId);
@@ -669,8 +665,8 @@ export function materializeBiomePrefix(
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
           loadout,
         );
-        decisions.push(materialized.batch);
-        const selected = selectedBatchContinuation(materialized.batch);
+        decisions.push(materialized);
+        const selected = selectedBatchContinuation(materialized);
         if (selected?.kind !== 'normal')
           return prefix(biome, biomeState, entryRoom, decisions, undefined, undefined);
         const chain = fixedRoomChain(
@@ -757,7 +753,7 @@ export function materializeBiomePrefix(
         roomReference(current),
         sourceRoom,
         current,
-        clockwork,
+        clockwork?.batches.get(current.occurrenceId),
         loadout,
       );
       const additional =
@@ -799,13 +795,12 @@ export function materializeBiomePrefix(
       decision,
       roomReference(current),
       current,
-      clockwork,
+      clockwork?.batches.get(current.occurrenceId),
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
       loadout,
     );
-    decisions.push(materialized.batch);
-    clockwork = materialized.nextClockwork;
-    const selected = selectedBatchContinuation(materialized.batch);
+    decisions.push(materialized);
+    const selected = selectedBatchContinuation(materialized);
     if (selected === undefined) {
       return prefix(
         biome,
@@ -851,10 +846,7 @@ export function materializeBiome(
   const decisions: CanonicalDecision[] = [];
   const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let currentRoom = entryRoom;
-  let clockwork =
-    layout.progression.kind === 'generated'
-      ? initialClockworkState(layout.progression, biomeState)
-      : undefined;
+  const clockwork = clockworkDoors(catalog, layout, topology, biomeState);
   let enteredPreboss: CanonicalAuthoredRoom | undefined;
   const traversed = new Set<OccurrenceId>();
 
@@ -918,8 +910,8 @@ export function materializeBiome(
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
           loadout,
         );
-        decisions.push(materialized.batch);
-        enteredPreboss = materialized.batch.targets.find((target) => target.picked)?.room;
+        decisions.push(materialized);
+        enteredPreboss = materialized.targets.find((target) => target.picked)?.room;
         if (enteredPreboss !== undefined) {
           fixedRoomLinks.push(
             ...fixedRoomChain(
@@ -949,13 +941,12 @@ export function materializeBiome(
       decision,
       roomReference(currentRoom),
       currentRoom,
-      clockwork,
+      clockwork?.batches.get(currentRoom.occurrenceId),
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
       loadout,
     );
-    decisions.push(materialized.batch);
-    clockwork = materialized.nextClockwork;
-    const selected = selectedBatchContinuation(materialized.batch);
+    decisions.push(materialized);
+    const selected = selectedBatchContinuation(materialized);
     if (selected === undefined) fail(`${currentRoom.gameName} lost selected target`);
     const nextRoom = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
     if (catalog.rooms.byKey[nextRoom.gameName]?.kind === 'Preboss') enteredPreboss = nextRoom;

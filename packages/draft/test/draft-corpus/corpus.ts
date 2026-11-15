@@ -4,6 +4,7 @@ import {
   createProjectDocument,
   routeInitialProfile,
   type DraftFillerRank,
+  type DraftSpending,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -51,7 +52,7 @@ interface EntryRecipe {
   readonly rackKeepsakeKey?: string;
   readonly preferMidshops?: boolean;
   readonly pursueTartarusGoal?: boolean;
-  readonly purchasesPerBiome?: number;
+  readonly spending?: DraftSpending;
   readonly fillerPriority?: readonly DraftFillerRank[];
 }
 
@@ -395,12 +396,12 @@ const MIDSHOP_VARIANTS = ['U3', 'S2', 'D3', 'U6', 'F3'];
 /** Full-route specs through Tartarus, with the Clockwork Goal pursued. */
 const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4', 'F3'];
 
-/** Ranked filler: the spec's suffix, its ranking and its Shop purchases per biome. */
+/** Ranked filler: the spec's suffix, its ranking and its spending style. */
 const FILLER_VARIANTS: readonly {
   readonly base: string;
   readonly suffix: string;
   readonly fillerPriority: readonly DraftFillerRank[];
-  readonly purchasesPerBiome?: number;
+  readonly spending?: DraftSpending;
 }[] = [
   {
     base: 'U1',
@@ -425,7 +426,7 @@ const FILLER_VARIANTS: readonly {
     base: 'D1',
     suffix: 'filler shops',
     fillerPriority: [{ kind: 'pom' }, { kind: 'maxHealth' }, { kind: 'maxMagick' }],
-    purchasesPerBiome: 3,
+    spending: 'greedy',
   },
 ];
 
@@ -448,6 +449,14 @@ const recipes: readonly EntryRecipe[] = [
     prefix: 4,
     godKeys: UNDERWORLD_GODS,
     basket: { godTraits: MEDIUM, leadTraits: ['NarcissusI'] },
+  },
+  {
+    name: 'S13 medium Heracles P',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { P: ['Heracles'] },
+    basket: { godTraits: MEDIUM },
   },
 ];
 
@@ -569,9 +578,7 @@ function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
     rackKeepsakeKeys,
     ...(recipe.preferMidshops === true ? { preferMidshops: true } : {}),
     ...(recipe.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
-    ...(recipe.purchasesPerBiome === undefined
-      ? {}
-      : { purchasesPerBiome: recipe.purchasesPerBiome }),
+    ...(recipe.spending === undefined ? {} : { spending: recipe.spending }),
     ...(recipe.fillerPriority === undefined ? {} : { fillerPriority: recipe.fillerPriority }),
   };
   const refusals = draftRefusals(catalog, base, spec);

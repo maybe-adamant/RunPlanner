@@ -130,9 +130,13 @@ Chaos requirements pass, the declaration and map can offer the gate.
 
 ### The ten-room rule is offer spacing, not minimum depth
 
-`NoRecentChaosEncounter` examines the previous ten room-history records for
-`ForceSecretDoor = true` and requires zero matches. That flag is set on the
-host source when a Chaos gate is successfully created.
+`NoRecentChaosEncounter` (`SumPrevRooms = 10`) examines the last ten
+room-history records for `ForceSecretDoor = true` and requires zero matches.
+That flag is set on the host source when a Chaos gate is successfully created.
+The check runs at the host's entry (`StartRoom` → `HandleSecretSpawns`), before
+the host joins `RoomHistory`, so its tenth record is the host's own slot, which
+cannot hold the flag: the effective window is the host's nine predecessors, and
+a gate can follow the last one ten rooms later.
 
 Consequences:
 
@@ -324,8 +328,8 @@ The planner's numbered map annotations use the capture module's one-based
 ordering of numerically sorted `GetIdsByType({ Name = "SecretPoint" })` IDs,
 not spatial order. All 125 supported hosts' declared counts match their capture
 annotation counts. The optional authored `spawnPointIndex` uses this same
-ordering for both natural and Ixion-generated gates; omission takes the gate's
-stable default point. Explicit position is enforced at the SecretDoor spawn contact,
+ordering for both natural and Ixion-generated gates; the edit that first
+reaches the gate's room stores its stable draw. Explicit position is enforced at the SecretDoor spawn contact,
 without changing host eligibility or native gate application. Physical alignment
 between explicit executor choices and the annotated images remains a live-game
 verification requirement.
@@ -334,7 +338,7 @@ verification requirement.
 
 This means Spark of Ixion can:
 
-- bypass the natural ten-room offer spacing;
+- bypass the natural Chaos offer spacing;
 - bypass a room's zero natural chance;
 - bypass natural biome, depth, and room-specific requirements;
 - wait until the next map that has a `SecretPoint` and satisfies the narrower
@@ -449,7 +453,11 @@ acquisition, not selection. `TrackCapturePointChallengeProgressReal`
 capture area, lowers it outside, and stops the encounter at 100 or 0:
 
 - when `CapturePointProgress >= 100`, `EndCapturePointChallengeEncounter`
-  calls `SpawnRoomReward`, making the selected reward available;
+  calls `SpawnRoomReward`, making the selected reward available. With no
+  challenge switch, which an Anomaly never has (`BaseAnomaly`
+  `ChallengeSpawnChance = 0.0`), it spawns with `CanDuplicate = false`
+  (`EncounterLogic.lua:2166-2181`), so Sea Star never copies it; an Artificer
+  replacement keeps its source's `CanDuplicate` (`GiftLogic.lua:24-36`);
 - otherwise it marks the objective failed and does not spawn the room reward;
 - the failed reward is not put back into the reward store.
 
@@ -706,7 +714,7 @@ The planner applies these deliberate normalizations:
   Blessing**;
 - preserve fixed `Empty_Chaos`, the source-level offer marker (recorded whether
   Chaos is selected or skipped), the
-  prior-ten-room spacing window, and each Chaos map's ordinary visible fresh
+  nine-predecessor spacing window, and each Chaos map's ordinary visible fresh
   return batch;
 - omit `BaseChaos.PauseBiomeState` from production modeling because the planner
   has no biome-state trait lifecycle input or consumer;

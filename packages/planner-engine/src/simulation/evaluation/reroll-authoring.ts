@@ -1,4 +1,6 @@
 import {
+  createBiomeAddress,
+  createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type HubDecisionAddress,
@@ -8,12 +10,15 @@ import {
 import type { HubDecision } from '../../authored-project/model';
 import {
   hubStayRows,
+  rerollAppendIndex,
   rerollSurfaceKey,
   rerollSurfaceOwner,
   type RerolledRewardOwner,
+  type RerollPressTarget,
   type RerollSurface,
 } from '../../authored-project/rerolls';
 import { sameRewardOffer, type ResolvedRewardOffer } from '../../reward-kernel';
+import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { RerollSurfaceSettlement } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import type { RollFeature } from '../../authored-project/feature-rolls';
@@ -337,4 +342,64 @@ function screenRerollReach(
   let maxCount = spend.fromCount;
   while (extra(maxCount + 1) <= remaining) maxCount += 1;
   return { enabled, maxCount, limit: remaining - extra(maxCount) > 0 ? 'poolShort' : 'poolEmpty' };
+}
+
+/** A value's canonical text, its object keys sorted, which keys a draw. */
+function canonicalText(value: unknown): string {
+  return JSON.stringify(value, (_key, entry: unknown) =>
+    entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+      ? Object.fromEntries(
+          Object.entries(entry as Record<string, unknown>).sort(([left], [right]) =>
+            left.localeCompare(right),
+          ),
+        )
+      : entry,
+  );
+}
+
+/**
+ * The command appending a press of one target to a reached surface, its
+ * result unset for the owner to choose. Undefined while the surface is
+ * unreached or not enabled, or for a target the game refuses.
+ */
+export function rerollPressForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  surface: RerollSurface,
+  target: RerollPressTarget,
+): Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }> | undefined {
+  const settlement = rerollSurfaceForProjectEvaluationAssembly(assembly, surface);
+  const targetKey = canonicalText(target);
+  const settled = settlement?.targets.find(
+    (candidate) => canonicalText(candidate.target) === targetKey,
+  );
+  const index = rerollAppendIndex(assembly.project, surface);
+  if (
+    settlement?.enabled !== true ||
+    settled === undefined ||
+    settled.unavailable !== undefined ||
+    index === undefined
+  )
+    return undefined;
+  if (surface.kind === 'hubStay') {
+    if (target.kind !== 'hubSlot') return undefined;
+    return Object.freeze({
+      kind: 'InsertHubReroll' as const,
+      hub: surface.hub,
+      hubSlotKey: target.hubSlotKey,
+      index,
+    });
+  }
+  if (target.kind === 'hubSlot') return undefined;
+  return Object.freeze({
+    kind: 'InsertReroll' as const,
+    occurrence:
+      surface.kind === 'doors'
+        ? surface.occurrence
+        : createOccurrenceAddress(
+            createBiomeAddress(surface.wheel.routeKey, surface.wheel.biomeKey),
+            surface.wheel.occurrenceId,
+          ),
+    target,
+    index,
+  });
 }

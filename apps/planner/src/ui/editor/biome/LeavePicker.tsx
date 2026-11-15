@@ -4,6 +4,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceCommandIntent,
+  type WorkspaceCommandsIntent,
   type WorkspaceInteractionCatalog,
   type WorkspaceMixedBatchNode,
   type WorkspaceOrdinaryBatchNode,
@@ -28,7 +29,7 @@ import {
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
 import { DoorChipFace } from './DecisionWorkbench';
-import { doorChipMapLink, doorRewardIcons, type DoorChip } from './doorSummary';
+import { doorChipMapLink, doorRewardIcons, roomNumberOf, type DoorChip } from './doorSummary';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import {
   highlightOwner,
@@ -114,22 +115,44 @@ function OptionFace({ option }: { readonly option: LeaveOption }) {
 /**
  * How the room is left, picked on its last Timeline row: each way out, then
  * ending the plan here. Ending the plan keeps the picked way underneath, so
- * picking it again continues the plan through it.
+ * picking it again continues the plan through it. A Ship phase's Select wheel
+ * picks its wheel offer with it, without ending the plan.
  */
 export function LeavePicker({
+  choiceLabel = 'Leave room',
   chosenKey,
+  endThrough,
   findingMark,
   id,
+  label = 'Exit door',
+  onOpen,
   options,
   pastEnd = false,
   planEnd,
   readinessOwner,
   unreached = false,
 }: {
+  /** The list's name. */
+  readonly choiceLabel?: string;
   /** The way out picked, kept while the plan ends here. */
   readonly chosenKey: string | undefined;
+  /**
+   * Ending the plan here by one edit that also changes the way out: whether
+   * the plan can end after that edit, and why that way out cannot be picked.
+   */
+  readonly endThrough?:
+    | {
+        readonly intent: WorkspaceCommandsIntent;
+        readonly availability: () => WorkspacePlanEndAvailability;
+        readonly disabledHint?: string | undefined;
+      }
+    | undefined;
   readonly findingMark?: FindingMarkProps | undefined;
   readonly id: string;
+  /** The trigger's name. */
+  readonly label?: string;
+  /** Called as the list opens, such as to evaluate its options. */
+  readonly onOpen?: () => void;
   readonly options: readonly LeaveOption[];
   /** The plan ends before this way out: its pick stays as authored, not walked. */
   readonly pastEnd?: boolean;
@@ -162,9 +185,16 @@ export function LeavePicker({
     if (link !== undefined) mapPreview?.show(link);
   };
 
+  // A way out the edit cannot take explains itself; the plan end is judged only past it.
+  const endThroughHint = (through: NonNullable<typeof endThrough>): string | undefined =>
+    through.disabledHint ?? planEndUnavailableHint(through.availability());
+  const endThroughDisabled = (through: NonNullable<typeof endThrough>): boolean =>
+    through.disabledHint !== undefined || !through.availability().available;
+
   const pick = (key: string) => {
-    if (planEnd !== undefined && key === endKey) {
-      if (!ended) executeIntent(planEnd.endIntent);
+    if (key === endKey) {
+      if (endThrough !== undefined) executeCommands(endThrough.intent);
+      else if (planEnd !== undefined && !ended) executeIntent(planEnd.endIntent);
       return;
     }
     const option = options.find((candidate) => candidate.key === key);
@@ -205,9 +235,11 @@ export function LeavePicker({
     const availability = planEnd === undefined || ended ? undefined : planEnd.availability();
     const items = [
       ...ways,
-      ...(planEnd === undefined
-        ? []
-        : [item(endKey, 'End plan here', ended, availability?.available === false)]),
+      ...(endThrough !== undefined
+        ? [item(endKey, 'End plan here', false, endThroughDisabled(endThrough))]
+        : planEnd === undefined
+          ? []
+          : [item(endKey, 'End plan here', ended, availability?.available === false)]),
     ];
     const selected = items.find((candidate) => candidate.selected);
     const section: ContextualPickerSection<string> = {
@@ -222,9 +254,11 @@ export function LeavePicker({
 
   const hint = (item: ContextualPickerItem<string>): string | undefined => {
     if (item.key === endKey)
-      return ended || planEnd === undefined
-        ? undefined
-        : planEndUnavailableHint(planEnd.availability());
+      return endThrough !== undefined
+        ? endThroughHint(endThrough)
+        : ended || planEnd === undefined
+          ? undefined
+          : planEndUnavailableHint(planEnd.availability());
     const option = options.find((candidate) => candidate.key === item.key);
     return option?.disabledHint;
   };
@@ -235,7 +269,7 @@ export function LeavePicker({
   return (
     <span className="timeline-leave-door">
       <ContextualPickerPopover<string>
-        choiceLabel="Leave room"
+        choiceLabel={choiceLabel}
         itemFace={(item) => {
           if (item.key === endKey) return <PlanEndFace />;
           const option = options.find((candidate) => candidate.key === item.key);
@@ -249,6 +283,7 @@ export function LeavePicker({
         }}
         onOpenChange={(next) => {
           if (!next) preview(undefined);
+          else if (!closed) onOpen?.();
           setOpen(next && !closed);
         }}
         onSelect={pick}
@@ -262,11 +297,11 @@ export function LeavePicker({
           {...hintProps(
             waiting ? candidateWaitingHint : ended ? undefined : chosen?.label,
             marked ? findingMark['aria-description'] : undefined,
-            'Exit door',
+            label,
           )}
           aria-expanded={open && !closed}
           aria-haspopup="listbox"
-          aria-label="Exit door"
+          aria-label={label}
           className="timeline-door-chip timeline-door-option timeline-leave-picker"
           data-map-pointed={pointed || undefined}
           disabled={closed}
@@ -352,6 +387,7 @@ export function BatchExitPicker({
             doorIndex: target.index,
             label,
             roomIcon: target.door.room.roomIcon,
+            ...roomNumberOf(target.door.room),
             rewards: doorRewardIcons(target, 'final'),
             ...(unavailable ? { unavailable: true } : {}),
           },
@@ -380,6 +416,7 @@ export function BatchExitPicker({
           additionalExit: 'kind' in control ? 'chaos' : 'zagreusContract',
           label: control.exitTypeLabel,
           roomIcon: control.door.room.roomIcon,
+          ...roomNumberOf(control.door.room),
           rewards: [rewardIcon(control.fixedRewardType)],
         },
         disabledHint: waitsOnDoors,

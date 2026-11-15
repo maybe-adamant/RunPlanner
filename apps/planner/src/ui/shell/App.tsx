@@ -118,6 +118,7 @@ export function App({
   );
   const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
   const roomActionLabel = workspace?.roomActionLabel;
+  const roomEventPointName = workspace?.roomEventPointName;
   const findingLabels = useMemo(
     () =>
       project === undefined
@@ -125,8 +126,9 @@ export function App({
         : {
             ...projectFindingLabels(catalog, project),
             ...(roomActionLabel === undefined ? {} : { roomAction: roomActionLabel }),
+            ...(roomEventPointName === undefined ? {} : { roomEventPoint: roomEventPointName }),
           },
-    [catalog, project, roomActionLabel],
+    [catalog, project, roomActionLabel, roomEventPointName],
   );
   const activeRouteNavigation =
     project === undefined ? undefined : projectRouteNavigation(catalog, project.route);

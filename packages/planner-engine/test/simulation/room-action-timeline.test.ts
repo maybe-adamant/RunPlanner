@@ -15,11 +15,20 @@ import {
   createTranscendentEmbryoOutcomeAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
-import type { RoomLifecycleStructure } from '../../src/authored-project';
+import type { RoomEventGraph } from '../../src/authored-project';
 import { roomActionKey } from '../../src/authored-project/room-actions/state';
 import type { RoomActionReference } from '../../src/authored-project/model';
 import type { ResolvedEncounterPhase } from '../../src/simulation/encounters';
-import type { RoomActionRow, RoomActionWindow } from '../../src/simulation/room-actions';
+import type { RoomActionRow } from '../../src/simulation/room-actions';
+import { withRequiredScopes } from '../../src/simulation/room-actions/required-scope';
+import { boundsForPlacement, type TestRowPlacement } from '../support/room-action-bounds';
+
+/** A test row names where it stands; the room's graph gives it bounds, label and phase. */
+type TestRow = Omit<RoomActionRow, 'contact' | 'label' | 'bounds'> & {
+  readonly placement: TestRowPlacement;
+};
+type TestRoster = Omit<RoomActionRoster, 'rows'> & { readonly rows: readonly TestRow[] };
+import { testGraphEvents } from '../support/event-graph';
 
 const owner: OccurrenceAddress = Object.freeze({
   kind: 'occurrence',
@@ -53,36 +62,16 @@ function embryoAt(phaseKey: string, cycle = 1) {
   });
 }
 
-function roster(overrides: Partial<RoomActionRoster> = {}): RoomActionRoster {
+function roster(overrides: Partial<TestRoster> = {}): TestRoster {
   return Object.freeze({
-    lifecycleStructure: Object.freeze({
+    eventGraph: Object.freeze({
       profileKey: 'StandardRewardRoom',
       activeEncounterSlotKeys: Object.freeze([]),
       phases: Object.freeze([]),
-      points: Object.freeze([
-        Object.freeze({ kind: 'roomEntered' as const, key: 'roomEntered' as const }),
-        Object.freeze({
-          kind: 'outgoingGeneration' as const,
-          key: 'outgoingGeneration' as const,
-        }),
-        Object.freeze({ kind: 'cleanup' as const, key: 'cleanup' as const }),
-      ]),
+      pressFights: [],
+      events: Object.freeze(testGraphEvents([], { generatesOutgoing: true })),
     }),
     rows: Object.freeze([]),
-    checkpoints: Object.freeze([
-      Object.freeze({
-        checkpointKey: 'outgoingGeneration',
-        label: 'Outgoing generation',
-        window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
-        afterRank: 1,
-      }),
-      Object.freeze({
-        checkpointKey: 'exitUsable',
-        label: 'Exit usable',
-        window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
-        afterRank: 1,
-      }),
-    ]),
     issues: Object.freeze([]),
     proposals: Object.freeze([]),
     valid: true,
@@ -110,8 +99,8 @@ const encounter = (slotKey: string): ResolvedEncounterPhase =>
 function structure(
   profileKey: string,
   encounterPhases: readonly ResolvedEncounterPhase[],
-  roomActionRoster: RoomActionRoster,
-): RoomLifecycleStructure {
+  roomActionRoster: TestRoster,
+): RoomEventGraph {
   const declared = encounterPhases
     .filter(
       (phase) =>
@@ -139,53 +128,17 @@ function structure(
           return [...ranked, ...declared.filter((phase) => !rankedKeys.has(phase.phaseKey))];
         })()
       : declared;
-  const points: RoomLifecycleStructure['points'][number][] = [
-    Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
-  ];
-  phases.forEach((phase, index) => {
-    if (phase.rewardWheelKey !== undefined && index > 0) {
-      points.push(
-        Object.freeze({
-          kind: 'wheelsOpen',
-          key: `wheelsOpen:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-        Object.freeze({
-          kind: 'nextPhase',
-          key: `nextPhase:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-      );
-    }
-    points.push(
-      Object.freeze({
-        kind: 'encounterStart',
-        key: `encounterStart:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-      ...(profileKey === 'BossRoom'
-        ? [
-            Object.freeze({
-              kind: 'bossDefeated' as const,
-              key: `bossDefeated:${phase.phaseKey}`,
-              phaseKey: phase.phaseKey,
-            }),
-          ]
-        : []),
-      Object.freeze({
-        kind: 'encounterEnd',
-        key: `encounterEnd:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-    );
+  const events = testGraphEvents(phases, {
+    cages: profileKey === 'FieldsCombatRoom',
+    generatesOutgoing: true,
+    boss: profileKey === 'BossRoom',
   });
-  points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
   return Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(encounterPhases.map((phase) => phase.slotKey)),
     phases: Object.freeze(phases),
-    points: Object.freeze(points),
+    pressFights: [],
+    events: Object.freeze(events),
   });
 }
 
@@ -193,31 +146,37 @@ function assembleRoomLifecycleTimeline(input: {
   readonly owner: OccurrenceAddress;
   readonly lifecycleProfileKey: string;
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
-  readonly roomActionRoster: RoomActionRoster;
+  readonly roomActionRoster: TestRoster;
 }) {
-  const lifecycleStructure = structure(
+  const eventGraph = structure(
     input.lifecycleProfileKey,
     input.encounterPhases,
     input.roomActionRoster,
   );
+  const rows = withRequiredScopes(
+    input.roomActionRoster.rows.map(({ placement, ...row }) =>
+      Object.freeze({ ...row, bounds: boundsForPlacement(placement, eventGraph) }),
+    ),
+    eventGraph,
+  );
   return assembleTimeline({
     owner: input.owner,
-    roomActionRoster: Object.freeze({ ...input.roomActionRoster, lifecycleStructure }),
+    roomActionRoster: Object.freeze({ ...input.roomActionRoster, eventGraph, rows }),
   });
 }
 
 function rankedRow(
   reference: RoomActionReference,
-  window: RoomActionWindow,
+  placement: TestRowPlacement,
   rank: number,
   participation: 'required' | 'optional' = 'required',
-): RoomActionRow {
+): TestRow {
   return Object.freeze({
     reference,
     key: roomActionKey(reference),
     owner,
     participation,
-    window,
+    placement,
     dependencies: Object.freeze([]),
     rank,
     stale: false,
@@ -301,7 +260,7 @@ describe('room lifecycle timeline', () => {
       key: 'interactLocalReward:x:y',
       owner,
       participation: 'optional' as const,
-      window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
+      placement: Object.freeze({ kind: 'afterCombat' as const }),
       dependencies: Object.freeze([]),
       rank: 1,
       stale: false,
@@ -315,9 +274,10 @@ describe('room lifecycle timeline', () => {
     });
     expect(timeline.boundaries.map((boundary) => boundary.kind)).toEqual([
       'roomEntered',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
-      'cleanup',
+      'doorsOpened',
     ]);
     expect(timeline.entries.filter((entry) => entry.kind === 'action')).toHaveLength(1);
     expect(timeline.repairRows).toEqual([]);
@@ -330,7 +290,7 @@ describe('room lifecycle timeline', () => {
         producerPoint: 'roomEntrance',
         acquisitionRole: 'source',
       },
-      { kind: 'standard', phase: 'beforeCombat' },
+      { kind: 'beforeCombat' as const },
       1,
     );
     const after = rankedRow(
@@ -339,7 +299,7 @@ describe('room lifecycle timeline', () => {
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
       },
-      { kind: 'standard', phase: 'afterCombat' },
+      { kind: 'afterCombat' as const },
       2,
     );
     const timeline = assembleRoomLifecycleTimeline({
@@ -351,15 +311,15 @@ describe('room lifecycle timeline', () => {
     const keys = timeline.entries.map((entry) =>
       entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
     );
-    expect(keys.indexOf(before.key)).toBeLessThan(keys.indexOf('encounterStart'));
-    expect(keys.indexOf('encounterStart')).toBeLessThan(keys.indexOf('encounterEnd'));
+    expect(keys.indexOf(before.key)).toBeLessThan(keys.indexOf('encounterStarted'));
+    expect(keys.indexOf('encounterStarted')).toBeLessThan(keys.indexOf('encounterEnd'));
     expect(keys.indexOf('encounterEnd')).toBeLessThan(keys.indexOf(after.key));
   });
 
   it('keeps the required Boss pickup and matured Shrine delivery in authored action order', () => {
     const collect = rankedRow(
       { kind: 'collectRequiredReward' },
-      { kind: 'standard', phase: 'afterCombat' },
+      { kind: 'afterCombat' as const },
       1,
     );
     const delivery = rankedRow(
@@ -367,9 +327,8 @@ describe('room lifecycle timeline', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey: 'hermesShrineDelivery:test',
-        encounterPhaseKey: 'Encounter',
       },
-      { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
       2,
     );
     const timeline = assembleRoomLifecycleTimeline({
@@ -378,20 +337,6 @@ describe('room lifecycle timeline', () => {
       encounterPhases: Object.freeze([encounter('Encounter')]),
       roomActionRoster: roster({
         rows: Object.freeze([collect, delivery]),
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
-            afterRank: 2,
-          }),
-          Object.freeze({
-            checkpointKey: 'exitUsable',
-            label: 'Exit usable',
-            window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
-            afterRank: 2,
-          }),
-        ]),
       }),
     });
     const keys = timeline.entries.map((entry) =>
@@ -400,12 +345,13 @@ describe('room lifecycle timeline', () => {
 
     expect(keys).toEqual([
       'roomEntered',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'bossDefeated',
       'encounterEnd',
       collect.key,
       delivery.key,
-      'cleanup',
+      'doorsOpened',
     ]);
   });
 
@@ -416,7 +362,7 @@ describe('room lifecycle timeline', () => {
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
       },
-      { kind: 'standard', phase: 'beforeCombat' },
+      { kind: 'beforeCombat' as const },
       1,
     );
     const timeline = assembleRoomLifecycleTimeline({
@@ -428,7 +374,14 @@ describe('room lifecycle timeline', () => {
     const keys = timeline.entries.map((entry) =>
       entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
     );
-    expect(keys).toEqual(['roomEntered', pickup.key, 'encounterStart', 'encounterEnd', 'cleanup']);
+    expect(keys).toEqual([
+      'roomEntered',
+      pickup.key,
+      'encounterBegun',
+      'encounterStarted',
+      'encounterEnd',
+      'doorsOpened',
+    ]);
   });
 
   it('keeps lifecycle seams structural when authored action ranks contradict their windows', () => {
@@ -438,7 +391,7 @@ describe('room lifecycle timeline', () => {
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
       },
-      { kind: 'standard', phase: 'afterCombat' },
+      { kind: 'afterCombat' as const },
       1,
     );
     const preCombat = rankedRow(
@@ -447,7 +400,7 @@ describe('room lifecycle timeline', () => {
         producerPoint: 'roomEntrance',
         acquisitionRole: 'source',
       },
-      { kind: 'standard', phase: 'beforeCombat' },
+      { kind: 'beforeCombat' as const },
       2,
     );
     const timeline = assembleRoomLifecycleTimeline({
@@ -461,7 +414,7 @@ describe('room lifecycle timeline', () => {
     );
 
     expect(keys.indexOf(postCombat.key)).toBeLessThan(keys.indexOf(preCombat.key));
-    expect(keys.indexOf('encounterStart')).toBeLessThan(keys.indexOf('encounterEnd'));
+    expect(keys.indexOf('encounterStarted')).toBeLessThan(keys.indexOf('encounterEnd'));
     expect(
       timeline.entries.filter((entry) => entry.kind === 'action').map((entry) => entry.rank),
     ).toEqual([1, 2]);
@@ -473,7 +426,7 @@ describe('room lifecycle timeline', () => {
       key: 'chooseRewardWheel:wheel1',
       owner,
       participation: 'required' as const,
-      window: Object.freeze({ kind: 'shipPreCombat' as const, wheelKey: 'wheel1' }),
+      placement: Object.freeze({ kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }),
       dependencies: Object.freeze([]),
       rank: null,
       stale: false,
@@ -527,14 +480,14 @@ describe('room lifecycle timeline', () => {
             executable: false,
           }),
         ]),
-        checkpoints: Object.freeze([]),
       }),
     });
     expect(timeline.boundaries.map((boundary) => boundary.kind)).toEqual([
       'roomEntered',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
-      'cleanup',
+      'doorsOpened',
     ]);
     expect(timeline.repairRows.map((row) => row.key)).toEqual([roomActionKey(cage)]);
   });
@@ -542,13 +495,13 @@ describe('room lifecycle timeline', () => {
   it('keeps cleanup anchored to active ranked work when a stale row has a later rank', () => {
     const active = rankedRow(
       { kind: 'interactLocalReward', groupKey: 'x', slotKey: 'active' },
-      { kind: 'standard', phase: 'afterCombat' },
+      { kind: 'afterCombat' as const },
       1,
     );
     const stale = Object.freeze({
       ...rankedRow(
         { kind: 'interactLocalReward', groupKey: 'x', slotKey: 'stale' },
-        { kind: 'standard', phase: 'afterCombat' },
+        { kind: 'afterCombat' as const },
         7,
       ),
       stale: true,
@@ -559,16 +512,15 @@ describe('room lifecycle timeline', () => {
       encounterPhases: Object.freeze([encounter('Combat')]),
       roomActionRoster: roster({
         rows: Object.freeze([active, stale]),
-        checkpoints: Object.freeze([]),
       }),
     });
-    expect(timeline.boundaries.find((boundary) => boundary.kind === 'cleanup')).toEqual({
-      kind: 'cleanup',
-      key: 'cleanup',
+    expect(timeline.boundaries.find((boundary) => boundary.kind === 'doorsOpened')).toMatchObject({
+      kind: 'doorsOpened',
+      key: 'doorsOpened',
     });
     expect(
       timeline.entries.find(
-        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
       ),
     ).toMatchObject({ rank: 1 });
     expect(timeline.repairRows.map((row) => row.key)).toEqual([stale.key]);
@@ -598,27 +550,17 @@ describe('room lifecycle timeline', () => {
           rankedRow(cage2, { kind: 'fields', phaseKey: 'Cage02' }, 3),
           rankedRow(replacement, { kind: 'fields', phaseKey: 'Cage01' }, 4, 'optional'),
         ]),
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'fields' as const, phaseKey: 'Cage02' }),
-            afterRank: 3,
-          }),
-          Object.freeze({
-            checkpointKey: 'exitUsable',
-            label: 'Exit usable',
-            window: Object.freeze({ kind: 'fields' as const, phaseKey: 'Cage02' }),
-            afterRank: 3,
-          }),
-        ]),
       }),
     });
     const visible = timeline.entries.map((entry) =>
       entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
     );
-    expect(visible.indexOf(roomActionKey(earlyOptional))).toBeLessThan(visible.indexOf('cleanup'));
-    expect(visible.indexOf('cleanup')).toBeLessThan(visible.indexOf(roomActionKey(replacement)));
+    expect(visible.indexOf(roomActionKey(earlyOptional))).toBeLessThan(
+      visible.indexOf('doorsOpened'),
+    );
+    expect(visible.indexOf('doorsOpened')).toBeLessThan(
+      visible.indexOf(roomActionKey(replacement)),
+    );
     expect(visible).not.toContain('outgoingGeneration');
   });
 
@@ -665,14 +607,6 @@ describe('room lifecycle timeline', () => {
       ]),
       roomActionRoster: roster({
         rows,
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'fields' as const }),
-            afterRank: 4,
-          }),
-        ]),
       }),
     });
     expect(
@@ -681,28 +615,83 @@ describe('room lifecycle timeline', () => {
       ),
     ).toEqual([
       'roomEntered:',
-      'encounterStart:Cage02',
+      'encounterBegun:Cage02',
+      'encounterStarted:Cage02',
       'encounterEnd:Cage02',
-      'encounterStart:Cage01',
+      'encounterBegun:Cage01',
+      'encounterStarted:Cage01',
       'encounterEnd:Cage01',
-      'cleanup:',
+      'doorsOpened:',
     ]);
-    const cage2Start = timeline.entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Cage02',
+    // The cage's row begins its fight: Encounter, Combat and its end follow it at once.
+    const cage2Row = timeline.entries.findIndex(
+      (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(cage2),
     );
-    const cage2End = timeline.entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterEnd:Cage02',
-    );
-    expect(timeline.entries.slice(cage2Start + 1, cage2End)).toEqual([
-      expect.objectContaining({
-        kind: 'action',
-        action: expect.objectContaining({ key: roomActionKey(cage2) }),
-      }),
-    ]);
-    expect(timeline.boundaries.some((boundary) => boundary.kind === 'cleanup')).toBe(true);
+    expect(
+      timeline.entries
+        .slice(cage2Row + 1, cage2Row + 4)
+        .map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind)),
+    ).toEqual(['encounterBegun:Cage02', 'encounterStarted:Cage02', 'encounterEnd:Cage02']);
+    expect(timeline.boundaries.some((boundary) => boundary.kind === 'doorsOpened')).toBe(true);
     expect(timeline.boundaries.some((boundary) => boundary.kind === ('exitUsable' as never))).toBe(
       false,
     );
+  });
+
+  it('drops the trigger of a Combat moved forward past its wheel choice', () => {
+    const wheelPhase = (phaseKey: string, wheelKey: string) =>
+      Object.freeze({
+        ...encounter(phaseKey),
+        rewardAttachment: Object.freeze({
+          kind: 'rewardWheel' as const,
+          key: wheelKey,
+          reward: Object.freeze({
+            kind: 'countedChoice' as const,
+            storeKeys: Object.freeze(['store']),
+            eligibleRewardTypes: Object.freeze([]),
+            ineligibleRewardTypes: Object.freeze([]),
+            allowedRewardTypes: Object.freeze([]),
+            producerLifecycleKey: 'test',
+          }),
+          defaultStoreKey: 'store',
+          offerKeys: Object.freeze(['offer1']),
+          offerCount: Object.freeze({ min: 1, max: 1, defaultValue: 1 }),
+          picked: 'exactlyOne' as const,
+        }),
+      });
+    const choose1 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
+    const choose2 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'ShipCombatRoom',
+      encounterPhases: Object.freeze([
+        wheelPhase('Combat1', 'wheel1'),
+        wheelPhase('Combat2', 'wheel2'),
+      ]),
+      roomActionRoster: roster({
+        rows: Object.freeze([
+          // Retained-invalid: the second wheel's choice ranked before the first's.
+          rankedRow(choose2, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' }, 1),
+          rankedRow(choose1, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 2),
+        ]),
+      }),
+    });
+    const started = (phaseKey: string) =>
+      timeline.entries.find(
+        (entry) =>
+          entry.kind === 'boundary' &&
+          entry.boundary.kind === 'encounterStarted' &&
+          entry.boundary.phaseKey === phaseKey,
+      );
+
+    expect(started('Combat1')).toMatchObject({
+      rank: 2,
+      placement: 'after',
+      trigger: { kind: 'roomAction', actionKey: roomActionKey(choose1) },
+    });
+    // Its choice stands earlier, so the Combat no longer follows it.
+    expect(started('Combat2')).toMatchObject({ rank: 2, placement: 'after' });
+    expect(started('Combat2')).not.toHaveProperty('trigger');
   });
 
   it('places Ship wheel controls at each next phase and emits one final cleanup', () => {
@@ -756,40 +745,37 @@ describe('room lifecycle timeline', () => {
       ]),
       roomActionRoster: roster({
         rows: Object.freeze([
-          rankedRow(choose1, { kind: 'shipPreCombat', wheelKey: 'wheel1' }, 1),
-          rankedRow(reward1, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 2),
-          rankedRow(choose2, { kind: 'shipPreCombat', wheelKey: 'wheel2' }, 3),
-          rankedRow(reward2, { kind: 'shipPostCombat', wheelKey: 'wheel2' }, 4),
-        ]),
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
-            afterRank: 4,
-          }),
+          rankedRow(choose1, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 1),
+          rankedRow(reward1, { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' }, 2),
+          rankedRow(choose2, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' }, 3),
+          rankedRow(reward2, { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' }, 4),
         ]),
       }),
     });
 
     expect(timeline.boundaries.map((boundary) => boundary.kind)).toEqual([
       'roomEntered',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
       'wheelsOpen',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
       'wheelsOpen',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
-      'cleanup',
+      'doorsOpened',
     ]);
     expect(
       timeline.boundaries
         .filter((boundary) => boundary.kind === 'wheelsOpen')
         .map((boundary) => boundary.wheelKey),
     ).toEqual(['wheel1', 'wheel2']);
-    expect(timeline.boundaries.filter((boundary) => boundary.kind === 'cleanup')).toHaveLength(1);
+    expect(timeline.boundaries.filter((boundary) => boundary.kind === 'doorsOpened')).toHaveLength(
+      1,
+    );
     expect(
       timeline.entries.filter(
         (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen',
@@ -802,7 +788,7 @@ describe('room lifecycle timeline', () => {
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward1),
     );
     const combatTwoStart = timeline.entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Combat2',
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStarted:Combat2',
     );
     const wheelTwoStart = timeline.entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.key === 'wheelsOpen:wheel2',
@@ -857,18 +843,10 @@ describe('room lifecycle timeline', () => {
       ]),
       roomActionRoster: roster({
         rows: Object.freeze([
-          rankedRow(choose1, { kind: 'shipPreCombat', wheelKey: 'wheel1' }, 1),
-          rankedRow(reward1, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 2),
-          rankedRow(choose2, { kind: 'shipPreCombat', wheelKey: 'wheel2' }, 3),
-          rankedRow(reward2, { kind: 'shipPostCombat', wheelKey: 'wheel2' }, 4),
-        ]),
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
-            afterRank: 4,
-          }),
+          rankedRow(choose1, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 1),
+          rankedRow(reward1, { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' }, 2),
+          rankedRow(choose2, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' }, 3),
+          rankedRow(reward2, { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' }, 4),
         ]),
       }),
     });
@@ -900,7 +878,7 @@ describe('room lifecycle timeline', () => {
       (entry) => entry.kind === 'automaticEffect' && entry.address === embryo.address,
     );
     const cleanup = indexOf(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
     );
 
     expect(effect1).toBe(wheel1 + 1);
@@ -944,9 +922,14 @@ describe('room lifecycle timeline', () => {
       ]),
       roomActionRoster: roster({
         rows: Object.freeze([
-          rankedRow(choose, { kind: 'shipPreCombat', wheelKey: 'wheel1' }, 1),
-          rankedRow(wheel, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 2),
-          rankedRow(generated, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 3, 'optional'),
+          rankedRow(choose, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 1),
+          rankedRow(wheel, { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' }, 2),
+          rankedRow(
+            generated,
+            { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
+            3,
+            'optional',
+          ),
         ]),
       }),
     });
@@ -963,7 +946,12 @@ describe('room lifecycle timeline', () => {
     );
 
     expect(effectIndex).toBe(requiredIndex + 1);
-    expect(optionalIndex).toBe(effectIndex + 1);
+    // The doors open right after the last required item; the optional pickup follows them.
+    expect(entries[effectIndex + 1]).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'doorsOpened' },
+    });
+    expect(optionalIndex).toBe(effectIndex + 2);
   });
 
   it('keeps a three-cage Fields permutation atomic with one visible Cleanup boundary', () => {
@@ -1005,14 +993,6 @@ describe('room lifecycle timeline', () => {
       ]),
       roomActionRoster: roster({
         rows,
-        checkpoints: Object.freeze([
-          Object.freeze({
-            checkpointKey: 'outgoingGeneration',
-            label: 'Outgoing generation',
-            window: Object.freeze({ kind: 'fields' as const }),
-            afterRank: 6,
-          }),
-        ]),
       }),
     });
     expect(
@@ -1021,30 +1001,34 @@ describe('room lifecycle timeline', () => {
       ),
     ).toEqual([
       'roomEntered:',
-      'encounterStart:Cage03',
+      'encounterBegun:Cage03',
+      'encounterStarted:Cage03',
       'encounterEnd:Cage03',
-      'encounterStart:Cage01',
+      'encounterBegun:Cage01',
+      'encounterStarted:Cage01',
       'encounterEnd:Cage01',
-      'encounterStart:Cage02',
+      'encounterBegun:Cage02',
+      'encounterStarted:Cage02',
       'encounterEnd:Cage02',
-      'cleanup:',
+      'doorsOpened:',
     ]);
     for (const [phaseKey, completionKey] of [
       ['Cage03', roomActionKey(cage3)],
       ['Cage01', roomActionKey(cage1)],
       ['Cage02', roomActionKey(cage2)],
     ] as const) {
-      const start = timeline.entries.findIndex(
-        (entry) => entry.kind === 'boundary' && entry.boundary.key === `encounterStart:${phaseKey}`,
+      // Each cage's row begins its fight; nothing stands between them and its end.
+      const row = timeline.entries.findIndex(
+        (entry) => entry.kind === 'action' && entry.action.key === completionKey,
       );
-      const end = timeline.entries.findIndex(
-        (entry) => entry.kind === 'boundary' && entry.boundary.key === `encounterEnd:${phaseKey}`,
-      );
-      expect(timeline.entries.slice(start + 1, end)).toEqual([
-        expect.objectContaining({
-          kind: 'action',
-          action: expect.objectContaining({ key: completionKey }),
-        }),
+      expect(
+        timeline.entries
+          .slice(row + 1, row + 4)
+          .map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind)),
+      ).toEqual([
+        `encounterBegun:${phaseKey}`,
+        `encounterStarted:${phaseKey}`,
+        `encounterEnd:${phaseKey}`,
       ]);
     }
   });

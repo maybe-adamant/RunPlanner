@@ -1,7 +1,4 @@
-import type {
-  WorkspaceRoomChoice,
-  WorkspaceRoomIcon,
-} from '@planner/projections/structured-workspace';
+import type { WorkspaceRoomIcon } from '@planner/projections/structured-workspace';
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
 import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
@@ -45,13 +42,4 @@ export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
     case 'story':
       return room.npcKey === undefined ? undefined : (npcArtwork[room.npcKey] ?? undefined);
   }
-}
-
-/** The icon of the offered room with this game name. */
-export function roomChoiceIcon(
-  choices: readonly WorkspaceRoomChoice[],
-  gameName: string,
-): string | undefined {
-  const choice = choices.find((candidate) => candidate.value === gameName);
-  return choice === undefined ? undefined : roomKindIcon(choice.roomIcon);
 }

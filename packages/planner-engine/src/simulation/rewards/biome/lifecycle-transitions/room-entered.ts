@@ -1,5 +1,11 @@
-import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
-import { routeRoomShop } from '../../../../authored-project/route-profile';
+import { roomOpensRewardWheels, roomRunsCages } from '../../../encounters/model';
+import {
+  settleRewardSpawn,
+  spawnDueHermesDeliveries,
+} from '../offer-lifecycle/spawned-trait-offers';
+import { routePurgingPool, routeRoomShop } from '../../../../authored-project/route-profile';
+import { assessPurgingPool } from '../../../commerce/purging-pool';
+import type { PurgingPoolRoomAssessment } from '../chronology-walk';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
@@ -30,19 +36,11 @@ import {
   type HermesShrineCandidateContext,
 } from '../../../commerce/hermes-shrine';
 import { createBiomeRewardFacts } from '../../facts';
-import { appendRewardEvent, mapReached, type RewardBranchState } from '../../branch-primitives';
+import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import { advanceReachedBranch } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
-import {
-  consumeOlympianProviderForReachedOffer,
-  reachedOfferForOrigin,
-} from '../../offer-generation';
-import {
-  advanceArcanaRoomEntry,
-  consumeRoomRewardForfeit,
-  encounterEntryVowRanks,
-} from '../../../arcana-fear';
-import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
+import { reachedOfferForOrigin } from '../../offer-generation';
+import { advanceArcanaRoomEntry, encounterEntryVowRanks } from '../../../arcana-fear';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
@@ -58,20 +56,14 @@ import {
 } from '../../../encounters/challenge-switch';
 import { challengeSwitchHost } from '../../../../authored-project/acquisition/challenge-switch';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
-import type {
-  DerivedAcquisitionEntryFrontier,
-  FixedAcquisitionRealization,
-} from '../../acquisition/contracts';
+import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
 import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
 export interface RoomEnteredTransition {
   readonly generatedPickupPlacements: readonly import('../../acquisition/contracts').GeneratedPickupPlacement[];
   readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
-  /** Roles realized by a Forfeit fixed at this entry, ahead of their pickup contact. */
-  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
-  readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly hermesShrineAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessment: HermesShrineCandidateContext;
@@ -80,6 +72,8 @@ export interface RoomEnteredTransition {
     readonly origin: OccurrenceAddress;
     readonly entry: StygianWellEntryCandidateContext;
   };
+  /** The Pool's entry list, generated from the traits held on entry. */
+  readonly purgingPoolAssessment?: PurgingPoolRoomAssessment;
   /** What native could place at a switch host's entry, observed switch or not. */
   readonly challengeSwitchAssessment?: {
     readonly origin: OccurrenceAddress;
@@ -100,13 +94,12 @@ export interface RoomEnteredTransition {
 export interface RoomEntryEffects {
   readonly branch: RewardBranchState | undefined;
   readonly findings: readonly LifecycleFinding[];
-  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly flushHost: boolean;
 }
 
 /**
  * The entry effects on the reached state that no Overview product decides:
- * map reset, Fields forfeits, a forced Chaos spark and the delivery flush.
+ * map reset, the Fields cages' spawn, a forced Chaos spark and the delivery flush.
  */
 export function applyRoomEntryEffects(
   catalog: Catalog,
@@ -131,61 +124,25 @@ export function applyRoomEntryEffects(
     });
   });
   const findings: LifecycleFinding[] = [];
-  const fixedAcquisitionRealizations: FixedAcquisitionRealization[] = [];
-  if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
+  // Fields cages spawn together on entry, in cage order (RoomLogic.lua:5683-5714).
+  if (room !== undefined && roomRunsCages(room)) {
     for (const localReward of room.localRewards ?? []) {
-      let replacement: 'RoomRewardConsolationPrize' | undefined;
       next = mapReached(next, (branch) => {
         const offer = reachedOfferForOrigin(branch, localReward.origin);
-        const qualifyingRewardType =
-          offer?.rewardType === 'Boon' || offer?.rewardType === 'HermesUpgrade'
-            ? offer.rewardType
-            : undefined;
-        const forfeit =
-          qualifyingRewardType === undefined
-            ? Object.freeze({ consumed: false as const, state: branch.state.arcanaFear })
-            : consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
-                owner: localReward.origin,
-                sequence: event.sequence,
-              });
-        replacement = forfeit.consumed ? forfeit.replacementRewardType : undefined;
-        const materialized = forfeit.consumed
-          ? appendRewardEvent(
-              Object.freeze({
-                ...branch,
-                state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
-              }),
-              event.sequence,
-              Object.freeze({
-                kind: 'rewardForfeited' as const,
-                origin: localReward.origin,
-                rewardType: qualifyingRewardType!,
-                replacementRewardType: forfeit.replacementRewardType,
-              }),
-            )
-          : branch;
-        return forfeit.consumed
-          ? materialized
-          : consumeOlympianProviderForReachedOffer(
+        return offer === undefined
+          ? branch
+          : settleRewardSpawn(
               catalog,
-              materialized,
-              localReward.origin,
-              'free',
+              branch,
+              {
+                origin: localReward.origin,
+                offer,
+                producerLifecycleKey: localReward.producerLifecycleKey,
+                forfeitEligible: true,
+              },
+              event.sequence,
             );
       });
-      // A forfeit fixed at entry realizes the cage's roles before their pickup
-      // contact is reached.
-      if (replacement === undefined) continue;
-      fixedAcquisitionRealizations.push(
-        ...forfeitFixedAcquisitionRealizations(
-          catalog,
-          localReward.origin,
-          localReward.producerLifecycleKey,
-          localReward.offer,
-          replacement,
-          event.sequence,
-        ),
-      );
     }
   }
   if (room !== undefined) {
@@ -285,7 +242,6 @@ export function applyRoomEntryEffects(
   return Object.freeze({
     branch: next,
     findings: Object.freeze(findings),
-    fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
     flushHost,
   });
 }
@@ -317,7 +273,6 @@ export function applyRoomEnteredTransition(
   );
   const findings: LifecycleFinding[] = [...effects.findings];
   const next = effects.branch;
-  const fixedAcquisitionRealizations = effects.fixedAcquisitionRealizations;
   const flushHost = effects.flushHost;
   const dueDeliveries =
     flushHost && room?.origin.kind === 'occurrence'
@@ -402,16 +357,12 @@ export function applyRoomEnteredTransition(
         );
     }
   }
-  if (
-    room !== undefined &&
-    room.lifecycleProfileKey !== 'ShipCombatRoom' &&
-    roomView?.entry === undefined
-  )
+  if (room !== undefined && !roomOpensRewardWheels(room) && roomView?.entry === undefined)
     throw new BiomeRewardSimulationContractError(
       `${room.gameName} has no room-entry Run State view`,
     );
   const checkpoint =
-    room !== undefined && room.lifecycleProfileKey !== 'ShipCombatRoom'
+    room !== undefined && !roomOpensRewardWheels(room)
       ? Object.freeze({
           owner: createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
           room,
@@ -572,7 +523,12 @@ export function applyRoomEnteredTransition(
           }),
         );
       for (const issue of assessment.inventory?.issues ?? []) {
-        const code = issue.kind === 'duplicate' ? 'stygianWellDuplicate' : 'stygianWellWrongGroup';
+        const code =
+          issue.kind === 'missing'
+            ? 'stygianWellMissing'
+            : issue.kind === 'duplicate'
+              ? 'stygianWellDuplicate'
+              : 'stygianWellWrongGroup';
         const origin = createRoomFeatureAddress(room.origin, {
           kind: 'stygianWellOffer',
           generationKey: issue.generationKey,
@@ -593,13 +549,49 @@ export function applyRoomEnteredTransition(
       }
     }
   }
+  let purgingPoolAssessment: PurgingPoolRoomAssessment | undefined;
+  if (
+    room?.purgingPool !== undefined &&
+    next !== undefined &&
+    routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) !== undefined
+  ) {
+    const traits = next.state.traitHistory.equippedTraits;
+    const assessment = assessPurgingPool(catalog, room.purgingPool, traits);
+    for (const finding of assessment.findings)
+      findings.push(
+        Object.freeze({
+          finding: rewardFinding(
+            finding.code,
+            createRoomFeatureAddress(room.origin, {
+              kind: 'purgingPoolOffer',
+              slotKey: finding.slotKey,
+            }),
+            { ...finding.evidence, slotKey: finding.slotKey },
+          ),
+          region: ownerRegion(room.origin),
+          chronology: findingChronology,
+        }),
+      );
+    purgingPoolAssessment = Object.freeze({
+      origin: room.origin,
+      assessment,
+      entryRarities: Object.freeze(
+        Object.fromEntries(
+          Object.values(room.purgingPool.traitKeyBySlot).flatMap((traitKey) =>
+            traitKey === null || traits[traitKey] === undefined
+              ? []
+              : [[traitKey, traits[traitKey]!.rarity]],
+          ),
+        ),
+      ),
+    });
+  }
   return Object.freeze({
     branch: next,
     findings: Object.freeze(findings),
-    fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
+    ...(purgingPoolAssessment === undefined ? {} : { purgingPoolAssessment }),
     generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
-    hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),
     ...(challengeSwitchAssessment === undefined ? {} : { challengeSwitchAssessment }),

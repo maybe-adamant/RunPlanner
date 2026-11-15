@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
+import { collectTestRequiredItems, replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNStoryBoardProject,
@@ -35,6 +36,7 @@ const {
   createIncomingRewardAddress,
   createExitSelectionAddress,
   createNaturalSelectionResultAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -281,6 +283,7 @@ describe('trait-offers/bind', () => {
       phase,
       value: true,
     });
+    project = collectTestRequiredItems(project);
     const { interactions } = bind(project, 'Surface', 'P');
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.owner.owner.kind === 'gorgonPhase',
@@ -581,11 +584,16 @@ describe('trait-offers/bind', () => {
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
     });
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: createStartingRewardAddress('Underworld'),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-    });
+    // The swapped starting Boon is picked up again.
+    let project = replaceTestPlacedItem(
+      createCompleteFGProject(),
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      },
+      createOccurrenceAddress(goldenFBiome, goldenFStartId),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait,

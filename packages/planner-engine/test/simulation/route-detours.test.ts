@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  parseArtificerReplacementEntryKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
@@ -50,7 +55,15 @@ import {
   goldenGBiome,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { reachedFrontier } from '../support/reward-frontier';
+import { authorTestArtificerReplacement } from '@run-planner/test-fixtures/underworld';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
+import { canonicalArtificerSource } from '../../src/simulation/rewards/biome/reward-sources';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -84,7 +97,7 @@ function prefix(
   readonly snapshot: MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom };
   readonly history: BiomeHistoryPrefix;
 } {
-  const authored = project;
+  const authored = scheduleTestRequiredRoomActions(project, catalog, biome);
   const snapshot = materializeBiomePrefix(
     catalog,
     biome,
@@ -694,7 +707,7 @@ describe('route-detour simulation', () => {
         origin: additional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['targetDomain']),
+          refusals: expect.arrayContaining([{ reason: 'targetDomain' }]),
         }),
       }),
     );
@@ -798,7 +811,7 @@ describe('route-detour simulation', () => {
     });
   });
 
-  it('consumes a skipped Chaos offer for the preceding-ten-room spacing rule', () => {
+  it('consumes a skipped Chaos offer for the preceding-nine-room spacing rule', () => {
     const opening = createOccurrenceId('natural-chaos-spacing-opening');
     const firstCombat = createOccurrenceId('natural-chaos-spacing-first-combat');
     const secondCombat = createOccurrenceId('natural-chaos-spacing-second-combat');
@@ -833,14 +846,17 @@ describe('route-detour simulation', () => {
     project = replaceIncomingReward(project, fBiome, secondCombat, 'MaxManaDrop');
     const { snapshot, history } = prefix(project, fBiome);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
-    const generationAssembly = simulateProjectAssembly(catalog, project);
+    const generationAssembly = simulateProjectAssembly(catalog, collectTestRequiredItems(project));
 
     expect(
       chaosCandidateForProjectEvaluationAssembly(
         generationAssembly,
         createOccurrenceAddress(fBiome, firstCombat),
       ),
-    ).toMatchObject({ placementEligible: false, failedConditions: ['offerSpacing'] });
+    ).toMatchObject({
+      placementEligible: false,
+      refusals: [{ reason: 'offerSpacing', rooms: expect.any(Number) }],
+    });
 
     expect(generation.findings).toContainEqual(
       expect.objectContaining({
@@ -848,15 +864,15 @@ describe('route-detour simulation', () => {
         origin: secondAdditional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['offerSpacing']),
+          refusals: expect.arrayContaining([expect.objectContaining({ reason: 'offerSpacing' })]),
         }),
       }),
     );
   });
 
   it.each([
-    { blocked: true, fBatchIndex: 4, position: 'tenth' },
-    { blocked: false, fBatchIndex: 3, position: 'eleventh' },
+    { blocked: true, fBatchIndex: 5, position: 'ninth' },
+    { blocked: false, fBatchIndex: 4, position: 'tenth' },
   ] as const)(
     'treats a skipped cross-biome Chaos offer at the $position predecessor as blocked=$blocked',
     ({ blocked, fBatchIndex }) => {
@@ -882,15 +898,21 @@ describe('route-detour simulation', () => {
         (finding) =>
           semanticAddressKey(finding.origin) === semanticAddressKey(secondAdditional) &&
           finding.evidence.kind === 'chaos' &&
-          Array.isArray(finding.evidence.failedConditions) &&
-          finding.evidence.failedConditions.includes('offerSpacing'),
+          Array.isArray(finding.evidence.refusals) &&
+          finding.evidence.refusals.some(
+            (refusal) =>
+              typeof refusal === 'object' &&
+              refusal !== null &&
+              !Array.isArray(refusal) &&
+              refusal.reason === 'offerSpacing',
+          ),
       );
       expect(spacingFinding !== undefined).toBe(blocked);
     },
   );
 
   it('validates a same-host natural gate as forced while a pending Spark overrides spacing', () => {
-    const priorSource = goldenFOccurrenceId(4, 1);
+    const priorSource = goldenFOccurrenceId(5, 1);
     const priorAdditional = createAdditionalExitAddress(goldenFBiome, priorSource, 'chaos');
     const forcedAdditional = createAdditionalExitAddress(goldenGBiome, goldenGStartId, 'chaos');
     const well = createOccurrenceAddress(
@@ -931,7 +953,7 @@ describe('route-detour simulation', () => {
         origin: forcedAdditional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['offerSpacing']),
+          refusals: expect.arrayContaining([expect.objectContaining({ reason: 'offerSpacing' })]),
         }),
       }),
     );
@@ -1157,6 +1179,62 @@ describe('route-detour simulation', () => {
     },
   );
 
+  it("marks the Anomaly's reward and its Artificer replacement as never copied by Sea Star", () => {
+    // EncounterLogic.lua:2166-2181 spawns the Anomaly's success reward with
+    // CanDuplicate = false; an Artificer replacement keeps it (GiftLogic.lua:24-36).
+    const built = buildAnomalyProject(true);
+    const incoming = createIncomingRewardAddress(gBiome, built.anomaly);
+    const project = authorTestArtificerReplacement(
+      replaceIncomingReward(built.project, gBiome, built.returned, 'RoomMoneyDrop'),
+      catalog,
+      createAcquisitionRoleAddress(incoming, 'self'),
+      createUnresolvedAcquisitionRewardState(
+        catalog,
+        { rewardType: 'MaxHealthDrop' },
+        { kind: 'producerLifecycle', key: 'RoomReward' },
+        'Underworld',
+      ),
+    );
+    const replacement = createAcquisitionEntryAddress(
+      artificerAcquisitionSite(createOccurrenceAddress(gBiome, built.anomaly), incoming),
+      artificerReplacementEntryKey(incoming, 'self'),
+    );
+    const { snapshot } = prefix(project, gBiome);
+    const room = (occurrenceId: OccurrenceId) =>
+      snapshot.decisions
+        .filter((decision) => decision.kind === 'batch')
+        .flatMap((decision) => decision.targets)
+        .find((target) => target.room.occurrenceId === occurrenceId)!.room;
+    const anomaly = room(built.anomaly);
+    expect(anomaly.incomingReward?.blocksSeaStarDuplication).toBe(true);
+    // The replacement's pickup reads its source's block from here.
+    const parsed = parseArtificerReplacementEntryKey(replacement.entryKey)!;
+    expect(canonicalArtificerSource(anomaly, parsed.sourceKey)?.blocksSeaStarDuplication).toBe(
+      true,
+    );
+    expect(room(built.returned).incomingReward?.blocksSeaStarDuplication).toBeUndefined();
+
+    // Neither can take a Sea Star result; the normal room reward still can.
+    for (const owner of [incoming, replacement])
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceSeaStarResult',
+          acquisition: createAcquisitionRoleAddress(owner, 'self'),
+          procced: true,
+        }),
+      ).toThrow(/its room encounter spawned a reward that cannot duplicate/);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition: createAcquisitionRoleAddress(
+          createIncomingRewardAddress(gBiome, built.returned),
+          'self',
+        ),
+        procced: true,
+      }),
+    ).not.toThrow();
+  });
+
   it('retains an incompatible Anomaly reward as an editable finding rather than rerolling it', () => {
     const { anomaly, project: initial } = buildAnomalyProject(true);
     const incoming = createIncomingRewardAddress(gBiome, anomaly);
@@ -1300,12 +1378,15 @@ describe('route-detour simulation', () => {
       .find((room) => room.occurrenceId === contract);
     expect(contractRoom?.lifecycleProfileKey).toBe('StandardRewardRoom');
     expect(
-      contractRoom?.roomLifecycleTimeline.structure.points.map((point) => point.kind),
+      contractRoom?.roomLifecycleTimeline.graph.events.map((event) => event.kind),
     ).not.toContain('bossDefeated');
+    // The gems are the room's one required collect; the Contract trait is granted after combat.
     expect(
-      plan(project, fBiome).topology!.occurrences.find((room) => room.occurrenceId === contract)
-        ?.roomActions.order,
-    ).toContainEqual({ kind: 'collectRequiredReward' });
+      plan(
+        scheduleTestRequiredRoomActions(project, catalog, fBiome),
+        fBiome,
+      ).topology!.occurrences.find((room) => room.occurrenceId === contract)?.roomActions.order,
+    ).toEqual([{ kind: 'collectRequiredReward' }]);
     const rewards = evaluateBiomeRewards(
       catalog,
       snapshot,
@@ -1336,6 +1417,105 @@ describe('route-detour simulation', () => {
         .filter((entry) => entry.gameName === 'C_Boss01')
         .map((entry) => entry.storeKey),
     ).toEqual(['RunProgress']);
+  });
+
+  describe('while the gems lie unplaced', () => {
+    const withoutRoomActions = (
+      project: ProjectDocument,
+      biomeKey: string,
+      occurrenceId: OccurrenceId,
+    ): ProjectDocument => ({
+      ...project,
+      route: {
+        ...project.route!,
+        biomes: project.route!.biomes.map((biome) =>
+          biome.biomeKey !== biomeKey
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology!,
+                  occurrences: biome.topology!.occurrences.map((room) =>
+                    room.occurrenceId !== occurrenceId
+                      ? room
+                      : { ...room, roomActions: { ...room.roomActions, order: [] } },
+                  ),
+                },
+              },
+        ),
+      },
+    });
+
+    it('grants the Contract trait after combat', () => {
+      const { project, contract } = buildMidshopProject({ normalTargets: true });
+      const gemsUnplaced = withoutRoomActions(
+        scheduleTestRequiredRoomActions(project, catalog, fBiome),
+        'F',
+        contract,
+      );
+      const materialized = materializeBiomePrefix(
+        catalog,
+        fBiome,
+        ordinaryPositionFor(catalog, fBiome),
+        plan(gemsUnplaced, fBiome),
+        traitContext(gemsUnplaced, fBiome),
+      );
+      if (materialized?.entryRoom === undefined) throw new Error('F did not materialize');
+      const snapshot = { ...materialized, entryRoom: materialized.entryRoom };
+      const history = composeBiomeHistoryPrefix(
+        catalog,
+        snapshot,
+        ordinaryPositionFor(catalog, snapshot),
+      )!;
+      const contractOrigin = semanticAddressKey(createOccurrenceAddress(fBiome, contract));
+      expect(
+        history.events.filter(
+          (event) =>
+            event.kind === 'producerRoleAdvanced' &&
+            semanticAddressKey(event.origin) === contractOrigin,
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          rewardType: 'InfernalContractBoon',
+          role: 'self',
+          lifecyclePoint: 'afterCombat',
+        }),
+      ]);
+      const rewards = evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        ordinaryPositionFor(catalog, snapshot),
+        traitContext(gemsUnplaced, fBiome),
+      );
+      expect(
+        reachedFrontier(rewards).some(
+          (branch) =>
+            branch.state.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
+            'InfernalContractBoon',
+        ),
+      ).toBe(true);
+    });
+
+    it("leaves the gems' placement as the only finding", () => {
+      const saved = loadUnderworldZagreusContractCheckpoint();
+      expect(simulateProject(catalog, saved).findings).toEqual([]);
+      const gemsUnplaced = withoutRoomActions(
+        saved,
+        'G',
+        createOccurrenceId('zagreus-contract-showcase'),
+      );
+      expect(simulateProject(catalog, gemsUnplaced).findings).toEqual([
+        expect.objectContaining({
+          code: 'roomActionPlacementRequired',
+          origin: expect.objectContaining({
+            kind: 'roomAction',
+            occurrenceId: 'zagreus-contract-showcase',
+            actionKey: '["collectRequiredReward"]',
+          }),
+        }),
+      ]);
+    });
   });
 
   it('keeps a later unpicked contract authored but invalidates it from the earlier entered route contract', () => {

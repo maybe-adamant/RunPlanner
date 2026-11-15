@@ -4,9 +4,9 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  rerollResult,
   semanticAddressKey,
   type HubRerollAddress,
   type ProjectDocument,
@@ -14,6 +14,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   requireWorkspaceBiome,
@@ -89,14 +90,25 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
     .map((item) => item.value);
 }
 
+/**
+ * The bound list's command appending a press, its drawn result replaced by the first reward
+ * (after `skip`) that the placed row's picker offers.
+ */
+async function appendCommand(project: ProjectDocument, targetKey: string, skip = 0) {
+  const { interaction } = rerollsOf(projectStructuredWorkspaceFixture(project));
+  const placed = interaction.pressIntent(targetKey)!.command;
+  const after = rerollsOf(
+    projectStructuredWorkspaceFixture(applyProjectCommand(project, catalog, placed)),
+  );
+  const rewards = (
+    await possibleRewards(after.interaction.rowReward(after.rerolls.rows.at(-1)!.key))
+  ).filter((reward) => reward.payload === undefined);
+  return { ...placed, reward: rewards[skip] as ResolvedRewardOffer };
+}
+
 /** Appends a press through the bound list, with the first reward its picker offers. */
 async function append(project: ProjectDocument, targetKey: string, skip = 0) {
-  const { interaction } = rerollsOf(projectStructuredWorkspaceFixture(project));
-  const rewards = (await possibleRewards(interaction.pendingReward(targetKey))).filter(
-    (reward) => reward.payload === undefined,
-  );
-  const reward = rewards[skip] as ResolvedRewardOffer;
-  return applyProjectCommand(project, catalog, interaction.appendIntent(targetKey, reward).command);
+  return applyProjectCommand(project, catalog, await appendCommand(project, targetKey, skip));
 }
 
 /** A room press's action address. */
@@ -121,21 +133,17 @@ describe('Room door rerolls', () => {
       ['Door 1', false],
       ['Door 2', false],
     ]);
-    // The pending press excludes its door's first draw.
-    const rewards = await possibleRewards(interaction.pendingReward(doorKey(doorTo)));
-    expect(rewards.length).toBeGreaterThan(0);
-    expect(rewards).not.toContainEqual({ rewardType: 'MaxHealthDrop' });
-    expect(interaction.appendIntent(doorKey(doorTo), { rewardType: 'RoomMoneyDrop' })).toEqual({
-      command: {
-        kind: 'InsertReroll',
-        occurrence: createOccurrenceAddress(f, source),
-        target: { kind: 'door', exitKey: 'exit1', occurrenceId: doorTo },
-        reward: { rewardType: 'RoomMoneyDrop' },
-        index: base.route.biomes[0]!.topology!.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === source,
-        )!.roomActions.order.length,
-      },
+    // A press is placed with a drawn reward other than its door's first draw.
+    const pressed = interaction.pressIntent(doorKey(doorTo))!.command;
+    expect(pressed).toMatchObject({
+      kind: 'InsertReroll',
+      occurrence: createOccurrenceAddress(f, source),
+      target: { kind: 'door', exitKey: 'exit1', occurrenceId: doorTo },
+      index: base.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === source,
+      )!.roomActions.order.length,
     });
+    expect(pressed.reward).not.toEqual({ rewardType: 'MaxHealthDrop' });
   });
 
   it('is absent without the card and without presses', () => {
@@ -295,48 +303,24 @@ describe('Room door rerolls', () => {
     ).toContain('Door 1 Cage 1');
   });
 
-  it('repairs a kept rerolled reward that no longer matches its last reroll', async () => {
-    const pom = await append(base, doorKey(doorTo), 1);
-    const resolved = applyProjectCommand(pom, catalog, {
-      kind: 'ReplaceLevelResolution',
-      levelResolution: createLevelResolutionAddress(createIncomingRewardAddress(f, doorTo), 'self'),
-      value: { kind: 'choice', offeredTraitKeys: ['ZeusSpecialBoon'], selectedTraitKey: null },
-    });
-    const [press] = rerollsOf(projectStructuredWorkspaceFixture(resolved)).rerolls.rows;
-    const changed = applyProjectCommand(resolved, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: roomAction(press!.address),
-      reward: { rewardType: 'RoomMoneyDrop' },
-    });
-    const projected = projectStructuredWorkspaceFixture(changed);
-    const owner = createIncomingRewardAddress(f, doorTo);
-    expect(
-      batchOf(projected, 'F', source).targets[0]?.door.offerRewardSurface.rewards[0]
-        ?.rerolledRewardRepair,
-    ).toEqual({ owner, repair: 'adopt' });
-    expect(
-      projected.workspace.findingsByRepairTarget.has(findingControlKey(owner, 'rerolledReward')),
-    ).toBe(true);
-    // Without its reroll the kept reward is dropped instead.
-    const removed = projectStructuredWorkspaceFixture(
-      applyProjectCommand(resolved, catalog, {
-        kind: 'RemoveRoomAction',
-        action: roomAction(press!.address),
-      }),
-    );
-    expect(
-      batchOf(removed, 'F', source).targets[0]?.door.offerRewardSurface.rewards[0]
-        ?.rerolledRewardRepair,
-    ).toEqual({ owner, repair: 'drop' });
-  });
-
   it("collects a rerolled door's final reward with its own details", async () => {
     // Door 1 rerolled into a Pom: the next room collects the Pom and resolves it.
-    const project = await append(base, doorKey(doorTo), 1);
+    const project = replaceTestPlacedItem(
+      base,
+      await appendCommand(base, doorKey(doorTo), 1),
+      createOccurrenceAddress(f, doorTo),
+    );
     const reroll = project.route.biomes[0]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === source,
     )!.roomActions.order.find((action) => action.kind === 'reroll');
-    expect(reroll?.kind === 'reroll' && reroll.reward).toEqual({ rewardType: 'StackUpgrade' });
+    expect(
+      reroll?.kind === 'reroll' &&
+        rerollResult(
+          project.route.biomes[0]!.topology!,
+          createIncomingRewardAddress(f, doorTo),
+          reroll.rerollId,
+        ),
+    ).toEqual({ rewardType: 'StackUpgrade' });
     const projected = projectStructuredWorkspaceFixture(project);
     const next = requireWorkspaceBiome(projected.workspace, 'F').nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === doorTo,

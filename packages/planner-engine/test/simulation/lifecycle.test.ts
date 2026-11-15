@@ -1,3 +1,5 @@
+import type { RoomActionContribution } from '../../src/authored-project/room-actions/domain';
+import { boundsForPlacement, type TestRowPlacement } from '../support/room-action-bounds';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
@@ -5,8 +7,8 @@ import {
   createRoomActionAddress,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
-  type RoomLifecycleStructure,
-  type RoomLifecycleStructurePhase,
+  type RoomEventGraph,
+  type RoomEventGraphPhase,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
@@ -14,11 +16,12 @@ import {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
   type ResolvedEncounterPhase,
-  type RoomActionRosterContribution,
   type RoomLifecycleExecutionInput,
 } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
+import { testGraphEvents } from '../support/event-graph';
+import type { EncounterScript } from '../../src/catalog-schema';
 
 const origin = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -26,10 +29,10 @@ const origin = createOccurrenceAddress(
 );
 
 it('declares the Gate A ordinary producer-point mapping without a room-flat fallback', () => {
-  const points = (profileKey: string) =>
-    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.flatMap((operation) =>
-      operation.kind === 'advanceProducer' ? [operation.point] : [],
-    );
+  const points = (profileKey: string) => {
+    const profile = catalog.roomLifecycleProfiles.byKey[profileKey];
+    return profile?.producer.kind === 'required' ? profile.producer.points : undefined;
+  };
 
   expect({
     standard: points('StandardRewardRoom'),
@@ -80,8 +83,71 @@ function phases(
   );
 }
 
+/** A room each profile runs in, whose bound encounters compose its operations. */
+const roomByProfile: Readonly<Record<string, string>> = {
+  StandardRewardRoom: 'F_Combat01',
+  OpeningRewardRoom: 'F_Opening01',
+  RewardlessCombatRoom: 'P_Intro',
+  PCombatRoom: 'P_Combat01',
+  EphyraMainRoom: 'N_Combat01',
+  EphyraSideRoom: 'N_Sub01',
+  StoryPickupRoom: 'G_Story01',
+  DevotionRoom: 'O_Devotion01',
+  FieldsCombatRoom: 'H_Combat01',
+  ShipCombatRoom: 'O_Combat01',
+  WorldShopRoom: 'F_Shop01',
+  PrebossFreeRewardRoom: 'F_PreBoss01',
+  PrebossShopRoom: 'F_PreBoss01',
+  BossRoom: 'F_Boss01',
+  PostBossRoom: 'F_PostBoss01',
+};
+
+function roomDeclaration(lifecycleProfileKey: string, encounterEnvelopeKey: string) {
+  const declared = catalog.rooms.byKey[roomByProfile[lifecycleProfileKey] ?? ''];
+  const room =
+    declared?.encounterEnvelopeKey === encounterEnvelopeKey
+      ? declared
+      : (catalog.rooms.values.find((room) => room.encounterEnvelopeKey === encounterEnvelopeKey) ??
+        catalog.rooms.byKey.F_Combat01);
+  if (room === undefined) throw new Error(`missing test room for ${lifecycleProfileKey}`);
+  return room;
+}
+
+/** A room with no rows: its graph runs the input's phases in order. */
+function rowlessRoster(
+  lifecycleProfileKey: string,
+  encounterPhases: readonly ResolvedEncounterPhase[] = [],
+) {
+  const fields = lifecycleProfileKey === 'FieldsCombatRoom';
+  const graphPhases: readonly RoomEventGraphPhase[] = encounterPhases.map((phase) => ({
+    phaseKey: phase.slotKey,
+    ...(phase.rewardAttachment?.kind === 'rewardWheel'
+      ? { rewardWheelKey: phase.rewardAttachment.key }
+      : {}),
+    ...(catalog.encounterDefinitions.byKey[phase.encounterKey] === undefined
+      ? {}
+      : { script: catalog.encounterDefinitions.byKey[phase.encounterKey]!.script }),
+    ...(fields ? { standsAt: Object.freeze({ kind: 'roomEntered' as const }) } : {}),
+  }));
+  const eventGraph: RoomEventGraph = Object.freeze({
+    profileKey: lifecycleProfileKey,
+    activeEncounterSlotKeys: Object.freeze(graphPhases.map((phase) => phase.phaseKey)),
+    phases: Object.freeze(graphPhases),
+    pressFights: [],
+    events: Object.freeze(
+      testGraphEvents(graphPhases, {
+        cages: fields,
+        generatesOutgoing:
+          catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey]?.generatesOutgoing === true,
+      }),
+    ),
+  });
+  return assembleRoomActionRoster({ owner: origin, order: [], eventGraph, contributions: [] });
+}
+
 function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecycleExecutionInput {
-  return {
+  const executionInput: Omit<RoomLifecycleExecutionInput, 'roomDeclaration' | 'roomActionRoster'> &
+    Partial<Pick<RoomLifecycleExecutionInput, 'roomActionRoster'>> = {
     origin,
     lifecycleProfileKey: 'StandardRewardRoom',
     encounterEnvelopeKey: 'SingleEncounter',
@@ -96,6 +162,15 @@ function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecy
     counterEffects: {},
     ...overrides,
   };
+  return {
+    ...executionInput,
+    roomActionRoster:
+      executionInput.roomActionRoster ??
+      rowlessRoster(executionInput.lifecycleProfileKey, executionInput.encounterPhases),
+    roomDeclaration:
+      overrides.roomDeclaration ??
+      roomDeclaration(executionInput.lifecycleProfileKey, executionInput.encounterEnvelopeKey),
+  };
 }
 
 function inputWithoutProducer(
@@ -105,6 +180,7 @@ function inputWithoutProducer(
   return {
     origin: executionInput.origin,
     lifecycleProfileKey: executionInput.lifecycleProfileKey,
+    roomDeclaration: executionInput.roomDeclaration,
     encounterEnvelopeKey: executionInput.encounterEnvelopeKey,
     ...(executionInput.encounterPhases === undefined
       ? {}
@@ -112,9 +188,7 @@ function inputWithoutProducer(
     ...(executionInput.requiredObjects === undefined
       ? {}
       : { requiredObjects: executionInput.requiredObjects }),
-    ...(executionInput.roomActionRoster === undefined
-      ? {}
-      : { roomActionRoster: executionInput.roomActionRoster }),
+    roomActionRoster: executionInput.roomActionRoster,
     counterEffects: executionInput.counterEffects,
   };
 }
@@ -123,31 +197,34 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
   return executeRoomLifecycle(catalog, executionInput).events.map((event) => event.kind);
 }
 
-function firstShrinePurchase(rushed: boolean): RoomActionReference {
-  return Object.freeze({
-    kind: 'purchaseHermesShrineOffer',
-    generationKey: 'initial:first',
-    rushed,
-  });
-}
+const firstShrinePurchase: RoomActionReference = Object.freeze({
+  kind: 'purchaseHermesShrineOffer',
+  generationKey: 'initial:first',
+});
+
+const firstShrineRush: RoomActionReference = Object.freeze({
+  kind: 'rushHermesShrineOffer',
+  generationKey: 'initial:first',
+});
 
 function actionRoster(
   actionOrigin: typeof origin,
   order: readonly RoomActionReference[],
-  contributions: readonly Omit<
-    Extract<RoomActionRosterContribution, { readonly kind: 'action' }>,
-    'kind' | 'owner'
-  >[],
+  contributions: readonly (Omit<RoomActionContribution, 'kind' | 'owner' | 'bounds'> & {
+    readonly placement: TestRowPlacement;
+  })[],
   lifecycleProfileKey?: string,
   phaseKeysOverride?: readonly string[],
+  phaseScripts: Readonly<Record<string, EncounterScript>> = {},
 ) {
   const profileKey =
     lifecycleProfileKey ??
-    (contributions.some((entry) => entry.window.kind === 'fields')
+    (contributions.some((entry) => entry.placement.kind === 'fields')
       ? 'FieldsCombatRoom'
       : contributions.some(
             (entry) =>
-              entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat',
+              entry.placement.kind === 'beforeWheelPhase' ||
+              entry.placement.kind === 'afterWheelPhase',
           )
         ? 'ShipCombatRoom'
         : 'StandardRewardRoom');
@@ -174,13 +251,13 @@ function actionRoster(
   const shipWheelKeys = Array.from(
     new Set(
       contributions.flatMap((entry) =>
-        entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat'
-          ? [entry.window.wheelKey]
+        entry.placement.kind === 'beforeWheelPhase' || entry.placement.kind === 'afterWheelPhase'
+          ? [entry.placement.wheelKey]
           : [],
       ),
     ),
   );
-  const phasesForStructure: readonly RoomLifecycleStructurePhase[] =
+  const phasesForStructure: readonly RoomEventGraphPhase[] =
     profileKey === 'ShipCombatRoom'
       ? [
           { phaseKey: 'Intro' },
@@ -189,62 +266,36 @@ function actionRoster(
             rewardWheelKey: wheelKey,
           })),
         ]
-      : phaseKeys.map((phaseKey) => ({ phaseKey }));
-  const points: RoomLifecycleStructure['points'][number][] = [
-    Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
-  ];
-  phasesForStructure.forEach((phase, index) => {
-    if (phase.rewardWheelKey !== undefined && index > 0) {
-      points.push(
-        Object.freeze({
-          kind: 'wheelsOpen',
-          key: `wheelsOpen:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-        Object.freeze({
-          kind: 'nextPhase',
-          key: `nextPhase:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-      );
-    }
-    points.push(
-      Object.freeze({
-        kind: 'encounterStart',
-        key: `encounterStart:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-      Object.freeze({
-        kind: 'encounterEnd',
-        key: `encounterEnd:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-    );
+      : phaseKeys.map((phaseKey) => ({
+          phaseKey,
+          ...(phaseScripts[phaseKey] === undefined ? {} : { script: phaseScripts[phaseKey] }),
+          ...(profileKey === 'FieldsCombatRoom'
+            ? { standsAt: Object.freeze({ kind: 'roomEntered' as const }) }
+            : {}),
+        }));
+  const events = testGraphEvents(phasesForStructure, {
+    cages: profileKey === 'FieldsCombatRoom',
+    generatesOutgoing: catalog.roomLifecycleProfiles.byKey[profileKey]?.generatesOutgoing === true,
   });
-  if (
-    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.some(
-      (operation) => operation.kind === 'generateOutgoingBatch',
-    )
-  )
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-  const lifecycleStructure: RoomLifecycleStructure = Object.freeze({
+  const eventGraph: RoomEventGraph = Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(phaseKeys),
     phases: Object.freeze(phasesForStructure),
-    points: Object.freeze(points),
+    pressFights: [],
+    events: Object.freeze(events),
   });
   return assembleRoomActionRoster({
     owner: actionOrigin,
     order,
-    lifecycleStructure,
-    contributions: contributions.map((entry) => ({
+    eventGraph,
+    contributions: contributions.map(({ placement, ...entry }) => ({
       kind: 'action' as const,
       owner: createRoomActionAddress(
         createBiomeAddress(actionOrigin.routeKey, actionOrigin.biomeKey),
         actionOrigin.occurrenceId,
         roomActionKey(entry.reference),
       ),
+      bounds: boundsForPlacement(placement, eventGraph),
       ...entry,
     })),
   });
@@ -272,12 +323,12 @@ describe('single-room lifecycle execution', () => {
         },
         roomActionRoster: actionRoster(
           sideOrigin,
-          [firstShrinePurchase(false)],
+          [firstShrinePurchase],
           [
             {
-              reference: firstShrinePurchase(false),
+              reference: firstShrinePurchase,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
           ],
@@ -301,7 +352,7 @@ describe('single-room lifecycle execution', () => {
     expect(committed).toBeGreaterThan(scheduled);
     expect(fragment.events[scheduled]).toMatchObject({
       kind: 'hermesShrineDeliveriesScheduled',
-      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: false }],
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2 }],
     });
   });
 
@@ -331,18 +382,24 @@ describe('single-room lifecycle execution', () => {
         },
         roomActionRoster: actionRoster(
           sideOrigin,
-          [firstShrinePurchase(true), delivery],
+          [firstShrinePurchase, firstShrineRush, delivery],
           [
             {
-              reference: firstShrinePurchase(true),
+              reference: firstShrinePurchase,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
+              dependencies: [],
+            },
+            {
+              reference: firstShrineRush,
+              participation: 'optional',
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
             {
               reference: delivery,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
           ],
@@ -353,6 +410,7 @@ describe('single-room lifecycle execution', () => {
     const scheduled = fragment.events.findIndex(
       (event) => event.kind === 'hermesShrineDeliveriesScheduled',
     );
+    const rushed = fragment.events.findIndex((event) => event.kind === 'hermesShrineRushReached');
     const deliveryReached = fragment.events.findIndex(
       (event) =>
         event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery',
@@ -360,12 +418,15 @@ describe('single-room lifecycle execution', () => {
     const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
 
     expect(fragment.blockedAt).toBeUndefined();
-    expect(deliveryReached).toBeGreaterThan(scheduled);
+    // The rush settles at its own row, between the scheduling and the pickup.
+    expect(rushed).toBeGreaterThan(scheduled);
+    expect(deliveryReached).toBeGreaterThan(rushed);
     expect(committed).toBeGreaterThan(deliveryReached);
     expect(fragment.events[scheduled]).toMatchObject({
       kind: 'hermesShrineDeliveriesScheduled',
-      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: true }],
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2 }],
     });
+    expect(fragment.events[rushed]).toMatchObject({ generationKey: 'initial:first' });
   });
 
   it.each([['GeneratedO_Intro01'], ['HeraclesCombatO']])(
@@ -406,32 +467,35 @@ describe('single-room lifecycle execution', () => {
           ...[delivery0, delivery1, delivery2].map((reference) => ({
             reference,
             participation: 'required' as const,
-            window: { kind: 'encounterEnd' as const, phaseKey: reference.encounterPhaseKey },
+            placement: {
+              kind: 'afterEncounterEnd' as const,
+              phaseKey: reference.encounterPhaseKey,
+            },
             dependencies: [],
           })),
           {
             reference: choose1,
             participation: 'required',
-            window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+            placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
             dependencies: [],
           },
           {
             reference: interact1,
             participation: 'required',
-            window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-            dependencies: [{ kind: 'afterAction', action: choose1 }],
+            placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
+            dependencies: [{ action: choose1 }],
           },
           {
             reference: choose2,
             participation: 'required',
-            window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+            placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' },
             dependencies: [],
           },
           {
             reference: interact2,
             participation: 'required',
-            window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
-            dependencies: [{ kind: 'afterAction', action: choose2 }],
+            placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
+            dependencies: [{ action: choose2 }],
           },
         ],
         'ShipCombatRoom',
@@ -521,25 +585,25 @@ describe('single-room lifecycle execution', () => {
               {
                 reference: choose,
                 participation: 'required',
-                window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+                placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
                 dependencies: [],
               },
               {
                 reference: icarus,
                 participation: 'required',
-                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+                placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
                 dependencies: [],
               },
               {
                 reference: wheel,
                 participation: 'required',
-                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-                dependencies: [{ kind: 'afterAction', action: choose }],
+                placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
+                dependencies: [{ action: choose }],
               },
               {
                 reference: delivery,
                 participation: 'required',
-                window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
+                placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Combat1' },
                 dependencies: [],
               },
             ],
@@ -601,7 +665,7 @@ describe('single-room lifecycle execution', () => {
       reward('cage2'),
     ];
     order.splice(index, 0, delivery);
-    const after = (phaseKey: string) => [{ kind: 'afterAction' as const, action: cage(phaseKey) }];
+    const after = (phaseKey: string) => [{ action: cage(phaseKey) }];
     const roster = actionRoster(
       fieldsOrigin,
       order,
@@ -609,31 +673,31 @@ describe('single-room lifecycle execution', () => {
         {
           reference: cage('Cage01'),
           participation: 'required',
-          window: { kind: 'fields' },
+          placement: { kind: 'fields' as const },
           dependencies: [],
         },
         {
           reference: cage('Cage02'),
           participation: 'required',
-          window: { kind: 'fields' },
+          placement: { kind: 'fields' as const },
           dependencies: [],
         },
         {
           reference: reward('cage1'),
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage01' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
           dependencies: after('Cage01'),
         },
         {
           reference: reward('cage2'),
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage02' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage02' },
           dependencies: after('Cage02'),
         },
         {
           reference: delivery,
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage01' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
           dependencies: after('Cage01'),
         },
       ],
@@ -802,7 +866,7 @@ describe('single-room lifecycle execution', () => {
             {
               reference: active,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -841,19 +905,19 @@ describe('single-room lifecycle execution', () => {
             {
               reference: reward,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
             {
               reference: purchase,
               participation: 'optional',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
             {
               reference: collect,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -884,6 +948,131 @@ describe('single-room lifecycle execution', () => {
     });
   });
 
+  it.each([
+    ['unplaced', [] as const],
+    ['placed after the delivery', ['delivery', 'reward'] as const],
+  ])(
+    'holds a waiting encounter’s end effects for its reward, before the delivery they spawn (%s)',
+    (_, placed) => {
+      const reward = {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source' as const,
+      };
+      const delivery = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(origin, 'initial:first'),
+        encounterPhaseKey: 'Encounter',
+      });
+      const roster = actionRoster(
+        origin,
+        placed.length === 0
+          ? [delivery]
+          : placed.map((key) => (key === 'reward' ? reward : delivery)),
+        [
+          {
+            reference: reward,
+            participation: 'required',
+            placement: { kind: 'afterCombat' as const },
+            dependencies: [],
+          },
+          {
+            reference: delivery,
+            participation: 'required',
+            placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
+            dependencies: [],
+          },
+        ],
+        'StandardRewardRoom',
+        ['Encounter'],
+        { Encounter: catalog.encounterDefinitions.byKey.HeraclesCombatO!.script },
+      );
+      // Heracles' script waits for the room to be ready before its end effects
+      // (`WaitForNextEncounterReady`): the reward is due there, before the delivery spawns.
+      const rewardRow = roster.rows.find((row) => row.key === roomActionKey(reward));
+      expect(rewardRow?.bounds.deadline).toEqual({ kind: 'endEffects', phaseKey: 'Encounter' });
+      const fragment = executeRoomLifecycle(
+        catalog,
+        input({
+          encounterPhases: phases('SingleEncounter', ['HeraclesCombatO']),
+          roomActionRoster: roster,
+        }),
+      );
+
+      expect(
+        fragment.events.some(
+          (event) =>
+            event.kind === 'acquisitionPointReached' && event.entryKey === delivery.entryKey,
+        ),
+      ).toBe(false);
+      expect(fragment.events.some((event) => event.kind === 'encounterEndEffectsApplied')).toBe(
+        false,
+      );
+      if (placed.length === 0) {
+        expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(reward));
+        expect(fragment.blockedDeadline).toEqual({ kind: 'endEffects', phaseKey: 'Encounter' });
+      } else {
+        // The delivery spawns at the end effects, which pass the reward's deadline.
+        expect(roster.issues).toContainEqual(
+          expect.objectContaining({
+            kind: 'pastDeadline',
+            reference: reward,
+            precedingAction: delivery,
+          }),
+        );
+      }
+    },
+  );
+
+  it('takes the reward before an earlier fight’s unplaced delivery, which is due only as the doors open', () => {
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(origin, 'initial:first'),
+      encounterPhaseKey: 'Intro',
+    });
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'PCombatRoom',
+        encounterEnvelopeKey: 'PEncounter',
+        encounterPhases: phases('PEncounter', ['GeneratedP_PreCombat', 'GeneratedP']),
+        roomActionRoster: actionRoster(
+          origin,
+          [reward],
+          [
+            {
+              reference: delivery,
+              participation: 'required',
+              placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Intro' },
+              dependencies: [],
+            },
+            {
+              reference: reward,
+              participation: 'required',
+              placement: { kind: 'afterCombat' as const },
+              dependencies: [],
+            },
+          ],
+          'PCombatRoom',
+          ['Intro', 'Combat'],
+        ),
+      }),
+    );
+
+    expect(fragment.reachedActions.map((action) => action.actionKey)).toContain(
+      roomActionKey(reward),
+    );
+    expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(delivery));
+    expect(fragment.blockedDeadline).toEqual({ kind: 'doorsOpened' });
+  });
+
   it("keeps an earlier same-window row's own events apart from the pickup it precedes", () => {
     const fountain = { kind: 'useFountain' as const };
     const reward = {
@@ -901,13 +1090,13 @@ describe('single-room lifecycle execution', () => {
             {
               reference: fountain,
               participation: 'optional',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
             {
               reference: reward,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -1009,16 +1198,45 @@ describe('single-room lifecycle execution', () => {
   ] as const)(
     'acquires the %s %s opening reward before its delayed counting encounter',
     (routeKey, biomeKey, encounterKey) => {
+      const openingOrigin = createOccurrenceAddress(
+        createBiomeAddress(routeKey, biomeKey),
+        createOccurrenceId(`${biomeKey.toLowerCase()}-opening-lifecycle-fixture`),
+      );
+      const pickup = {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      };
+      const roster = actionRoster(
+        openingOrigin,
+        [pickup],
+        [
+          {
+            reference: pickup,
+            participation: 'required',
+            placement: { kind: 'beforeCombat' as const },
+            dependencies: [],
+          },
+        ],
+        'OpeningRewardRoom',
+      );
+      // Using the pickup starts the fight.
+      const eventGraph = Object.freeze({
+        ...roster.eventGraph,
+        events: roster.eventGraph.events.map((event) =>
+          event.kind === 'encounterStarted'
+            ? Object.freeze({ ...event, trigger: { kind: 'action' as const, action: pickup } })
+            : event,
+        ),
+      });
       const fragment = executeRoomLifecycle(
         catalog,
         input({
-          origin: createOccurrenceAddress(
-            createBiomeAddress(routeKey, biomeKey),
-            createOccurrenceId(`${biomeKey.toLowerCase()}-opening-lifecycle-fixture`),
-          ),
+          origin: openingOrigin,
           lifecycleProfileKey: 'OpeningRewardRoom',
           encounterEnvelopeKey: 'SingleEncounter',
           encounterPhases: phases('SingleEncounter', [encounterKey]),
+          roomActionRoster: Object.freeze({ ...roster, eventGraph }),
         }),
       );
 
@@ -1095,7 +1313,7 @@ describe('single-room lifecycle execution', () => {
     });
   });
 
-  it('keeps WorldShop outgoing generation before purchases', () => {
+  it('starts and completes the Shop encounter, then keeps outgoing generation before purchases', () => {
     const fragment = executeRoomLifecycle(
       catalog,
       input({
@@ -1111,17 +1329,16 @@ describe('single-room lifecycle execution', () => {
       'encounterRecorded',
       'offerPointMaterialized',
       'roomEntered',
+      'encounterStarted',
+      'encounterCompleted',
       'outgoingGenerationCheckpoint',
-      'acquisitionPointReached',
       'roomCommitted',
       'roomCountersAdvanced',
       'roomExited',
     ]);
     expect(fragment.events[2]).toMatchObject({ offerPoint: 'shopInventory' });
-    expect(fragment.events[5]).toMatchObject({
-      kind: 'acquisitionPointReached',
-      point: 'roomExit',
-    });
+    // A Shop counts no depth and has no end effects (`StartEncounter`, RoomLogic.lua).
+    expect(fragment.events[5]).toMatchObject({ kind: 'encounterCompleted', endEffects: 'none' });
   });
 
   it('blocks before Wheel 2 when the required Wheel 1 pickup is unranked', () => {
@@ -1140,26 +1357,26 @@ describe('single-room lifecycle execution', () => {
         {
           reference: choose1,
           participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+          placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
           dependencies: [],
         },
         {
           reference: pickup1,
           participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-          dependencies: [{ kind: 'afterAction', action: choose1 }],
+          placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
+          dependencies: [{ action: choose1 }],
         },
         {
           reference: choose2,
           participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+          placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' },
           dependencies: [],
         },
         {
           reference: pickup2,
           participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
-          dependencies: [{ kind: 'afterAction', action: choose2 }],
+          placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
+          dependencies: [{ action: choose2 }],
         },
       ],
     );
@@ -1186,7 +1403,7 @@ describe('single-room lifecycle execution', () => {
         event.kind === 'encounterCompleted' ? [[event.phaseKey, event.endEffects]] : [],
       ),
     ).toEqual([
-      ['Intro', 'applied'],
+      ['Intro', 'deferred'],
       ['Combat1', 'deferred'],
     ]);
     expect(
@@ -1212,14 +1429,14 @@ describe('single-room lifecycle execution', () => {
       {
         reference: complete,
         participation: 'required' as const,
-        window: { kind: 'fields' as const },
+        placement: { kind: 'fields' as const },
         dependencies: [],
       },
       {
         reference: contact,
         participation: 'required' as const,
-        window: { kind: 'fields' as const, phaseKey: 'Cage01' },
-        dependencies: [{ kind: 'afterAction' as const, action: complete }],
+        placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
+        dependencies: [{ action: complete }],
       },
     ];
     const invalid = executeRoomLifecycle(
@@ -1388,7 +1605,7 @@ describe('single-room lifecycle execution', () => {
               {
                 reference: pickup,
                 participation: 'required',
-                window: { kind: 'standard', phase: 'afterCombat' },
+                placement: { kind: 'afterCombat' as const },
                 dependencies: [],
               },
             ],
@@ -1406,6 +1623,14 @@ describe('single-room lifecycle execution', () => {
     },
   );
 
+  it('runs a reward room without its producer points when its reward has no pickup', () => {
+    const kinds = executeRoomLifecycle(catalog, inputWithoutProducer()).events.map(
+      (event) => event.kind,
+    );
+    expect(kinds).not.toContain('producerPointReached');
+    expect(kinds).toContain('outgoingGenerationCheckpoint');
+  });
+
   it('fails unknown and incompatible execution references at the executor boundary', () => {
     const cases: readonly [RoomLifecycleExecutionInput, string][] = [
       [input({ lifecycleProfileKey: 'Missing' }), 'unknown room lifecycle profile Missing'],
@@ -1415,7 +1640,6 @@ describe('single-room lifecycle execution', () => {
         'EmptyEncounter is incompatible with StandardRewardRoom',
       ],
       [input({ enteredRewardStoreKey: 'Missing' }), 'unknown entered reward store Missing'],
-      [inputWithoutProducer(), 'StandardRewardRoom requires a producer'],
       [
         input({
           lifecycleProfileKey: 'EphyraMainRoom',
@@ -1457,5 +1681,86 @@ describe('single-room lifecycle execution', () => {
         new LifecycleExecutionContractError(message),
       );
     }
+  });
+
+  it('starts each door’s fight right after its press, wherever the press stands', () => {
+    const presses = (['exit2', 'exit3'] as const).map((exitKey) =>
+      Object.freeze({ kind: 'unlockExit' as const, exitKey }),
+    );
+    const definition = catalog.encounterDefinitions.byKey.GeneratedG_ExtraDoor!;
+    const walk = (order: readonly Extract<RoomActionReference, { kind: 'unlockExit' }>[]) => {
+      const roster = actionRoster(
+        origin,
+        order,
+        presses.map((reference) => ({
+          reference,
+          participation: 'optional' as const,
+          placement: { kind: 'afterDoorsOpen' as const },
+          dependencies: [],
+        })),
+        'RewardlessCombatRoom',
+      );
+      const pressFights = order.map((press) =>
+        Object.freeze({
+          phaseKey: `unlockExit:${press.exitKey}`,
+          script: definition.script,
+          envelopeKey: 'unlockExit',
+          encounterKey: definition.key,
+          press,
+          standsAt: Object.freeze({ kind: 'doorsOpened' as const }),
+          completes: true,
+        }),
+      );
+      const eventGraph: RoomEventGraph = Object.freeze({
+        ...roster.eventGraph,
+        pressFights,
+        events: Object.freeze([
+          ...roster.eventGraph.events,
+          ...pressFights.flatMap((fight) => [
+            Object.freeze({
+              kind: 'encounterBegun' as const,
+              key: `encounterBegun:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'action' as const, action: fight.press }),
+              markers: 'merged' as const,
+            }),
+            Object.freeze({
+              kind: 'encounterStarted' as const,
+              key: `encounterStarted:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'automatic' as const }),
+            }),
+            Object.freeze({
+              kind: 'encounterEnd' as const,
+              key: `encounterEnd:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'automatic' as const }),
+            }),
+          ]),
+        ]),
+      });
+      return executeRoomLifecycle(
+        catalog,
+        inputWithoutProducer({
+          lifecycleProfileKey: 'RewardlessCombatRoom',
+          roomActionRoster: Object.freeze({ ...roster, eventGraph }),
+        }),
+      ).events.flatMap((event) =>
+        event.kind === 'exitUnlocked'
+          ? [`press ${event.exitKey}`]
+          : 'phaseKey' in event && event.phaseKey.startsWith('unlockExit:')
+            ? [`${event.kind} ${event.phaseKey}`]
+            : [],
+      );
+    };
+    const fight = (exitKey: string) => [
+      `press ${exitKey}`,
+      `encounterStarted unlockExit:${exitKey}`,
+      `encounterDepthAdvanced unlockExit:${exitKey}`,
+      `encounterCompleted unlockExit:${exitKey}`,
+    ];
+
+    expect(walk(presses)).toEqual([...fight('exit2'), ...fight('exit3')]);
+    expect(walk([...presses].reverse())).toEqual([...fight('exit3'), ...fight('exit2')]);
   });
 });

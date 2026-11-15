@@ -27,6 +27,8 @@ export type {
   GorgonPhaseCandidateSupport,
   NemesisRandomEventAssessment,
   NemesisRandomEventCandidateSupport,
+  NemesisRandomEventFamily,
+  NemesisRandomEventFamilyRefusal,
 } from './model';
 export type {
   DecisionCounterState,

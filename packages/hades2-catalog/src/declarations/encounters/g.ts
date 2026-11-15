@@ -83,6 +83,8 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'DevotionTestG',
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestG],
     label: 'Devotion combat',
@@ -288,6 +290,8 @@ export const gEncounterDefinitions = [
     key: 'GeneratedG_ExtraDoor',
     label: 'Locked door fight',
     kind: 'combat',
+    // The press generates and starts it, never recording it (RoomLogic.lua:762-789).
+    script: { press: { records: false, generatedAt: 'start' } },
     countsEncounterDepth: true,
     advancesHermesShrineDeliveryUses: false,
     blocksGorgon: true,

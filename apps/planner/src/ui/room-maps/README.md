@@ -24,10 +24,24 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
+A room that holds either a shop or a free reward (the F, G, H and P Prebosses,
+`H_Bridge01`) has a second image, `<room>_Shop` (Charon and his empty item pads
+on the same terrain), shown for an occurrence whose room holds a shop; it has
+its own calibration and the room's points. A room that always holds a shop
+(Shop rooms, the I, N, O and Q Prebosses) has only its own image, captured with
+the shop and its pads empty.
+
+An entry the capture leaves out of frame (the Q Preboss's, far below) is drawn
+at the frame's edge with an arrow toward it.
+
 Every map is a clean capture: `roomMapCalibration.ts` records each image's capture camera and the
-editor draws their points from the catalog's map points. Regenerate it from the
-capture manifests with `npm run planner:room-map-calibration` whenever one of
-those images is replaced; an image without calibration shows no points.
+editor draws their points from the catalog's map points. It is generated from
+`scripts/data/room-map-captures.json`, the capture record of every calibrated
+image. When images are replaced, pass their capture manifests to
+`npm run planner:room-map-calibration -- <manifest.json>...`: their rooms replace
+the checked-in records and the calibration is regenerated. Without arguments it
+regenerates from the checked-in records alone. An image without calibration shows
+no points.
 
 A room too large for one screen is stitched from tiles; its manifest entry
 carries the stitched image's own calibration. Package it at most 2560 wide
@@ -37,6 +51,13 @@ calibration to match.
 A Ship's wheel is a catalog map point too: each phase a wheel follows shows its
 offers there (one on the wheel, two on its left and right spots), and the last
 phase shows the exit doors.
+
+World Shop items stand on the room's catalog Shop points (its `LootPoint`s,
+ascending by ObjectId): the engine pairs the k-th stocked item, empty slots
+left out, with the k-th point, and a Travel Deal refill takes its bought
+item's point. The Contract pedestal's item stands on its RoomData pedestal
+point, and a Midshop's Contract door on its RoomData `ZagContractDestinationId`
+point.
 
 Ephyra side doors and Hub board doors are catalog map doors too: a side door
 stands at its local slot's physical door, each Hub slot at its door on the

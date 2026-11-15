@@ -58,8 +58,17 @@ native offer predicate reads Death Defiance state; it does not encode the
 predicate. While any of them is listed on an offer screen, selected or not, the
 trait offer editor shows a display-only note in its feedback area. The note is
 not a finding: it does not affect validity, publishing, finding order, or
-repair marks. The Shop, Shrine, Well, Twist, and Nemesis items carry no such
-note.
+repair marks.
+
+The Shop, Shrine and Well Last Stand items (Death Defiance in the Hermes
+Shrine and the Erebus and Thessaly World Shops, Kiss of Styx at the Well)
+declare `unmodeledOfferCondition: missingLastStand` on their shop option
+instead. The game leaves them out of a stock generated while a Last Stand is
+held, so no automatic draw takes them: stock filled on first reach (a Fateful
+Twist result and every Travel Deal restock included) and Draft's Shop and Shrine
+steering skip them. A chosen one stays legal and follows the exact-result
+disposition below, and stock already holding one keeps it. They carry no note.
+Nemesis's free item is never drawn automatically and needs no flag.
 
 ## Gorgon Amulet exception
 

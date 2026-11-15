@@ -30,6 +30,8 @@ import {
   selectedExitKey,
 } from '../../topology/query';
 import { fieldsDefaultActiveCageCount } from '../../fields';
+import { createBiomeAddress } from '../../addresses';
+import { carryRerolledRecords } from '../../rerolls';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import {
@@ -391,15 +393,19 @@ export function createTarget(
     const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
     return hasInventory === entryActive
       ? occurrence
-      : defaultOccurrence(
-          catalog,
-          targetRoom,
-          located.routeKey,
-          occurrence.occurrenceId,
-          targetRole,
-          entryActive,
-          batchRewardStoreKey,
-          located.loadout,
+      : carryRerolledRecords(
+          createBiomeAddress(located.routeKey, located.layout.biomeKey),
+          occurrence,
+          defaultOccurrence(
+            catalog,
+            targetRoom,
+            located.routeKey,
+            occurrence.occurrenceId,
+            targetRole,
+            entryActive,
+            batchRewardStoreKey,
+            located.loadout,
+          ),
         );
   });
   const next = replaceDecision(

@@ -461,27 +461,29 @@ Black Night may disable Forfeit. The comparison uses the effective rank from
 rewards. A skip already consumed earlier in the biome remains historical; no
 trait offer is restored retroactively.
 
-### Biome coverage and accepted settlement timing
+### Biome coverage and planner spawn contacts
 
-The planner preserves observable outcomes, not every native spawn callback.
-Required-reward acquisition settlement remains sufficient unless an earlier
-decision changes a modeled outcome. Fields' coexisting cages need earlier
-consumption because pickup order is independent of spawn order. This is one
-Forfeit policy with different lifecycle contacts, not one policy per biome.
+The planner decides Forfeit where the game does: at each qualifying
+`SpawnRoomReward`, so the first Boon or Hermes room-reward spawn of the biome
+takes the use, whichever host spawns it. This is one Forfeit policy with
+different spawn contacts, not one policy per biome. The one planner
+difference: an Opening reward the room does not create at encounter start is
+decided at its pickup, which no door generation separates from the native
+spawn ([Trait Offers](../../design/TRAIT_OFFERS.md#fear-and-reward-settlement)).
 
-| Biome / surface | Native reward path                                                                                                                                    | Accepted planner contact                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F               | Opening and ordinary encounters call SpawnRoomReward.                                                                                                 | Shared required-reward settlement.                                                                                                                       |
-| G               | Ordinary incoming rewards, including qualifying rewards after detours.                                                                                | Shared settlement; door generation does not consume.                                                                                                     |
-| H combat cages  | All active cage objects spawn in list order during room setup.                                                                                        | Selected room entry fixes the Onion and consumes the use; pickup reuses that outcome.                                                                    |
-| H minibosses    | One locked reward spawns before combat and unlocks afterward.                                                                                         | Shared required-reward settlement. No observable modeled counterexample justifies separate pre-combat machinery.                                         |
-| H other rooms   | Ordinary incoming rewards qualify; FieldsOptionalRewards contains no natural Boon/Hermes.                                                             | Shared incoming settlement; optional Artificer replacements use conversion settlement.                                                                   |
-| I               | TartarusRewards includes Boon; ClockworkGoal does not qualify.                                                                                        | Shared reward settlement, not goal completion.                                                                                                           |
-| N               | Hub generates offers; entered rooms spawn rewards. Side-room stores have no natural Boon/Hermes.                                                      | Shared settlement in visit order, not board order. Restores do not replay consumption or reset the use. Side-room Artificer remains separately eligible. |
-| O ships         | Selected wheel reward spawns after combat. WaitForNextEncounterReady waits for required objects and reward screens before continuing.                 | Picked reward settlement only; unpicked previews do not consume. No separate spawn phase is needed.                                                      |
-| O other rooms   | Ordinary incoming reward path; empty intro does not qualify.                                                                                          | Shared settlement.                                                                                                                                       |
-| P               | GeneratedP_PreCombat overrides the reward to Empty; rewarded combat supplies the incoming reward. HeraclesCombatP can replace the encounter sequence. | One incoming reward settlement, not one opportunity per phase.                                                                                           |
-| Q               | Qualifying ordinary rewards use SpawnRoomReward; shop purchases and boss drops do not qualify merely by being rewards.                                | Shared incoming settlement; purchases remain separate.                                                                                                   |
+| Biome / surface | Native reward path                                                                                                                                    | Planner spawn contact                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F               | Opening and ordinary encounters call SpawnRoomReward.                                                                                                 | The encounter's end; an Opening reward at its pickup.                                                                                                 |
+| G               | Ordinary incoming rewards, including qualifying rewards after detours.                                                                                | The encounter's end; door generation only previews.                                                                                                   |
+| H combat cages  | All active cage objects spawn in list order during room setup.                                                                                        | Selected room entry, in cage-list order; pickup reuses that outcome.                                                                                  |
+| H minibosses    | One locked reward spawns before combat and unlocks afterward.                                                                                         | That encounter's start.                                                                                                                               |
+| H other rooms   | Ordinary incoming rewards qualify; FieldsOptionalRewards contains no natural Boon/Hermes.                                                             | The encounter's end; an optional's Artificer replacement at its conversion.                                                                           |
+| I               | TartarusRewards includes Boon; ClockworkGoal does not qualify.                                                                                        | The encounter's end, not goal completion.                                                                                                             |
+| N               | Hub generates offers; entered rooms spawn rewards. Side-room stores have no natural Boon/Hermes.                                                      | Each entered room's spawn in visit order, not board order. Restores do not replay consumption or reset the use; side-room Artificer remains eligible. |
+| O ships         | Selected wheel reward spawns after combat. WaitForNextEncounterReady waits for required objects and reward screens before continuing.                 | The picked reward after its phase's combat; unpicked offers only preview.                                                                             |
+| O other rooms   | Ordinary incoming reward path; empty intro does not qualify.                                                                                          | The encounter's end.                                                                                                                                  |
+| P               | GeneratedP_PreCombat overrides the reward to Empty; rewarded combat supplies the incoming reward. HeraclesCombatP can replace the encounter sequence. | One incoming reward spawn, not one opportunity per phase.                                                                                             |
+| Q               | Qualifying ordinary rewards use SpawnRoomReward; shop purchases and boss drops do not qualify merely by being rewards.                                | The encounter's end; purchases never qualify.                                                                                                         |
 
 Source anchors: `EncounterSets.lua:446–490` (ordinary, H miniboss and Ship
 sequences); `RoomLogic.lua:1368` (WaitForNextEncounterReady), `:1466` (wheel
@@ -493,12 +495,11 @@ nonqualifying N side-room and H optional reward domains. Fountain rewards
 also spawn early through HealthRestore start events in EncounterData_Unique;
 early spawn alone does not warrant another planner timing mechanism.
 
-Artificer's required replacement uses existing settlement. In Fields,
-converting an optional minor reward into a boon before collecting the cage
-Onion cannot produce a second Onion: entry has already consumed Forfeit.
-The later cage pickup does not consume again. Merely tagging the cage while
-leaving the counter available would be incorrect. Additional timing machinery
-requires a concrete legal interleaving that changes the modeled outcome.
+Artificer's replacement is decided at its conversion. In Fields, converting
+an optional minor reward into a boon before collecting the cage Onion cannot
+produce a second Onion: entry has already consumed Forfeit. The later cage
+pickup does not consume again. Merely tagging the cage while leaving the
+counter available would be incorrect.
 
 ## Planner disposition
 

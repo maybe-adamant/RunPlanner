@@ -36,7 +36,7 @@ appear, not what they mean.
 - Overview owns occurrence contents, feature inventory and room positions
   (entry, object anchors and Fields points in its Layout section), and Timeline
   owns participating actions and their chronology, the room's outgoing offers
-  on its Doors open row and the exit pick on its last row.
+  on its Doors opened marker and the exit pick on its last row.
 - Dormant, ungenerated, unvisited and unpurchased children publish no active
   Timeline control merely because their authored detail is retained.
 - Context-invalid authored values remain visible until explicitly replaced or
@@ -323,36 +323,43 @@ phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
 opening the dialog.
 
-On the Room Timeline each encounter phase opens with its Encounter banner and
-closes with its Encounter ended banner, with its Encounter outcome between
-them where the fight's ending hosts a choice; a Fields room numbers start and end by the
-cage's combat cycle and tags the start with its cage. A definitional encounter's start banner
-names its settled identity: the phase's role, when the room has more than one
-encounter start banner and no Fields cage tag already names the phase, then the
-selected encounter. Phases settled on entry do not count toward that role rule.
+On the Room Timeline each encounter phase opens with its **Encounter started**
+marker and closes with its **Encounter ended** marker, with its Encounter outcome between
+them where the fight's ending hosts a choice. **Combat started** shows only where the fight
+is its own marker after the encounter's start (an opening pickup between them, a Fields
+miniboss); otherwise the one marker reads Encounter started. In a room of several
+encounters the start names its phase as a chip (Pre-combat and Follow-up in P rooms,
+Intro and Phase n in a Ship); Encounter ended and single-encounter rooms carry none.
+Out of the Timeline, where no chip can show, a reference names the phase in brackets,
+such as "Encounter ended (Phase 1)". A Fields cage's encounter starts as its Unlock row
+is taken, so its start hangs under that row and neither marker repeats the cage. A
+definitional encounter's start marker names its settled identity: the phase's role,
+when the room has more than one encounter start and no Fields cage names the phase,
+then the selected encounter. Phases settled on entry do not count toward that role rule.
 A non-combat encounter settled on entry (a Nemesis event, Empty) leaves its
-Room entered banner plain; a selected Nemesis family is read-only text on its
-movable interaction row. The banner identity only navigates to its Overview
+Room entered marker plain; a selected Nemesis family is read-only text on its
+movable interaction row. The marker's identity only navigates to its Overview
 owner.
 
-A banner hosts the events of its moment, as the
+A marker hosts the events of its moment, as the
 [Encounter outcome](ROOM_LIFECYCLE_MODEL.md#encounter-outcome) divides them.
-The start banner carries only the Fig Leaf skip. The **Encounter outcome**
+The start marker carries only the Fig Leaf skip. The **Encounter outcome**
 carries how the fight ended: the Aetos appearance and its wave, the Gorgon
 Amulet's Death Defiance condition (whose Athena appears in that fight), a
 Nemesis kill race, a Nemesis event's result and an Anomaly's capture point. It
 appears only where the engine lists a choice for it, an eligible one or an
 authored value; a stop at the outcome keeps it with its controls to repair
 them. In a Boss room **Boss defeated** is the outcome, its own event between
-the start and end hosting the fixed effects Judgment and Crystal Figurine. The
-end banner hosts no choice: it carries the fight gold and announces what
+the start and end, with the fixed effects Judgment and Crystal Figurine hanging under
+it. The end marker hosts no choice: it carries the fight gold and announces what
 spawns. The fight gold is the engine's summary for the phase, a Nemesis bet's
 win or loss included, shown as its estimate and spread, or plainly when
 exact, with its breakdown by source on hover; a challenge switch's or locked
-door's fight shows its summary on its press row the same way. A banner is one
-line: its title, then its controls at the line's end. The outcome keeps one
+door's fight shows its summary on its press row the same way. A marker is one
+line: its name, then its small content as chips; bigger content (a wheel's offers,
+the doors) sits under it. The outcome keeps one
 fixed slot per event, in the order Aetos, Death Defiance condition, so each
-event lines up across banners and an absent event leaves its slot empty. The Fig Leaf skip and the Death
+event lines up across markers and an absent event leaves its slot empty. The Fig Leaf skip and the Death
 Defiance condition are icon toggles named by their meaning, which their hint
 also tells; the Aetos appearance is one compact choice of no appearance or the
 wave it joins. The title gives way first; only a line that still cannot fit
@@ -410,22 +417,34 @@ a generic room-details disclosure. Standard, Fields, and Shop occurrences
 render Room Overview and Room Timeline. Overview's Layout section shows the
 room's entry with its orientation as one choice of the (entry, flip) pairs the
 engine leaves open, shown where the door or the room settles it, and chip rows
-of positions: Anchors (one chip per present object showing its authored or
-default anchor, the Well's pin shown, not picked), and the Fields Cages and
+of positions: Anchors (one chip per present object showing its stored
+anchor, the Well's pin shown, not picked), and the Fields Cages and
 Rewards (optional and Nemesis slots, each its reward's icon numbered by slot,
-then its point); an unset position is `?`, standing on the engine's default,
-and a point or anchor another occupant holds is not offered. While a Fields chip is hovered or its
+then its point), and the Chaos Gate's point. Every position shows the point
+its item stands on as stored, and the point an item stands on or another
+occupant holds is not offered. While a Fields chip is hovered or its
 list is open, the map numbers the free points of that slot's family. The link runs both ways:
 hovering a control previews its point, and pointing at a map point marks the control that owns
-it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). Overview contains read-only
+it (an anchor's or Fields point's chip, Entry, the Chaos Gate, the Contract door, a door's chips
+and rows). The map also stands each World Shop item on the point the game spawns it at, and the
+Contract pedestal's item on the pedestal, as stock that changes along the room: Overview shows it
+as the room is entered, and the Timeline as its worked-on row leaves it, a bought or collected
+item gone and a Travel Deal restock on its bought item's point from the purchase the engine names
+as its trigger. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
 with it) and whose Pedestal holds the Contract pedestal's item. Overview
 authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
-shows only its presence and initial stock, whose slots are always editable and
-optional; using it starts on the Timeline. An Ephyra parent with declared
+shows only its presence and initial stock; using it starts on the Timeline.
+Every stock slot the walk reached holds its
+[stocked draw](SIMULATION_AND_VALIDATION.md#stock-filled-on-first-reach), which
+its picker can replace but not empty, except a World Shop item nothing can
+replace, which leaves its slot empty as the game does; a slot not reached yet
+is blank and waits on an earlier choice. The list a Pool regenerates after its fountain use stands
+on its own automatic row right after that use, edited like the Overview's list
+and moving only with the fountain. An Ephyra parent with declared
 side-room groups lists its side doors among its Spawns: a row per side-room
 door in generation priority (open, priority, room by its short number such as
 SR 10, reward and map), the header opening the illustrative parent map. A
@@ -436,7 +455,10 @@ has: Encounter (encounters), Spawns (Fields optional rewards, additional
 exits, room objects, resources, NPCs, as existence only; the challenge switch
 is one toggle per kind, turning one on replacing the switch), Offers (Shop,
 Well, Pool and Shrine stock, the challenge switch's reward, the Pedestal's
-item) and Layout. Its rows share one column grid of
+item) and Layout. A feature the room never holds by its declarations has no
+toggle; one it cannot take now is disabled, its hover naming each engine
+refusal as one sentence, or that it waits on an earlier choice;
+door-generated side doors, being chance-driven, carry none. Its rows share one column grid of
 label, value picker and secondary action, so each picker starts at the same
 place in every section and room. A room object or Chaos Gate the room always
 has is named without a presence toggle.
@@ -482,14 +504,21 @@ start or the Loadout; its content returns as soon as the walk reaches it.
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked
 for a Travel Deal restock), its label, its decisions, its money and its delete.
-Money and delete keep one right edge on every row, and each encounter phase's
-rows read as one group. Every banner (encounter start and end, other lifecycle
-boundaries and checkpoints) shares one band style. A banner is an event the
-engine announces once the walk reaches it, brought about by the rows before
-it, so it can host choices but cannot be inserted, moved or deleted.
+Money and delete keep one right edge on every row. The Timeline holds three
+things: the user's **action rows**, the spine's only nodes, and two kinds of
+notification derived from them. A **room event** (Room entered, Encounter started,
+Wheels opened, Doors opened and the rest) is a quiet divider between actions: the
+engine announces it once the walk reaches it, brought about by the rows before it,
+so it can host choices but cannot be inserted, moved or deleted. A **notice** tells
+what the game did, such as what spawned or unlocked. Anything with a cause hangs
+under it, one line each and never merged: an action's spawn under the action, a
+room event's spawns, unlocks and settled outcomes (Steady Growth, Transcendent
+Embryo, Judgment, Crystal Figurine) under its marker, and a notice whose cause the
+Timeline does not show at its end. Select wheel is an action row; leaving the room
+is the last row.
 
 A label is the action's verb (Buy for paid World Shop, Shrine and Well items
-and refills, Rush for rushed Shrine purchases, Collect for pickups including
+and refills, Rush for a bought Shrine item's rush, Collect for pickups including
 Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for
 rerolls) followed by what it takes. A reward is shown by its icon, with its
 name as the icon's accessible name and a mark for a Boosted variant; tags name
@@ -500,7 +529,8 @@ empty slot), never on the Pom. What produced a generated pickup is the engine's
 published source family: the row tells it as an origin hint shown on hover and
 focus and carried in its accessible description, and the Add area groups by
 it. Where the engine lets a pickup be goldified or transformed, the verb itself
-is the choice between collecting and those conversions; a Mystery Boon whose
+opens the live row's verb menu with its current way checked, and choosing
+another swaps the row's way in place; a Mystery Boon whose
 source the row authors shows its source picker in place of its name. Headings,
 drag previews and action controls share the projected label.
 
@@ -512,13 +542,15 @@ output, Fountain and other row decisions. A control appears only where the row
 uses it. The money column carries a purchase's price and chance to afford, or
 the gold the row gains or loses as the engine's gold ledger attributes it to
 that row, apart from fight gold, which shows as its fight's summary. The chance to afford tells on hover and focus the gold estimated to
-be held just before the purchase, with its spread; no banner repeats a running
+be held just before the purchase, with its spread; no marker repeats a running
 balance. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
-removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line, a Restock line: for a
-Shrine, the engine's refill source (the first rushed initial purchase made
-with Travel Deal); for a Well, its first purchase; for a World Shop, the
+removes the action, and a Rush row's delete control undoes only the rush. The
+row that triggers Travel Deal renders the refill's inventory controls as its
+second line, a Restock line: for a Shrine, the rush of the engine's refill
+source (the first initial rush made with Travel Deal); for a Well,
+its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
@@ -535,13 +567,13 @@ family, each group opening its short list; the optional pickups a room object
 produces sit beside that object. Loot the game spawns is not listed there: it
 is placed from its spawn row. A finding on an action marks its object or
 group entry, and navigating to the action opens its list. A Well
-or Pool offers buy or sell for each offered slot (a blank initial slot takes
-its item or trait in the same pick) and Reroll with its cost, disabled with a
+or Pool offers buy or sell for each offered slot and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
-or Rush for each unbought item, one pick and one Undo step either way; once
-its Travel Deal item is live, either offers to buy it, a blank one taking its
-item in the same pick; a Pedestal offers its collect. Every entry is
+for each unbought item and Rush for each bought one not yet rushed, one pick
+and one Undo step each; the purchase or rush Travel Deal restocks on opens
+its row's refill choice, and once its Travel Deal item is stocked, either
+offers to buy it; a Pedestal offers its collect. Every entry is
 shown while its object is present and is disabled with the reason when nothing
 can be done there (everything bought or sold, the only option left a reroll
 that cannot be made, the item collected or not yet chosen, the pedestal
@@ -549,9 +581,11 @@ inactive). One pick appends one action at its last legal position, which its
 reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
-Where the game spawns loot, a read-only spawn row follows the moment (room
-entry, an encounter's end, an O phase's wheel reward, the Preboss delivery
-flush, read as Delivered) or sits under the action whose settlement spawns it.
+Where the game spawns loot, a read-only spawn row follows the entry the
+engine names as the moment's cause (room entry, an encounter's end, an O
+phase's wheel reward, the Preboss delivery flush, read as Delivered; an
+encounter's begin shown with its Combat follows that one marker) or sits under
+the action whose settlement spawns it.
 It lists the items in spawn order as chips, grouped by what spawned them (a
 boon, keepsake, NPC, the Hermes Shrine, the Artificer, Sea Star or a switch);
 the room's own reward and Fields slots stand alone. It shows exactly the
@@ -579,20 +613,21 @@ the World Shop.
 A room's doors are rows of its Timeline, in the tab whose phase opens them (a
 Ship's last phase). They appear once the walk reaches the doors opening: a
 room whose walk stops before it, or at a row after it (a Postboss purchase
-after the fountain), shows neither its doors on **Doors open** nor its Leave
-row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors open** banner holds the doors'
-compact state at its right end: one chip per door, each its room's icon then
-its rewards' icons as first drawn, the picked door outlined and a missing door
-dashed; a fixed exit (a boss door, the next biome) is one chip of its
+after the fountain), shows neither its doors on **Doors opened** nor its Leave
+row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors opened** marker holds the doors'
+compact state on its line: one chip per door, each its room's icon then
+its rewards' icons as first drawn, the picked door outlined and a door still
+waiting on its room or on a reward it shows dashed; a fixed exit (a boss door, the next biome) is one chip of its
 destination, and an Ephyra room's hidden return door is a chip of its own.
-Beside the chips a disclosure shows or hides the doors' editor, which follows
-the banner as one full-width line: the batch rules (pool line, Fields roll and
-cage facts, a boss door's pool), then the shared door table without selection
-controls. The editor stays collapsed until it needs attention: a finding on
-any owner it repairs, the room's doors being the next required input, or
-navigation to a door owner or one of their findings opens it. An explicit open
-or close is remembered per room for the session (neither authored nor in
-history) and yields only to attention it has not yet seen.
+The marker's name and its chips are one control, **Edit doors**, that opens
+the whole moment's editor in one popover: the batch rules (pool line, Fields
+roll and cage facts, a boss door's pool), then the shared door table without
+selection controls. Hovering or focusing any part of the line selects the whole
+moment, never one chip. The popover opens only when asked: a click, or
+navigation to a door owner or one of their findings. A finding on any owner it
+repairs marks the line but never opens it. An explicit open or close is
+remembered per room for the session (neither authored nor in history) until
+the next navigation.
 The table's header ends in one quiet red action that removes the batch.
 
 The room's last Timeline row says how it is left. **Leave room** is one picker
@@ -663,12 +698,13 @@ A row's position changes only through its reorder handle, by pointer drag or
 by keyboard (pick up, step, drop, cancel), over the positions the engine's
 proposals publish. The keyboard steps through legal positions only; a pointer
 over a disallowed position names why, from that proposal's explanation. The
-start of each banner's section is a drop anchor, and a move announcement names
+start of each marker's section is a drop anchor, and a move announcement names
 the Ship phase it crosses into. A row with no legal move keeps a quieter
 disabled handle, and a row that can never be removed a quieter disabled
 delete, so the trailing columns stay put. The timeline legend explains the
-row accents (optional, required before the phase ends, required before leaving
-the room, automatic) and the chance-to-afford pill.
+three row kinds (required, optional, automatic), each told apart by colour and
+line style, and the chance-to-afford pill. Required merges the engine's
+before-this-phase-ends and before-leaving scopes in presentation only.
 
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
@@ -700,18 +736,18 @@ child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
 ShipCombat is the deliberate fourth shape. Its tabs are Room Overview, then one
-Timeline per phase named by the phase: Intro, Combat 1, and Combat 2 when it is
-structurally active. Overview owns encounter count, every phase's encounter
-and room features. Each phase tab holds its encounter banners and their events
+Timeline per phase named by the phase: Intro, Phase 1, and Phase 2 when it is
+structurally active. Overview owns the phase count, every phase's encounter
+and room features. Each phase tab holds its encounter markers and their events
 and its post-combat actions. A phase a wheel follows then opens that wheel at
-**Wheels open**, like Doors open: its offers' chips and the wheel's editor
+**Wheels opened**, like Doors opened: its offers' chips and the wheel's editor
 (pool and offer count, then its offers as first drawn). The pickups the phase's
 end spawned and the wheel-offer rerolls, press rows added from the phase's
 **Wheel** object, follow in their authored order, and the phase ends with
 **Select wheel** at the choice's place, which picks the offer by its
 name and shows its reward as it stands; a one-offer wheel has nothing to pick.
 While the walk stops before the choice, Select wheel stands at the last wheel
-banner reached. The last phase keeps Doors open and Leave room, since a Ship room
+marker reached. The last phase keeps Doors opened and Leave room, since a Ship room
 leaves through ordinary doors.
 The groups are views over one interaction and one authored order: global ranks,
 proposals, pointer drag, keyboard moves, and Undo are unchanged. The application
@@ -729,7 +765,8 @@ navigation, and its remaining door-specific identity controls; Anomaly
 identity/revert remains on its door. The Nemesis random event is an encounter
 choice of its phase's identity picker, the H Passive phase included, where it
 replaces the passive encounter as in the game. Once selected, its family is
-chosen beside that picker in the Overview and its outcome on the Timeline
+chosen beside that picker in the Overview, a family the engine refuses on entry
+shown disabled with its reason, and its outcome on the Timeline
 interaction row; H projects the outcome editor at the required Passive event
 row and uses the engine-derived optional-count maximum. Incoming room identity
 and door-visible reward are read-only context in an entered occurrence; their
@@ -771,10 +808,10 @@ its lock as the hint (unreached, or a challenge switch in the room). The room
 locks its doors exactly while one is locked. A locked door's press is an option of the room's Doors object, beside
 its rerolls, so the object appears for a locked door even without rerolls; the
 press row carries the fight's Combat entry, the same encounter customization
-editor. The Leave room picker offers only the doors the engine publishes as
+editor, which the door editor never repeats. The Leave room picker offers only the doors the engine publishes as
 open at leave, keeping a saved pick of a still-locked door, which carries its
-finding. That finding and any finding on a door's press count as the door
-editor's attention.
+finding. That finding and any finding on a door's press mark the Doors opened
+line.
 
 ### Wheel offers
 
@@ -783,7 +820,8 @@ picker, with no arrow, since a wheel has no separate counted store) beside its
 offer count, then its active offers as rows of the door table: offer label (L
 Offer and R Offer, or Offer alone) and reward, each as first drawn. They remain
 rewards, not doors: no room selector, door number, map or topology interaction
-is introduced. Each wheel opens on the phase it follows, and the next room's
+is introduced. Each wheel opens on the phase it follows, its **Wheels opened**
+line opening its editor in a popover as the doors' line does, and the next room's
 doors show the last active wheel's pool as a plain value.
 
 The chronological Choose action does not duplicate card selection with another
@@ -795,10 +833,10 @@ offer or phase count hides dormant editors without deleting retained values.
 
 A Fields occurrence workbench projects one optional-count control, one active
 inventory row per spawned optional, and one engine-owned mixed chronology.
-One staged Combat Order picker above Room entered displays cage identities and
-rewards. Only the final selection commits the complete permutation as one
-semantic edit; closing an unfinished picker leaves the chronology unchanged.
-Encounter-cycle headings show their assigned cage as a read-only label.
+Each cage's locked reward has an Unlock row, an ordinary movable row naming
+that reward and its cage. The row is the trigger of the cage's encounter, so
+the cages are reordered by moving their Unlock rows. The encounter's markers
+name their cage, and its end releases the reward, whose Collect row follows.
 Inventory rows own reward payload and acquisition disposition. An optional
 pickup joins the chronology from its chip on the room-entry spawn row and leaves
 it by its row's removal; the
@@ -907,8 +945,8 @@ row per exit: its door name (a door number, with any door
 type such as Indoor muted beneath it, or Contract or Chaos Gate), its room, its
 reward, an action zone, and its map, pinned last at the table's right edge.
 The zone holds the row's actions and notices (an Anomaly replacement or
-restoration, a reroll repair, a hidden reward's tag) without moving the reward
-or the map. Normal doors, takeover doors and additional exits (Chaos Gate,
+restoration, each an icon of what the door becomes with an action badge, a
+reroll repair, a hidden reward's tag) without moving the reward or the map. Normal doors, takeover doors and additional exits (Chaos Gate,
 Infernal Contract) share these columns, and the table keeps a working width
 rather than stretching across the panel. Each row names its room once; a value
 the declaration fixes (a takeover room, an additional exit's room or reward,

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +24,13 @@ describe('recipe-backed checkpoint regeneration', () => {
         );
         return;
       }
-      writeFileSync(path, regenerated);
-      expect(readFileSync(path, 'utf8')).toBe(regenerated);
+      // A checkpoint keeps the revision it was written under unless its content changed.
+      if (
+        !existsSync(path) ||
+        withoutSchemaRevision(readFileSync(path, 'utf8')) !== withoutSchemaRevision(regenerated)
+      ) {
+        writeFileSync(path, regenerated);
+      }
     },
   );
 });

@@ -714,16 +714,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'hermesShrinePlacementUnavailable':
       return { kind: 'generic', message: 'This ordinary Shrine is outside its placement window.' };
     case 'hermesShrineDeliveryPlacementRequired':
-      return {
-        kind: 'acquisition',
-        message: 'Restore this missing Shrine delivery at its due room.',
-      };
     case 'echoGoldPickupPlacementRequired':
-      return {
-        kind: 'acquisition',
-        message: 'Restore this missing Gold Gold Gold pickup on the Timeline.',
-      };
+      return presented('acquisition', finding);
     case 'roomActionOrderUnavailable':
+    case 'roomActionItemReplaced':
     case 'roomActionPlacementRequired':
       return presented('generic', finding);
     case 'hermesShrineInventoryMissing':
@@ -808,6 +802,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'encounter', message: 'Choose the result of this Nemesis event.' };
     case 'nemesisOutcomeUnavailable':
       return { kind: 'encounter', message: 'Choose a Nemesis result legal at this interaction.' };
+    case 'nemesisEventUnavailable':
+      return { kind: 'encounter', message: 'Choose a Nemesis event type she can offer here.' };
     case 'echoLastRunBoonMissing':
       return { kind: 'trait', message: 'Choose one to three boons from the previous run.' };
     case 'echoLastRunBoonOptionUnavailable':
@@ -935,12 +931,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'rewardPayloadInvalid':
       return { kind: 'payload', message: 'These reward details are not valid.' };
     case 'rewardMissing':
+    case 'rerollResultMissing':
       return { kind: 'reward', message: 'Choose this reward.' };
     case 'phantomExitPlaceholderUnavailable':
       return { kind: 'reward', message: 'This room cannot fill the hidden door here.' };
     case 'phantomExitRewardUnavailable':
       return { kind: 'bag', message: 'This room’s pool cannot draw this reward here.' };
-    case 'rerolledRewardMismatch':
     case 'rerollUnavailable':
     case 'rerollTargetUnavailable':
     case 'rerollPoolExceeded':

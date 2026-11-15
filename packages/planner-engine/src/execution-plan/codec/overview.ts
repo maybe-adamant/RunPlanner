@@ -6,6 +6,7 @@ import {
   fail,
   integer,
   object,
+  oneOf,
   stringArray,
   stringValue,
 } from './primitives';
@@ -87,25 +88,32 @@ function executionLockedExits(value: unknown, label: string) {
   return Object.freeze(exits);
 }
 
-/** An object's optional `ChallengeSwitchBase` anchor. */
+/** An object's `ChallengeSwitchBase` anchor: stored, drawn or the Well's pin. */
 function anchorId(record: Readonly<Record<string, unknown>>, label: string) {
-  return record.anchorId === undefined
-    ? {}
-    : { anchorId: integer(record.anchorId, `${label}.anchorId`, 1) };
+  if (record.anchorId === undefined) fail(`${label}.anchorId is required`);
+  return { anchorId: integer(record.anchorId, `${label}.anchorId`, 1) };
 }
 
 /** The room's flip and entry where they are determined. */
 function roomLayout(value: unknown, label: string): import('../model').ExecutionRoomLayout {
   const record = object(value, label);
-  exact(record, [], ['flipped', 'entry'], label);
-  if (record.flipped === undefined && record.entry === undefined)
-    fail(`${label} must be non-empty when present`);
+  exact(record, ['flipped'], ['entry', 'derived'], label);
   const entry = record.entry === undefined ? undefined : object(record.entry, `${label}.entry`);
   if (entry !== undefined) exact(entry, ['startPointId', 'endPointId'], [], `${label}.entry`);
+  const derived =
+    record.derived === undefined
+      ? undefined
+      : array(record.derived, `${label}.derived`).map((value, index) =>
+          oneOf<'flipped' | 'entry'>(value, ['flipped', 'entry'], `${label}.derived[${index}]`),
+        );
+  if (derived !== undefined) {
+    if (derived.length === 0) fail(`${label}.derived must not be empty`);
+    if (new Set(derived).size !== derived.length) fail(`${label}.derived has duplicate values`);
+    if (derived.includes('entry') && entry === undefined)
+      fail(`${label}.derived names an entry it does not publish`);
+  }
   return Object.freeze({
-    ...(record.flipped === undefined
-      ? {}
-      : { flipped: booleanValue(record.flipped, `${label}.flipped`) }),
+    flipped: booleanValue(record.flipped, `${label}.flipped`),
     ...(entry === undefined
       ? {}
       : {
@@ -114,6 +122,7 @@ function roomLayout(value: unknown, label: string): import('../model').Execution
             endPointId: integer(entry.endPointId, `${label}.entry.endPointId`, 1),
           }),
         }),
+    ...(derived === undefined ? {} : { derived: Object.freeze(derived) }),
   });
 }
 
@@ -267,12 +276,10 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
   const optionalRewards = Object.freeze(
     array(record.optionalRewards, `${label}.optionalRewards`).map((entry, index) => {
       const row = object(entry, `${label}.optionalRewards[${index}]`);
-      exact(row, ['slotKey', 'reward'], ['pointId'], `${label}.optionalRewards[${index}]`);
+      exact(row, ['slotKey', 'pointId', 'reward'], [], `${label}.optionalRewards[${index}]`);
       return Object.freeze({
         slotKey: stringValue(row.slotKey, `${label}.optionalRewards[${index}].slotKey`),
-        ...(row.pointId === undefined
-          ? {}
-          : { pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1) }),
+        pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1),
         reward: reward(row.reward, `${label}.optionalRewards[${index}].reward`),
       });
     }),
@@ -280,7 +287,6 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
   if (new Set(optionalRewards.map((entry) => entry.slotKey)).size !== optionalRewards.length)
     fail(`${label}.optionalRewards has duplicate slot keys`);
   for (const entry of optionalRewards) {
-    if (entry.pointId === undefined) continue;
     if (pointIds.has(entry.pointId)) fail(`${label} reuses a Fields point ID`);
     pointIds.add(entry.pointId);
   }
@@ -794,7 +800,7 @@ export function overview(value: unknown, label: string) {
     well === undefined
       ? undefined
       : Object.freeze({
-          offers: wellOffers(well.offers, 'initial', `${label}.stygianWell.offers`),
+          offers: initialWellOffers(well.offers, `${label}.stygianWell.offers`),
           ...(well.rerolls === undefined
             ? {}
             : {
@@ -802,10 +808,13 @@ export function overview(value: unknown, label: string) {
                   well.rerolls,
                   `${label}.stygianWell.rerolls`,
                   (row, rollKey, path) => {
-                    exact(row, ['rollKey', 'offers'], [], path);
+                    exact(row, ['rollKey', 'offers'], ['boughtSlots'], path);
+                    const offers = wellOffers(row.offers, rollKey, `${path}.offers`);
+                    const boughtSlots = wellBoughtSlots(row.boughtSlots, rollKey, offers, path);
                     return Object.freeze({
                       rollKey,
-                      offers: wellOffers(row.offers, rollKey, `${path}.offers`),
+                      offers,
+                      ...(boughtSlots === undefined ? {} : { boughtSlots }),
                     });
                   },
                 ),
@@ -816,12 +825,18 @@ export function overview(value: unknown, label: string) {
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined) exact(pool, ['traits'], ['rerolls', 'anchorId'], `${label}.purgingPool`);
+  if (pool !== undefined)
+    exact(pool, ['traits'], ['refreshTraits', 'rerolls', 'anchorId'], `${label}.purgingPool`);
   const parsedPool =
     pool === undefined
       ? undefined
       : Object.freeze({
           traits: poolTraits(pool.traits, `${label}.purgingPool.traits`),
+          ...(pool.refreshTraits === undefined
+            ? {}
+            : {
+                refreshTraits: poolTraits(pool.refreshTraits, `${label}.purgingPool.refreshTraits`),
+              }),
           ...(pool.rerolls === undefined
             ? {}
             : {
@@ -868,7 +883,9 @@ export function overview(value: unknown, label: string) {
           );
           if (row.kind !== 'chaos' && row.kind !== 'zagreusContract')
             fail(`${label}.additional[${index}].kind is unsupported`);
-          if (row.spawnPointIndex !== undefined && row.kind !== 'chaos')
+          if (row.kind === 'chaos' && row.spawnPointIndex === undefined)
+            fail(`${label}.additional[${index}].spawnPointIndex is required for Chaos`);
+          if (row.kind !== 'chaos' && row.spawnPointIndex !== undefined)
             fail(`${label}.additional[${index}].spawnPointIndex is Chaos-only`);
           const ixion =
             row.ixionOrigin === undefined
@@ -882,16 +899,16 @@ export function overview(value: unknown, label: string) {
               `${label}.additional[${index}].ixionOrigin`,
             );
           return Object.freeze({
-            kind: row.kind,
-            ...(row.spawnPointIndex === undefined
-              ? {}
-              : {
+            ...(row.kind === 'chaos'
+              ? {
+                  kind: 'chaos' as const,
                   spawnPointIndex: integer(
                     row.spawnPointIndex,
                     `${label}.additional[${index}].spawnPointIndex`,
                     1,
                   ),
-                }),
+                }
+              : { kind: 'zagreusContract' as const }),
             owner: stringValue(row.owner, `${label}.additional[${index}].owner`, MAX_OWNER_STRING),
             room: roomReference(row.room, `${label}.additional[${index}].room`),
             ...(ixion === undefined
@@ -1096,7 +1113,7 @@ export function overview(value: unknown, label: string) {
   });
 }
 
-const WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'];
+const WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'] as const;
 
 /** One Well roll's authored offers, each at a slot of that roll. */
 function wellOffers(
@@ -1125,6 +1142,41 @@ function wellOffers(
   if (new Set(offers.map((offer) => offer.generationKey)).size !== offers.length)
     fail(`${label} has duplicate generation keys`);
   return offers;
+}
+
+/** The initial Well roll: nothing is bought before it, so it stocks all three slots. */
+function initialWellOffers(value: unknown, label: string) {
+  const offers = wellOffers(value, 'initial', label);
+  if (offers.length !== 3)
+    fail(`${label} must stock the healing, secondLeft and secondRight slots`);
+  return offers;
+}
+
+/**
+ * A Well reroll's slots bought before it, which the game blanks: present only
+ * when non-empty, and with the restocked offers exactly the three slots.
+ */
+function wellBoughtSlots(
+  value: unknown,
+  rollKey: string,
+  offers: readonly import('../model').ExecutionWellOffer[],
+  label: string,
+): readonly (typeof WELL_SLOT_KEYS)[number][] | undefined {
+  const bought =
+    value === undefined
+      ? []
+      : array(value, `${label}.boughtSlots`).map((entry, index) =>
+          oneOf<(typeof WELL_SLOT_KEYS)[number]>(
+            entry,
+            WELL_SLOT_KEYS,
+            `${label}.boughtSlots[${index}]`,
+          ),
+        );
+  if (value !== undefined && bought.length === 0) fail(`${label}.boughtSlots must not be empty`);
+  const offered = offers.map((offer) => offer.generationKey.slice(rollKey.length + 1));
+  if (new Set([...offered, ...bought]).size !== 3 || offered.length + bought.length !== 3)
+    fail(`${label} offers and boughtSlots must be the healing, secondLeft and secondRight slots`);
+  return value === undefined ? undefined : Object.freeze(bought);
 }
 
 /** A Well's or Pool's rerolls in action order, each named by a distinct reroll id. */

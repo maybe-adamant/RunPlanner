@@ -94,15 +94,22 @@ and violated internal contacts throw contract errors rather than masquerading
 as user findings.
 
 `settleProjectEdit` composes a structural command with exact delivery and
-pickup reconciliation and derived required-action activation before
-application history publication. It consumes the before assembly and returns
-the final project and its exact assembly.
+pickup reconciliation before application history publication. It consumes the
+before assembly and returns the final project and its exact assembly.
 
-- Required Hermes obligations are inserted at reached due contacts read from
-  the Hermes delivery obligation product; optional clocked pickups are never
-  accepted automatically.
-- A delivery the edit proves displaced (valid before, invalid now) moves: it
-  is unplaced and placed again at its reached due contact. A displaced clocked
+- Settlement stocks every blank stock slot the walk reaches
+  ([Stock filled on first reach](#stock-filled-on-first-reach)) once nothing
+  else is repaired; it places no row.
+- Settlement places nothing the owner has not placed: a due Hermes delivery,
+  Gold Gold Gold's duplicate and a matured clocked pickup arrive on their own
+  and lie live until the owner places their pickup, and an unplaced required
+  one stops the walk at its deadline with its placement finding.
+- A placed delivery the edit proves displaced (valid before, invalid now: the
+  walk has it due at another host) loses its row first. Then a row on a
+  replaced item, a delivery, a rerolled reward and an Echo replay the edit
+  replaced are all judged and repaired by one
+  [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone): a
+  delivery due at another host arrives there as a new item. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly
@@ -110,9 +117,9 @@ the final project and its exact assembly.
 - Settlement carries out the policy for
   [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   in every room the evaluation reaches: it judges each room-action row by what
-  the edit changed, comparing the walk before and after it, and removes,
-  re-keys or keeps the row as that policy classifies it, through the row's
-  owning removal command. Every generated batch's doors are settled the same
+  the edit changed, comparing the walk before and after it, and removes or
+  keeps the row as that policy classifies it, through the row's owning
+  removal command. Every generated batch's doors are settled the same
   way to its source room's declared exits, as
   [exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity) defines; a door
   its source room lacks is never published. An installed route is not
@@ -120,9 +127,9 @@ the final project and its exact assembly.
 - The settlement names, by room, the removals the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
-  from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
-  address names or nests. Rows a rekey replaced and a delivery placed again
-  elsewhere are never named.
+  from other rooms with their source, the doors a room lost and the replaced
+  items whose observations it discarded. The room an edit addresses is the occurrence its command's
+  address names or nests.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A batch whose doors cannot
@@ -139,7 +146,7 @@ sequenceDiagram
   App->>Eng: semantic command + before assembly
   Eng->>Eng: apply structural command
   loop while an obligation or displaced owner remains
-    Eng->>Eng: edit settlement (timed effects, required actions)
+    Eng->>Eng: edit settlement (displaced pickups, rows gone)
     Eng->>Eng: re-evaluate the project
   end
   Eng-->>App: final project, assembly with findings and readiness
@@ -147,9 +154,10 @@ sequenceDiagram
 ```
 
 The upgrade settlement settles a plan saved before schema 103 the same way,
-once, silently, inside its 102 → 103 migration and with no command. With no
-walk before an edit, it removes only rows the plan itself shows lost their
-context or source, as the
+once, silently, inside its 102 → 103 migration and with no command, after a
+plan saved before 99 has its timed outcomes recovered. With no walk before an
+edit, it removes only rows the plan itself shows lost their context or source,
+as the
 [policy's upgrade paragraph](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
 lists; every batch's doors settle, and a row whose loss the plan cannot show,
 such as every reroll whose reward is gone, stays with its finding. Loading a
@@ -257,10 +265,13 @@ and shows read-only with the unreached hint, which follows coverage, not
 readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
-queried command owners. Jointly generated products, such as a Hub board or
-side-room sibling generation set, remain atomic. A Hub's missing next visit is
-its outgoing decision: the Hub's board, stays and fountain and every settled
-visit with its side rooms stay editable, while later visits, the interiors of
+queried command owners. A timed outcome (Steady Growth, Transcendent Embryo)
+is addressed by its source but located where its cycle lands, for the horizon
+and its own edits alike; a cycle the walk has not landed lies past the horizon.
+Jointly generated products, such as a Hub board or
+side-room sibling generation set, remain atomic. A Hub's missing next visit or
+fountain use is its outgoing decision: the Hub's board, stays and fountain and
+every visit settled before it with its side rooms stay editable, while later visits, the interiors of
 board rooms no settled visit entered and the Hub's exit are locked. The
 application applies this product; it does not infer chronology from tabs, rail
 order, a target index or the component containing the finding.
@@ -365,12 +376,12 @@ engine contract.
 Where the cut falls follows the room's
 [stages](ROOM_LIFECYCLE_MODEL.md#room-stages):
 
-| Block                                                                                                                                                                                                                                                                                               | Cut and published products                                                                                                                                                                                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview: anything fixed on entry, such as the room's layout, its objects' anchors, Shop, Shrine, Well or Contract inventory, a challenge switch's placement, encounter or elite, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
-| Timeline, including the doors opening                                                                                                                                                                                                                                                               | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
-| Exit work                                                                                                                                                                                                                                                                                           | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
-| The next room                                                                                                                                                                                                                                                                                       | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                |
+| Block                                                                                                                                                                                                                                                                                               | Cut and published products                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview: anything fixed on entry, such as the room's layout, its objects' anchors, Shop, Shrine, Well or Contract inventory, a challenge switch's placement, encounter or elite, any phase's encounter identity, composition, customization or introduction, or a picked host's resource placement | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, the Fields cages' spawn with its Forfeit and keepsake decisions) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
+| Timeline, including the doors opening                                                                                                                                                                                                                                                               | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                                                                      |
+| Exit work                                                                                                                                                                                                                                                                                           | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                                                                      |
+| The next room                                                                                                                                                                                                                                                                                       | The source room has committed and exited first: its Shop completion, resource element grants and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                                                                |
 
 Overview assessments read only entry state, never a Timeline product. The
 blocking product is the engine atomic region of the blocking finding, so every
@@ -388,25 +399,26 @@ so the entry stands with its controls to repair it; a stop **before** its
 entry did not reach it. The stop is where the walk actually stopped, never
 past it: it claims no entry the walk did not pass.
 
-| Stop                                                                                                                                       | Entry                                                                                                      | Reached |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------- |
-| Overview                                                                                                                                   | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
-| A Timeline row                                                                                                                             | The first row of the blocking product the walk reached by the contact                                      | At      |
-| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**)           | That entry                                                                                                 | At      |
-| A door's generation or offer, or the store the doors draw from                                                                             | **Doors open**                                                                                             | At      |
-| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Wheels open** | That boundary                                                                                              | At      |
-| Any other Timeline contact, such as an unplaced required action                                                                            | The entry after the last boundary the walk passed before the contact                                       | Before  |
-| Exit work, after the room committed or as a restored room departs again                                                                    | Past every entry                                                                                           | Before  |
+| Stop                                                                                                                             | Entry                                                                                                      | Reached |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
+| Overview                                                                                                                         | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
+| A Timeline row                                                                                                                   | The first row of the blocking product the walk reached by the contact                                      | At      |
+| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**) | That entry                                                                                                 | At      |
+| A door's generation or offer, or the store the doors draw from                                                                   | **Doors open**                                                                                             | At      |
+| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome, a wheel's offers at **Wheels open**          | That boundary                                                                                              | At      |
+| A required item left unplaced, at its deadline                                                                                   | The first entry the walk did not reach; a deferred Ship phase's end is reached at its completion           | Before  |
+| Any other Timeline contact                                                                                                       | The entry after the last boundary the walk passed before the contact                                       | Before  |
+| Exit work, after the room committed or as a restored room departs again                                                          | Past every entry                                                                                           | Before  |
 
 The blocking product's rows are the row whose own contact the blocking region
 is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
 that settles an owner of the region: besides a row's own acquisition or reward,
 the Keepsake Rack settles its selection and equip result, a fountain use its
-rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's Twist
-is judged at the refill purchase, so its row) and its initial or rolled item,
-and a Shrine purchase its initial item. A Travel Deal restock is judged at the
-earlier purchase that restocks it and a Pool list as the fountain opens it, so
-neither has a row. A row is claimed only when the walk reached it at or before
+rarity outcome and the Pool list it makes the Pool regenerate, a Well purchase
+its Fateful Twist (a Travel Deal refill's Twist is judged at the refill
+purchase, so its row) and its initial or rolled item, and a Shrine purchase its
+initial item. A Travel Deal restock is judged at the earlier purchase that
+restocks it, so it has no row. A row is claimed only when the walk reached it at or before
 the blocking contact: never a later row of the same stretch of the Timeline,
 nor a wheel's choice row while its offers block at **Wheels open**, which
 settles with them. A deferred Ship wheel's post-combat rows run before its
@@ -538,27 +550,81 @@ entry with the whole-layout edit that picks it, and the layout query adds
 both rolled flips, so no offered edit reaches a combination the rule rules
 out.
 
-### Position defaults
+### Positions filled on first reach
 
-Every positioned item the game would place at random has a position: its
-stored one, the owner's choice, or a stable default derived on every
-evaluation and never stored. The items are a rolled flip and an entry the
-game picks among ties, each anchor object, each active Fields cage, optional
-reward and Nemesis slot, and a Chaos gate's spawn point; whatever the room or
-its arrival door decides stays derived. Each item scores every eligible point
-by a stable hash of its semantic identity and the point, and takes its best
-point that no stored position or earlier claim holds. Items of one room
-claim in the game's spawn order: anchor objects in native order (the Well's
-pin is its own, never a default), Fields cages, then optional rewards, then
-Nemesis off its excluded points. Choosing one item's position therefore moves
-only the defaults it displaces, directly or in turn. A rolled flip defaults first and
-the entry among those the flip allows, without narrowing the entries offered.
-A stored position is kept when it becomes invalid and raises its finding; a
-default re-derives and raises none. An item left no free point has no
-position, which only an invalid or over-capacity room can reach. Authoring
-products, the Chaos gate's included, mark each position chosen or default; execution publishes both
-alike, so the runtime steers every one. Draft and the run import leave
-positions unset and take the defaults.
+Every positioned item the game would place at random has a stored position,
+filled once like [stock](#stock-filled-on-first-reach): the edit whose
+settlement first reaches a room stores, as part of that edit, a position for
+each such item it holds without one, so one Undo reverts both. The items are a
+rolled flip, an entry the game picks among several the flip allows, each
+anchor object, each active Fields cage, optional reward and Nemesis slot, and a
+Chaos gate's spawn point; whatever the room or its arrival door decides stays
+derived and unstored. Each blank item scores every eligible point by a stable
+hash of its semantic identity and the point, and takes its best point that no
+stored position or earlier claim holds. Items of one room claim in the game's
+spawn order: anchor objects in native order (the Well's pin is its own, never
+stored), Fields cages, then optional rewards, then Nemesis off its excluded
+points; a rolled flip draws first and the entry among those the flip allows.
+The walk reads the same draw for an item still blank, so storing it leaves the
+walk unchanged and the fill is collision-free: an edit whose only fills are
+positions publishes the walk that drew them, with no second walk, while a
+stocked slot changes what the walk judges and is walked again.
+
+After that a stored position changes only when the owner changes it. Two items
+on one point, or a point an upstream edit makes ineligible, keep their values
+and raise their findings; nothing is re-claimed or displaced. Filling a
+position is not an edit of its room: it removes no retained stale row there.
+Filling stock is: stock changes what the room and later rooms can buy, sell or
+reroll, while a position can at most collide with another position in its own
+room. An item left no free point stays blank, which only an invalid or
+over-capacity room can reach. Authoring products show stored positions only;
+execution publishes every reached position. Draft and the run import take the
+filled positions; the import writes the record's points over them. Loading a
+plan saved before positions were stored fills its reached blanks once, the
+same way.
+
+### Stock filled on first reach
+
+A Stygian Well's rolls, Travel Deal restock and Fateful Twist results, a
+Hermes Shrine's items and Travel Deal refill, a Pool of Purging's lists, a
+World Shop's items and Travel Deal item and an Infernal Contract pedestal's
+item are stored, never derived. A blank
+slot the walk reaches is an incomplete finding where it is generated, and the
+edit whose settlement first reaches it stocks it as part of that edit, so one
+Undo reverts both. The stock is a stable legal draw: each slot scores its
+legal values, those the slot's generation contact admits there, by a stable
+hash of its semantic identity and the value, and takes its best value that no
+stored slot or earlier claim of the same group holds. A draw never takes an
+item the game offers only on live hero state the planner does not model, such
+as a Last Stand item, offered only while the hero is missing a Last Stand; the
+owner may still choose one. Slots claim in slot order; a reroll's last drawn
+slot avoids repeating every item on show before it, which the game's ban rules
+out. A World Shop stocks one slot at a time,
+each from the values its joint inventory admits beside its stocked peers. A
+Travel Deal restock draws under its triggering purchase's identity, a World
+Shop's from the restocked slot's values. A Contract pedestal, spawned once the
+walk reaches its Preboss holding the Contract, draws from the options its slot
+admits after every other stock is filled, as its draw sees the Shop its room
+stocked first.
+
+A stored value an upstream edit makes illegal keeps its value and raises its
+finding, with two exceptions. A Pool list that an edit makes stale (a listed
+boon the edit leaves unchanged, which the walk did not judge stale before it,
+is no longer held or eligible where the list is judged) is redrawn in the
+same edit on its unsold slots, as the game regenerates it; sold slots keep
+their trait and a list showing fewer slots blanks the rest. A list already stale before the edit, including one
+whose value the owner set to a boon not held, keeps its values and finding
+through every later edit that does not change them. A Travel Deal restock
+(World Shop, Shrine or Well) whose triggering purchase or rush the edit
+changed is a new item: the old item and its purchase go and a new one is
+drawn.
+
+Rolls of one Well or Pool are stocked in the order they are shown, each
+after the ones before it are stored, so a reroll's ban sees what was on show.
+A slot with no legal value stays blank with its finding and does not stop
+later slots from stocking. Loading a plan only stocks its blank reached
+slots, the same way, so a loaded plan is complete; a stale Pool list it holds
+keeps its values and finding.
 
 ### Persistent and multi-phase rooms
 
@@ -644,14 +710,24 @@ engine-owned authoring queries publish what each of its objects allows there,
 each with the command that appends it: a Stygian Well's or Pool of Purging's
 offered slots and reroll with its cost, a World Shop's unbought items and its
 live Travel Deal item with the values the reached state can stock there, a
-Hermes Shrine's unbought items to buy or rush with its live refill,
+Hermes Shrine's unbought items to buy and bought ones to rush with its live refill,
 whether the Pedestal can be collected or why not, and an Oceanus lock host's
 lockable doors with each one's lock command (from entry), each locked door's
-press to append or its pressed fight, and the doors still locked when the
-room is left. A room's anchor query publishes its `ChallengeSwitchBase`
+press to append and its fight, generated at the press or, before the press is
+placed, where it would append, and the doors still locked when the room is
+left. A room's anchor query publishes its `ChallengeSwitchBase`
 anchors: each object it can hold in native spawn order (Well, Pool, Shrine,
-then switch), whether it is fixed, the anchor it takes, why native could not
-spawn it and the commands placing or removing it, and each anchor's choices.
+then switch, and a Pool its route excludes), whether it is fixed, the anchor
+it takes, why native could not spawn it and the commands placing or removing
+it, and each anchor's choices. Every room feature the owner can switch on
+states why it cannot appear in one shared vocabulary of typed refusals, each
+rule with its own values: the anchor objects', a Chaos gate's and an Infernal
+Contract door's at their reached source, and each resource spot's for every
+entered host of its family. A room that never holds the feature by its
+declarations (no host declaration, `SecretPoint` or anchor, or no Chaos room
+in its biome) is no toggle target and carries no such refusal; a source
+requirement names the rule that fails, the route standing in for save
+progression such as `ChaosUnlocked`.
 A structural authoring query answers, for any of those purchase commands, every
 index it may place its purchase at instead of appending.
 
@@ -659,14 +735,17 @@ The gold query prices each reached purchase from the price facts its
 settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)
 from the gain facts each contact published: each room reached through its exit
 reports its gains, spending and balances, and each purchase the balance before
-it and the chance that balance covers its price. It is guidance, never a
-finding, and never refuses an edit; past coverage a value is unavailable, not
-zero.
+it and the chance that balance covers its price. A purchase is found by the
+owner of its row, and a Shop purchase also by the Shop offer it buys. It is
+guidance, never a finding, and never refuses an edit; past coverage a value is
+unavailable, not zero.
 
 ### Reroll settlement
 
 Every reroll spend and every hidden draw is settled in the walk at its own
-point, never by a side pass. Door, cage, wheel and Hub presses settle at
+point, never by a side pass. A press whose result the owner has not set is a
+required missing input: the walk stops at it with its result's candidates,
+and publication, which takes complete plans only, never sees one. Door, cage, wheel and Hub presses settle at
 their rank as real store draws against every target's current reward; a
 rerolled owner then offers its current reward onward and acquires the reward
 held beside its first draw. A hidden return door settles at its room's first
@@ -686,7 +765,7 @@ under the fixed-budget rule, judged by the pool at the new spend's own point, so
 earlier spend takes precedence over the later spends it starves. Engine-owned authoring
 queries publish, at each reached reroll surface, the pool there, whether a
 held card enables it, each target's settled current reward and why a press
-would be refused, candidates for a press not yet inserted, and each Hub
+would be refused, and each Hub
 stay's board: every open door, whether a visit has cleared it, its first draw,
 its current reward and the presses that drew it up to and within that stay.
 The board's draw order is published from the authored open set alone, so an
@@ -753,7 +832,8 @@ Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required
 action remains incomplete. Stale roster rows are never executed and create no
-findings; a Purging Pool sale of a trait the game cannot sell is an active,
+findings; a row on a replaced item is never executed and stops the walk with
+its own finding; a Purging Pool sale of a trait the game cannot sell is an active,
 invalid row with its finding, like a Shop purchase past the god cap.
 The walk enforces the [roster's](ROOM_LIFECYCLE_MODEL.md#roster) required-first
 order as placement does: a row ranked before a required action of an earlier
@@ -772,8 +852,13 @@ Three responsibilities stay separate:
 Generated pickup placement assessment is separate from required participation
 and reward completeness. Hermes deliveries and clocked trait pickups publish
 exact source, entry and reached-contact evidence as valid, invalid or unassessed.
-Rejection at the reached state proves invalidity; with no reached state the
-placement is unassessed. Missing candidate capability is not evidence of a stale source.
+Their arrival is the walk's, never stored: a row is valid in the room the walk
+has the item due in, after its due spawn and before its deadline, which the
+[required-object rule](ROOM_LIFECYCLE_MODEL.md#live-at-a-point) names. A row
+before the spawn takes nothing and carries its order finding; a row past the
+deadline leaves the waiting row's order finding naming it. Rejection at the
+reached state proves invalidity (due in another room, or a source no longer
+held); with no reached state the placement is unassessed. Missing candidate capability is not evidence of a stale source.
 A valid placement with missing or mismatched reward details retains its reward
 repair instead of becoming an obsolete placement.
 
@@ -799,7 +884,7 @@ each purchase owns its own region: purchase, Contract, refill and Gold Gold
 Gold duplicate findings belong to their acquisition entry, and a Travel Deal
 refill inventory finding to the refill offer. Inventory generation failure
 belongs to the Shop's Overview with the relevant slots in evidence; only the
-close-time Echo Gold pickup placement finding is Shop-wide. A purchase order
+Echo Gold pickup placement finding, at its deadline, is Shop-wide. A purchase order
 that loses the reached state without an entry finding is a broken engine
 contract.
 A sequence failure belongs to chronology, not every supported sibling. Missing
@@ -815,10 +900,10 @@ Aetos or Gorgon finding at the fight's [Encounter outcome](ROOM_LIFECYCLE_MODEL.
 so its control stands reached.
 
 Reroll findings belong to the press, the roll or the screen that made the
-spend: an unavailable target, reward or roll at its press or roll action, an
-over-spend at the spend that exceeded the pool, a rerolled reward that no
-longer matches its last press at the rerolled owner, and an earlier-screen
-finding at that screen of the offer. A hidden return door's unavailable
+spend: an unset or unavailable target, reward or roll at its press or roll action, an
+over-spend at the spend that exceeded the pool, and an earlier-screen finding
+at that screen of the offer. A rerolled owner acquires its effective press's
+result, so it has no finding of its own. A hidden return door's unavailable
 placeholder or reward belongs to its room's door.
 
 A Hub visit or side-room visit that enters a room visited before it, a

@@ -1,10 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress, type BiomeAddress } from '../addresses';
-import { resolveRoutePosition } from '../route-context';
-import { resolveEntryDeclaration, resolveEntryRoom } from '../room-state/entry-resolution';
-import { composeStartingReward, routeStartIncomingReward } from '../room-state/starting-reward';
-import { activeSelectedPickupProducers } from '../acquisition/pickup-producers';
-import { CHALLENGE_SWITCH_SITE_KEY } from '../acquisition/challenge-switch';
+import type { BiomeAddress } from '../addresses';
+import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
+import { resolveEntryRoom } from '../room-state/entry-resolution';
+import { composeStartingReward } from '../room-state/starting-reward';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -18,10 +16,11 @@ import {
   type RoomActionContribution,
   type RoomActionDomain,
 } from './domain';
-import { authoredRoomLifecycleProfileKey, roomLifecycleWindowOrdinal } from './lifecycle-structure';
+import { fieldsRoom, roomActionOpeningPoint, roomEventPlaces } from './event-graph';
+import { roomLifecycleProfileKey, roomRunsProducer } from './lifecycle-profile';
+import { clockworkDoors, forcedDoorReward } from '../clockwork-doors';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { roomActionKey } from './state';
-import { structurallyActiveOccurrenceIds } from '../topology/query';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
 
 function frozen<T>(value: T): T {
@@ -53,14 +52,13 @@ function score(
   action: RoomActionContribution,
 ): number {
   const reference = action.reference;
-  if (action.window.kind !== 'fields') {
-    const ordinal = roomLifecycleWindowOrdinal(domain.lifecycleStructure, action.window);
-    // Fields rows score from their cage order below; a later window follows all of them.
-    return domain.lifecycleStructure.profileKey === 'FieldsCombatRoom' &&
-      ordinal > roomLifecycleWindowOrdinal(domain.lifecycleStructure, { kind: 'fields' })
-      ? 10000 + ordinal * 100
-      : ordinal * 100;
-  }
+  // A Fields room's rows score from their cage order below.
+  const cagePhaseKey =
+    action.bounds.spawn.kind === 'encounterEnd' || action.bounds.spawn.kind === 'endEffects'
+      ? action.bounds.spawn.phaseKey
+      : undefined;
+  if (!fieldsRoom(domain.eventGraph))
+    return roomEventPlaces(domain.eventGraph)(roomActionOpeningPoint(action.bounds)) * 100;
   const phaseOrder = fieldsPhaseOrder(catalog, domain, order);
   if (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') {
     const ordinal = phaseOrder.indexOf(reference.phaseKey);
@@ -71,13 +69,13 @@ function score(
     return 2000 + Math.max(0, ordinal) * 200;
   }
   if (reference.kind === 'interactLocalReward' && reference.groupKey === 'cages') {
-    const ordinal = phaseOrder.indexOf(action.window.phaseKey ?? '');
+    const ordinal = phaseOrder.indexOf(cagePhaseKey ?? '');
     if (ordinal < 0) throw new Error(`${domain.declaration.gameName} cage reward has no phase`);
     return 2150 + ordinal * 200;
   }
   // A cage end's delivery or clocked drop is collected with its cage, after the reward.
-  if (reference.kind === 'interactAcquisitionEntry' && action.window.phaseKey !== undefined) {
-    const ordinal = phaseOrder.indexOf(action.window.phaseKey);
+  if (reference.kind === 'interactAcquisitionEntry' && cagePhaseKey !== undefined) {
+    const ordinal = phaseOrder.indexOf(cagePhaseKey);
     if (ordinal >= 0) return 2175 + ordinal * 200;
   }
   return 8000;
@@ -91,16 +89,13 @@ function sortedCohort(
 ): readonly RoomActionContribution[] {
   const pending = new Map(actions.map((action) => [roomActionKey(action.reference), action]));
   const contributionOrdinal = new Map(
-    domain.contributions.flatMap((entry, index) =>
-      entry.kind === 'action' ? [[roomActionKey(entry.reference), index] as const] : [],
-    ),
+    domain.contributions.map((entry, index) => [roomActionKey(entry.reference), index] as const),
   );
   const result: RoomActionContribution[] = [];
   while (pending.size > 0) {
     const ready = [...pending.values()].filter((action) =>
       action.dependencies.every(
         (dependency) =>
-          dependency.kind !== 'afterAction' ||
           !pending.has(roomActionKey(dependency.action)) ||
           result.some(
             (candidate) => roomActionKey(candidate.reference) === roomActionKey(dependency.action),
@@ -134,9 +129,7 @@ export function scheduleRequiredRoomActions(options: {
   readonly participation?: 'required' | 'any';
 }): readonly RoomActionReference[] {
   const authoredKeys = new Set(options.order.map(roomActionKey));
-  const activeActions = options.domain.contributions.filter(
-    (entry): entry is RoomActionContribution => entry.kind === 'action',
-  );
+  const activeActions = options.domain.contributions;
   const byKey = new Map(activeActions.map((action) => [roomActionKey(action.reference), action]));
   const contributionOrdinal = new Map(
     activeActions.map((action, index) => [roomActionKey(action.reference), index]),
@@ -153,7 +146,6 @@ export function scheduleRequiredRoomActions(options: {
     const actionScore = score(options.catalog, options.domain, result, action);
     let lowerBound = 0;
     for (const dependency of action.dependencies) {
-      if (dependency.kind !== 'afterAction') continue;
       const index = result.findIndex(
         (reference) => roomActionKey(reference) === roomActionKey(dependency.action),
       );
@@ -164,9 +156,7 @@ export function scheduleRequiredRoomActions(options: {
       const retained = byKey.get(roomActionKey(result[index]!));
       if (retained === undefined) continue;
       const retainedDependsOnAction = retained.dependencies.some(
-        (dependency) =>
-          dependency.kind === 'afterAction' &&
-          roomActionKey(dependency.action) === roomActionKey(action.reference),
+        (dependency) => roomActionKey(dependency.action) === roomActionKey(action.reference),
       );
       if (
         retainedDependsOnAction ||
@@ -186,72 +176,62 @@ export function scheduleRequiredRoomActions(options: {
   return frozen(result);
 }
 
-function activeDomains(
-  document: ProjectDocument,
+/**
+ * The lifecycle an authored occurrence runs where its plan places it, in its
+ * Hub role if it has one, and whether it runs its reward's producer: the same
+ * answers materialization publishes for the room.
+ */
+export function occurrenceLifecycle(
   catalog: Catalog,
-  biomeKeys: ReadonlySet<string>,
-): ReadonlyMap<string, RoomActionDomain> {
-  const result = new Map<string, RoomActionDomain>();
-  const route = document.route;
-  for (const plan of route.biomes) {
-    if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
-    if (plan.topology === null) continue;
-    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
-    const active = structurallyActiveOccurrenceIds(plan.topology);
-    for (const occurrence of plan.topology.occurrences.filter((candidate) =>
-      active.has(candidate.occurrenceId),
-    )) {
-      result.set(
-        JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
-        assembleRoomActionDomain({
-          catalog,
-          biome,
-          topology: plan.topology,
-          occurrence,
-          routePosition,
-          ...roomActionDomainContext(
-            catalog,
-            routePosition,
-            plan,
-            plan.topology,
-            occurrence,
-            route.loadout,
-          ),
-        }),
-      );
-    }
-  }
-  return result;
-}
-
-function changedBiomeKeys(before: ProjectDocument, proposed: ProjectDocument): ReadonlySet<string> {
-  const beforePlans = new Map(
-    before.route.biomes.map(
-      (plan) => [JSON.stringify([before.route.routeKey, plan.biomeKey]), plan] as const,
+  routePosition: ResolvedRoutePosition,
+  plan: AuthoredBiomePlan,
+  topology: BiomeTopology,
+  occurrence: RoomOccurrence,
+): { readonly lifecycleProfileKey: string; readonly producer: boolean } {
+  const rawDeclaration = catalog.rooms.byKey[occurrence.gameName];
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (rawDeclaration === undefined || layout === undefined)
+    throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
+  const entry = topology.startOccurrenceId === occurrence.occurrenceId;
+  const resolved = resolveEntryRoom(catalog, rawDeclaration, routePosition, entry);
+  const role = topology.decisions.some(
+    (decision) =>
+      decision.kind === 'localVisit' &&
+      Object.values(decision.targetsBySlot).some(
+        (target) => target.occurrenceId === occurrence.occurrenceId,
+      ),
+  )
+    ? 'localVisit'
+    : topology.decisions.some(
+          (decision) =>
+            decision.kind === 'hub' &&
+            decision.openTargets.some((target) => target.occurrenceId === occurrence.occurrenceId),
+        )
+      ? 'hubTarget'
+      : 'ordinary';
+  return Object.freeze({
+    lifecycleProfileKey: roomLifecycleProfileKey(resolved.declaration, role, occurrence),
+    producer: roomRunsProducer(
+      resolved,
+      entry,
+      forcedDoorReward(
+        clockworkDoors(catalog, layout, topology, plan.state),
+        occurrence.occurrenceId,
+      ),
     ),
-  );
-  const afterPlans = new Map(
-    proposed.route.biomes.map(
-      (plan) => [JSON.stringify([proposed.route.routeKey, plan.biomeKey]), plan] as const,
-    ),
-  );
-  return new Set(
-    [...new Set([...beforePlans.keys(), ...afterPlans.keys()])].filter(
-      (key) => beforePlans.get(key) !== afterPlans.get(key),
-    ),
-  );
+  });
 }
 
 function roomActionDomainContext(
   catalog: Catalog,
-  routePosition: import('../route-context').ResolvedRoutePosition,
+  routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
   loadout: ProjectDocument['route']['loadout'],
 ): {
   readonly lifecycleProfileKey: string;
+  readonly producer: boolean;
   readonly incomingRewardBinding?: import('../../reward-kernel/bindings').RewardProducerBinding;
   readonly incomingRewardState?: import('../model').AuthoredRewardState | null;
   readonly activeEncounterSlotKeys?: readonly string[];
@@ -264,19 +244,10 @@ function roomActionDomainContext(
       : resolveEntryRoom(catalog, rawDeclaration, routePosition, entry);
   const declaration = resolved?.declaration;
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (declaration === undefined || layout === undefined) {
+  if (resolved === undefined || declaration === undefined || layout === undefined) {
     throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
   }
-  const isLocalVisit = topology.decisions.some(
-    (decision) =>
-      decision.kind === 'localVisit' &&
-      Object.values(decision.targetsBySlot).some(
-        (target) => target.occurrenceId === occurrence.occurrenceId,
-      ),
-  );
-  const role = isLocalVisit ? 'ephyraSide' : 'ordinary';
-  const lifecycleProfileKey =
-    resolved?.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, occurrence, role);
+  const lifecycle = occurrenceLifecycle(catalog, routePosition, plan, topology, occurrence);
   const startingReward =
     entry && routePosition.isFirst
       ? composeStartingReward(loadout.startingReward, occurrence.startingRewardAcquisition)
@@ -285,18 +256,18 @@ function roomActionDomainContext(
     startingReward === undefined
       ? {}
       : {
-          incomingRewardBinding: resolved!.incomingRewardBinding,
+          incomingRewardBinding: resolved.incomingRewardBinding,
           incomingRewardState: startingReward,
         };
   if (declaration.mode.kind !== 'authored' || declaration.mode.templateKey !== 'FieldsCombat') {
-    return frozen({ lifecycleProfileKey, ...entryRewardContext });
+    return frozen({ ...lifecycle, ...entryRewardContext });
   }
   const decision = topology.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
       candidate.normal.targets.some((target) => target.occurrenceId === occurrence.occurrenceId),
   );
-  if (decision?.kind !== 'exit') return frozen({ lifecycleProfileKey, ...entryRewardContext });
+  if (decision?.kind !== 'exit') return frozen({ ...lifecycle, ...entryRewardContext });
   const activeCageCount = fieldsDefaultActiveCageCount({
     catalog,
     layout,
@@ -305,68 +276,18 @@ function roomActionDomainContext(
     room: declaration,
     replacingOccurrenceId: occurrence.occurrenceId,
   });
-  if (activeCageCount === undefined) return frozen({ lifecycleProfileKey, ...entryRewardContext });
+  if (activeCageCount === undefined) return frozen({ ...lifecycle, ...entryRewardContext });
   const slots = encounterEnvelopeSlots(catalog, declaration, occurrence.gameName);
   const passive = slots.filter((phase) => phase.rewardAttachment?.kind !== 'localReward');
   const cages = slots.filter((phase) => phase.rewardAttachment?.kind === 'localReward');
   return frozen({
-    lifecycleProfileKey,
+    ...lifecycle,
     ...entryRewardContext,
     activeEncounterSlotKeys: frozen([
       ...passive.map((phase) => phase.key),
       ...cages.slice(0, activeCageCount).map((phase) => phase.key),
     ]),
   });
-}
-
-/** Close only the required-action delta activated by one semantic command. */
-export function reconcileNewRequiredRoomActions(
-  before: ProjectDocument,
-  proposed: ProjectDocument,
-  catalog: Catalog,
-): ProjectDocument {
-  const changedBiomes = changedBiomeKeys(before, proposed);
-  if (changedBiomes.size === 0) return proposed;
-  const beforeDomains = activeDomains(before, catalog, changedBiomes);
-  const afterDomains = activeDomains(proposed, catalog, changedBiomes);
-  const replacements = new Map<string, readonly RoomActionReference[]>();
-  for (const [ownerKey, domain] of afterDomains) {
-    const beforeRequired = new Set(
-      (beforeDomains.get(ownerKey)?.contributions ?? []).flatMap((entry) =>
-        entry.kind === 'action' && entry.participation === 'required'
-          ? [roomActionKey(entry.reference)]
-          : [],
-      ),
-    );
-    const newlyRequired = new Set(
-      domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' &&
-        entry.participation === 'required' &&
-        !beforeRequired.has(roomActionKey(entry.reference))
-          ? [roomActionKey(entry.reference)]
-          : [],
-      ),
-    );
-    if (newlyRequired.size === 0) continue;
-    const [routeKey, biomeKey, occurrenceId] = JSON.parse(ownerKey) as [string, string, string];
-    const plan =
-      proposed.route.routeKey === routeKey
-        ? proposed.route.biomes.find((candidate) => candidate.biomeKey === biomeKey)
-        : undefined;
-    const owner = plan?.topology?.occurrences.find(
-      (candidate) => candidate.occurrenceId === occurrenceId,
-    );
-    if (owner === undefined) throw new Error(`active Room Action owner ${ownerKey} disappeared`);
-    const order = scheduleRequiredRoomActions({
-      catalog,
-      domain,
-      order: owner.roomActions.order,
-      requiredKeys: newlyRequired,
-    });
-    if (order !== owner.roomActions.order) replacements.set(ownerKey, order);
-  }
-  if (replacements.size === 0) return proposed;
-  return replaceOccurrenceOrders(proposed, replacements);
 }
 
 export function replaceOccurrenceOrders(
@@ -397,145 +318,6 @@ export function replaceOccurrenceOrders(
       ),
     }),
   });
-}
-
-interface TraitDroppedPickups {
-  readonly placement: 'afterSource' | 'roomExit';
-  readonly sourceAction: RoomActionReference;
-  readonly pickups: readonly RoomActionReference[];
-}
-
-/**
- * Same-room pickups each active trait acquisition drops (Quick Buck, Buried
- * Treasure, Narcissus) or a challenge switch's claim spawns, per occurrence.
- * Clocked drops and other producers keep their own closure.
- */
-function activeTraitDroppedPickups(
-  document: ProjectDocument,
-  catalog: Catalog,
-  biomeKeys: ReadonlySet<string>,
-): ReadonlyMap<string, readonly TraitDroppedPickups[]> {
-  const result = new Map<string, readonly TraitDroppedPickups[]>();
-  const route = document.route;
-  for (const plan of route.biomes) {
-    if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
-    if (plan.topology === null) continue;
-    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
-    const active = structurallyActiveOccurrenceIds(plan.topology);
-    for (const occurrence of plan.topology.occurrences) {
-      if (!active.has(occurrence.occurrenceId)) continue;
-      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
-      if (rawRoom === undefined) continue;
-      const drops = activeSelectedPickupProducers(
-        catalog,
-        biome,
-        occurrence,
-        resolveEntryDeclaration(rawRoom, routePosition),
-        routePosition.ordinal,
-        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
-      ).flatMap(({ sourceAction, ...producer }): TraitDroppedPickups[] =>
-        sourceAction === undefined ||
-        (producer.siteKey !== CHALLENGE_SWITCH_SITE_KEY &&
-          (producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:')))
-          ? []
-          : [
-              frozen({
-                placement: producer.placement,
-                sourceAction,
-                pickups: frozen(
-                  producer.pickups
-                    .filter((pickup) => !pickup.required)
-                    .map((pickup) =>
-                      frozen({
-                        kind: 'interactAcquisitionEntry' as const,
-                        siteKey: producer.siteKey,
-                        entryKey: pickup.key,
-                      }),
-                    ),
-                ),
-              }),
-            ],
-      );
-      if (drops.length > 0)
-        result.set(
-          JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
-          frozen(drops),
-        );
-    }
-  }
-  return result;
-}
-
-/**
- * Taking a trait whose acquisition drops same-room pickups also takes those
- * optional pickups in the same command: right after the source acquisition, or
- * at the room-exit window for a drop that settles there. Only pickups the
- * command newly drops are added; earlier drops keep their authored choice.
- */
-export function reconcileNewTraitDroppedPickupActions(
-  before: ProjectDocument,
-  proposed: ProjectDocument,
-  catalog: Catalog,
-): ProjectDocument {
-  const changedBiomes = changedBiomeKeys(before, proposed);
-  if (changedBiomes.size === 0) return proposed;
-  const afterDrops = activeTraitDroppedPickups(proposed, catalog, changedBiomes);
-  if (afterDrops.size === 0) return proposed;
-  const beforeDrops = activeTraitDroppedPickups(before, catalog, changedBiomes);
-  const replacements = new Map<string, readonly RoomActionReference[]>();
-  const route = proposed.route;
-  for (const [ownerKey, drops] of afterDrops) {
-    const previous = new Set(
-      (beforeDrops.get(ownerKey) ?? []).flatMap((drop) => drop.pickups.map(roomActionKey)),
-    );
-    const [, biomeKey, occurrenceId] = JSON.parse(ownerKey) as [string, string, OccurrenceId];
-    const host = roomActionDomainForOccurrence(
-      proposed,
-      catalog,
-      createBiomeAddress(route.routeKey, biomeKey),
-      occurrenceId,
-    );
-    if (host === undefined) throw new Error(`active Room Action owner ${ownerKey} disappeared`);
-    const domainKeys = new Set(host.domain.activeReferences.map(roomActionKey));
-    let order = host.occurrence.roomActions.order;
-    const exitDrops = new Set<string>();
-    for (const drop of drops) {
-      const added = drop.pickups.filter((pickup) => {
-        const key = roomActionKey(pickup);
-        return (
-          !previous.has(key) &&
-          domainKeys.has(key) &&
-          !order.some((reference) => roomActionKey(reference) === key)
-        );
-      });
-      if (added.length === 0) continue;
-      if (drop.placement === 'roomExit') {
-        for (const pickup of added) exitDrops.add(roomActionKey(pickup));
-        continue;
-      }
-      // The game drops these at the source acquisition, after any of its pickups already taken.
-      const owned = new Set(drop.pickups.map(roomActionKey));
-      let index = order.findIndex(
-        (reference) => roomActionKey(reference) === roomActionKey(drop.sourceAction),
-      );
-      if (index < 0) continue;
-      index += 1;
-      while (index < order.length && owned.has(roomActionKey(order[index]!))) index += 1;
-      order = frozen([...order.slice(0, index), ...added, ...order.slice(index)]);
-    }
-    if (exitDrops.size > 0)
-      order = scheduleRequiredRoomActions({
-        catalog,
-        domain: host.domain,
-        order,
-        requiredKeys: exitDrops,
-        participation: 'any',
-      });
-    if (order !== host.occurrence.roomActions.order) replacements.set(ownerKey, order);
-  }
-  if (replacements.size === 0) return proposed;
-  return replaceOccurrenceOrders(proposed, replacements);
 }
 
 export function roomActionDomainForOccurrence(

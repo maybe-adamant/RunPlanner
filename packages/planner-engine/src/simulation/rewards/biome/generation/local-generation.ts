@@ -1,3 +1,4 @@
+import { roomRunsCages } from '../../../encounters/model';
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
@@ -62,18 +63,16 @@ function localAcquisition(
   phaseKey: string,
 ) {
   const ownerKey = semanticAddressKey(context.room.origin);
-  const event =
-    context.room.lifecycleProfileKey === 'FieldsCombatRoom'
-      ? lifecycle.acquisitionPointsByOwner
-          .get(ownerKey)
-          ?.find((point) => point.point === `cages:${slotKey}`)
-      : lifecycle.encounterCompletionsByOwner
-          .get(ownerKey)
-          ?.find((point) => point.phaseKey === phaseKey);
-  const view =
-    context.room.lifecycleProfileKey === 'FieldsCombatRoom'
-      ? views?.acquisitionPoints?.find((point) => point.point === `cages:${slotKey}`)?.before
-      : (views?.preOutgoing ?? views?.entry);
+  const event = roomRunsCages(context.room)
+    ? lifecycle.acquisitionPointsByOwner
+        .get(ownerKey)
+        ?.find((point) => point.point === `cages:${slotKey}`)
+    : lifecycle.encounterCompletionsByOwner
+        .get(ownerKey)
+        ?.find((point) => point.phaseKey === phaseKey);
+  const view = roomRunsCages(context.room)
+    ? views?.acquisitionPoints?.find((point) => point.point === `cages:${slotKey}`)?.before
+    : (views?.preOutgoing ?? views?.entry);
   return Object.freeze({ event, view });
 }
 
@@ -99,13 +98,6 @@ export function generateLocalRewards(
   for (const ownedReward of context.localRewards) {
     // A rerolled cage still offers its first draw; its acquisition is the effective reward's.
     const localReward = forGeneration(ownedReward);
-    if (ownedReward.rerolledRewardMismatch === true)
-      addRewardFinding(
-        findings,
-        rewardFinding('rerolledRewardMismatch', ownedReward.origin, {}),
-        ownerRegion(ownedReward.origin),
-        historyFindingChronology(event.sequence),
-      );
     const frontier = branch;
     const chronology =
       event.source === 'localVisit'

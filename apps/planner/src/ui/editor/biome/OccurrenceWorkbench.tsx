@@ -46,10 +46,8 @@ import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
 import { roomMapPlacements } from './room-map/roomMapPlacements';
 
 /**
- * The map's stage for a Timeline row: before Doors open (or a Ship phase's
- * Wheels open) the doors are closed, from it they are open, from the
- * room's last row (or Select wheel) it is left. Rows outside the Timeline
- * leave the map as it is.
+ * The Timeline row a map stage is read from: a row of the room's (or a Ship
+ * phase's) Timeline. Rows outside the Timeline leave the map as it is.
  */
 function timelineMapRow(target: Element): HTMLElement | undefined {
   return (
@@ -57,18 +55,10 @@ function timelineMapRow(target: Element): HTMLElement | undefined {
   );
 }
 
-function timelineMapStage(row: Element): RoomMapStage | undefined {
-  const list = row.parentElement;
-  if (list == null) return undefined;
-  const rows = [...list.children];
-  const index = rows.indexOf(row);
-  const leave = rows.findIndex((item) => item.classList.contains('timeline-leave-row'));
-  const open = rows.findIndex((item) =>
-    item.matches('[data-doors-open], [data-boundary-kind="cleanup"]'),
-  );
-  if (leave >= 0 && index >= leave) return 'left';
-  if (open >= 0 && index >= open) return 'open';
-  return 'closed';
+/** The map's stage at a Timeline row, as the row stands against the room's opening. */
+function timelineMapStage(row: HTMLElement): RoomMapStage {
+  const stage = row.dataset.mapStage;
+  return stage === 'open' || stage === 'left' ? stage : 'closed';
 }
 
 /** The room's latest door press (an unlock or a reroll) at or before the row. */
@@ -79,6 +69,15 @@ function timelineDoorStep(row: Element, stepKeys: ReadonlySet<string>): string |
     if (key !== undefined && stepKeys.has(key)) return key;
   }
   return undefined;
+}
+
+/** The room's action rows at or before the row: what the room has done by then. */
+function timelineMadeRows(row: Element): readonly string[] {
+  const rows = [...(row.parentElement?.children ?? [])];
+  return rows.slice(0, rows.indexOf(row) + 1).flatMap((candidate) => {
+    const key = (candidate as HTMLElement).dataset.roomActionKey;
+    return key === undefined ? [] : [key];
+  });
 }
 
 /**
@@ -113,8 +112,6 @@ interface OccurrenceWorkbenchProps {
   readonly timelineDoors?: TimelineDoorsContent;
   /** Navigation landed on a door owner, so the Doors open row opens. */
   readonly doorsRequested?: boolean;
-  /** The room's exit is the authoring frontier: its doors are the next required input. */
-  readonly doorsFrontier?: boolean;
   /** The room's place against the plan end; past it, every panel is read-only but its last row. */
   readonly planEndRelation?: WorkspacePlanEndRelation;
   /** Exact room-owned additions to ordinary lifecycle rows. */
@@ -129,7 +126,6 @@ interface OccurrenceWorkbenchProps {
 export function OccurrenceWorkbench({
   incomingDoor,
   doorsRequested = false,
-  doorsFrontier = false,
   timelineDoors,
   entryIdentity,
   initialTab,
@@ -174,9 +170,8 @@ export function OccurrenceWorkbench({
     });
   }
   const selectedTab = tabState.active;
-  // The door editor stays shut unless it needs attention (a finding inside or
-  // on a locked door, or the doors as the next required input) or navigation asks for it. A
-  // remembered choice holds until attention it has not seen appears.
+  // The doors' popover opens only when asked: by the user, or by navigation to a door
+  // owner; a choice holds until the next navigation.
   const doorChoice = useAppSelector(
     (state) => state.editorSession.doorEditorChoices?.[roomIdentity],
   );
@@ -185,32 +180,24 @@ export function OccurrenceWorkbench({
     timelineDoors?.findingOwners ?? [],
     timelineDoors?.attentionFindings,
   );
-  const doorAttention = [...doorFindingKeys, ...(doorsFrontier ? ['frontier'] : [])];
   const currentNavigation = navigationRevision ?? -1;
   const doorsExpanded =
     (doorsRequested &&
       (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
-    (doorChoice === undefined
-      ? doorAttention.length > 0
-      : doorChoice.expanded ||
-        doorAttention.some((attention) => !doorChoice.attention.includes(attention)));
+    (doorChoice?.expanded === true && doorChoice.navigationRevision === currentNavigation);
   const doors: TimelineDoors | undefined =
     timelineDoors === undefined
       ? undefined
       : {
           ...timelineDoors,
           noun: 'door' as const,
-          detailId: `occurrence-${room.occurrenceId}-doors-detail`,
           expanded: doorsExpanded,
+          holdsFindings: doorFindingKeys.length > 0,
           onExpandedChange: (expanded: boolean) =>
             dispatch(
               doorEditorChosen({
                 room: roomIdentity,
-                choice: {
-                  expanded,
-                  attention: doorAttention,
-                  navigationRevision: currentNavigation,
-                },
+                choice: { expanded, navigationRevision: currentNavigation },
               }),
             ),
         };
@@ -293,22 +280,24 @@ export function OccurrenceWorkbench({
     readonly step?: string;
     /** The side door Melinoë stands at; none puts her at the entry. */
     readonly heroDoor?: string;
+    /** The room's action rows made by the row, for the stock standing there. */
+    readonly made: readonly string[];
   }>();
   const mapRow = useRef<HTMLElement>(undefined);
   const shipPhases = room.workbench.kind === 'ship' ? room.workbench.phases : [];
   const shipPhase = shipPhases.find((phase) => phase.tab === activeTab);
   const timelineTab = activeTab === 'actions' || shipPhase !== undefined;
   // A Ship phase before the last shows the wheel the next phase is chosen at; the last its doors.
-  const wheelPhase = shipPhase === shipPhases.at(-1) ? undefined : shipPhase;
+  const wheelPhase = shipPhase?.wheel === undefined ? undefined : shipPhase;
   const leaveTab = timelineTab && wheelPhase === undefined;
-  const pastEnd = planEndRelation === 'pastEnd';
-  // Past the plan end every control is locked; only the last row's own picker stays live.
-  const readOnlyPastEnd = (panel: ReactNode): ReactNode =>
-    pastEnd ? <ReadOnlyFindingScope>{panel}</ReadOnlyFindingScope> : panel;
   const stepsShown =
     wheelPhase === undefined
       ? (timelineDoors?.steps ?? [])
       : wheelOfferSteps(wheelPhase.wheelRerolls);
+  const pastEnd = planEndRelation === 'pastEnd';
+  // Past the plan end every control is locked; only the last row's own picker stays live.
+  const readOnlyPastEnd = (panel: ReactNode): ReactNode =>
+    pastEnd ? <ReadOnlyFindingScope>{panel}</ReadOnlyFindingScope> : panel;
   // Leaving the Timeline tab or the room returns the map to the plan.
   const mapStageShown =
     timelineTab && mapStage?.roomIdentity === roomIdentity && mapStage.tab === activeTab;
@@ -322,13 +311,15 @@ export function OccurrenceWorkbench({
   };
   const workOnTimeline = (event: SyntheticEvent<HTMLElement>): void => {
     const row = timelineMapRow(event.target as Element);
-    const stage = row === undefined ? undefined : timelineMapStage(row);
-    if (row === undefined || stage === undefined) return;
+    if (row === undefined) return;
+    const stage = timelineMapStage(row);
     markMapRow(row);
     const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
     const heroDoor = timelineHeroDoor(row);
+    const made = timelineMadeRows(row);
     if (
       stage !== mapStage?.stage ||
+      made.join('\n') !== mapStage.made.join('\n') ||
       step !== mapStage.step ||
       heroDoor !== mapStage.heroDoor ||
       mapStage.tab !== activeTab ||
@@ -340,6 +331,7 @@ export function OccurrenceWorkbench({
         stage,
         ...(step === undefined ? {} : { step }),
         ...(heroDoor === undefined ? {} : { heroDoor }),
+        made,
       });
   };
   // The doors or wheel offers as they stand at the marked row: the latest press's, else as they open.
@@ -391,8 +383,13 @@ export function OccurrenceWorkbench({
                 ? { heroSideDoor: mapStage.heroDoor }
                 : {})}
               map={room.map}
-              placements={roomMapPlacements(room)}
+              placements={roomMapPlacements(
+                room,
+                // Overview shows the room's stock as entered; the Timeline as the row leaves it.
+                mapStageShown ? new Set(mapStage.made) : timelineTab ? 'end' : 'start',
+              )}
               roomIdentity={roomIdentity}
+              shop={room.roomLocal.kind === 'shop'}
               {...(localVisit === undefined ? {} : { sideDoors: sideDoorMapDoors(localVisit) })}
               stage={shownMapStage}
               title={room.label}

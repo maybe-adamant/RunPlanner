@@ -19,10 +19,23 @@ export {
   purchaseTestHermesShrineOffer,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  scheduleTestRequiredRoomActions,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
+  procTestSeaStar,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
-export { settleTestEdit } from './settled-edit';
+export { withItemContent, withItemContents } from './item-content';
+export {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  placeTestLivePickup,
+  placeTestLivePickupsAtSite,
+  placeTestRushedShrinePickup,
+  replaceTestPlacedItem,
+  settleTestEdit,
+  stockTestProject,
+} from './settled-edit';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';
 export { legacyRareEpicHexTrees } from './legacy-hex-trees';
 export { legacySchema99Body } from './legacy-schema-99';

@@ -10,6 +10,7 @@ import {
   roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import type {
@@ -153,12 +154,68 @@ describe('challenge switch in the structured workspace', () => {
     const use = rows.find((row) => row.reference.kind === 'interactChallengeSwitch');
     expect(use?.label).toBe('Use Infernal Trove');
     expect(use?.challengeSwitchKind).toBe('time');
-    expect(claim?.addGroup).toEqual({
-      key: 'object:challengeSwitch',
-      label: 'Challenge Switch',
-      object: 'challengeSwitch',
-    });
     expect(claim?.labelParts?.origin).toBe('Claimed from the challenge switch');
+  });
+
+  it("marks a pressed switch's fight with one Encounter marker right after its press", () => {
+    const { workspace } = projectStructuredWorkspaceFixture(
+      observed(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money', true),
+    );
+    const entries = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.timeline.entries;
+    const press = entries.findIndex(
+      (entry) => entry.kind === 'action' && entry.actionKey === roomActionKey(use),
+    );
+    expect(press).toBeGreaterThanOrEqual(0);
+    // Begun and started merge into one Encounter marker; its end follows with no Combat.
+    expect(entries[press + 1]).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterStarted', phaseKey: 'challengeSwitch' },
+      label: 'Encounter started',
+      beginsEncounter: true,
+    });
+    expect(entries[press + 2]).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterEnd', phaseKey: 'challengeSwitch' },
+      label: 'Encounter ended',
+    });
+  });
+
+  it("keeps a Ship room's phase tabs and stands a pressed switch's fight on its press row's tab", () => {
+    const surface = loadSurfaceNOPQProject();
+    let placed = 0;
+    for (const occurrenceId of ['surface-o-combat04', 'surface-o-combat02']) {
+      const plain = room(projectStructuredWorkspaceFixture(surface).workspace, 'O', occurrenceId);
+      if (plain.workbench.kind !== 'ship') throw new Error(`${occurrenceId} is no Ship room`);
+      const tabs = plain.workbench.phases.map((phase) => phase.tab);
+      for (const variant of catalog.challengeSwitches.variants.values) {
+        const summary = room(
+          projectStructuredWorkspaceFixture(observed(surface, 'O', occurrenceId, variant.key, true))
+            .workspace,
+          'O',
+          occurrenceId,
+        );
+        if (summary.workbench.kind !== 'ship') throw new Error(`${occurrenceId} is no Ship room`);
+        expect(summary.workbench.phases.map((phase) => phase.tab)).toEqual(tabs);
+        // An Elite switch's Overview choice can hold the walk at entry.
+        if (summary.roomActions?.timeline.waitsOn?.kind === 'overview') continue;
+        placed += 1;
+        const pressTab = summary.workbench.phases.find((phase) =>
+          phase.actionRows.some((row) => row.key === roomActionKey(use)),
+        );
+        expect(pressTab, `${occurrenceId} ${variant.key}`).toBeDefined();
+        const fight = pressTab!.timeline.find(
+          (entry) =>
+            entry.kind === 'boundary' &&
+            entry.boundary.kind === 'encounterStarted' &&
+            entry.boundary.phaseKey === 'challengeSwitch',
+        );
+        expect(fight, `${occurrenceId} ${variant.key}`).toMatchObject({
+          label: 'Encounter started',
+        });
+        expect(fight).not.toHaveProperty('runState');
+      }
+    }
+    expect(placed).toBeGreaterThanOrEqual(catalog.challengeSwitches.variants.values.length);
   });
 
   it("narrows each Elite attribute draw by the earlier ones and binds the elite's pin", () => {
@@ -245,9 +302,13 @@ describe('challenge switch in the structured workspace', () => {
     ).toMatchObject({ outcome: 'finished', nectar: true });
     // The claim's gold sits on its Collect row with the estimate's hover, not on the use row.
     expect(row.goldGained).toBeUndefined();
-    const claim = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
+    const claimed = projectStructuredWorkspaceFixture(
+      placeTestLivePickupsAtSite(project, host(project, 'F', 'golden-f-b5-e1'), 'challengeSwitch'),
+    ).workspace;
+    const claim = room(claimed, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
       (candidate) => candidate.sourceFamily?.kind === 'challengeSwitch',
     );
+    expect(claim?.rank).not.toBeNull();
     expect(claim?.goldGained?.hint).toEqual(expect.any(String));
 
     const left = projectStructuredWorkspaceFixture(

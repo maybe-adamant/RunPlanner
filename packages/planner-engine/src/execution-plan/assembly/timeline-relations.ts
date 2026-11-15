@@ -1,7 +1,6 @@
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
-import { assembleLifecycleWindow } from './lifecycle';
 import type {
   ExecutionTimeline,
   ExecutionTimelineObligation,
@@ -71,11 +70,6 @@ export function assembleTimelineRelations(
         checkpoint,
       }) as ExecutionTimelineObligation;
     });
-  // Keep lifecycle window validation close to its existing room authority;
-  // no action meaning is inferred by this projection.
-  for (const row of room.roomActionRoster.rows) {
-    if (!row.stale && row.rank !== null) assembleLifecycleWindow(row.window);
-  }
   return Object.freeze({
     transactions: Object.freeze([...transactions]),
     dependencies: Object.freeze(dependencies),

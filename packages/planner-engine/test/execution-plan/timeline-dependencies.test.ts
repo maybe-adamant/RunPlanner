@@ -25,7 +25,7 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { assembleExecutionProduct } from '@run-planner/engine/execution-plan';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
-import type { RoomLifecycleStructure } from '../../src/authored-project/room-actions/lifecycle-structure';
+import type { RoomEventGraph } from '../../src/authored-project/room-actions/event-graph';
 import {
   classifyTimelineDependencyEndpoint,
   roomTimelineDependencies,
@@ -41,6 +41,7 @@ import {
 } from '../../src/simulation/traits/history/fold';
 import type { TraitHistoryEvent } from '../../src/simulation/traits/history/model';
 import { executionFixtures } from './support/execution-fixtures';
+import { gateFreeGraphEvents } from '../support/event-graph';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrenceId = createOccurrenceId('fence-room');
@@ -50,16 +51,12 @@ const steadyGrowthOutcome = createSteadyGrowthOutcomeAddress(
   createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
   1,
 );
-const structure: RoomLifecycleStructure = {
+const structure: RoomEventGraph = {
   profileKey: 'Combat',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'encounterStart:Encounter', phaseKey: 'Encounter' },
-    { kind: 'encounterEnd', key: 'encounterEnd:Encounter', phaseKey: 'Encounter' },
-    { kind: 'outgoingGeneration', key: 'outgoingGeneration' },
-  ],
+  pressFights: [],
+  events: gateFreeGraphEvents(['Encounter'], true),
 };
 
 type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReference['kind'];
@@ -67,7 +64,7 @@ type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReferen
 interface Action {
   readonly key: string;
   readonly kind: Kind;
-  readonly window?: RoomActionRow['window'];
+  readonly contact?: RoomActionRow['contact'];
   readonly owner?: SemanticAddress;
 }
 
@@ -93,7 +90,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
         key: action.key,
         owner: ownerOf(action),
         participation: 'required',
-        window: action.window ?? afterCombat,
+        contact: action.contact ?? { kind: 'afterCombat' },
         dependencies: [],
         rank: index + 1,
         stale: false,
@@ -142,7 +139,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
       gameName: 'F_Combat01',
       occurrenceId,
       origin: occurrence,
-      roomActionRoster: { lifecycleStructure: structure, rows },
+      roomActionRoster: { eventGraph: structure, rows },
     } as unknown as CanonicalAuthoredRoom,
     transactions: [
       ...transactions,
@@ -181,9 +178,9 @@ describe('trait fence dependencies', () => {
 
   it('orders a fence against its neighbours by rank across lifecycle windows', () => {
     const { room: fenceRoom, transactions } = room([
-      { key: 'before', kind: 'screen', window: { kind: 'standard', phase: 'beforeCombat' } },
+      { key: 'before', kind: 'screen', contact: { kind: 'beforeCombat' } },
       { key: 'fence', kind: 'interactKeepsakeRack' },
-      { key: 'after', kind: 'screen', window: { kind: 'postOutgoing' } },
+      { key: 'after', kind: 'screen', contact: { kind: 'afterDoorsOpen' } },
     ]);
     expect(traitFenceDependencies(fenceRoom, transactions)).toEqual([
       edge('fence', 'before'),
@@ -302,7 +299,11 @@ describe('natively ordered trait mutations', () => {
   it('publishes an automatic outcome edge only where the screen can open before it', () => {
     const { room: automaticRoom, transactions } = room(
       [
-        { key: 'cage', kind: 'screen', window: { kind: 'encounterEnd', phaseKey: 'Encounter' } },
+        {
+          key: 'cage',
+          kind: 'screen',
+          contact: { kind: 'afterEncounterEnd', endedPhaseKey: 'Encounter' },
+        },
         { key: 'reward', kind: 'screen' },
       ],
       [steadyGrowth, embryo],
@@ -323,7 +324,7 @@ describe('natively ordered trait mutations', () => {
         key: 'chosen',
         kind: 'screen',
         owner: chosen,
-        window: { kind: 'standard', phase: 'beforeCombat' },
+        contact: { kind: 'beforeCombat' },
       },
       { key: 'spurned', kind: 'screen', owner: spurned },
     ]);

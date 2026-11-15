@@ -2,7 +2,10 @@ import { isCombatBearingEncounterPhaseKind } from '@run-planner/engine/catalog-s
 import type {
   CatalogCollection,
   EncounterDefinition,
+  EncounterGate,
+  EncounterOutcomeKind,
   EncounterPhaseKind,
+  EncounterScript,
 } from '@run-planner/engine/catalog-schema';
 
 import type { RawEncounterDefinitionDeclaration } from '../../declarations/index';
@@ -24,6 +27,59 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'nonCombat',
   'story',
 ]);
+
+const scriptFlags = ['waitReadyBeforeEnd'] as const;
+
+function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterGate {
+  if (raw === undefined) return Object.freeze({ kind: 'none' });
+  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
+  switch (raw.kind) {
+    case 'none':
+    case 'wheelUse':
+    case 'cageActivation':
+      return Object.freeze({ kind: raw.kind });
+    case 'useItemRole':
+      return Object.freeze({ kind: raw.kind, role: requireNonEmpty(raw.role, `${path}.role`) });
+    default:
+      fail(`${path}.kind`, `unknown encounter gate ${String(receivedKind)}`);
+  }
+}
+
+/**
+ * The declared script, with the facts that follow from the encounter's other
+ * declarations: the outcomes it hosts (Aetos waves, a Gorgon trigger it does
+ * not block, a Nemesis bet or her random event), that her random event
+ * ends when she is answered, which clears her required object and unlocks the
+ * exits (EncounterData_Story.lua:1966, InteractLogic.lua:366-376, 605-611), and
+ * that a Boss encounter without `SkipBossTraits` ends with the boss defeat
+ * (RoomLogic.lua:984, 2815).
+ */
+function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): EncounterScript {
+  const script = raw.script ?? {};
+  for (const flag of scriptFlags)
+    if (script[flag] !== undefined && script[flag] !== true)
+      fail(`${path}.${flag}`, 'must be true when declared');
+  const hostsOutcome: EncounterOutcomeKind[] = [
+    ...(raw.aetosWaves === undefined ? [] : (['aetosWave'] as const)),
+    ...(raw.hostsGorgon === true && raw.blocksGorgon !== true ? (['gorgon'] as const) : []),
+    ...(raw.goldBet === undefined ? [] : (['goldBet'] as const)),
+    ...(raw.nemesisRandomEvent === undefined ? [] : (['nemesisRandomEvent'] as const)),
+  ];
+  const press = script.press;
+  if (press !== undefined && (script.gate !== undefined || script.waitReadyBeforeEnd === true))
+    fail(`${path}.press`, 'a press fight has no gate and no ready wait');
+  return Object.freeze({
+    beginTrigger: press === undefined ? 'automatic' : 'pressRow',
+    endEffects: press === undefined ? 'run' : 'none',
+    records: press?.records ?? true,
+    generatedAt: press?.generatedAt ?? 'preparation',
+    gate: normalizeGate(script.gate, `${path}.gate`),
+    waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
+    endsByInteraction: raw.nemesisRandomEvent !== undefined,
+    endsWithBossDefeated: raw.kind === 'boss' && raw.skipBossTraits !== true,
+    hostsOutcome: Object.freeze(hostsOutcome),
+  });
+}
 
 /** A store's integer bounds are ordered and its ramp is a non-negative per-depth amount. */
 function normalizeMoneyStore(
@@ -179,6 +235,8 @@ export function normalizeEncounterDefinitions(
       if (raw.skipEndEncounterEffects === true && raw.canEncounterSkip !== true) {
         fail(`${path}.skipEndEncounterEffects`, 'requires canEncounterSkip');
       }
+      if (raw.skipBossTraits !== undefined && (raw.skipBossTraits !== true || raw.kind !== 'boss'))
+        fail(`${path}.skipBossTraits`, 'must be true on a boss encounter');
       const blocksKeepsakeSelectionKeys =
         raw.blocksKeepsakeSelectionKeys === undefined
           ? undefined
@@ -367,6 +425,11 @@ export function normalizeEncounterDefinitions(
       )
         fail(`${path}.createsIncomingRewardAtStart`, 'must be boolean');
       if (
+        raw.incomingRewardCannotDuplicate !== undefined &&
+        raw.incomingRewardCannotDuplicate !== true
+      )
+        fail(`${path}.incomingRewardCannotDuplicate`, 'must be true when declared');
+      if (
         raw.enemyTriggeredIntroduction !== undefined &&
         typeof raw.enemyTriggeredIntroduction !== 'boolean'
       )
@@ -406,7 +469,7 @@ export function normalizeEncounterDefinitions(
               );
               exactKeys(
                 policy.damageTrade,
-                ['variants', 'response', 'pickupRequiredOnAccept'],
+                ['variants', 'unavailableWhileHeldTraitKeys', 'response', 'pickupRequiredOnAccept'],
                 `${path}.nemesisRandomEvent.damageTrade`,
               );
               exactKeys(
@@ -603,6 +666,10 @@ export function normalizeEncounterDefinitions(
                 }),
                 damageTrade: Object.freeze({
                   variants: normalizeDamageVariants(),
+                  unavailableWhileHeldTraitKeys: freezeUniqueStrings(
+                    policy.damageTrade.unavailableWhileHeldTraitKeys,
+                    `${path}.nemesisRandomEvent.damageTrade.unavailableWhileHeldTraitKeys`,
+                  ),
                   response: Object.freeze(['accept', 'decline']) as readonly ['accept', 'decline'],
                   pickupRequiredOnAccept: true as const,
                 }),
@@ -660,6 +727,7 @@ export function normalizeEncounterDefinitions(
         key,
         label,
         kind: raw.kind,
+        script: normalizeScript(raw, `${path}.script`),
         countsEncounterDepth: raw.countsEncounterDepth,
         advancesHermesShrineDeliveryUses:
           raw.advancesHermesShrineDeliveryUses ?? isCombatBearingEncounterPhaseKind(raw.kind),
@@ -676,6 +744,9 @@ export function normalizeEncounterDefinitions(
           : {}),
         ...(raw.createsIncomingRewardAtStart === true
           ? { createsIncomingRewardAtStart: true as const }
+          : {}),
+        ...(raw.incomingRewardCannotDuplicate === true
+          ? { incomingRewardCannotDuplicate: true as const }
           : {}),
         ...(raw.goldBet === undefined
           ? {}

@@ -1,4 +1,5 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { pressFightOf } from '../../authored-project/room-actions/event-graph';
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
@@ -104,6 +105,7 @@ export type EncounterValidatedBiomeHistory =
       readonly kind: 'rewardBlocked';
       readonly history: BiomeHistoryPrefix;
       readonly blockedAt: import('../../authored-project/addresses').SemanticAddress;
+      readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline;
     };
 
 /** A prefix history and the room action, when present, at which its lifecycle stopped. */
@@ -112,12 +114,17 @@ export interface EncounterValidatedBiomeHistoryPrefix {
   /** The room actions the walk reached, placed in that history. */
   readonly reachedActions: readonly ReachedHistoryRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').SemanticAddress;
+  /** Set when the block is a required action left unplaced. */
+  readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline;
 }
 
 /** Stops composition at an unauthored lifecycle producer or unplaced required
  * room action; the caller publishes the block over the pre-stop prefix. */
 class RewardAuthorshipBlocked extends Error {
-  constructor(readonly blockedAt: import('../../authored-project/addresses').SemanticAddress) {
+  constructor(
+    readonly blockedAt: import('../../authored-project/addresses').SemanticAddress,
+    readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline,
+  ) {
     super('reward authorship blocks room lifecycle');
     this.name = 'RewardAuthorshipBlocked';
   }
@@ -354,7 +361,7 @@ export function appendRoomLifecycle(
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
   const fragment = executeRoomLifecycle(
     catalog,
-    createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
+    createRoomLifecycleInput(catalog, room, effectiveEncounterPhases, declaration),
   );
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
@@ -412,7 +419,7 @@ export function appendRoomLifecycle(
   }
   if (stopped) return;
   if (fragment.blockedAt !== undefined) {
-    throw new RewardAuthorshipBlocked(fragment.blockedAt);
+    throw new RewardAuthorshipBlocked(fragment.blockedAt, fragment.blockedDeadline);
   }
   if (options.stopAfterOutgoing && !reachedOutgoing) {
     fail(`${room.gameName} has no outgoing checkpoint for prefix composition`);
@@ -452,8 +459,12 @@ export function appendRoomLifecycle(
           ? (() => {
               const phase = effectiveEncounterPhases.find(
                 (candidate) => candidate.slotKey === sourceEvent.phaseKey,
-              )!;
-              if (phase.aetosWaves === undefined && phase.aetosWave === undefined)
+              );
+              // A press fight hosts no Aetos.
+              if (
+                phase === undefined ||
+                (phase.aetosWaves === undefined && phase.aetosWave === undefined)
+              )
                 return sourceEvent;
               return Object.freeze({
                 ...sourceEvent,
@@ -465,11 +476,10 @@ export function appendRoomLifecycle(
                 ),
               });
             })()
-          : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
-            ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
-            : sourceEvent.kind === 'exitUnlocked' && room.kind === 'authored'
-              ? withUnlockExitEncounter(catalog, room, writer, sourceEvent, fail)
-              : sourceEvent;
+          : (sourceEvent.kind === 'encounterRecorded' || sourceEvent.kind === 'encounterStarted') &&
+              room.kind === 'authored'
+            ? withPressFightComposition(catalog, room, writer, sourceEvent, fail)
+            : sourceEvent;
       if (
         options.stopAfterOutgoing &&
         options.continueThroughPostOutgoingActions === true &&
@@ -526,67 +536,31 @@ export function appendRoomLifecycle(
 }
 
 /**
- * The switch press runs the encounter native generated at the room's entry
- * (RoomLogic.lua:4983-4992), so it is prepared at the entry view.
+ * A press fight's composition, generated where its script says: at the room's
+ * entry view for a switch (RoomLogic.lua:4983-4992), at the press for a locked
+ * door (`AttemptUseDoor`). The room's own phases come prepared.
  */
-function withChallengeSwitchEncounter(
+function withPressFightComposition(
   catalog: Catalog,
   room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
   writer: HistorySegmentWriter,
-  event: Extract<RoomLifecycleEvent, { readonly kind: 'challengeSwitchInteracted' }>,
+  event: Extract<RoomLifecycleEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
   fail: (detail: string) => never,
 ): RoomLifecycleEvent {
-  if (room.challengeSwitch === undefined) return event;
-  const entry = writer.roomEntry(room.origin);
-  if (entry === undefined) fail(`${room.gameName} pressed its switch before entry`);
-  const prepared = prepareChallengeSwitchEncounter(catalog, room, writer.routePosition, entry);
-  if (prepared === undefined) return event;
-  const { phase } = prepared;
+  const fight = pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey);
+  if (fight === undefined) return event;
+  const view =
+    fight.script.generatedAt === 'entry' ? writer.roomEntry(room.origin) : writer.current();
+  if (view === undefined) fail(`${room.gameName} pressed ${event.phaseKey} before entry`);
+  const prepared =
+    fight.press.kind === 'unlockExit'
+      ? prepareUnlockExitEncounter(catalog, room, writer.routePosition, fight.press, view)
+      : prepareChallengeSwitchEncounter(catalog, room, writer.routePosition, view);
+  const customization = prepared?.phase.generatedCustomization;
   return Object.freeze({
     ...event,
-    encounter: Object.freeze({
-      encounterKey: phase.encounterKey,
-      phaseKind: phase.kind,
-      countsEncounterDepth: phase.countsEncounterDepth,
-      completed: room.challengeSwitch.outcome !== 'left',
-      ...(phase.generatedCustomization === undefined
-        ? {}
-        : { generatedCustomization: phase.generatedCustomization }),
-    }),
-  });
-}
-
-/** A locked door's press runs the fight `AttemptUseDoor` generates there, at the press's view. */
-function withUnlockExitEncounter(
-  catalog: Catalog,
-  room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
-  writer: HistorySegmentWriter,
-  event: Extract<RoomLifecycleEvent, { readonly kind: 'exitUnlocked' }>,
-  fail: (detail: string) => never,
-): RoomLifecycleEvent {
-  const action = room.roomActionRoster.rows.find(
-    (row) => row.reference.kind === 'unlockExit' && row.reference.exitKey === event.exitKey,
-  )?.reference;
-  if (action?.kind !== 'unlockExit') fail(`${room.gameName} pressed a door it does not lock`);
-  const prepared = prepareUnlockExitEncounter(
-    catalog,
-    room,
-    writer.routePosition,
-    action,
-    writer.current(),
-  );
-  if (prepared === undefined) return event;
-  const { phase } = prepared;
-  return Object.freeze({
-    ...event,
-    encounter: Object.freeze({
-      encounterKey: phase.encounterKey,
-      phaseKind: phase.kind,
-      countsEncounterDepth: phase.countsEncounterDepth,
-      ...(phase.generatedCustomization === undefined
-        ? {}
-        : { generatedCustomization: phase.generatedCustomization }),
-    }),
+    pressFight: true as const,
+    ...(customization === undefined ? {} : { generatedCustomization: customization }),
   });
 }
 
@@ -650,6 +624,7 @@ function composeBiomeHistoryPrefixResult({
       history: foldBiomeHistoryPrefixEvents(builder.events, seed),
       reachedActions: Object.freeze([...builder.reachedActions]),
       blockedAt: error.blockedAt,
+      ...(error.blockedDeadline === undefined ? {} : { blockedDeadline: error.blockedDeadline }),
     });
   }
   return Object.freeze({
@@ -819,6 +794,7 @@ function composeBiomeHistoryEnvelopeResult<
         kind: 'rewardBlocked',
         history: foldBiomeHistoryPrefixEvents(builder.events, seed),
         blockedAt: error.blockedAt,
+        ...(error.blockedDeadline === undefined ? {} : { blockedDeadline: error.blockedDeadline }),
       });
     }
     throw error;

@@ -1,3 +1,4 @@
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -11,10 +12,10 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -27,7 +28,6 @@ import {
   projectStructuredWorkspaceFixture,
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
-import type { WorkspaceRewardOfferResolver } from '@planner/projections/structured-workspace';
 
 const o = createBiomeAddress('Surface', 'O');
 const ship = createOccurrenceId('surface-o-combat04');
@@ -75,25 +75,56 @@ function wheelPhase(projected: Projected) {
   return phase;
 }
 
-async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
-  const model = resolver.model(await resolver.load(), 'type');
-  return model.sections
-    .flatMap((section) => section.items)
-    .filter((item) => !item.disabled && item.value.payload === undefined)
-    .map((item) => item.value);
+/** A three-phase O room whose Phase 1 end matures a Hermes Shrine delivery. */
+function threePhaseDeliveryProject(): ProjectDocument {
+  const { oShrine } = surfaceShrineDeliverySources;
+  const occurrence = createOccurrenceAddress(o, oOccurrenceIds.combat02);
+  let project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+    kind: 'ReplaceShipEncounterCount',
+    occurrence,
+    encounterCount: 3,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SelectEncounter',
+    phase: createEncounterPhaseAddress(o, occurrence, 'Combat1'),
+    encounterKey: 'IcarusCombatO',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: oShrine,
+    slotKey: 'secondLeft',
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+  project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
+    delay: 5,
+    rushed: false,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRewardWheelStore',
+    wheel: createRewardWheelAddress(o, oOccurrenceIds.combat02, 'wheel2'),
+    storeKey: 'RunProgress',
+  });
+  project = authorTestTraitsAndRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(o, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    }),
+  );
+  return project;
 }
 
-describe('ship wheels on their phase Timeline', () => {
-  it('opens the wheel after the Intro on the Intro Timeline, with its pool and offer targets', () => {
+describe('ship wheels on the Timeline of the phase before their combat', () => {
+  it('opens the wheel on the tab before its combat, with its pool and offer targets', () => {
     const projected = projectStructuredWorkspaceFixture(cardHolder());
     const phase = wheelPhase(projected);
     expect(phase).toMatchObject({ tab: 'shipIntroActions', wheel: { key: 'wheel1' } });
     expect(phase.wheelRerolls).toMatchObject({ poolRemaining: 10, targetNoun: 'offer', rows: [] });
-    // The Timeline keeps only its Wheels open marker.
+    // The Timeline keeps only its Wheels opened marker.
     const wheelsOpen = phase.timeline.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen',
     );
-    expect(wheelsOpen).toBeDefined();
+    expect(wheelsOpen).toMatchObject({ label: 'Wheels opened · Phase 1' });
     expect(wheelsOpen?.kind === 'boundary' ? wheelsOpen.supplement : undefined).toBeUndefined();
     for (const owner of [wheel, createRewardWheelOfferAddress(o, ship, 'wheel1', 'offer1')])
       expect(projected.workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
@@ -119,8 +150,8 @@ describe('ship wheels on their phase Timeline', () => {
       .targets(undefined)
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
-    const [reward] = await possibleRewards(interaction.pendingReward(targetKey!));
-    const intent = interaction.appendIntent(targetKey!, reward as ResolvedRewardOffer);
+    const intent = interaction.pressIntent(targetKey!)!;
+    expect(intent.command).not.toHaveProperty('reward');
     const order = base.route.biomes
       .find((biome) => biome.biomeKey === 'O')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === ship)!.roomActions
@@ -130,8 +161,23 @@ describe('ship wheels on their phase Timeline', () => {
         (action) => action.kind === 'chooseRewardWheel' && action.wheelKey === 'wheel1',
       ),
     );
+    // Placed, the press's result is unset until its row's picker sets it.
+    const placed = applyProjectCommand(base, catalog, intent.command);
+    const unset = projectStructuredWorkspaceFixture(placed);
+    const unsetRow = wheelPhase(unset).wheelRerolls!.rows[0]!;
+    expect(unsetRow.reward).toBeUndefined();
+    const rowInteraction = unset.workspace.interactions.roomRerolls.get(list.interactionKey)!;
+    const resolver = rowInteraction.rowReward(unsetRow.key);
+    const reward = resolver
+      .model(await resolver.load(), 'type')
+      .sections.flatMap((section) => section.items)
+      .find((item) => !item.disabled)!.value as ResolvedRewardOffer;
     const projected = projectStructuredWorkspaceFixture(
-      applyProjectCommand(base, catalog, intent.command),
+      applyProjectCommand(
+        placed,
+        catalog,
+        rowInteraction.replaceRewardIntent(unsetRow.key, reward).command,
+      ),
     );
     const phase = wheelPhase(projected);
     expect(phase.wheelRerolls?.rows.map((row) => row.targetLabel)).toEqual(['Offer']);
@@ -157,7 +203,7 @@ describe('ship wheels on their phase Timeline', () => {
     expect(row?.label).toMatch(/^Reroll Offer → \S/);
   });
 
-  it('opens each wheel at Wheels open and leaves no next-phase checkpoint row in any phase', () => {
+  it('opens each wheel at Wheels opened and leaves no next-phase checkpoint row in any phase', () => {
     const threePhase = createOccurrenceId('surface-o-combat07');
     const wheel2 = createRewardWheelAddress(o, threePhase, 'wheel2');
     const project = [
@@ -196,51 +242,10 @@ describe('ship wheels on their phase Timeline', () => {
       ),
     );
     expect(wheelsOpen).toEqual([['wheel1'], ['wheel2'], []]);
-    for (const phase of room.workbench.phases) {
-      expect(phase.checkpoints.map((checkpoint) => checkpoint.key)).not.toContainEqual(
-        expect.stringMatching(/^nextPhase/),
-      );
-      expect(phase.checkpoints.map((checkpoint) => checkpoint.label)).not.toContainEqual(
-        expect.stringContaining('ready to advance'),
-      );
-    }
   });
 
   it('shows a delivery the phase end matured as the next wheel opens, after the NPC is answered', () => {
-    const { oShrine } = surfaceShrineDeliverySources;
-    const occurrence = createOccurrenceAddress(o, oOccurrenceIds.combat02);
-    let project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence,
-      encounterCount: 3,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SelectEncounter',
-      phase: createEncounterPhaseAddress(o, occurrence, 'Combat1'),
-      encounterKey: 'IcarusCombatO',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: oShrine,
-      slotKey: 'secondLeft',
-      value: { rewardType: 'MaxHealthDrop' },
-    });
-    project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
-      delay: 5,
-      rushed: false,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelStore',
-      wheel: createRewardWheelAddress(o, oOccurrenceIds.combat02, 'wheel2'),
-      storeKey: 'RunProgress',
-    });
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceRewardWheelOffer',
-        offer: createRewardWheelOfferAddress(o, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
-        value: { rewardType: 'RoomMoneyDrop' },
-      }),
-    );
+    let project = threePhaseDeliveryProject();
     // Icarus's offer is authored first, so the walk reaches the delivery's due contact.
     project = authorLegalTraitOffers(placeDueHermesShrineDeliveries(project));
     const node = requireWorkspaceBiome(
@@ -254,37 +259,45 @@ describe('ship wheels on their phase Timeline', () => {
     if (node?.kind !== 'occurrenceWorkbench' || node.room.workbench.kind !== 'ship')
       throw new Error('the ship room is not projected');
     const actions = node.room.roomActions!;
-    const combatOne = node.room.workbench.phases.find((phase) => phase.key === 'Combat1')!;
-    const sequence = combatOne.timeline.flatMap((entry) => {
-      if (entry.kind === 'boundary')
-        return entry.boundary.kind === 'encounterEnd' || entry.boundary.kind === 'wheelsOpen'
-          ? [entry.boundary.kind]
-          : [];
-      if (entry.kind === 'spawned') return [`spawned ${entry.moment}`];
-      if (entry.kind !== 'action') return [];
-      const reference = actions.rows.find((row) => row.key === entry.actionKey)?.reference;
-      switch (reference?.kind) {
-        case 'interactWheelReward':
-          return ['collect reward'];
-        case 'interactEncounter':
-          return ['talk'];
-        case 'interactAcquisitionEntry':
-          return reference.siteKey === 'hermesShrineDelivery' ? ['collect delivery'] : [];
-        case 'chooseRewardWheel':
-          return ['select wheel'];
-        default:
-          return [];
-      }
-    });
-    // Encounter ended spawns the wheel reward; the delivery arrives as the next wheel opens.
-    const tail = sequence.slice(sequence.indexOf('encounterEnd'));
+    const sequenceOf = (key: string) =>
+      node.room.workbench.kind !== 'ship'
+        ? []
+        : node.room.workbench.phases
+            .find((phase) => phase.key === key)!
+            .timeline.flatMap((entry) => {
+              if (entry.kind === 'boundary')
+                return entry.boundary.kind === 'encounterEnd' ||
+                  entry.boundary.kind === 'wheelsOpen'
+                  ? [entry.boundary.kind]
+                  : [];
+              if (entry.kind === 'spawned') return [`spawned ${entry.moment}`];
+              if (entry.kind !== 'action') return [];
+              const reference = actions.rows.find((row) => row.key === entry.actionKey)?.reference;
+              switch (reference?.kind) {
+                case 'interactWheelReward':
+                  return ['collect reward'];
+                case 'interactEncounter':
+                  return ['talk'];
+                case 'interactAcquisitionEntry':
+                  return reference.siteKey === 'hermesShrineDelivery' ? ['collect delivery'] : [];
+                case 'chooseRewardWheel':
+                  return ['select wheel'];
+                default:
+                  return [];
+              }
+            });
+    // Encounter ended spawns the wheel reward; the delivery arrives as the next wheel opens,
+    // before its choice on the same tab.
+    const combatOne = sequenceOf('Combat1');
+    const tail = combatOne.slice(combatOne.indexOf('encounterEnd'));
     expect(tail.slice(0, 2)).toEqual(['encounterEnd', 'spawned encounterEnd']);
-    expect([...tail.slice(2, 4)].sort()).toEqual(['collect reward', 'talk']);
-    expect(tail.slice(4)).toEqual([
+    expect([...tail.slice(2, -4)].sort()).toEqual(['collect reward', 'talk']);
+    expect(tail.slice(-4)).toEqual([
       'wheelsOpen',
       'spawned wheelsOpen',
       'collect delivery',
       'select wheel',
     ]);
+    expect(sequenceOf('Combat2')).not.toContain('wheelsOpen');
   });
 });

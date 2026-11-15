@@ -16,7 +16,10 @@ function TestProtocol.testChaosSpawnPointIndexIsStrictAndChaosOnly()
             .. (kind or "chaos") .. '","owner":"gate","room":{"id":"chaos","biomeKey":"F","gameName":"Chaos_01"}'
             .. field .. '}]}'))
     end
-    lu.assertNotNil(overview.decode(value(""), "overview"))
+    local missing, missingError = overview.decode(value(""), "overview")
+    lu.assertNil(missing)
+    lu.assertStrContains(missingError, "overview.additional[1].spawnPointIndex is required")
+    lu.assertNotNil(overview.decode(value("", "zagreusContract"), "overview"))
     lu.assertNotNil(overview.decode(value(',"spawnPointIndex":2'), "overview"))
     for _, field in ipairs({ 'null', '0', '-1', '1.5', '"2"', 'true', '{}', '[]' }) do
         lu.assertNil(overview.decode(value(',"spawnPointIndex":' .. field), "overview"))
@@ -471,30 +474,6 @@ function TestProtocol.testMirroredArachneFixtureCarriesBothAndPositionOnlyChoice
     })
 end
 
-local function anomalyCustomization(name)
-    local plan = assert(protocol.decode(decode(name)))
-    local found, customization = false, nil
-    for _, occurrence in ipairs(plan.occurrences) do
-        for _, phase in ipairs(occurrence.overview.encounterPhases) do
-            if phase.encounterKey == "GeneratedAnomalyB" then found, customization = true, phase.customization end
-        end
-    end
-    lu.assertTrue(found, name)
-    return customization
-end
-
-function TestProtocol.testMirroredDefaultAnomalyCarriesNoCustomization()
-    lu.assertNil(anomalyCustomization("fg-anomaly"))
-end
-
-function TestProtocol.testMirroredAnomalyFixtureCarriesTheOrderedRoster()
-    lu.assertEquals(anomalyCustomization("fg-anomaly-roster"), { { decisionKey = "infiniteRoster", kind = "infiniteRoster", types = {
-        { choiceKey = "SpreadShotUnit_Elite", nativeId = "SpreadShotUnit_Elite" },
-        { choiceKey = "SpreadShotUnit", nativeId = "SpreadShotUnit" },
-        { choiceKey = "BloodlessPitcher", nativeId = "BloodlessPitcher" },
-    } } })
-end
-
 function TestProtocol.testScheduledLifecycleKeepsHermesAndEchoStateDiagnosticOnly()
     local decoded, errorMessage = protocol.decode(decode("surface-scheduled-lifecycle"))
     lu.assertNotNil(decoded, errorMessage)
@@ -532,6 +511,37 @@ local function refreshFingerprint(plan)
         rewardStoreComparison = plan.rewardStoreComparison, olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
+end
+
+local function anomalyCustomization(value)
+    local plan = assert(protocol.decode(value))
+    local found, customization = false, nil
+    for _, occurrence in ipairs(plan.occurrences) do
+        for _, phase in ipairs(occurrence.overview.encounterPhases) do
+            if phase.encounterKey == "GeneratedAnomalyB" then found, customization = true, phase.customization end
+        end
+    end
+    lu.assertTrue(found)
+    return customization
+end
+
+function TestProtocol.testMirroredDefaultAnomalyCarriesNoCustomization()
+    local value = decode("fg-anomaly-roster")
+    for _, occurrence in ipairs(value.occurrences) do
+        for _, phase in ipairs(occurrence.overview.encounterPhases) do
+            if phase.encounterKey == "GeneratedAnomalyB" then phase.customization = nil end
+        end
+    end
+    fixtures.refingerprint(value, "fg-anomaly-roster")
+    lu.assertNil(anomalyCustomization(value))
+end
+
+function TestProtocol.testMirroredAnomalyFixtureCarriesTheOrderedRoster()
+    lu.assertEquals(anomalyCustomization(decode("fg-anomaly-roster")), { { decisionKey = "infiniteRoster", kind = "infiniteRoster", types = {
+        { choiceKey = "SpreadShotUnit_Elite", nativeId = "SpreadShotUnit_Elite" },
+        { choiceKey = "SpreadShotUnit", nativeId = "SpreadShotUnit" },
+        { choiceKey = "BloodlessPitcher", nativeId = "BloodlessPitcher" },
+    } } })
 end
 
 local function automatic(plan)
@@ -644,7 +654,7 @@ local function minimalPlan(transactions)
                 biomeKey = "F",
                 gameName = "F_Opening01",
                 kind = "opening",
-                overview = { encounterPhases = {}, requiredObjects = {} },
+                overview = { encounterPhases = {}, requiredObjects = {}, layout = tagged({ flipped = false }) },
                 timeline = { transactions = transactions, dependencies = {}, obligations = obligations },
                 roomGuide = {},
                 doors = { kind = "terminal", owner = "doors-owner" },
@@ -735,7 +745,7 @@ function TestProtocol.testRoomGuideRequiresUniqueKeysAndLocalTransactionOwners()
             producerLifecycleKey = "pickup", roles = { role() }, window = window(),
         } })
         local description = { kind = "purchaseHermesShrineOffer", generationKey = "initial:first",
-            rewardType = "MaxHealthDrop", rushed = true }
+            rewardType = "MaxHealthDrop" }
         for key, field in pairs(extra or {}) do description[key] = field end
         value.occurrences[1].roomGuide = tagged({ {
             key = "shrine", transactionOwner = transactionOwner, description = description,
@@ -746,7 +756,11 @@ function TestProtocol.testRoomGuideRequiresUniqueKeysAndLocalTransactionOwners()
     decoded, errorMessage = protocol.decode(shrinePlan())
     lu.assertNotNil(decoded, errorMessage)
     lu.assertNil(protocol.decode(shrinePlan(nil, "source")))
-    for _, invalid in ipairs({ { rushed = "yes" }, { generationKey = "initial:healing" }, { unexpected = true } }) do
+    decoded, errorMessage = protocol.decode(shrinePlan({ kind = "rushHermesShrineOffer" }))
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertNil(protocol.decode(shrinePlan({ kind = "rushHermesShrineOffer" }, "source")))
+    -- The rush is its own row; a purchase no longer carries it.
+    for _, invalid in ipairs({ { rushed = true }, { generationKey = "initial:healing" }, { unexpected = true } }) do
         lu.assertNil(protocol.decode(shrinePlan(invalid)))
     end
 end
@@ -766,6 +780,7 @@ local function minimalShrinePlan()
         },
     } })
     plan.occurrences[1].overview.hermesShrine = tagged({
+        anchorId = 1,
         offers = {
             {
                 generationKey = "initial:first", optionKey = "Heal", rewardType = "HealBigDrop",
@@ -814,6 +829,33 @@ function TestProtocol.testHermesShrinePurchaseRequiresDeliverySourcePair()
         refreshFingerprint(plan)
         lu.assertNil(protocol.decode(plan))
     end
+end
+
+-- An entered room publishes its flip, its entry unless it has none, and the values its arrival door derives.
+function TestProtocol.testLayoutRequiresItsFlipAndNamesOnlyPublishedDerivedValues()
+    local function decoded(layout)
+        return overview.decode(assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"layout":'
+            .. layout .. '}')), "overview")
+    end
+    local entry = '"entry":{"startPointId":7,"endPointId":8}'
+    lu.assertNotNil(decoded('{"flipped":false}'))
+    lu.assertNotNil(decoded('{"flipped":true,' .. entry .. ',"derived":["flipped","entry"]}'))
+    lu.assertNotNil(decoded('{"flipped":true,"derived":["flipped"]}'))
+    for _, layout in ipairs({
+        '{' .. entry .. '}',
+        '{"flipped":true,' .. entry .. ',"derived":[]}',
+        '{"flipped":true,' .. entry .. ',"derived":["entry","entry"]}',
+        '{"flipped":true,' .. entry .. ',"derived":["exit"]}',
+        '{"flipped":true,"derived":["entry"]}',
+    }) do
+        lu.assertNil(decoded(layout), layout)
+    end
+    local plan = minimalPlan({})
+    plan.occurrences[1].overview.layout = nil
+    refreshFingerprint(plan)
+    local missing, reason = protocol.decode(plan)
+    lu.assertNil(missing)
+    lu.assertStrContains(reason, "overview.layout must be published exactly for a selected occurrence")
 end
 
 function TestProtocol.testWellOverviewCannotRetainTheMovedTravelDealRefill()
@@ -1118,7 +1160,7 @@ function TestProtocol.testEveryNonAcquisitionHasExactlyOneObligation()
 end
 
 function TestProtocol.testLegacyProtocolVectorsAreRejected()
-    for _, name in ipairs({ "f-opening", "fg", "fg-ixion-chaos", "fg-anomaly", "automatic-boss" }) do
+    for _, name in ipairs({ "f-opening", "fg", "fg-ixion-chaos", "fg-anomaly-roster", "automatic-boss" }) do
         local plan = decode(name)
         plan.resources = nil
         refreshFingerprint(plan)
@@ -2523,37 +2565,105 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
         return overview.decode(assert(json.decode('{"encounterPhases":[],"requiredObjects":[],' .. text .. '}')),
             "overview")
     end
-    local initial = '"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"}]'
-    lu.assertNotNil(decoded('"stygianWell":{' .. initial .. ',"rerolls":['
-        .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}]},'
-        .. '{"rollKey":"r2","offers":[]}]}'))
-    lu.assertNotNil(decoded('"stygianWell":{"offers":[]}'))
-    lu.assertNotNil(decoded('"purgingPool":{"traits":[{"slotKey":"right","traitKey":"A"}]}'))
-    lu.assertNotNil(decoded('"purgingPool":{"traits":[],"rerolls":['
+    local initial = '"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"},'
+        .. '{"generationKey":"initial:secondLeft","offerKey":"LastStandShopItem"},'
+        .. '{"generationKey":"initial:secondRight","offerKey":"RandomStoreItem"}]'
+    lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":['
+        .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}],'
+        .. '"boughtSlots":["healing","secondLeft"]},'
+        .. '{"rollKey":"r2","offers":[],"boughtSlots":["healing","secondLeft","secondRight"]}]}'))
+    lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. '}'))
+    lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[{"slotKey":"right","traitKey":"A"}]}'))
+    lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[],"rerolls":['
         .. '{"rollKey":"r1","traits":[{"slotKey":"middle","traitKey":"A"}]},{"rollKey":"r3","traits":[]}]}'))
     for _, text in ipairs({
-        '"stygianWell":{"rerollCount":2,"offers":[]}',
-        '"stygianWell":{"interacted":true,"offers":[]}',
+        '"stygianWell":{"rerollCount":2,' .. initial .. '}',
+        '"stygianWell":{"interacted":true,' .. initial .. '}',
         '"stygianWell":{"rerolls":[{"rollKey":"r1","offers":[]}]}',
-        '"purgingPool":{"interacted":true,"traits":[]}',
-        '"purgingPool":{"rerolls":[{"rollKey":"r1","traits":[]}]}',
-        '"purgingPool":{"traits":[{"slotKey":"left","traitKey":null}]}',
-        '"purgingPool":{"traits":[{"traitKey":"A"}]}',
-        '"stygianWell":{"offers":[],"rerolls":[]}',
-        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"initial","offers":[]}]}',
-        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"r1","offers":[]},'
-            .. '{"rollKey":"r1","offers":[]}]}',
-        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"r1","offers":['
+        '"purgingPool":{"anchorId":1,"interacted":true,"traits":[]}',
+        '"purgingPool":{"anchorId":1,"rerolls":[{"rollKey":"r1","traits":[]}]}',
+        '"purgingPool":{"anchorId":1,"traits":[{"slotKey":"left","traitKey":null}]}',
+        '"purgingPool":{"anchorId":1,"traits":[{"traitKey":"A"}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"initial","offers":[]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]},{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
             .. '{"generationKey":"r2:healing","offerKey":"HealDropRange"}]}]}',
+        -- A reroll's offers and bought slots are exactly the three slots, disjoint.
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
+            .. '{"generationKey":"r1:healing","offerKey":"HealDropRange"}],"boughtSlots":["secondLeft"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
+            .. '{"generationKey":"r1:healing","offerKey":"HealDropRange"}],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","healing","secondRight"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","middle"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],"boughtSlots":[]}]}',
         '"stygianWell":{"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
-        '"purgingPool":{"rerollCount":1,"traits":[]}',
-        '"purgingPool":{"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+        '"purgingPool":{"anchorId":1,"rerollCount":1,"traits":[]}',
+        '"purgingPool":{"anchorId":1,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
             .. '{"slotKey":"left","traitKey":null}]}]}',
-        '"purgingPool":{"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+        '"purgingPool":{"anchorId":1,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
             .. '{"slotKey":"left","traitKey":"A"},{"slotKey":"left","traitKey":"B"}]}]}',
     }) do
         lu.assertNil(decoded(text), text)
     end
+end
+
+-- Every position and stock slot a valid plan reaches is published; its absence fails decode by name.
+function TestProtocol.testRequiredPositionsAndStockRefuseByField()
+    local function refused(text, phases, expected)
+        local decoded, reason = overview.decode(assert(json.decode('{"encounterPhases":' .. (phases or "[]")
+            .. ',"requiredObjects":[],' .. text .. '}')), "overview")
+        lu.assertNil(decoded, text)
+        lu.assertStrContains(reason, expected)
+    end
+    refused('"purgingPool":{"traits":[]}', nil, "overview.purgingPool.anchorId is required")
+    refused('"challengeSwitch":{"variantKey":"V","encounterKey":"E"}', nil,
+        "overview.challengeSwitch.anchorId is required")
+    local shrine = minimalShrinePlan()
+    shrine.occurrences[1].overview.hermesShrine.anchorId = nil
+    refreshFingerprint(shrine)
+    local decodedShrine, shrineReason = protocol.decode(shrine)
+    lu.assertNil(decodedShrine)
+    lu.assertStrContains(shrineReason, "hermesShrine.anchorId is required")
+
+    refused('"stygianWell":{"offers":[]}', nil, "overview.stygianWell is missing anchorId")
+    refused('"stygianWell":{"anchorId":1,"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"},'
+        .. '{"generationKey":"initial:secondLeft","offerKey":"LastStandShopItem"}]}', nil,
+        "overview.stygianWell.offers must stock the healing, secondLeft and secondRight slots")
+    refused('"stygianWell":{"anchorId":1,"offers":[]}', nil,
+        "overview.stygianWell.offers must stock the healing, secondLeft and secondRight slots")
+
+    local optional = '{"slotKey":"optional1","reward":{"rewardType":"MaxManaDropSmall",'
+        .. '"producerLifecycleKey":"RoomReward","resolvedStoreKey":"FieldsOptionalRewards"}}'
+    refused('"fields":{"cagePoints":[],"optionalRewards":[' .. optional .. ']}', nil,
+        "overview.fields.optionalRewards[1] is missing pointId")
+    local nemesisPhase = '[{"slotKey":"Nemesis","encounterKey":"NemesisRandomEvent","kind":"Combat"}]'
+    refused('"fields":{"cagePoints":[],"optionalRewards":[]}', nemesisPhase,
+        "overview.fields.nemesisPointId is required for a planned Nemesis")
+    refused('"fields":{"cagePoints":[],"optionalRewards":[],"nemesisPointId":7}', nil,
+        "overview.fields.nemesisPointId requires a NemesisRandomEvent phase")
+    lu.assertNotNil(overview.decode(assert(json.decode('{"encounterPhases":' .. nemesisPhase
+        .. ',"requiredObjects":[],"fields":{"cagePoints":[],"optionalRewards":[],"nemesisPointId":7}}')),
+        "overview"))
+
+    local fieldsId
+    local decoded, reason = decodeEdited("underworld-fgh", function(plan)
+        for _, occurrence in ipairs(plan.occurrences) do
+            if occurrence.overview.fields ~= nil then
+                fieldsId = occurrence.id
+                table.remove(occurrence.overview.fields.cagePoints)
+                return
+            end
+        end
+    end)
+    lu.assertNotNil(fieldsId)
+    lu.assertNil(decoded)
+    lu.assertStrContains(reason, "cagePoints must name a point for each active cage")
 end
 
 function TestProtocol.testWellAndPoolGuideRowsNameTheirRoll()

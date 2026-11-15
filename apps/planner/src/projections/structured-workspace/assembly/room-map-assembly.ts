@@ -1,6 +1,6 @@
-import type { RoomOccurrence } from '@run-planner/engine/authored-project';
 import {
   nativeExitDoorOrder,
+  worldShopItemPoints,
   type Catalog,
   type RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
@@ -19,7 +19,18 @@ const point = ({ id, x, y }: { readonly id: number; readonly x: number; readonly
 export function assembleRoomMap(
   catalog: Pick<Catalog, 'rooms' | 'exitTypes'>,
   room: RoomDeclaration,
-  occurrence: RoomOccurrence,
+  exits: {
+    /** The authored Chaos gate's one-based spawn point, chosen or default. */
+    readonly chaosGateSpawnPointIndex: number | undefined;
+    /** The room authors its Contract door. */
+    readonly contractExit: boolean;
+  },
+  stock: {
+    /** The World Shop's stocked offers in native order, its empty slots left out. */
+    readonly shopOfferKeys: readonly string[];
+    /** The room holds the Infernal Contract pedestal. */
+    readonly contractPedestal: boolean;
+  },
 ): WorkspaceRoomMap | undefined {
   const points = room.mapPoints;
   if (points === undefined) return undefined;
@@ -39,16 +50,10 @@ export function assembleRoomMap(
           room.gameName,
           exitDoors.map((door) => ({ doorId: door.id })),
         );
-  const chaos = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
-  // A room with one SecretPoint can place its gate only there.
   const chaosGate =
-    chaos === undefined
+    exits.chaosGateSpawnPointIndex === undefined
       ? undefined
-      : chaos.spawnPointIndex === undefined || chaos.spawnPointIndex === null
-        ? points.secretPoints.length === 1
-          ? points.secretPoints[0]
-          : undefined
-        : points.secretPoints[chaos.spawnPointIndex - 1];
+      : points.secretPoints[exits.chaosGateSpawnPointIndex - 1];
   return Object.freeze({
     doors: Object.freeze(
       exitDoors.map((door) => {
@@ -67,7 +72,18 @@ export function assembleRoomMap(
     chaosPoints: Object.freeze(points.secretPoints.map(point)),
     fieldsCagePoints: Object.freeze((points.fieldsCagePoints ?? []).map(point)),
     fieldsOptionalPoints: Object.freeze((points.fieldsOptionalPoints ?? []).map(point)),
+    shopItems: Object.freeze(
+      worldShopItemPoints(points, stock.shopOfferKeys).map(({ item, point: at }) =>
+        Object.freeze({ ...point(at), offerKey: item }),
+      ),
+    ),
+    ...(stock.contractPedestal && points.contractPedestalPoint !== undefined
+      ? { contractPedestal: point(points.contractPedestalPoint) }
+      : {}),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
+    ...(exits.contractExit && points.contractExitPoint !== undefined
+      ? { contractExit: point(points.contractExitPoint) }
+      : {}),
     ...(points.shipWheel === undefined
       ? {}
       : {

@@ -201,6 +201,8 @@
 .biome-structure-scroll {
   position: relative;
   grid-area: rail;
+  /* The rail only scrolls down; a subpixel overhang must not add a sideways scrollbar. */
+  overflow-x: hidden;
   padding-right: 12px;
   border-right: 1px solid #30313a;
   scrollbar-gutter: auto;
@@ -235,7 +237,9 @@
 
 .biome-rail-pin {
   flex: 0 0 auto;
-  padding: 2px 7px;
+  /* One width for every glyph, so the toggle never moves as it changes. */
+  width: 2rem;
+  padding: 2px 0;
   border: 0;
   border-radius: 6px;
   color: #77757e;
@@ -259,9 +263,14 @@
   grid-template-columns: 112px minmax(0, 1fr);
 }
 
-/* Folded, the head keeps only the biome's icon; clearing waits for the full rail. */
+/*
+ * Folded, the head keeps only the biome's icon; clearing waits for the full rail.
+ * The hidden action keeps its height, so the toggle stays put as the rail folds.
+ */
 .biome-workspace[data-rail='folded'] .biome-structure-title-row > .topology-removal-action {
-  display: none;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 
 /* Folded, the title is kept for assistive technology only. */
@@ -274,20 +283,8 @@
   white-space: nowrap;
 }
 
-.biome-workspace[data-rail='folded'] .biome-structure-head {
-  padding-right: 6px;
-}
-
 .biome-workspace[data-rail='folded'] .biome-structure-scroll {
   padding-right: 6px;
-}
-
-.biome-workspace[data-rail='folded'] .biome-structure-head {
-  justify-content: center;
-}
-
-.biome-workspace[data-rail='folded'] .biome-structure-head > .biome-structure-heading {
-  flex: 0 0 auto;
 }
 
 /* Opened while folded, the full rail floats over the room. */
@@ -303,7 +300,8 @@
 
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-node {
   justify-items: start;
-  padding: 8px 8px;
+  /* Pinned height, with sides narrow enough that a room icon beside a reward icon fits the column. */
+  padding: 10px 6px;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
@@ -344,7 +342,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 1px;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
@@ -583,11 +581,20 @@
 }
 
 .biome-rail-stop[data-step][data-plan-end='end']::after {
+  padding-left: 12px;
+  /* A flag before the step, drawn so it matches across platforms; centred on the digits' ink. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='13' viewBox='2 1.5 10 13'%3E%3Cpath fill='%231c1d23' d='M2 1.5h1.8v13H2zM3.8 2H12l-2.2 3.2L12 8.4H3.8z'/%3E%3C/svg%3E");
+  background-position: 4px calc(50% - 1px);
+  background-repeat: no-repeat;
+  background-size: auto 7px;
   color: #1c1d23;
 }
 
 .biome-rail-node {
   display: grid;
+  /* One height whether the rail is pinned or folded: the room icon's, with the card's padding. */
+  min-height: calc(1.5rem + 22px);
+  align-content: center;
   width: 100%;
   min-width: 0;
   gap: 2px;
@@ -703,6 +710,7 @@
 
 /* A side room is a slim sub-row: no frame until it is hovered, selected or has a finding. */
 .biome-hub-rail-side-visit .biome-rail-node {
+  min-height: calc(1.2rem + 10px);
   padding: 4px 9px;
 }
 

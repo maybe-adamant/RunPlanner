@@ -521,10 +521,21 @@ function buildRoom(
     endKeepsake !== undefined && endKeepsake !== startKeepsake
       ? { ...optional('from', startKeepsake), to: endKeepsake }
       : undefined;
-  const timePieceUses = (traitsList: readonly SavedTrait[] | undefined) =>
-    traitsList?.find((trait) => trait.name === 'GoldifyKeepsake')?.boonConversionUses;
-  const timePieceBefore = timePieceUses(traitsBefore?.traits);
-  const timePieceAfter = timePieceUses(traitsAfter?.traits);
+  const timePiece = (traitsList: readonly SavedTrait[] | undefined) =>
+    traitsList?.find((trait) => trait.name === 'GoldifyKeepsake');
+  const timePieceBefore = timePiece(traitsBefore?.traits)?.boonConversionUses;
+  const timePieceLeft = timePiece(traitsAfter?.traits);
+  // Spending an unslotted Time Piece's last charge removes its trait (GiftLogic.lua:131);
+  // a slotted one swapped away may drop without a spend, and one that expired
+  // (a keepsake opposing Fated chosen) zeroed without one, leaving its spends unknown.
+  const timePieceAfter =
+    timePieceLeft !== undefined
+      ? timePieceLeft.expired
+        ? undefined
+        : timePieceLeft.boonConversionUses
+      : traitsAfter !== undefined && startKeepsake !== 'GoldifyKeepsake'
+        ? 0
+        : undefined;
   const conversions: RunRecordConversions | undefined = nonEmpty({
     ...optional('artificer', gain(before.metaConversionUses, after.metaConversionUses)),
     ...optional(

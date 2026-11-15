@@ -1,5 +1,9 @@
-import { rerollAppendIndex, type ProjectDocument } from '@run-planner/engine/authored-project';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  rerollPressForProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import type {
   CandidateProjectionSession,
   RewardDomainCandidateOwner,
@@ -29,6 +33,7 @@ function unavailableReason(reason: 'notRerollable'): string {
 
 function bindRoomRerolls(
   input: {
+    readonly assembly: ProjectEvaluationAssembly;
     readonly candidates: CandidateProjectionSession;
     readonly project: ProjectDocument;
     readonly rewardPicker: RewardPickerProjectionService;
@@ -71,7 +76,6 @@ function bindRoomRerolls(
     return target;
   };
   const rowResolvers = new Map<string, WorkspaceRewardOfferResolver>();
-  const pendingResolvers = new Map<string, WorkspaceRewardOfferResolver>();
   return Object.freeze({
     key: requirement.interactionKey,
     owner: requirement.owner,
@@ -102,23 +106,6 @@ function bindRoomRerolls(
       rowResolvers.set(rowKey, bound);
       return bound;
     },
-    pendingReward: (targetKey: string) => {
-      const existing = pendingResolvers.get(targetKey);
-      if (existing !== undefined) return existing;
-      const target = requireTarget(targetKey);
-      const bound = resolver(
-        `${requirement.interactionKey}:pending:${targetKey}`,
-        {
-          kind: 'pendingReroll',
-          address: target.rewardOwner,
-          surface: requirement.surface,
-          target: target.target,
-        },
-        target.rewardTypes,
-      );
-      pendingResolvers.set(targetKey, bound);
-      return bound;
-    },
     replaceRewardIntent: (rowKey: string, reward: ResolvedRewardOffer) => {
       const address = requireRow(rowKey).address;
       return Object.freeze({
@@ -137,48 +124,20 @@ function bindRoomRerolls(
             : Object.freeze({ kind: 'RemoveRoomAction' as const, action: address }),
       });
     },
-    appendIntent: (targetKey: string, reward: ResolvedRewardOffer) => {
-      const index = rerollAppendIndex(input.project, requirement.surface);
-      if (index === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${requirement.interactionKey} has no authored room to append to`,
-        );
-      const owner = requirement.owner;
-      const target = requireTarget(targetKey).target;
-      if (owner.kind === 'hubDecision') {
-        if (target.kind !== 'hubSlot')
-          throw new StructuredWorkspaceProjectionContractError(
-            `${requirement.interactionKey} names a Hub press by its board slot`,
-          );
-        return Object.freeze({
-          command: Object.freeze({
-            kind: 'InsertHubReroll' as const,
-            hub: owner,
-            hubSlotKey: target.hubSlotKey,
-            reward,
-            index,
-          }),
-        });
-      }
-      if (target.kind === 'hubSlot')
-        throw new StructuredWorkspaceProjectionContractError(
-          `${requirement.interactionKey} names a room press by its door`,
-        );
-      return Object.freeze({
-        command: Object.freeze({
-          kind: 'InsertReroll' as const,
-          occurrence: owner,
-          target,
-          reward,
-          index,
-        }),
-      });
+    pressIntent: (targetKey: string) => {
+      const command = rerollPressForProjectEvaluationAssembly(
+        input.assembly,
+        requirement.surface,
+        requireTarget(targetKey).target,
+      );
+      return command === undefined ? undefined : Object.freeze({ command });
     },
   });
 }
 
 /** Binds each room's and Hub stay's Rerolls list over engine candidates. */
 export function bindRoomRerollInteractions(input: {
+  readonly assembly: ProjectEvaluationAssembly;
   readonly candidates: CandidateProjectionSession;
   readonly project: ProjectDocument;
   readonly requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>;

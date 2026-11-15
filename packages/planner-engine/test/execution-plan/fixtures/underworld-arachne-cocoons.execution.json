@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 3,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -414,7 +414,11 @@
           { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -769,7 +773,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1156,7 +1165,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1548,7 +1562,12 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1728,7 +1747,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -2104,7 +2128,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 560632, "endPointId": 560633 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -2313,7 +2342,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 560632, "endPointId": 560633 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -2490,7 +2524,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 560632, "endPointId": 560633 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -2692,7 +2731,11 @@
             }
           ]
         },
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 560626, "endPointId": 560627 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -2765,7 +2808,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -2821,8 +2868,27 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [], "anchorId": 755023 },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "LimitedSwapTraitDrop" },
+            { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
+          ],
+          "anchorId": 480768
+        },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
+          "anchorId": 755023
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 40009, "endPointId": 40012 },
+          "derived": ["flipped", "entry"]
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -2896,7 +2962,11 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -3003,7 +3073,11 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": true }
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -3346,7 +3420,11 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Narcissus_01", "kind": "story" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -3741,7 +3819,11 @@
             }
           ]
         },
-        "layout": { "flipped": true }
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4118,7 +4200,11 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": true }
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -4374,7 +4460,11 @@
             }
           ]
         },
-        "layout": { "flipped": true }
+        "layout": {
+          "flipped": true,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4447,7 +4537,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossScylla01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -4503,9 +4597,27 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [], "anchorId": 637448 },
-        "layout": { "flipped": false },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "LastStandShopItem" },
+            { "generationKey": "initial:secondLeft", "offerKey": "TemporaryMoveSpeedTrait" },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedExTrait" }
+          ],
+          "anchorId": 487438
+        },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "HeraCastBoon" },
+            { "slotKey": "middle", "traitKey": "HestiaManaBoon" },
+            { "slotKey": "right", "traitKey": "HestiaWeaponBoon" }
+          ],
+          "anchorId": 637448
+        },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 40009, "endPointId": 40012 },
+          "derived": ["entry"]
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4568,5 +4680,5 @@
       }
     }
   ],
-  "planFingerprint": "141177a6"
+  "planFingerprint": "c70b18f0"
 }

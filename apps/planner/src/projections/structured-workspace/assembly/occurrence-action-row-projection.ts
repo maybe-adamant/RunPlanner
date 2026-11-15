@@ -1,5 +1,4 @@
 import {
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
@@ -8,6 +7,7 @@ import {
   createRoomActionAddress,
   createInfernalContractPedestalAddress,
   createShopOfferAddress,
+  isPlacementBlocker,
   roomActionKey,
   semanticAddressKey,
   sitesWithNemesisResultPickups,
@@ -16,19 +16,23 @@ import {
   type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
+  type RoomActionPlacementBlocker,
   type RoomActionReference,
   type RoomActionSemanticAddress,
+  type RoomEventPoint,
   type RoomRunStateCheckpointAddress,
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import { requiredFirstTitle } from '@planner/projections/walkStopCopy';
+import { roomEventPointName, type RoomEventPhaseNames } from '@planner/projections/roomEventNames';
 import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
 import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
+  playedEncounterPhaseKeys,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
 import type {
@@ -53,12 +57,8 @@ import type {
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
-import {
-  occurrenceActionAddGroup,
-  occurrenceActionLabel,
-  occurrenceActionLabelParts,
-} from './occurrence-action-label';
-import { assembleFeatureRerollSlots } from './feature-roll-assembly';
+import { occurrenceActionLabel, occurrenceActionLabelParts } from './occurrence-action-label';
+import { assembleFeatureRerollSlots, assemblePurgingPoolSlots } from './feature-roll-assembly';
 import {
   projectRoomLifecycleTimeline,
   splitAtRoomStop,
@@ -236,45 +236,24 @@ function roomActionsForOccurrence(
       : undefined) ??
     encounterPhases.find((phase) => phase.address.phaseKey === key)?.label ??
     key;
-  const wheelPhaseLabel = (key: string) =>
-    phaseLabel(
-      roster.lifecycleStructure.phases.find((phase) => phase.rewardWheelKey === key)?.phaseKey ??
-        key,
-    );
-  const checkpointLabel = (key: string): string => {
-    if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
-    if (key === 'outgoingGeneration') return 'the next rooms are generated';
-    if (key === 'exitUsable') return 'the doors can be used';
-    return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
-  };
-  const windowLabel = (
-    window: import('@run-planner/engine/simulation').RoomActionWindow,
-  ): string => {
-    switch (window.kind) {
-      case 'standard':
-        return window.phase === 'beforeCombat' ? 'before combat' : 'after combat';
-      case 'encounterEnd': {
-        // In a Ship room a phase's end-effect pickups are due before the next wheel's choice.
-        const phases = roster.lifecycleStructure.phases;
-        const wheelKey =
-          phases[phases.findIndex((phase) => phase.phaseKey === window.phaseKey) + 1]
-            ?.rewardWheelKey;
-        return wheelKey === undefined || roster.lifecycleStructure.profileKey !== 'ShipCombatRoom'
-          ? `after ${phaseLabel(window.phaseKey)} ends`
-          : `after ${phaseLabel(window.phaseKey)} ends, before choosing the ${wheelPhaseLabel(wheelKey)} wheel`;
-      }
-      case 'postOutgoing':
-        return 'after the next rooms are generated';
-      case 'fields':
-        return 'during the Fields room';
-      case 'shipPreCombat':
-        return `before ${wheelPhaseLabel(window.wheelKey)}`;
-      case 'shipWheelsOpen':
-        return `before choosing the ${wheelPhaseLabel(window.wheelKey)} wheel`;
-      case 'shipPostCombat':
-        return `after ${wheelPhaseLabel(window.wheelKey)}`;
-    }
-  };
+  const graphPhases = roster.eventGraph.phases;
+  const phaseNames: RoomEventPhaseNames = Object.freeze({
+    label: phaseLabel,
+    multiPhase: graphPhases.length > 1,
+    ship: roomLocal.kind === 'ship',
+    phaseOfWheel: (wheelKey: string) =>
+      graphPhases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey,
+    choosesWheel: (phaseKey: string) =>
+      graphPhases.some(
+        (phase) => phase.phaseKey === phaseKey && phase.rewardWheelKey !== undefined,
+      ),
+  });
+  const pointName = (point: RoomEventPoint): string => roomEventPointName(point, phaseNames);
+  const pointIdentity = (point: RoomEventPoint) => [
+    point.kind,
+    'phaseKey' in point ? point.phaseKey : null,
+    'wheelKey' in point ? point.wheelKey : null,
+  ];
   const requiredKeys = new Set(
     roster.rows.flatMap((row) => (row.participation === 'required' ? [row.key] : [])),
   );
@@ -296,68 +275,51 @@ function roomActionsForOccurrence(
     const key = roomActionKey(entry.proposal.reference);
     proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), entry.key]);
   }
-  type Blocker = import('@run-planner/engine/simulation').RoomActionProposal['blockers'][number];
-  const windowIdentity = (window: import('@run-planner/engine/simulation').RoomActionWindow) => [
-    window.kind,
-    'phase' in window ? window.phase : null,
-    'phaseKey' in window ? window.phaseKey : null,
-    'wheelKey' in window ? window.wheelKey : null,
-  ];
-  const blockerIdentity = (blocker: Blocker): string =>
+  const blockerIdentity = (blocker: RoomActionPlacementBlocker): string =>
     JSON.stringify(
-      blocker.kind === 'window'
+      blocker.kind === 'pastDeadline'
         ? [
             blocker.kind,
             roomActionKey(blocker.reference),
             roomActionKey(blocker.precedingAction),
-            windowIdentity(blocker.window),
-            windowIdentity(blocker.precedingWindow),
+            pointIdentity(blocker.deadline),
           ]
-        : blocker.kind === 'requiredFirst'
+        : blocker.kind === 'dependency'
           ? [
               blocker.kind,
               roomActionKey(blocker.reference),
-              roomActionKey(blocker.requiredAction),
-              windowIdentity(blocker.window),
-              windowIdentity(blocker.requiredWindow),
+              roomActionKey(blocker.dependency.action),
             ]
           : [
               blocker.kind,
               roomActionKey(blocker.reference),
-              blocker.dependency.kind,
-              blocker.dependency.kind === 'afterAction'
-                ? roomActionKey(blocker.dependency.action)
-                : blocker.dependency.checkpointKey,
-              blocker.checkpointUnavailable === true,
+              pointIdentity(blocker.point),
+              blocker.requiredAction === undefined ? null : roomActionKey(blocker.requiredAction),
+              blocker.unavailable === true,
             ],
     );
-  const existingBlockers = new Set(
-    roster.issues.flatMap((issue) =>
-      issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst'
-        ? [blockerIdentity(issue)]
-        : [],
-    ),
-  );
+  const existingBlockers = new Set(roster.issues.filter(isPlacementBlocker).map(blockerIdentity));
   const explanationFor = (
     proposal: import('@run-planner/engine/simulation').RoomActionProposal,
   ): readonly string[] => {
-    if (proposal.blockers.length === 0) return Object.freeze([]);
+    const blockers = proposal.blockers;
+    if (blockers.length === 0) return Object.freeze([]);
     const proposedKey = roomActionKey(proposal.reference);
-    const introduced = proposal.blockers.filter(
+    const introduced = blockers.filter(
       (blocker) => !existingBlockers.has(blockerIdentity(blocker)),
     );
-    const candidates = introduced.length > 0 ? introduced : proposal.blockers;
-    const concernsProposal = (blocker: Blocker) =>
+    const candidates = introduced.length > 0 ? introduced : blockers;
+    const concernsProposal = (blocker: RoomActionPlacementBlocker) =>
       roomActionKey(blocker.reference) === proposedKey ||
-      (blocker.kind === 'window'
+      (blocker.kind === 'pastDeadline'
         ? roomActionKey(blocker.precedingAction) === proposedKey
-        : blocker.kind === 'requiredFirst'
-          ? roomActionKey(blocker.requiredAction) === proposedKey
-          : blocker.dependency.kind === 'afterAction' &&
-            roomActionKey(blocker.dependency.action) === proposedKey);
-    // The most direct blockers first: what must precede the moved action, then its window.
-    const rank = (entry: Blocker) =>
-      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'window' ? 1 : 0);
+        : blocker.kind === 'dependency'
+          ? roomActionKey(blocker.dependency.action) === proposedKey
+          : blocker.requiredAction !== undefined &&
+            roomActionKey(blocker.requiredAction) === proposedKey);
+    // The most direct blockers first: what must precede the moved action, then its deadline.
+    const rank = (entry: RoomActionPlacementBlocker) =>
+      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'pastDeadline' ? 1 : 0);
     const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
     const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
     return Object.freeze(
@@ -366,61 +328,58 @@ function roomActionsForOccurrence(
       ].slice(0, 2),
     );
   };
-  const blockerSentence = (blocker: Blocker, proposedKey: string): string => {
+  const blockerSentence = (blocker: RoomActionPlacementBlocker, proposedKey: string): string => {
     const label = actionLabel(blocker.reference);
-    let explanation: string;
-    if (blocker.kind === 'window') {
-      const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
-      explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
-    } else if (blocker.kind === 'requiredFirst') {
-      explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
-    } else if (blocker.dependency.kind === 'afterAction') {
-      const prerequisite = blocker.dependency.action;
-      const movingDependent = roomActionKey(blocker.reference) === proposedKey;
-      const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
-      // An Artificer replacement depends on the reward it converts.
-      const artificerSource = allProjectedRows.find(
-        (row) => row.key === roomActionKey(prerequisite),
-      );
-      const artificer =
-        roster.rows.find((row) => row.key === roomActionKey(blocker.reference))?.sourceFamily
-          ?.kind === 'artificer' && artificerSource?.rewardPayload !== undefined;
-      const cageReward =
-        blocker.reference.kind === 'interactLocalReward' &&
-        prerequisite.kind === 'completeFieldsCage';
-      const cageInteraction =
-        (blocker.reference.kind === 'interactEncounter' ||
-          blocker.reference.kind === 'interactGorgon') &&
-        prerequisite.kind === 'completeFieldsCage';
-      const nextCage =
-        blocker.reference.kind === 'completeFieldsCage' &&
-        (prerequisite.kind === 'interactEncounter' || prerequisite.kind === 'interactGorgon');
-      const wheelReward =
-        blocker.reference.kind === 'interactWheelReward' &&
-        prerequisite.kind === 'chooseRewardWheel';
-      if (artificer)
-        // The source reads as the transformation its verb now names.
-        explanation = `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
-      else if (cageReward)
-        explanation = `${actionLabel(prerequisite)} to unlock ${movingDependent ? 'this reward' : label}.`;
-      else if (cageInteraction)
-        explanation =
-          blocker.reference.kind === 'interactGorgon'
-            ? `${actionLabel(prerequisite)} to make Athena available.`
-            : `${actionLabel(prerequisite)}, then ${label}.`;
-      else if (nextCage)
-        explanation = `${actionLabel(prerequisite)} before clearing ${blocker.reference.phaseKey}.`;
-      else if (wheelReward)
-        explanation = `${actionLabel(prerequisite)} before collecting its reward.`;
-      else if (movingDependent) explanation = `Requires: ${actionLabel(prerequisite)}.`;
-      else if (movingPrerequisite) explanation = `${label} requires this action first.`;
-      else explanation = `${label} requires ${actionLabel(prerequisite)} first.`;
-    } else if (blocker.checkpointUnavailable === true) {
-      explanation = `${label} requires a checkpoint this room cannot reach: ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
-    } else {
-      explanation = `${label} must come ${blocker.dependency.kind === 'afterCheckpoint' ? 'after' : 'before'} ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
+    if (blocker.kind === 'pastDeadline')
+      // The moved action ordered first stands only after the point the other must precede.
+      return roomActionKey(blocker.precedingAction) === proposedKey
+        ? `${actionLabel(blocker.precedingAction)} must come after ${pointName(blocker.deadline)}.`
+        : `${label} must come before ${pointName(blocker.deadline)}.`;
+    if (blocker.kind !== 'dependency') {
+      if (blocker.requiredAction !== undefined)
+        return `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
+      return blocker.unavailable === true
+        ? `${label} waits on ${pointName(blocker.point)}, which this room never reaches.`
+        : `${label} waits on ${pointName(blocker.point)}.`;
     }
-    return explanation;
+    const prerequisite = blocker.dependency.action;
+    const movingDependent = roomActionKey(blocker.reference) === proposedKey;
+    const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
+    // An Artificer replacement depends on the reward it converts.
+    const artificerSource = allProjectedRows.find((row) => row.key === roomActionKey(prerequisite));
+    const artificer =
+      roster.rows.find((row) => row.key === roomActionKey(blocker.reference))?.sourceFamily
+        ?.kind === 'artificer' && artificerSource?.rewardPayload !== undefined;
+    const cageReward =
+      blocker.reference.kind === 'interactLocalReward' &&
+      prerequisite.kind === 'completeFieldsCage';
+    const cageInteraction =
+      (blocker.reference.kind === 'interactEncounter' ||
+        blocker.reference.kind === 'interactGorgon') &&
+      prerequisite.kind === 'completeFieldsCage';
+    const nextCage =
+      blocker.reference.kind === 'completeFieldsCage' &&
+      (prerequisite.kind === 'interactEncounter' || prerequisite.kind === 'interactGorgon');
+    const wheelReward =
+      blocker.reference.kind === 'interactWheelReward' && prerequisite.kind === 'chooseRewardWheel';
+    // A cage's own explanations name it by its cage, not its Unlock row's reward.
+    const cageName = (phaseKey: string) =>
+      encounterPhases.find((phase) => phase.address.phaseKey === phaseKey)?.label ?? phaseKey;
+    if (artificer)
+      // The source reads as the transformation its verb now names.
+      return `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
+    if (cageReward)
+      return `Unlock ${cageName(prerequisite.phaseKey)} to release ${movingDependent ? 'this reward' : label}.`;
+    if (cageInteraction)
+      return blocker.reference.kind === 'interactGorgon'
+        ? `Unlock ${cageName(prerequisite.phaseKey)} to make Athena available.`
+        : `Unlock ${cageName(prerequisite.phaseKey)}, then ${label}.`;
+    if (nextCage)
+      return `${actionLabel(prerequisite)} before unlocking ${cageName(blocker.reference.phaseKey)}.`;
+    if (wheelReward) return `${actionLabel(prerequisite)} before collecting its reward.`;
+    if (movingDependent) return `Requires: ${actionLabel(prerequisite)}.`;
+    if (movingPrerequisite) return `${label} requires this action first.`;
+    return `${label} requires ${actionLabel(prerequisite)} first.`;
   };
   const projectProposals = () =>
     proposalEntries.map(({ proposal, key }) =>
@@ -513,8 +472,6 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
-      // Object purchases and collects are added from their entry and removed on their rows.
-      const participationOwnedByOverview = row.reference.kind === 'interactKeepsakeRack';
       const fountainRarity =
         row.reference.kind !== 'useFountain'
           ? undefined
@@ -537,9 +494,7 @@ function roomActionsForOccurrence(
                 (candidate) =>
                   candidate.sourceFamily?.kind === 'artificer' &&
                   candidate.dependencies.some(
-                    (dependency) =>
-                      dependency.kind === 'afterAction' &&
-                      roomActionKey(dependency.action) === row.key,
+                    (dependency) => roomActionKey(dependency.action) === row.key,
                   ),
               );
               if (replacementRow === undefined) return undefined;
@@ -606,6 +561,28 @@ function roomActionsForOccurrence(
           interactionKey: `stygianWellTwist:${semanticAddressKey(owner)}:${generationKey}`,
         });
       })();
+      // The fountain use that makes the Pool's entry list stale hosts the list it regenerates.
+      const purgingPoolRefresh = (() => {
+        const refresh = input.purgingPoolAssessment?.(owner)?.refresh;
+        const pool = input.occurrence.purgingPool;
+        if (row.reference.kind !== 'useFountain' || refresh === undefined || pool === undefined)
+          return undefined;
+        const slots = assemblePurgingPoolSlots({
+          catalog: input.catalog,
+          markerDestinations: input.markerDestinations,
+          owner,
+          list: 'refresh',
+          stored: pool.refreshTraitKeyBySlot ?? {},
+          candidatesBySlot: refresh.candidateTraitKeysBySlot,
+          declaredTraitKeys: Object.freeze([]),
+          offeredSlotKeys: refresh.offeredSlotKeys,
+        });
+        input.markerDestinations.setRoomTab(
+          slots.map((slot) => slot.marker),
+          'actions',
+        );
+        return Object.freeze({ slots });
+      })();
       const sourceFamily = row.sourceFamily;
       const labelParts = occurrenceActionLabelParts(
         input.catalog,
@@ -619,15 +596,15 @@ function roomActionsForOccurrence(
         input.rerollTargetLabel,
         input.evaluatedRoom?.requiredReward,
       );
+      // A switch's drops carry its kind, which marks them as it marks the switch.
       const challengeSwitchKind =
-        row.reference.kind === 'interactChallengeSwitch'
+        row.reference.kind === 'interactChallengeSwitch' || sourceFamily?.kind === 'challengeSwitch'
           ? observedChallengeSwitchKind(input.catalog, input.occurrence)
           : undefined;
       return Object.freeze({
         address,
         key: row.key,
         label: labelParts.label,
-        addGroup: occurrenceActionAddGroup(input.catalog, row.reference, roomLocal, sourceFamily),
         ...(sourceFamily === undefined ? {} : { sourceFamily }),
         ...(challengeSwitchKind === undefined ? {} : { challengeSwitchKind }),
         ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),
@@ -648,6 +625,9 @@ function roomActionsForOccurrence(
                 ...(labelParts.place === undefined ? {} : { place: labelParts.place }),
                 ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
                 ...(labelParts.npcKey === undefined ? {} : { npcKey: labelParts.npcKey }),
+                ...(labelParts.encounterKey === undefined
+                  ? {}
+                  : { encounterKey: labelParts.encounterKey }),
                 ...(labelParts.traitKey === undefined ? {} : { traitKey: labelParts.traitKey }),
                 ...(labelParts.object === undefined ? {} : { object: labelParts.object }),
                 ...(labelParts.reward === undefined ? {} : { reward: labelParts.reward }),
@@ -660,7 +640,6 @@ function roomActionsForOccurrence(
         participation: isGoldPickup(row)
           ? (goldCapability?.participation ?? row.participation)
           : row.participation,
-        participationOwnedByOverview,
         rank: row.rank,
         ...(row.stale || artificerOutput === undefined
           ? {}
@@ -697,9 +676,11 @@ function roomActionsForOccurrence(
           ? {}
           : { placementAssessment: row.placementAssessment }),
         stale: row.stale,
-        window: row.window,
+        ...(row.contact.phaseKey === undefined ? {} : { phaseKey: row.contact.phaseKey }),
+        timing: row.label,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
+        ...(purgingPoolRefresh === undefined ? {} : { purgingPoolRefresh }),
         ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
         ...(row.reference.kind === 'rerollStygianWell' || row.reference.kind === 'rerollPurgingPool'
           ? {
@@ -728,26 +709,13 @@ function roomActionsForOccurrence(
         createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
       ) ?? Object.freeze([])
     ).flatMap((capability) => {
+      const reference = capability.reference;
       if (
         capability.kind !== 'hermesShrineDelivery' ||
-        projectedRows.some(
-          (row) =>
-            row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'hermesShrineDelivery' &&
-            row.reference.entryKey === capability.address.entryKey &&
-            (row.reference.encounterPhaseKey === capability.encounterPhaseKey ||
-              row.placementAssessment?.kind === 'invalid'),
-        )
+        reference === undefined ||
+        projectedRows.some((row) => roomActionKey(row.reference) === roomActionKey(reference))
       )
         return [];
-      const reference = Object.freeze({
-        kind: 'interactAcquisitionEntry' as const,
-        siteKey: 'hermesShrineDelivery' as const,
-        entryKey: capability.address.entryKey,
-        ...(capability.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: capability.encounterPhaseKey }),
-      });
       const control = controlAt(capability.address);
       const actionAddress = createRoomActionAddress(
         input.biome,
@@ -758,12 +726,6 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
-          addGroup: occurrenceActionAddGroup(
-            input.catalog,
-            reference,
-            roomLocal,
-            capability.sourceFamily,
-          ),
           label: occurrenceActionLabel(
             input.catalog,
             reference,
@@ -778,29 +740,21 @@ function roomActionsForOccurrence(
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'required' as const,
-          participationOwnedByOverview: false,
           ...(capability.sourceFamily === undefined
             ? {}
             : { sourceFamily: capability.sourceFamily }),
-          placement: Object.freeze({
-            command: Object.freeze({
-              kind: 'PlaceHermesShrineDelivery' as const,
-              entry: capability.address,
-              ...(capability.encounterPhaseKey === undefined
-                ? {}
-                : { encounterPhaseKey: capability.encounterPhaseKey }),
-            }),
-            focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
-          }),
+          ...(capability.placement === undefined
+            ? {}
+            : {
+                placement: Object.freeze({
+                  command: capability.placement,
+                  focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
+                }),
+              }),
           rank: null,
           stale: false,
-          window:
-            capability.encounterPhaseKey === undefined
-              ? Object.freeze({ kind: 'postOutgoing' as const })
-              : Object.freeze({
-                  kind: 'encounterEnd' as const,
-                  phaseKey: capability.encounterPhaseKey,
-                }),
+          ...(capability.phaseKey === undefined ? {} : { phaseKey: capability.phaseKey }),
+          timing: capability.label ?? Object.freeze({ kind: 'afterDoorsOpen' as const }),
           executable: false,
         }),
       ];
@@ -812,26 +766,17 @@ function roomActionsForOccurrence(
       Object.freeze([])
     ).flatMap((capability) => {
       const rewardType = capability.rewardTypes?.[0];
+      const reference = capability.reference;
       if (
         capability.kind !== 'clockedTraitPickup' ||
-        capability.encounterPhaseKey === undefined ||
-        capability.producerLifecycleKey === undefined ||
+        reference === undefined ||
+        capability.label === undefined ||
+        capability.placement === undefined ||
         capability.rewardTypes?.length !== 1 ||
         rewardType === undefined ||
-        projectedRows.some(
-          (row) =>
-            row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'roomExit' &&
-            row.reference.entryKey === capability.address.entryKey,
-        )
+        projectedRows.some((row) => roomActionKey(row.reference) === roomActionKey(reference))
       )
         return [];
-      const reference = Object.freeze({
-        kind: 'interactAcquisitionEntry' as const,
-        siteKey: 'roomExit',
-        entryKey: capability.address.entryKey,
-        encounterPhaseKey: capability.encounterPhaseKey,
-      });
       const control = controlAt(capability.address);
       const actionAddress = createRoomActionAddress(
         input.biome,
@@ -852,12 +797,6 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
-          addGroup: occurrenceActionAddGroup(
-            input.catalog,
-            reference,
-            roomLocal,
-            capability.sourceFamily,
-          ),
           label: labelParts.label,
           // Its one reward type names and shows the drop before it is placed.
           ...(labelParts.name === undefined
@@ -877,26 +816,17 @@ function roomActionsForOccurrence(
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'optional' as const,
-          participationOwnedByOverview: false,
           ...(capability.sourceFamily === undefined
             ? {}
             : { sourceFamily: capability.sourceFamily }),
           placement: Object.freeze({
-            command: Object.freeze({
-              kind: 'PlaceClockedTraitPickup' as const,
-              entry: capability.address,
-              encounterPhaseKey: capability.encounterPhaseKey,
-              producerLifecycleKey: capability.producerLifecycleKey,
-              rewardType,
-            }),
+            command: capability.placement,
             focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
           }),
           rank: null,
           stale: false,
-          window: Object.freeze({
-            kind: 'encounterEnd' as const,
-            phaseKey: capability.encounterPhaseKey,
-          }),
+          ...(capability.phaseKey === undefined ? {} : { phaseKey: capability.phaseKey }),
+          timing: capability.label,
           executable: false,
         }),
       ];
@@ -921,12 +851,6 @@ function roomActionsForOccurrence(
             Object.freeze({
               address: actionAddress,
               key: roomActionKey(reference),
-              addGroup: occurrenceActionAddGroup(
-                input.catalog,
-                reference,
-                roomLocal,
-                goldCapability.sourceFamily,
-              ),
               label: occurrenceActionLabel(
                 input.catalog,
                 reference,
@@ -941,7 +865,6 @@ function roomActionsForOccurrence(
               proposalKeys: Object.freeze([]),
               reference,
               participation: required ? ('required' as const) : ('optional' as const),
-              participationOwnedByOverview: false,
               ...(goldCapability.sourceFamily === undefined
                 ? {}
                 : { sourceFamily: goldCapability.sourceFamily }),
@@ -958,15 +881,14 @@ function roomActionsForOccurrence(
               placement: Object.freeze({
                 command: Object.freeze({
                   kind: 'PlaceEchoGoldPickup' as const,
-                  site: goldCapability.address.site,
-                  entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                  entry: goldCapability.address,
                   sourceOfferKey: goldCapability.sourceOfferKey,
                 }),
                 focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
               }),
               rank: null,
               stale: false,
-              window: Object.freeze({ kind: 'postOutgoing' as const }),
+              timing: Object.freeze({ kind: 'afterDoorsOpen' as const }),
               executable: false,
             }),
           ];
@@ -991,29 +913,8 @@ function roomActionsForOccurrence(
         : [projected];
     }),
   );
-  const unplacedOptionalRows = Object.freeze([
-    ...unrankedOrStaleRows.filter(
-      (row) =>
-        row.rank === null &&
-        !row.stale &&
-        row.participation === 'optional' &&
-        !row.participationOwnedByOverview &&
-        !addedFromEntry(row),
-    ),
-    ...clockedTraitPickupRows,
-    ...goldPickupRows.filter((row) => row.participation === 'optional'),
-  ]);
-  const optionalKeys = new Set(unplacedOptionalRows.map((row) => row.key));
-  const repairRows = Object.freeze([
-    ...unrankedOrStaleRows.filter(
-      (row) =>
-        !optionalKeys.has(row.key) &&
-        (row.stale ||
-          (!row.participationOwnedByOverview && !(row.rank === null && addedFromEntry(row)))),
-    ),
-    ...dueShrineRows,
-    ...goldPickupRows.filter((row) => row.participation === 'required'),
-  ]);
+  // Unplaced rows are live things now; only stale rows stand outside the order.
+  const repairRows = Object.freeze(unrankedOrStaleRows.filter((row) => row.stale));
   // The engine places each published outcome at its landing; this room keeps only its own.
   const steadyGrowthOutcomes = input.steadyGrowthOutcomes ?? [];
   const transcendentEmbryoOutcomes = input.transcendentEmbryoOutcomes ?? [];
@@ -1030,14 +931,11 @@ function roomActionsForOccurrence(
       ),
       transcendentEmbryoOutcomes,
     ),
-    lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
-      const address = createEncounterPhaseAddress(
-        input.biome,
-        { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },
-        phaseKey,
-      );
-      return input.encounterPhaseStatus(address)?.kind === 'dormantSuffix' ? [] : [phaseKey];
-    }),
+    playedEncounterPhaseKeys(
+      input.encounterPhaseStatus,
+      createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+      lifecycleTimeline.graph.activeEncounterSlotKeys,
+    ),
   );
   const steadyGrowthOutcomeByAddress = new Map(
     steadyGrowthOutcomes.map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),
@@ -1114,32 +1012,12 @@ function roomActionsForOccurrence(
     input.spawnedLoot,
     projectedTimeline.entries,
     allProjectedRows,
-    proposals,
     roomLocal,
-  );
-  // Spawned loot is placed from its spawn row, where that row is shown.
-  const shownRowKeys = new Set(
-    spawned.entries.flatMap((entry) =>
-      entry.kind === 'action' && entry.presentation === 'row' ? [entry.actionKey] : [],
-    ),
-  );
-  const spawnPlacedKeys = new Set([
-    ...[
-      ...spawned.entries.flatMap((entry) => (entry.kind === 'spawned' ? entry.groups : [])),
-      ...spawned.actionSpawns.flatMap((spawn) =>
-        shownRowKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
-      ),
-    ].flatMap((group) => group.items.map((item) => item.actionKey)),
-    ...spawned.copies.flatMap((copy) =>
-      shownRowKeys.has(copy.sourceActionKey) ? [copy.item.actionKey] : [],
-    ),
-  ]);
-  const optionalRows = Object.freeze(
-    unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
   // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
   const stop = splitAtRoomStop(spawned.entries, lifecycleTimeline.entries, input);
   return Object.freeze({
+    pointName,
     timeline: Object.freeze({
       ...projectedTimeline,
       entries: stop?.reached ?? spawned.entries,
@@ -1149,21 +1027,8 @@ function roomActionsForOccurrence(
     }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
-    checkpoints: Object.freeze(
-      roster.checkpoints
-        .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')
-        .map((checkpoint) =>
-          Object.freeze({
-            key: checkpoint.checkpointKey,
-            label: checkpoint.label,
-            afterRank: checkpoint.afterRank,
-            window: checkpoint.window,
-          }),
-        ),
-    ),
     interactionKey: semanticAddressKey(owner),
     owner,
-    optionalRows,
     proposals: Object.freeze(proposals),
     repairRows,
     rows: allProjectedRows,
@@ -1402,23 +1267,6 @@ export function goldBalanceLabel(moments: GoldMoments): WorkspaceGoldAmount {
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;
 
-/** An action added from a room object's Timeline entry rather than the optional actions. */
-function addedFromEntry({
-  reference,
-  sourceFamily,
-}: Pick<WorkspaceRoomActionRow, 'reference' | 'sourceFamily'>): boolean {
-  return (
-    reference.kind === 'purchaseStygianWellOffer' ||
-    reference.kind === 'sellPurgingPoolTrait' ||
-    reference.kind === 'rerollStygianWell' ||
-    reference.kind === 'rerollPurgingPool' ||
-    reference.kind === 'interactShopOffer' ||
-    reference.kind === 'interactInfernalContractPedestal' ||
-    reference.kind === 'purchaseHermesShrineOffer' ||
-    sourceFamily?.kind === 'shopTravelDealRefill'
-  );
-}
-
 /**
  * Purchase and collect rows: the Travel Deal line under the purchase the engine
  * names as its trigger, and the delete that undoes the purchase or collect.
@@ -1488,6 +1336,14 @@ function shopPurchaseRowProducts(
           }),
         };
       case 'purchaseHermesShrineOffer':
+        return removal({
+          kind: 'SetHermesShrinePurchase',
+          occurrence: owner,
+          generationKey: reference.generationKey,
+          purchased: false,
+        });
+      // The rush that triggers the Travel Deal refill carries its line.
+      case 'rushHermesShrineOffer':
         return {
           ...(shrineRefill !== undefined &&
           shrineRefill.sourceGenerationKey === reference.generationKey
@@ -1499,10 +1355,10 @@ function shopPurchaseRowProducts(
               }
             : {}),
           ...removal({
-            kind: 'SetHermesShrinePurchase',
+            kind: 'SetHermesShrineRush',
             occurrence: owner,
             generationKey: reference.generationKey,
-            purchased: false,
+            rushed: false,
           }),
         };
       default:

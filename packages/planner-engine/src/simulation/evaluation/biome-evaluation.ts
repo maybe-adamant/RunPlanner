@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../encounters/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import {
@@ -7,7 +8,6 @@ import {
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
-  type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
 import type {
   AuthoredBiomePlan,
@@ -76,6 +76,7 @@ import type {
   TraitOfferCandidateArtifacts,
 } from '../candidates/trait-offer/capability';
 import type {
+  BiomeEvaluationBase,
   BiomeEvaluationPoint,
   PrefixBiomeEvaluationCoverage,
   ProjectBiomeEvaluation,
@@ -161,7 +162,7 @@ function structurallyEligibleRunStateOwners(
   }
   for (const link of prefix.fixedRoomLinks ?? []) appendRoom(link.target);
   for (const room of enteredRooms) {
-    if (room.lifecycleProfileKey === 'ShipCombatRoom') {
+    if (roomOpensRewardWheels(room)) {
       for (const phase of room.encounterPhases) {
         owners.push(
           createRoomRunStateCheckpointAddress(room.origin, {
@@ -285,6 +286,15 @@ function generation(
       ...encounters.findingRegions,
     ]),
   });
+}
+
+/** The stop's entry index, beside the coverage that names it only by its anchor. */
+function roomStopEntry(
+  evaluation: ProgressiveBiomeEvaluation,
+): Pick<BiomeEvaluationBase, 'roomStopEntryIndex'> {
+  return evaluation.roomStopEntryIndex === undefined
+    ? {}
+    : { roomStopEntryIndex: evaluation.roomStopEntryIndex };
 }
 
 function roomTimelineCoverage(
@@ -578,6 +588,7 @@ export function evaluateBiomeAssembly(
           ...(blockedAt === undefined ? {} : { blockedAt }),
           ...roomTimelineCoverage(progressive.evaluation),
         }),
+        ...roomStopEntry(progressive.evaluation),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -664,6 +675,7 @@ export function evaluateBiomeAssembly(
           blockedAt,
           ...roomTimelineCoverage(progressive.evaluation),
         }),
+        ...roomStopEntry(progressive.evaluation),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -687,6 +699,7 @@ export function evaluateBiomeAssembly(
     context.seed?.rewardFrontier,
     context.resourcePlacements,
     context.resourceFindings,
+    composed.reachedActions,
   );
   const roomGeneration = generation(
     catalog,
@@ -702,19 +715,7 @@ export function evaluateBiomeAssembly(
     context.forcedChaosOccurrenceKeys,
     context.seed?.rewardFrontier.state.rewardLookups,
   );
-  const nemesisByOwner = new Map(
-    rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [
-      semanticAddressKey(candidate.origin),
-      candidate,
-    ]),
-  );
-  // Reward simulation reaches the actual interaction frontier, while
-  // encounter preparation owns the rest of the encounter capability. Compose
-  // the one narrow event surface here without exposing either artifact map.
-  const encounterArtifacts = Object.freeze({
-    ...roomGeneration.candidateArtifacts.encounters,
-    nemesisAt: (event: NemesisRandomEventAddress) => nemesisByOwner.get(semanticAddressKey(event)),
-  });
+  const encounterArtifacts = roomGeneration.candidateArtifacts.encounters;
   const findings = Object.freeze([
     ...roomGeneration.validation.findings,
     ...rewards.simulation.findings,
@@ -755,7 +756,6 @@ export function evaluateBiomeAssembly(
         rewards.transcendentEmbryoArtifacts,
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
-        rewards.rerollSurfaceArtifacts,
         rewards.objectInteractionArtifacts,
       ),
     });
@@ -793,7 +793,6 @@ export function evaluateBiomeAssembly(
         rewards.transcendentEmbryoArtifacts,
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
-        rewards.rerollSurfaceArtifacts,
         rewards.objectInteractionArtifacts,
       ),
       history: Object.freeze({
@@ -850,6 +849,7 @@ export function evaluateBiomeAssembly(
           : { blockedAt: progressive.evaluation.blockedAt }),
         ...roomTimelineCoverage(progressive.evaluation),
       }),
+      ...roomStopEntry(progressive.evaluation),
       materializedPrefix: progressive.evaluation.materializedPrefix,
       ...(progressive.evaluation.assessmentPrefix === undefined
         ? {}

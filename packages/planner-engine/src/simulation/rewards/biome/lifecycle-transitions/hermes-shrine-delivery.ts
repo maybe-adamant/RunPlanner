@@ -7,10 +7,11 @@ import {
 } from '../../../../authored-project/addresses';
 import {
   defaultHermesShrineDeliveryReward,
-  dueContactMatches,
   hermesShrineDeliveryEntryKey,
+  isSameRoomDelivery,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
+import { timedPickupDueContact } from '../../../room-actions';
 import { ownerRegion } from '../../../finding-regions';
 import type {
   GeneratedPickupPlacement,
@@ -31,24 +32,22 @@ export function dueHermesShrineDeliveryFrontier(
 ): {
   readonly findings: readonly LifecycleFinding[];
   readonly frontiers: readonly DerivedAcquisitionEntryFrontier[];
-  readonly placementRequired: boolean;
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
 } {
   const findings: LifecycleFinding[] = [];
   const frontiers: DerivedAcquisitionEntryFrontier[] = [];
-  let placementRequired = false;
   const placements = new Map<string, GeneratedPickupPlacement>();
   const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
   if (branch === undefined)
     return Object.freeze({
       findings: Object.freeze([]),
       frontiers: Object.freeze([]),
-      placementRequired: false,
       generatedPickupPlacements: Object.freeze([]),
     });
   for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
-    // The frontier covers every phase of the host; the exact phase is checked per retained action.
-    if (!dueContactMatches(delivery, deliveryHost)) continue;
+    // Only what fell due at this host arrives here; a placed row is timed by the walk.
+    if (delivery.due === undefined || !isSameRoomDelivery(delivery.due.host, deliveryHost))
+      continue;
     const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
     const retained =
       room?.kind === 'authored'
@@ -64,7 +63,21 @@ export function dueHermesShrineDeliveryFrontier(
     if (retainedReference?.kind === 'interactAcquisitionEntry')
       placements.set(
         entryKey,
-        assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branch, sequence),
+        assessReachedHermesDeliveryPlacement(
+          deliveryHost,
+          retainedReference,
+          branch,
+          sequence,
+          // It falls due at this contact, so the walk's later events take no part.
+          room === undefined
+            ? undefined
+            : {
+                catalog,
+                declaration: catalog.rooms.byKey[room.gameName],
+                graph: room.roomActionRoster.eventGraph,
+                events: [],
+              },
+        ).placement,
       );
     const fixedReward = defaultHermesShrineDeliveryReward(
       catalog,
@@ -77,11 +90,9 @@ export function dueHermesShrineDeliveryFrontier(
         (row) =>
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.siteKey === 'hermesShrineDelivery' &&
-          row.reference.entryKey === entryKey &&
-          row.reference.encounterPhaseKey === encounterPhaseKey,
+          row.reference.entryKey === entryKey,
       );
     if (retained === undefined || !hasExactDeliveryAction) {
-      placementRequired = true;
       findings.push(
         Object.freeze({
           finding: rewardFinding(
@@ -107,6 +118,14 @@ export function dueHermesShrineDeliveryFrontier(
         kind: 'hermesShrineDelivery',
         rewardTypes: Object.freeze([delivery.rewardType]),
         ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
+        ...(room?.roomActionRoster === undefined
+          ? {}
+          : {
+              dueContact: timedPickupDueContact(
+                room.roomActionRoster.eventGraph,
+                encounterPhaseKey,
+              ),
+            }),
         ...(fixedReward === null ? {} : { fixedReward }),
         retainedSourceMismatch:
           retained !== undefined &&
@@ -119,7 +138,6 @@ export function dueHermesShrineDeliveryFrontier(
   return Object.freeze({
     findings: Object.freeze(findings),
     frontiers: Object.freeze(frontiers),
-    placementRequired,
     generatedPickupPlacements: Object.freeze([...placements.values()]),
   });
 }

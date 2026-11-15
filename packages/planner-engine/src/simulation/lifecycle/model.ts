@@ -71,24 +71,12 @@ export type RoomLifecycleEvent =
       /** Starting and claiming the challenge switch; neither an encounter end nor a store draw. */
       readonly kind: 'challengeSwitchInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
-      /**
-       * The switch's encounter, recorded, started and completed by the press
-       * (`StartChallengeEncounter`, EncounterLogic.lua:2073-2113); history
-       * composition attaches it from the room's entry preparation.
-       */
-      readonly encounter?: ChallengeSwitchEncounterRun;
     })
   | (RoomLifecycleEventBase & {
-      /**
-       * Pressing a locked door: its fight starts at the press (`AttemptUseDoor`
-       * generates and starts it) and is fought out, opening the door. Neither a
-       * recorded encounter nor an encounter end, and it spawns no reward.
-       */
+      /** Pressing a locked door; its fight follows as the door's press fight, opening the door. */
       readonly kind: 'exitUnlocked';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
       readonly exitKey: string;
-      /** The fight; history composition attaches it from the press's view. */
-      readonly encounter?: UnlockExitEncounterRun;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
@@ -102,6 +90,8 @@ export type RoomLifecycleEvent =
       readonly encounterKey: string;
       readonly phaseKind: EncounterPhaseKind;
       readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+      /** A press fight, run outside the room's envelope; history composition marks it. */
+      readonly pressFight?: true;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
@@ -111,6 +101,9 @@ export type RoomLifecycleEvent =
       readonly phaseKind: EncounterPhaseKind;
       readonly execution: 'normal' | 'skippedByFigLeaf';
       readonly figLeafSkipOwner: boolean;
+      /** A press fight's composition; history composition attaches it as the fight is prepared. */
+      readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+      readonly pressFight?: true;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';
@@ -175,14 +168,20 @@ export type RoomLifecycleEvent =
         readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
         readonly rewardType: string;
         readonly delay: number;
-        readonly rushed: boolean;
       }[];
     })
   | (RoomLifecycleEventBase & {
-      /** One ranked Shrine purchase, where its rush can trigger the Travel Deal refill. */
+      /** One ranked Shrine purchase; the refill's purchase schedules its delivery here. */
       readonly kind: 'hermesShrinePurchaseReached';
       readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
-      readonly rushed: boolean;
+    })
+  | (RoomLifecycleEventBase & {
+      /**
+       * One ranked Shrine rush: it closes the Shrine, so the item spawns here,
+       * and the first rush made with Travel Deal refills its slot.
+       */
+      readonly kind: 'hermesShrineRushReached';
+      readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'acquisitionPointReached';
@@ -207,26 +206,6 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomExited' });
 
-/** One run of a switch's encounter, outside the room's envelope. */
-export interface ChallengeSwitchEncounterRun {
-  readonly encounterKey: string;
-  readonly phaseKind: EncounterPhaseKind;
-  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
-  readonly countsEncounterDepth: boolean;
-  /** False when the player left mid-fight (`EndedEarly`): started, never completed. */
-  readonly completed: boolean;
-  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
-}
-
-/** One locked door's fight, outside the room's envelope. */
-export interface UnlockExitEncounterRun {
-  readonly encounterKey: string;
-  readonly phaseKind: EncounterPhaseKind;
-  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
-  readonly countsEncounterDepth: boolean;
-  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
-}
-
 export interface RoomLifecycleProducerInput {
   readonly lifecycleProfileKey: string;
   readonly offer: ResolvedRewardOffer;
@@ -240,6 +219,8 @@ export interface RoomLifecycleProducerInput {
 export interface RoomLifecycleExecutionInput {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
+  /** The route-resolved room declaration whose bound encounters compose the profile's operations. */
+  readonly roomDeclaration: import('../../catalog-schema').RoomDeclaration;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly producer?: RoomLifecycleProducerInput;
@@ -251,8 +232,8 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  /** Present for occurrence rooms, including fixed Boss and Postboss rooms. */
-  readonly roomActionRoster?: RoomActionRoster;
+  /** The room's rows and event graph; the Hub board room's has neither rows nor encounters. */
+  readonly roomActionRoster: RoomActionRoster;
   /** Feature-local Shrine purchases, consumed only by the Shrine scheduling checkpoint. */
   readonly hermesShrine?: import('../../authored-project/model').HermesShrineState;
   /** The rack swaps the keepsake; an unchanged rack's action is a no-op. */
@@ -272,6 +253,14 @@ export interface ReachedRoomAction {
   readonly through?: number;
 }
 
+/**
+ * Where a required action left unplaced fell due: the graph point the walk
+ * could not pass without it, or a placed row of a later window.
+ */
+export type RequiredActionDeadline =
+  | import('../../authored-project/room-actions/event-graph').RoomEventPoint
+  | { readonly kind: 'action'; readonly actionKey: string };
+
 export interface RoomHistoryFragment {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
@@ -280,4 +269,6 @@ export interface RoomHistoryFragment {
   /** Every ranked action the walk reached, in walk order. */
   readonly reachedActions: readonly ReachedRoomAction[];
   readonly blockedAt?: RoomActionSemanticAddress;
+  /** Set when the block is a required action left unplaced. */
+  readonly blockedDeadline?: RequiredActionDeadline;
 }

@@ -1,3 +1,6 @@
+import { reconcileDerivedItems } from '../acquisition/derived-items';
+import { contentTouchedBiomeKeys, stampRoomActionContent } from '../room-actions/content-stamping';
+import { closeRerolledRecords } from './rerolls';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
@@ -25,10 +28,6 @@ import { applyRoomActionCommand } from './room-actions';
 import { applyRoomActionReset } from './room-action-reset';
 import { applyRerollCommand } from './rerolls';
 import {
-  reconcileNewRequiredRoomActions,
-  reconcileNewTraitDroppedPickupActions,
-} from '../room-actions/defaults';
-import {
   parseEchoLastRewardPickupEntryKey,
   reconcileGeneratedPickupProducerState,
   retractInactiveClockedTraitPickupActions,
@@ -39,7 +38,7 @@ import { applyRoomLayoutCommand } from './occurrence/room-layout';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 import { planEndExists } from '../plan-end';
 import { reconcileLeftChallengeSwitchPresses } from './challenge-switch-press';
-import { chosenIndexesFor, type PositionedObjectCommand } from './chosen-index';
+import { chosenIndexesFor, type PositionedCommand } from './chosen-index';
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
@@ -227,14 +226,7 @@ function applyUnchecked(
     case 'InsertHubReroll':
     case 'ReplaceHubRerollReward':
     case 'RemoveHubReroll':
-    case 'DropRerolledReward':
-    case 'AdoptRerolledReward':
-      return applyRerollCommand(
-        document,
-        catalog,
-        locateBiome(document, catalog, command),
-        command,
-      );
+      return applyRerollCommand(document, locateBiome(document, catalog, command), command);
     case 'ResetRoomActionsAfter':
       return applyRoomActionReset(
         document,
@@ -247,7 +239,6 @@ function applyUnchecked(
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
-    case 'ReplaceFieldsCageOrder':
     case 'ReplaceShopPurchaseParticipation':
     case 'PurchaseShopTravelDealRefill':
       return applyRoomActionCommand(
@@ -291,7 +282,6 @@ function applyUnchecked(
     case 'ReplacePhantomExit':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
-    case 'SellPurgingPoolRollSlot':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
     case 'ReplaceChallengeSwitch':
@@ -299,7 +289,7 @@ function applyUnchecked(
     case 'ReplaceChallengeSwitchElite':
     case 'ReplaceChallengeSwitchCustomization':
     case 'ReplaceLockedExit':
-    case 'ReplaceUnlockExitCustomization':
+    case 'ReplaceLockedExitCustomization':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'InsertStygianWellReroll':
@@ -312,7 +302,7 @@ function applyUnchecked(
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
-    case 'SetHermesShrinePurchaseRush':
+    case 'SetHermesShrineRush':
     case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return applyOccurrenceCommand(
@@ -424,9 +414,15 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
-    // Close source actions, derive generated pickup sites, take newly dropped trait pickups, then
-    // close newly generated actions; the two required-action passes stay separate, since one early
-    // pass misses generated pickups.
+    // A row of an observed item records that item before the edit can change it.
+    const stampedInput = stampRoomActionContent(
+      catalog,
+      document,
+      contentTouchedBiomeKeys(document, proposal),
+    );
+    if (stampedInput !== document) return applyProjectCommand(stampedInput, catalog, command);
+    // Close source actions and derive generated pickup sites; nothing places a row the owner
+    // has not placed.
     const withClearTopologyPlacements =
       command.kind === 'ClearTopology'
         ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)
@@ -435,41 +431,41 @@ export function applyProjectCommand(
       document,
       withClearTopologyPlacements,
     );
-    const withSourceActions = reconcileNewRequiredRoomActions(
-      document,
-      withoutRemovedShrineDeliveries,
-      catalog,
-    );
     const withRetractedClockedPickups = retractInactiveClockedTraitPickupActions(
       catalog,
       document,
-      withSourceActions,
+      withoutRemovedShrineDeliveries,
     );
     const withGeneratedPickupState = reconcileGeneratedPickupProducerState(
       document,
       withRetractedClockedPickups,
       catalog,
     );
-    // An installed route keeps exactly the pickups it was authored with.
-    const withTraitDroppedPickups =
-      command.kind === 'ReplaceRoute'
-        ? withGeneratedPickupState
-        : reconcileNewTraitDroppedPickupActions(document, withGeneratedPickupState, catalog);
-    const withRequiredActions = reconcileNewRequiredRoomActions(
-      withRetractedClockedPickups,
-      withTraitDroppedPickups,
-      catalog,
-    );
+    // An item derived from a source the edit changed goes with its source's old content.
+    const withDerivedItems = reconcileDerivedItems(document, withGeneratedPickupState, catalog);
     const reconciled = reconcileChaosTopology(
-      reconcileLeftChallengeSwitchPresses(document, withRequiredActions, command),
+      reconcileLeftChallengeSwitchPresses(document, withDerivedItems, command),
       catalog,
     );
     // Generated detours can delete occurrences after the direct command.
     // Close route-owned references against that final topology.
+    const closed = reconcilePlanEndTopology(
+      reconcileResourcePlacementTopology(reconciled),
+      command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+    );
+    // A rerolled record names exactly its owner's presses, and its item follows them.
+    const rerollsClosed = closeRerolledRecords(
+      catalog,
+      document,
+      closed,
+      contentTouchedBiomeKeys(document, closed),
+    );
+    // A row placed before its item was observed records the content observed since.
     return decodeProjectDocument(
-      reconcilePlanEndTopology(
-        reconcileResourcePlacementTopology(reconciled),
-        command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+      stampRoomActionContent(
+        catalog,
+        rerollsClosed,
+        contentTouchedBiomeKeys(document, rerollsClosed),
       ),
       catalog,
     );
@@ -500,22 +496,23 @@ export type {
 } from './types';
 
 /**
- * Every index an object command may place its new action at, ascending: the
- * order its actions leave behind, judged structurally as the command judges
- * a chosen index. Empty when the command places no new action or cannot
- * apply without an index (an item already bought, a blank Travel Deal item
- * given no value).
+ * Every index a positioned command (an object purchase or a derived pickup's
+ * placement) may place its new action at, ascending: the order its actions
+ * leave behind, judged structurally as the command judges a chosen index.
+ * Empty when the command places no new action or cannot apply without an
+ * index (an item already bought or a pickup already placed, a blank Travel
+ * Deal item given no value).
  */
-export function objectCommandInsertionIndexes(
+export function positionedCommandInsertionIndexes(
   document: ProjectDocument,
   catalog: Catalog,
-  command: PositionedObjectCommand,
+  command: PositionedCommand,
 ): readonly number[] {
   const { index: _index, ...withoutIndex } = command;
   void _index;
   let placed: ProjectDocument;
   try {
-    placed = applyUnchecked(document, catalog, withoutIndex as PositionedObjectCommand);
+    placed = applyUnchecked(document, catalog, withoutIndex as PositionedCommand);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) return Object.freeze([]);
     throw error;

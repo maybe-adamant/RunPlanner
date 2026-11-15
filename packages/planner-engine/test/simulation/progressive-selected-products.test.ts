@@ -1,8 +1,9 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../support/route-position';
 
 import * as fixture from './support/progressive-biome-fixtures';
-import { requireTraits } from '@run-planner/test-fixtures/shared';
+import { replaceTestPlacedItem, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -37,6 +38,7 @@ const {
   applyProjectCommand,
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  collectTestRequiredItems,
   bindTestCandidateSession,
   catalog,
   candidateArtifactsForProjectEvaluationAssembly,
@@ -407,6 +409,7 @@ describe('progressive selected and blocked products', () => {
       occurrenceId: createOccurrenceId('progressive-selected-chaos-return'),
       gameName: 'F_Combat02',
     });
+    blockedProject = collectTestRequiredItems(blockedProject);
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
     const blocked = blockedAssembly.evaluation.route?.biomes.find(
       (candidate) => candidate.biomeKey === 'F',
@@ -500,20 +503,19 @@ describe('progressive selected and blocked products', () => {
       ] as const,
       selectedOptionKey: 'option1' as const,
     };
-    let completeProject = applyProjectCommand(
-      authorLegalTraitOffers(createGoldenFGHIProject()),
-      catalog,
-      {
-        kind: 'ReplaceIncomingReward',
-        reward,
-        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-      },
-    );
-    completeProject = applyProjectCommand(completeProject, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value: completeOffer,
+    let completeProject = replaceTestPlacedItem(authorLegalTraitOffers(createGoldenFGHIProject()), {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
+    // The changed H boons leave its Pool's lists stale, as an edit would redraw them.
+    completeProject = stockTestProject(
+      applyProjectCommand(completeProject, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: completeOffer,
+      }),
+    );
     const completeEvaluation = simulateProject(catalog, completeProject);
     const complete = completeEvaluation.route?.biomes.find(
       (candidate) => candidate.biomeKey === 'H',
@@ -784,7 +786,9 @@ describe('progressive selected and blocked products', () => {
       );
       if (replacement === undefined)
         throw new Error(`${replacementRewardType} Artificer replacement is missing`);
-      project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
+      project = collectTestRequiredItems(
+        authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement),
+      );
       const assembly = simulateProjectAssembly(catalog, project);
       const role = Object.keys(replacement.traitOffersByAcquisitionRole)[0];
       if (role === undefined) throw new Error(`${replacementRewardType} has no trait role`);
@@ -1293,15 +1297,16 @@ describe('progressive selected and blocked products', () => {
       vowKey: 'BoonSkipShrineUpgrade',
       rank: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // The vow changes the F boons, so the Postboss Pool list is redrawn as an edit would.
+    project = authorLegalTraitOffers(stockTestProject(authorLegalTraitOffers(project)));
     // Cage2 becomes the first qualifying cage and is picked first; cage1's
     // Hammer resets to an unauthored offer, so the later cage1 pickup blocks.
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage2,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage1,
       value: { rewardType: 'WeaponUpgrade' },

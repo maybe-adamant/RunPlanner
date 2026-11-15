@@ -3,10 +3,12 @@
 // every case at each width, and exits.
 //
 //   npm run gallery:capture -- [--out <dir>] [--case <substring>[,<substring>…]]
-//                              [--widths 1440,960] [--full]
+//                              [--widths 1440,960] [--full] [--browser chromium|firefox]
 //
-// The browser is Playwright's Chromium headless shell: PLAYWRIGHT_CHROMIUM_EXECUTABLE, the
-// one this Playwright version installs, or the newest in the Playwright cache.
+// The default browser is Playwright's Chromium headless shell: PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+// the one this Playwright version installs, or the newest in the Playwright cache.
+// `--browser firefox` uses PLAYWRIGHT_FIREFOX_EXECUTABLE or the Firefox this Playwright version
+// installs (`npx playwright-core install firefox`), and writes under `<out>/firefox/<width>`.
 import console from 'node:console';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { createServer as createNetServer } from 'node:net';
@@ -15,7 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { chromium } from 'playwright-core';
+import { chromium, firefox } from 'playwright-core';
 import { createServer } from 'vite';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,6 +29,7 @@ function parseArguments(argv) {
     widths: [1440, 960],
     filter: '',
     full: false,
+    browser: 'chromium',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -44,9 +47,12 @@ function parseArguments(argv) {
         .map((width) => Number(width.trim()))
         .filter((width) => Number.isInteger(width) && width > 0);
     else if (argument === '--full') options.full = true;
+    else if (argument === '--browser') options.browser = value();
     else throw new Error(`Unknown argument ${argument}`);
   }
   if (options.widths.length === 0) throw new Error('--widths names no width');
+  if (options.browser !== 'chromium' && options.browser !== 'firefox')
+    throw new Error(`--browser must be chromium or firefox, not ${options.browser}`);
   return options;
 }
 
@@ -93,11 +99,19 @@ let browser;
 let failed = false;
 try {
   await server.listen();
-  browser = await chromium.launch({ executablePath: chromiumExecutable() });
+  browser =
+    options.browser === 'firefox'
+      ? await firefox.launch({
+          executablePath: process.env.PLAYWRIGHT_FIREFOX_EXECUTABLE || undefined,
+        })
+      : await chromium.launch({ executablePath: chromiumExecutable() });
   const query = options.filter === '' ? '' : `?case=${encodeURIComponent(options.filter)}`;
   const url = `http://127.0.0.1:${port}/${query}`;
   for (const width of options.widths) {
-    const directory = join(options.out, String(width));
+    const directory =
+      options.browser === 'firefox'
+        ? join(options.out, 'firefox', String(width))
+        : join(options.out, String(width));
     rmSync(directory, { force: true, recursive: true });
     mkdirSync(directory, { recursive: true });
     const page = await browser.newPage({ viewport: { width, height: 1000 } });

@@ -6,6 +6,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { featureLockHint } from '@planner/ui/feedback/candidatePresentation';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -28,6 +29,11 @@ export function ZagreusSpawnWorkbench({
     <div className="room-feature-presence-row additional-exit-row">
       <IconToggle
         disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+        disabledHint={
+          feature.presence.kind === 'optionalAbsent'
+            ? featureLockHint(feature.presence.lock)
+            : undefined
+        }
         icon={doorArtwork.ZagContract ?? undefined}
         name="Zagreus Contract"
         onToggle={() =>
@@ -70,6 +76,11 @@ export function ChaosSpawnWorkbench({
       ) : (
         <IconToggle
           disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+          disabledHint={
+            feature.presence.kind === 'optionalAbsent'
+              ? featureLockHint(feature.presence.lock)
+              : undefined
+          }
           icon={doorArtwork.ChaosExitDoor ?? undefined}
           name="Chaos Gate"
           onToggle={() => {
@@ -106,7 +117,7 @@ export function ChaosSpawnWorkbench({
   );
 }
 
-/** The Chaos gate's point among the room's SecretPoints, `?` leaving it to the game. */
+/** The Chaos gate's stored point among the room's SecretPoints. */
 export function ChaosGatePosition({
   feature,
   interactions,
@@ -122,10 +133,11 @@ export function ChaosGatePosition({
   if (feature.action !== 'remove' || feature.position === undefined) return null;
   const owner = feature.owner;
   const position = feature.position;
+  const shown = position.value === undefined ? '—' : `P${position.value}`;
   return (
     <div className="room-layout-row" {...mapLinks({ kind: 'chaosGate' })}>
       <span className="room-layout-label">Chaos Gate</span>
-      <ContextualPicker<number | null>
+      <ContextualPicker<number>
         ariaLabel="Chaos Gate position"
         findingTarget={findingTarget(owner)}
         id={`chaos-position-${workspaceInteractionKey(owner)}`}
@@ -134,8 +146,7 @@ export function ChaosGatePosition({
         layout="inline"
         model={declaredChoicesPicker(
           [
-            { key: 'any', value: null, label: '?' },
-            ...(position.invalid && position.value !== null
+            ...(position.invalid && position.value !== undefined
               ? [
                   {
                     key: String(position.value),
@@ -145,11 +156,7 @@ export function ChaosGatePosition({
                   },
                 ]
               : []),
-            ...position.choices.map((value) => ({
-              key: String(value),
-              value,
-              label: `P${value}`,
-            })),
+            ...position.choices.map((value) => ({ key: String(value), value, label: `P${value}` })),
           ],
           position.value,
           'Gate position',
@@ -171,12 +178,12 @@ export function ChaosGatePosition({
             ).positionIntent(value),
           );
         }}
-        placeholder="?"
+        placeholder={shown}
         searchable={false}
         {...(position.invalid
           ? { triggerHint: `P${position.value} isn’t available in this room` }
           : {})}
-        triggerLabel={position.value === null ? '?' : `P${position.value}`}
+        triggerLabel={shown}
         triggerSize="content"
       />
     </div>

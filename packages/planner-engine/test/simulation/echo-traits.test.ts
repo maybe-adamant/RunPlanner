@@ -28,6 +28,7 @@ import {
   type AuthoredTraitOfferTraits,
   type LevelResolutionAddress,
   type ProjectCommand,
+  type ProjectDocument,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
@@ -39,12 +40,17 @@ import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
+  settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
+  replaceTestPlacedItem,
   settleTestEdit,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
 import {
   createEchoTalentDropReplayProject,
@@ -92,6 +98,7 @@ import {
   openTimeTraitOfferContexts,
 } from '../support/simulation-state';
 import { reachedFrontier } from '../support/reward-frontier';
+import { verbStep } from '../support/live-room';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -205,11 +212,11 @@ function bridgeRoom(project: ReturnType<typeof createGoldenFGHProject>) {
 }
 
 function completeGoldenFGHProject() {
-  return authorLegalTraitOffers(createGoldenFGHProject());
+  return authorTestTraitsAndRequiredItems(createGoldenFGHProject());
 }
 
 function selectGoldenBridge(project = completeGoldenFGHProject()) {
-  const selected = authorLegalTraitOffers(
+  const selected = authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -261,12 +268,13 @@ function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge())
     'cages',
     'cage1',
   );
-  const swappedSibling = applyProjectCommand(project, catalog, {
+  // Each swap is a new item, which the owner picks up again.
+  const swappedSibling = replaceTestPlacedItem(project, {
     kind: 'ReplaceLocalReward',
     reward: siblingReward,
     value: { rewardType: 'WeaponUpgrade' },
   });
-  const replaced = applyProjectCommand(swappedSibling, catalog, {
+  const replaced = replaceTestPlacedItem(swappedSibling, {
     kind: 'ReplaceLocalReward',
     reward: selectedReward,
     value: { rewardType: 'MaxHealthDrop' },
@@ -284,7 +292,7 @@ function makeBridgeOutgoingEligible(project: ReturnType<typeof completeGoldenFGH
     occurrence: createOccurrenceAddress(goldenHBiome, targetId),
     gameName: 'H_MiniBoss02',
   });
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(replaced, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenHBiome, targetId),
@@ -2276,15 +2284,15 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(row).toMatchObject({
       participation: 'required',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      label: expect.objectContaining({ kind: 'afterCombat' }),
       rank: expect.any(Number),
       dependencies: [
         {
-          kind: 'afterAction',
           action: { kind: 'interactEncounter', phaseKey: 'Encounter' },
         },
       ],
     });
+    // A placed required row is removable; its item is then live again.
     expect(
       materializedBridge.roomActionRoster.proposals.some(
         (proposal) =>
@@ -2292,7 +2300,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
           proposal.reference.kind === 'interactAcquisitionEntry' &&
           proposal.reference.entryKey === echoReplayEntryKey,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('replays the latest consumable source at Echo without regenerating the room exit', () => {
@@ -2353,13 +2361,15 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
+    const replacement = replaceLatestGoldenRewardWithConsumable(project);
+    project = makeBridgeOutgoingEligible(replacement.project);
+    // A stale replay stands only unsettled, as a loaded plan may hold it: a settled edit
+    // that reaches it removes it.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: echoReplayEntry(),
       value: { rewardType: 'WeaponUpgrade' },
     });
-    const replacement = replaceLatestGoldenRewardWithConsumable(project);
-    project = makeBridgeOutgoingEligible(replacement.project);
     const stale = simulateProjectAssembly(catalog, project);
     const h = stale.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
@@ -2599,7 +2609,23 @@ describe('Echo Gate C Reward Reward Reward', () => {
       siteKey,
       entryKey: 'quickBuckGold',
     };
-    // Taking the replayed Quick Buck takes its gold right after the replay.
+    // The owner takes the replayed Quick Buck's gold right after the replay. The walk
+    // stops earlier (Cage 2's Hermes repeats Cage 1's), so the row is authored directly.
+    const replayAt = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!
+      .roomActions.order.findIndex(
+        (candidate) =>
+          candidate.kind === 'interactAcquisitionEntry' &&
+          candidate.entryKey === echoReplayEntryKey,
+      );
+    if (replayAt < 0) throw new Error('Echo replay row is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(reference)),
+      reference,
+      index: replayAt + 1,
+    });
     const bridgeOrder = project
       .route!.biomes.find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!.roomActions
@@ -2608,7 +2634,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (candidate) =>
         candidate.kind === 'interactAcquisitionEntry' && candidate.entryKey === echoReplayEntryKey,
     );
-    expect(bridgeOrder[replayIndex + 1]).toEqual(reference);
+    expect(bridgeOrder[replayIndex + 1]).toEqual(
+      withItemContent(project, createOccurrenceAddress(goldenHBiome, bridgeId), reference),
+    );
     expect(
       project
         .route!.biomes.find((biome) => biome.biomeKey === 'H')!
@@ -2628,10 +2656,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(generatedRow).toMatchObject({
       participation: 'optional',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      label: expect.objectContaining({ kind: 'afterCombat' }),
       dependencies: [
         {
-          kind: 'afterAction',
           action: {
             kind: 'interactAcquisitionEntry',
             siteKey: 'roomExit',
@@ -2656,7 +2683,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(restored.acquisitionSites?.[siteKey]).toMatchObject({
       pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
     });
-    expect(restored.roomActions.order).toContainEqual(reference);
+    expect(restored.roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenHBiome, bridgeId), reference),
+    );
   });
 
   it('supports Time Piece through the shared required replay acquisition role', () => {
@@ -2776,7 +2805,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
   });
 
   it('authors the Path screen of a Talent Drop copy through its first replay edit', () => {
-    const project = createEchoTalentDropReplayProject();
+    const project = collectTestRequiredItems(createEchoTalentDropReplayProject());
     const replayEntry = echoReplayEntry();
     const screen = createAcquisitionRoleAddress(replayEntry, 'self');
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
@@ -2807,7 +2836,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
   });
 
   it('replaces a stale replayed Path selection when the last reward changes', () => {
-    const project = createEchoTalentDropReplayProject();
+    const project = collectTestRequiredItems(createEchoTalentDropReplayProject());
     const replayEntry = echoReplayEntry();
     const screen = createAcquisitionRoleAddress(replayEntry, 'self');
     const authored = makeBridgeOutgoingEligible(
@@ -2868,6 +2897,154 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(entry?.offer).toEqual({ rewardType: 'HermesUpgrade' });
     expect(entry?.hexActivationsByAcquisitionRole).toBeUndefined();
     expect(simulateProjectAssembly(catalog, replaced).evaluation.findings).toEqual([]);
+  });
+
+  describe('in edit settlement', () => {
+    const combat09 = createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09'));
+    const bridge = createOccurrenceAddress(goldenHBiome, bridgeId);
+    const cage1 = { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' } as const;
+    /** A Talent Drop replay with its Path authored. */
+    const authoredReplay = () => {
+      const project = collectTestRequiredItems(createEchoTalentDropReplayProject());
+      const screen = createAcquisitionRoleAddress(echoReplayEntry(), 'self');
+      return makeBridgeOutgoingEligible(
+        applyProjectCommand(project, catalog, {
+          kind: 'EditEchoReplay',
+          entry: echoReplayEntry(),
+          sourceOffer: { rewardType: 'TalentDrop' },
+          edit: {
+            kind: 'ReplaceHexActivation',
+            acquisition: screen,
+            value: { selectedNodeKeys: firstPathSelection(project, screen) },
+          },
+        }),
+      );
+    };
+    const roomOf = (project: ReturnType<typeof createGoldenFGHProject>, id: string) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'H')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === id)!;
+    /** Taking Combat09's Cage 1 last makes its Hermes reward the last one Echo replays. */
+    const cage1Last = (project: ReturnType<typeof createGoldenFGHProject>): ProjectCommand => ({
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(
+        goldenHBiome,
+        combat09.occurrenceId,
+        roomActionKey(
+          roomOf(project, combat09.occurrenceId).roomActions.order.find(
+            (reference) => roomActionKey(reference) === roomActionKey(cage1),
+          )!,
+        ),
+      ),
+      toIndex: roomOf(project, combat09.occurrenceId).roomActions.order.length - 1,
+    });
+    const replayRow = (project: ReturnType<typeof createGoldenFGHProject>) =>
+      roomOf(project, bridgeId).roomActions.order.find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.entryKey === echoReplayEntryKey,
+      );
+    const replayPayload = (project: ReturnType<typeof createGoldenFGHProject>) =>
+      roomOf(project, bridgeId).acquisitionSites?.roomExit?.pickupEntries?.[echoReplayEntryKey];
+
+    it('removes a reached replay of another reward with its pickup, announced', () => {
+      const project = authoredReplay();
+      const row = replayRow(project);
+      expect(row).toBeDefined();
+      const settled = settleProjectEdit({
+        catalog,
+        before: simulateProjectAssembly(catalog, project),
+        command: cage1Last(project),
+        evaluate: (document) => simulateProjectAssembly(catalog, document),
+      });
+      expect(settled.fault).toBeUndefined();
+      // Its reward was another item: the entry is unobserved again.
+      expect(replayPayload(settled.assembly.project)).toBeNull();
+      expect(replayRow(settled.assembly.project)).toBeUndefined();
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: bridge, actions: [row], discarded: [{ item: echoReplayEntry() }] },
+      ]);
+      expect(
+        decodeProjectDocument(JSON.parse(encodeProjectDocument(settled.assembly.project)), catalog),
+      ).toEqual(settled.assembly.project);
+      // The new replay lies live, unplaced, with its place verb.
+      const live = liveRoomForProjectEvaluationAssembly(
+        catalog,
+        settled.assembly,
+        bridge,
+        'placements',
+      );
+      expect(
+        live?.gaps.some((gap) =>
+          gap.items.some((item) =>
+            item.verbs.some(
+              (verb) =>
+                verbStep(verb) === 'place' &&
+                roomActionKey(verb.reference!) === roomActionKey(row!),
+            ),
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('keeps a replay in a room the walk does not reach until an edit reaches it', () => {
+    const combat09 = createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09'));
+    const bridge = createOccurrenceAddress(goldenHBiome, bridgeId);
+    const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
+    const settle = (document: ProjectDocument, command: ProjectCommand) =>
+      settleProjectEdit({ catalog, before: evaluate(document), command, evaluate });
+    const roomOf = (document: ProjectDocument, id: string) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'H')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === id)!;
+    const project = (() => {
+      const base = collectTestRequiredItems(createEchoTalentDropReplayProject());
+      const screen = createAcquisitionRoleAddress(echoReplayEntry(), 'self');
+      return makeBridgeOutgoingEligible(
+        applyProjectCommand(base, catalog, {
+          kind: 'EditEchoReplay',
+          entry: echoReplayEntry(),
+          sourceOffer: { rewardType: 'TalentDrop' },
+          edit: {
+            kind: 'ReplaceHexActivation',
+            acquisition: screen,
+            value: { selectedNodeKeys: firstPathSelection(base, screen) },
+          },
+        }),
+      );
+    })();
+    const replay = (document: ProjectDocument) =>
+      roomOf(document, bridgeId).acquisitionSites?.roomExit?.pickupEntries?.[echoReplayEntryKey];
+    const cage2 = roomOf(project, combat09.occurrenceId).roomActions.order.find(
+      (reference) => reference.kind === 'interactLocalReward' && reference.slotKey === 'cage2',
+    )!;
+    const cage2Action = createRoomActionAddress(
+      goldenHBiome,
+      combat09.occurrenceId,
+      roomActionKey(cage2),
+    );
+    // Cage 2's Talent Drop is not picked up: the walk stops in Combat09, short of the replay.
+    const stopped = settle(project, { kind: 'RemoveRoomAction', action: cage2Action });
+    expect(stopped.fault).toBeUndefined();
+    expect(replay(stopped.assembly.project)?.offer).toEqual({ rewardType: 'TalentDrop' });
+    expect(stopped.removedStaleActions).toBeUndefined();
+    // Picked up before Cage 1 again, Hermes is the last reward when the walk reaches the replay.
+    const cage1Index = roomOf(
+      stopped.assembly.project,
+      combat09.occurrenceId,
+    ).roomActions.order.findIndex((reference) => reference.kind === 'interactLocalReward');
+    const reached = settle(stopped.assembly.project, {
+      kind: 'InsertRoomAction',
+      action: cage2Action,
+      reference: cage2,
+      index: cage1Index,
+    });
+    expect(reached.fault).toBeUndefined();
+    expect(replay(reached.assembly.project)).toBeNull();
+    expect(reached.removedStaleActions).toEqual([
+      expect.objectContaining({ occurrence: bridge, discarded: [{ item: echoReplayEntry() }] }),
+    ]);
   });
 
   it('wraps every acquisition outcome edit that addresses a reward role', () => {

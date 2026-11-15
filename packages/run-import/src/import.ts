@@ -7,6 +7,7 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
+  type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
   type SemanticAddress,
@@ -14,6 +15,7 @@ import {
 import { createAuthoringSession, type AuthoringSession } from '@run-planner/engine/authoring';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  collectRequiredItems,
   type ProjectCandidateSession,
   findingsAddedSince,
   planEndAvailability,
@@ -48,9 +50,16 @@ import {
 } from './carrier-children';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
+import { answerRequiredPlacement } from './actions';
 import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
-import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
+import {
+  answerFeatures,
+  importFeatures,
+  importKeepsakeRacks,
+  recordedHexTree,
+  reportDenialBans,
+} from './features';
 import {
   answerFields,
   importFieldsConversions,
@@ -116,6 +125,11 @@ export interface RunImportContext {
   readonly candidates: () => ProjectCandidateSession;
   /** Applies one command through edit settlement; false when it is refused or changes nothing. */
   readonly apply: (command: ProjectCommand) => boolean;
+  /**
+   * Collects every required item live in an entered room through the engine's
+   * collection, as playing forward would; false when it placed nothing.
+   */
+  readonly collectRequired: (occurrence: OccurrenceAddress) => boolean;
   /** Applies one command unless it is refused or adds a finding other than missing input. */
   readonly applyValid: (command: ProjectCommand) => boolean;
   /** Runs several applications as one, kept only when they succeed and stay valid as `applyValid`. */
@@ -347,6 +361,7 @@ export class RunImportWalk {
       assembly: () => this.assembly,
       candidates: () => this.authoring.candidates(),
       apply: (command) => this.apply(command),
+      collectRequired: (occurrence) => this.collectRequired(occurrence),
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
       probe: (run) => this.probe(run),
@@ -550,6 +565,7 @@ export class RunImportWalk {
       before = this.assembly;
       this.occurrences.bindEngineOccurrences(this.assembly.project);
       this.markDirty();
+      this.collectPendingRooms();
       // A room's lock fights precede its rerolls, whose draws read the depth they raise.
       importLockedDoors(this.context);
       // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
@@ -558,6 +574,7 @@ export class RunImportWalk {
       importDispositions(this.context);
       importSideRoomVisits(this.context);
       importPhantomExits(this.context);
+      importKeepsakeRacks(this.context);
       importCommerce(this.context);
       // A switch's claim pickups are authored before the room's Sea Star duplicates are placed.
       importChallengeSwitches(this.context);
@@ -669,6 +686,33 @@ export class RunImportWalk {
     const outcome = this.authoring.apply(command);
     if (outcome.kind !== 'applied') return false;
     if (outcome.fault !== undefined) this.reportFault(outcome.fault);
+    return true;
+  }
+
+  /** Collects the required items of each entered room that changed since the last sweep. */
+  private collectPendingRooms(): void {
+    const project = this.assembly.project;
+    for (const biome of project.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? [])
+        if (this.context.pending(occurrence.occurrenceId))
+          this.collectRequired(
+            createOccurrenceAddress(
+              createBiomeAddress(project.route.routeKey, biome.biomeKey),
+              occurrence.occurrenceId,
+            ),
+          );
+  }
+
+  private collectRequired(occurrence: OccurrenceAddress): boolean {
+    const collected = collectRequiredItems({
+      catalog: this.catalog,
+      before: this.assembly,
+      occurrence,
+      evaluate: (project) => simulateProjectAssembly(this.catalog, project),
+    });
+    if (collected.commands.length === 0) return false;
+    this.authoring.restore(collected.assembly);
+    if (collected.fault !== undefined) this.reportFault(collected.fault);
     return true;
   }
 
@@ -873,6 +917,7 @@ export class RunImportWalk {
       answerArcanaGrant(this.context, reason) ||
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
+      answerRequiredPlacement(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
       answerCarrierChild(this.context, reason) ||
       answerLevelResolution(this.context, reason) ||

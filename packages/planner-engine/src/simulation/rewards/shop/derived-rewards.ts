@@ -11,6 +11,7 @@ import {
   echoShopDuplicateOffer,
   echoShopDuplicateOfferMatches,
   echoShopDuplicateRequiresPickup,
+  echoShopDuplicateSourceEligible,
 } from '../../../authored-project/shop';
 import {
   findShopIndexedGenerationWitnesses,
@@ -144,15 +145,7 @@ export function eligibleShopGoldSourceOfferKeys(
   travelOffer:
     { readonly offerKey: string; readonly offer: ResolvedRewardOffer } | null | undefined,
 ): readonly string[] {
-  const disposition = Object.values(catalog.traits.byKey).find(
-    (trait) =>
-      trait.selectedDisposition?.kind === 'echo' &&
-      trait.selectedDisposition.effect === 'doubleShop',
-  )?.selectedDisposition;
-  const eligible = (offer: ResolvedRewardOffer): boolean =>
-    disposition?.kind === 'echo' &&
-    disposition.effect === 'doubleShop' &&
-    !disposition.excludedRewardTypes.includes(offer.rewardType);
+  const eligible = (offer: ResolvedRewardOffer) => echoShopDuplicateSourceEligible(catalog, offer);
   return Object.freeze([
     ...offers.flatMap((offer) => (eligible(offer.offer) ? [offer.offerKey] : [])),
     ...(travelOffer !== undefined && travelOffer !== null && eligible(travelOffer.offer)

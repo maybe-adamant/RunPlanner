@@ -1,5 +1,7 @@
+import type { AcquisitionDisposition } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceInteractionCatalog,
+  WorkspaceLiveVerb,
   WorkspaceRewardControl,
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
@@ -7,10 +9,9 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
 } from '@planner/projections/structured-workspace';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
@@ -20,6 +21,8 @@ import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ChallengeSwitchOutcomeControls } from './ChallengeSwitchOutcomeControls';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
+import { RowChoice } from './RowChoice';
+import { VerbMenu } from './LiveActions';
 
 /** The Sea Star toggle for one acquisition role of a timeline row: lit when Double Up procs. */
 function SeaStarToggle({
@@ -52,61 +55,41 @@ function SeaStarToggle({
   );
 }
 
-type ConversionKind = 'normal' | 'timePiece' | 'artificer';
+type Conversion = NonNullable<WorkspaceRewardControl['conversions']>[number];
 
-const conversionVerbs = { timePiece: 'Goldify', artificer: 'Transform' } as const;
+const conversionWords = { timePiece: 'Goldify', artificer: 'Transform' } as const;
 
 /** The role the row's verb shows: one already goldified or transformed, else the first. */
-function verbConversion(conversions: WorkspaceRewardControl['conversions']) {
-  return conversions?.find((candidate) => candidate.value.kind !== 'normal') ?? conversions?.[0];
+function shownConversion(conversions: readonly Conversion[]): Conversion | undefined {
+  return conversions.find((candidate) => candidate.value.kind !== 'normal') ?? conversions[0];
 }
 
 /**
- * The row's verb. Where the engine lets any of its pickups be goldified or
- * transformed, the verb is a picker whose trigger reads as the label's text.
+ * The row's verb. Where the engine lets any of its pickups be goldified or transformed, the
+ * verb opens the shared verb menu, its current way checked; choosing another swaps it in place.
  */
 export function RoomActionVerb({
+  announce,
+  biomeKey,
   interactions,
   row,
   verb,
 }: {
+  readonly announce: (message: string) => void;
+  readonly biomeKey: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly row: WorkspaceRoomActionRow;
   readonly verb: string;
 }) {
-  const conversions = row.rewardPayload?.control.conversions ?? [];
-  return conversions.length === 0 ? (
-    <strong>{verb}</strong>
-  ) : (
-    <ConversionVerbPicker
-      conversions={conversions}
-      interactions={interactions}
-      row={row}
-      verb={verb}
-    />
-  );
-}
-
-function ConversionVerbPicker({
-  conversions,
-  interactions,
-  row,
-  verb,
-}: {
-  readonly conversions: NonNullable<WorkspaceRewardControl['conversions']>;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly row: WorkspaceRoomActionRow;
-  readonly verb: string;
-}) {
-  const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
+  const conversions = row.rewardPayload?.control.conversions ?? [];
   const roles = conversions.map((conversion) => {
     const interaction = requireWorkspaceInteraction(
       interactions.acquisitionConversions,
       workspaceInteractionKey(conversion.address),
     );
     const kind = conversion.value.kind;
-    // Each choice shows only where the engine supports it or an authored value remains.
+    // A way shows only where the engine supports it or an authored value remains.
     return {
       conversion,
       interaction,
@@ -115,66 +98,84 @@ function ConversionVerbPicker({
     };
   });
   const convertible = roles.filter((role) => role.timePiece || role.artificer);
-  if (convertible.length === 0) return <strong>{verb}</strong>;
-  const shownConversion = verbConversion(conversions)!;
-  const shownRole = roles.find((role) => role.conversion === shownConversion)!;
-  const kind = shownConversion.value.kind;
-  const shown = kind === 'timePiece' || kind === 'artificer' ? conversionVerbs[kind] : verb;
-  const gold =
-    kind === 'timePiece' && row.goldGained !== undefined ? ` · ${row.goldGained.label} gold` : '';
+  const shown = shownConversion(conversions);
+  const shownRole = roles.find((role) => role.conversion === shown);
+  if (convertible.length === 0 || shown === undefined || shownRole === undefined)
+    return <strong>{verb}</strong>;
+  const current = shown.value.kind;
   const name = row.labelParts?.name ?? row.label;
-  // A row with several convertible pickups names each choice's own.
-  const roleSuffix = (role: (typeof roles)[number]) =>
+  const face = {
+    reference: row.reference,
+    ...(row.sourceFamily === undefined ? {} : { sourceFamily: row.sourceFamily }),
+    ...(row.labelParts?.reward === undefined ? {} : { reward: row.labelParts.reward }),
+  };
+  /** Taking one role's pickup this way, as one edit; the shown role's own way is current. */
+  const way = (
+    role: (typeof roles)[number],
+    kind: AcquisitionDisposition['kind'],
+    label: string,
+  ): WorkspaceLiveVerb =>
+    Object.freeze({
+      ...face,
+      key: `${workspaceInteractionKey(role.conversion.address)}:${kind}`,
+      label,
+      action:
+        role === shownRole && kind === current
+          ? Object.freeze({ kind: 'current' as const })
+          : Object.freeze({
+              kind: 'apply' as const,
+              intent: Object.freeze({
+                commands: Object.freeze([
+                  role.interaction.intentFor(Object.freeze({ kind })).command,
+                ]),
+              }),
+              ...(kind === 'artificer'
+                ? {
+                    opens: Object.freeze({
+                      rowKey: row.key,
+                      choice: 'artificerReplacement' as const,
+                    }),
+                  }
+                : {}),
+            }),
+    });
+  // A row with several convertible pickups names each way's own.
+  const suffix = (role: (typeof roles)[number]) =>
     convertible.length > 1 ? ` · ${role.conversion.acquisitionRoleLabel}` : '';
-  const choiceKey = (role: (typeof roles)[number], next: ConversionKind) =>
-    next === 'normal' ? 'normal' : `${workspaceInteractionKey(role.conversion.address)}:${next}`;
-  const choices = convertible.flatMap((role) => [
-    ...(role.timePiece
-      ? [
-          {
-            key: choiceKey(role, 'timePiece'),
-            value: { role, kind: 'timePiece' as const },
-            label: `Goldify · Time Piece${role === shownRole ? gold : ''}${roleSuffix(role)}`,
-          },
-        ]
-      : []),
-    ...(role.artificer
-      ? [
-          {
-            key: choiceKey(role, 'artificer'),
-            value: { role, kind: 'artificer' as const },
-            label: `Transform · Artificer${roleSuffix(role)}`,
-          },
-        ]
-      : []),
-  ]);
-  const selected = kind === 'normal' ? 'normal' : choiceKey(shownRole, kind);
+  const verbs = [
+    // Taking it plainly undoes the shown conversion.
+    way(shownRole, 'normal', verb),
+    ...convertible.flatMap((role) => [
+      ...(role.timePiece
+        ? [way(role, 'timePiece', `${conversionWords.timePiece}${suffix(role)}`)]
+        : []),
+      ...(role.artificer
+        ? [way(role, 'artificer', `${conversionWords.artificer}${suffix(role)}`)]
+        : []),
+    ]),
+  ];
+  const shownLabel = current === 'normal' ? verb : conversionWords[current];
+  const mark = findingMark(shown.address, 'pickupOutcome');
   return (
-    <ContextualPicker<string>
-      ariaLabel={`How to take ${name}: ${shown}`}
-      findingMark={findingMark(shownConversion.address, 'pickupOutcome')}
-      id={`room-action-verb-${workspaceInteractionKey(shownConversion.address)}`}
-      label=""
-      layout="inline"
-      model={declaredChoicesPicker(
-        [
-          { key: 'normal', value: 'normal', label: verb },
-          ...choices.map((choice) => ({ key: choice.key, value: choice.key, label: choice.label })),
-        ],
-        selected,
-      )}
-      onSelect={(key) => {
-        if (key === selected) return;
-        // Taking it plainly undoes the shown conversion; a conversion applies to its own pickup.
-        const choice = choices.find((candidate) => candidate.key === key);
-        const target = choice?.value ?? { role: shownRole, kind: 'normal' as const };
-        executeIntent(target.role.interaction.intentFor(Object.freeze({ kind: target.kind })));
-      }}
-      placeholder={verb}
-      searchable={false}
-      triggerLabel={shown}
-      triggerSize="content"
-    />
+    <VerbMenu
+      announce={announce}
+      applied={(label) => `${name}: ${label}.`}
+      biomeKey={biomeKey}
+      interactions={interactions}
+      label={name}
+      verbs={verbs}
+    >
+      <button
+        {...(mark['data-has-findings'] ? mark : {})}
+        {...hintProps(undefined, mark['aria-description'])}
+        aria-haspopup="listbox"
+        aria-label={`How to take ${name}: ${shownLabel}`}
+        className="contextual-picker-trigger room-action-verb"
+        type="button"
+      >
+        {shownLabel}
+      </button>
+    </VerbMenu>
   );
 }
 
@@ -268,37 +269,45 @@ export function RoomActionInlineEditors({
   );
   return (
     <>
-      {traitControls.map((control) => (
-        <TraitOfferLauncher
-          control={control}
-          interactions={interactions}
-          key={workspaceInteractionKey(control.address)}
-        />
-      ))}
-      {levels.map((control) => (
-        <PomResolutionLauncher
-          control={control}
-          interactions={interactions}
-          key={workspaceInteractionKey(control.address)}
-        />
-      ))}
-      {anvilInteractions.map(({ anvil, owner }) => (
-        <AnvilResultLauncher
-          interaction={anvil}
-          key={workspaceInteractionKey(owner)}
-          owner={owner}
-        />
-      ))}
-      {hexActivations.map(({ hexActivation, owner }) => (
-        <HexActivationLauncher
-          interaction={hexActivation}
-          key={workspaceInteractionKey(owner)}
-          owner={owner}
-        />
-      ))}
-      {payload === undefined
-        ? null
-        : conversions.map((conversion) => (
+      <RowChoice choice="traitOffer" rowKey={row.key}>
+        {traitControls.map((control) => (
+          <TraitOfferLauncher
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="levelResolution" rowKey={row.key}>
+        {levels.map((control) => (
+          <PomResolutionLauncher
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="anvilResult" rowKey={row.key}>
+        {anvilInteractions.map(({ anvil, owner }) => (
+          <AnvilResultLauncher
+            interaction={anvil}
+            key={workspaceInteractionKey(owner)}
+            owner={owner}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="hexActivation" rowKey={row.key}>
+        {hexActivations.map(({ hexActivation, owner }) => (
+          <HexActivationLauncher
+            interaction={hexActivation}
+            key={workspaceInteractionKey(owner)}
+            owner={owner}
+          />
+        ))}
+      </RowChoice>
+      {payload === undefined ? null : (
+        <RowChoice choice="seaStar" rowKey={row.key}>
+          {conversions.map((conversion) => (
             <SeaStarToggle
               conversion={conversion}
               interactions={interactions}
@@ -306,14 +315,20 @@ export function RoomActionInlineEditors({
               roleNamed={conversions.length > 1}
             />
           ))}
+        </RowChoice>
+      )}
       {row.fountainRarity === undefined ? null : (
-        <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+        <RowChoice choice="fountainRarity" rowKey={row.key}>
+          <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+        </RowChoice>
       )}
       {row.challengeSwitchOutcome === undefined ? null : (
-        <ChallengeSwitchOutcomeControls
-          interactions={interactions}
-          outcome={row.challengeSwitchOutcome}
-        />
+        <RowChoice choice="challengeSwitchOutcome" rowKey={row.key}>
+          <ChallengeSwitchOutcomeControls
+            interactions={interactions}
+            outcome={row.challengeSwitchOutcome}
+          />
+        </RowChoice>
       )}
     </>
   );

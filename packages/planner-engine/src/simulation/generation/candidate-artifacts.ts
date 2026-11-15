@@ -1,3 +1,4 @@
+import type { ChaosGateRefusal, ZagreusContractRefusal } from '../room-feature-refusals';
 import {
   semanticAddressKey,
   type OccurrenceAddress,
@@ -22,7 +23,7 @@ export function createRoomTargetCandidateArtifacts(
 /** Exact reached-source Chaos placement support for ordinary authoring. */
 export interface ChaosCandidateCapability {
   readonly placementEligible: boolean;
-  readonly failedConditions: readonly string[];
+  readonly refusals: readonly ChaosGateRefusal[];
 }
 export interface ChaosCandidateArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => ChaosCandidateCapability | undefined;
@@ -42,7 +43,7 @@ export function createEmptyChaosCandidateArtifacts(): ChaosCandidateArtifacts {
 /** Exact reached-source Zagreus Contract entry-cap support. */
 export interface ZagreusContractCandidateCapability {
   readonly placementEligible: boolean;
-  readonly failedConditions: readonly ('enteredContractCap' | 'sourceRequirement')[];
+  readonly refusals: readonly ZagreusContractRefusal[];
   readonly enteredContractCount: number;
   readonly maximumEnteredThisRoute: number;
 }

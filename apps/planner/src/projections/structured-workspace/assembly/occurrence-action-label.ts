@@ -10,7 +10,7 @@ import {
   type Catalog,
 } from '@run-planner/engine/catalog-schema';
 import {
-  purgingPoolRerolls,
+  purgingPoolRerollPins,
   stygianWellGenerationItemKey,
   stygianWellGenerationSlot,
 } from '@run-planner/engine/authored-project';
@@ -21,14 +21,21 @@ import { featureRollCatalog, featureRollNumber } from './feature-roll-assembly';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceDevotionRole } from '../contracts/timeline';
 
-/** Names a door or cage reroll target as the room's doors do. */
+/**
+ * A room's door or cage press as its row names it: its target as the room's
+ * doors do, and the reward it drew; neither while its target holds no result.
+ */
 export type WorkspaceDoorRerollTargetLabel = (
-  target: Exclude<
-    import('@run-planner/engine/authored-project').RerollTarget,
-    { readonly kind: 'wheelOffer' }
-  >,
-) => string;
+  press: import('@run-planner/engine/authored-project').RerollRoomAction,
+) =>
+  | {
+      readonly subject?: string;
+      /** Absent while the press's result is unset. */
+      readonly reward?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    }
+  | undefined;
 
 function timelineRewardName(catalog: Catalog, rewardType: string): string {
   switch (rewardType) {
@@ -145,9 +152,13 @@ export interface OccurrenceActionLabelParts {
     readonly boosted: boolean;
     /** A shop item's own key, whose artwork can differ from its reward type's. */
     readonly itemKey?: string;
+    /** A Trial god's side, marked on its icon. */
+    readonly devotionRole?: WorkspaceDevotionRole;
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
+  /** The encounter a fought contact names, by native declaration key, which the row can show as its icon. */
+  readonly encounterKey?: string;
   /** The trait the name stands for, such as a Pool sale's, which the row can show as a chip. */
   readonly traitKey?: string;
   /** The name is the room object used, which the row can show as its icon chip. */
@@ -221,7 +232,7 @@ export function occurrenceActionLabel(
     Partial<
       Pick<
         import('@run-planner/engine/authored-project').RoomOccurrence,
-        'roomActions' | 'challengeSwitch'
+        'roomActions' | 'challengeSwitch' | 'purgingPool'
       >
     >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
@@ -256,7 +267,7 @@ export function occurrenceActionLabelParts(
     Partial<
       Pick<
         import('@run-planner/engine/authored-project').RoomOccurrence,
-        'roomActions' | 'challengeSwitch'
+        'roomActions' | 'challengeSwitch' | 'purgingPool'
       >
     >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
@@ -269,7 +280,7 @@ export function occurrenceActionLabelParts(
   const plain = (label: string): OccurrenceActionLabelParts => Object.freeze({ label });
   const actionLabel = (
     subject: string | undefined,
-    verb: 'Collect' | 'Buy' = 'Collect',
+    verb: 'Collect' | 'Buy' | 'Unlock' = 'Collect',
     includeOfferSummary = true,
     control = rewardControl,
     fallbackSummary?: string,
@@ -324,18 +335,39 @@ export function occurrenceActionLabelParts(
         }),
       });
     }
-    case 'completeFieldsCage':
-      return plain(`Clear ${phase?.label ?? reference.phaseKey}`);
+    case 'completeFieldsCage': {
+      // Unlocking a cage's locked reward starts its encounter; the row names that reward.
+      const cage =
+        roomLocal.kind === 'fields'
+          ? roomLocal.cages.find((candidate) => candidate.phaseKey === reference.phaseKey)
+          : undefined;
+      if (cage === undefined) return plain(`Unlock ${phase?.label ?? reference.phaseKey}`);
+      const parts = actionLabel(cage.label, 'Unlock', true, cage.control);
+      if (parts.suffix !== cage.label) return parts;
+      return Object.freeze({
+        label: parts.label,
+        ...(parts.verb === undefined ? {} : { verb: parts.verb }),
+        ...(parts.name === undefined ? {} : { name: parts.name }),
+        ...(parts.reward === undefined ? {} : { reward: parts.reward }),
+        place: Object.freeze({ badge: cage.badge, label: cage.label }),
+      });
+    }
     case 'interactIncomingReward': {
       const role = reference.acquisitionRole;
       if (role === 'chosenSource' || role === 'spurnedSource') {
         const payload = rewardControl?.offer?.payload;
         const source = payload?.kind === 'DevotionPair' ? payload[role] : undefined;
-        return plain(
-          `Collect ${role === 'chosenSource' ? 'Chosen' : 'Spurned'} boon${
-            source === undefined ? '' : ` · ${timelineRewardName(catalog, source)}`
-          }`,
-        );
+        const side = role === 'chosenSource' ? 'Chosen' : 'Spurned';
+        if (source === undefined) return plain(`Collect ${side} boon`);
+        // The god's icon names the row, its side marked on it.
+        return Object.freeze({
+          ...labelParts('Collect', `${side} boon · ${timelineRewardName(catalog, source)}`),
+          reward: Object.freeze({
+            offer: Object.freeze({ rewardType: source }),
+            boosted: false,
+            devotionRole: role === 'chosenSource' ? ('chosen' as const) : ('spurned' as const),
+          }),
+        });
       }
       return actionLabel(
         rewardControl?.offer == null ? workspaceAcquisitionRoleLabel(role) : undefined,
@@ -413,7 +445,8 @@ export function occurrenceActionLabelParts(
         ? parts
         : withReward(parts, Object.freeze({ rewardType: well.rewardType }), false, well.itemKey);
     }
-    case 'purchaseHermesShrineOffer': {
+    case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer': {
       const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
       const slot =
         slotKey === undefined
@@ -428,7 +461,7 @@ export function occurrenceActionLabelParts(
           ? occurrence.hermesShrine?.travelDealRefill?.offer
           : occurrence.hermesShrine?.offerBySlot[slotKey];
       // A rushed item is delivered in the Shrine room.
-      const verb = reference.rushed ? 'Rush' : 'Buy';
+      const verb = reference.kind === 'rushHermesShrineOffer' ? 'Rush' : 'Buy';
       const item =
         offer === null || offer === undefined
           ? undefined
@@ -461,9 +494,7 @@ export function occurrenceActionLabelParts(
       const traitKey =
         reference.rollKey === undefined
           ? purgingPoolTraitKeyBySlot?.[reference.slotKey]
-          : purgingPoolRerolls(occurrence.roomActions?.order ?? []).find(
-              (action) => action.rerollId === reference.rollKey,
-            )?.traitKeyBySlot[reference.slotKey];
+          : purgingPoolRerollPins(occurrence.purgingPool, reference.rollKey)[reference.slotKey];
       const traitLabel =
         traitKey === null || traitKey === undefined
           ? undefined
@@ -496,9 +527,11 @@ export function occurrenceActionLabelParts(
           : isCombatBearingEncounterPhaseKind(definition.kind)
             ? 'Clear'
             : 'Talk to';
-      return plain(
-        `${verb} ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`,
-      );
+      const encounterName = phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`;
+      // A plain fight reads in words; a miniboss or other named contact by its icon.
+      return key === undefined || definition === undefined || definition.kind === 'combat'
+        ? plain(`${verb} ${encounterName}`)
+        : Object.freeze({ ...labelParts(verb, encounterName), encounterKey: key });
     }
     case 'interactGorgon':
       return talkTo('Athena');
@@ -547,7 +580,7 @@ export function occurrenceActionLabelParts(
             ? undefined
             : // A persisted entry key is never shown; an unnamed pickup reads plainly.
               (explicitRewardLabel ?? 'Pickup');
-      return actionLabel(
+      const parts = actionLabel(
         entryLabel,
         'Collect',
         true,
@@ -556,6 +589,18 @@ export function occurrenceActionLabelParts(
         undefined,
         source?.origin,
       );
+      // A reward the source fixes or the entry names is pictured before it is chosen.
+      const named =
+        authoredOffer ??
+        (explicitRewardType === undefined
+          ? undefined
+          : Object.freeze({ rewardType: explicitRewardType }));
+      return parts.reward !== undefined ||
+        named === undefined ||
+        explicitRewardLabel === undefined ||
+        parts.name !== explicitRewardLabel
+        ? parts
+        : withReward(parts, named, false);
     }
     case 'useFountain':
       return Object.freeze({ ...labelParts('Use', 'Fountain'), object: true as const });
@@ -579,6 +624,7 @@ export function occurrenceActionLabelParts(
     }
     case 'reroll': {
       const target = reference.target;
+      const press = rerollTargetLabel?.(reference);
       const subject =
         target.kind === 'wheelOffer'
           ? roomLocal.kind === 'ship'
@@ -586,28 +632,16 @@ export function occurrenceActionLabelParts(
                 .find((wheel) => wheel.key === target.wheelKey)
                 ?.offers.find((offer) => offer.key === target.offerKey)?.label
             : undefined
-          : rerollTargetLabel?.(target);
-      const reward = timelineRewardLabel(catalog, reference.reward);
+          : press?.subject;
+      if (press?.reward === undefined)
+        return plain(subject === undefined ? 'Reroll' : `Reroll ${subject}`);
+      const reward = timelineRewardLabel(catalog, press.reward);
       return plain(subject === undefined ? `Reroll → ${reward}` : `Reroll ${subject} → ${reward}`);
     }
   }
 }
 
-/** The Add area entry an optional action is offered under: a room object or a source family. */
-export interface OccurrenceActionAddGroup {
-  readonly key: string;
-  readonly label: string;
-  readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
-}
-
-const addGroup = (
-  key: string,
-  label: string,
-  object?: OccurrenceActionAddGroup['object'],
-): OccurrenceActionAddGroup =>
-  Object.freeze({ key, label, ...(object === undefined ? {} : { object }) });
-
-/** How a pickup's source family names its row, tells its origin and groups it in the Add area. */
+/** How a pickup's source family names its row and tells its origin. */
 function sourceFamilyPresentation(
   catalog: Catalog,
   family: AcquisitionEntrySourceFamily | undefined,
@@ -616,80 +650,35 @@ function sourceFamilyPresentation(
       readonly name: string;
       readonly unresolvedName: string;
       readonly origin: string;
-      readonly group: OccurrenceActionAddGroup;
     }
   | undefined {
   if (family === undefined) return undefined;
-  const source = (
-    name: string,
-    origin: string,
-    group: OccurrenceActionAddGroup,
-    unresolvedName = `${name} reward`,
-  ) => Object.freeze({ name, unresolvedName, origin, group });
+  const source = (name: string, origin: string, unresolvedName = `${name} reward`) =>
+    Object.freeze({ name, unresolvedName, origin });
   switch (family.kind) {
     case 'trait': {
       const label = catalog.traits.byKey[family.traitKey]?.label ?? family.traitKey;
-      return source(
-        label,
-        `Created by ${label}`,
-        addGroup(`trait:${family.traitKey}`, label),
-        label,
-      );
+      return source(label, `Created by ${label}`, label);
     }
     case 'echo':
-      return source('Echo', 'Created by Echo', addGroup('echo', 'Echo'));
+      return source('Echo', 'Created by Echo');
     case 'artificer':
-      return source('Artificer', 'Created by the Artificer', addGroup('artificer', 'Artificer'));
+      return source('Artificer', 'Created by the Artificer');
     case 'seaStar':
-      return source('Sea Star', 'Duplicated by Sea Star', addGroup('seaStar', 'Sea Star'));
+      return source('Sea Star', 'Duplicated by Sea Star');
     case 'nemesisEvent':
-      return source('Nemesis', 'From a Nemesis event', addGroup('nemesis', 'Nemesis'));
+      return source('Nemesis', 'From a Nemesis event');
     case 'erisGift':
-      return source('Eris', 'A gift from Eris', addGroup('eris', 'Eris'));
+      return source('Eris', 'A gift from Eris');
     case 'heraclesBounty':
-      return source('Heracles', 'Heracles’s bounty', addGroup('heracles', 'Heracles'));
+      return source('Heracles', 'Heracles’s bounty');
     case 'hermesShrineDelivery':
-      return source(
-        'Delivery',
-        'Delivered from the Hermes Shrine',
-        addGroup('object:hermesShrine', 'Hermes Shrine', 'hermesShrine'),
-        'Delivery',
-      );
+      return source('Delivery', 'Delivered from the Hermes Shrine', 'Delivery');
     case 'challengeSwitch':
-      return source(
-        'Switch reward',
-        'Claimed from the challenge switch',
-        addGroup('object:challengeSwitch', 'Challenge Switch', 'challengeSwitch'),
-      );
+      return source('Switch reward', 'Claimed from the challenge switch');
     case 'shopTravelDealRefill':
-      return source(
-        'Travel Deal Offer',
-        'Restocked by Travel Deal',
-        addGroup('object:worldShop', 'World Shop', 'worldShop'),
-        'Travel Deal Offer',
-      );
+      return source('Travel Deal Offer', 'Restocked by Travel Deal', 'Travel Deal Offer');
   }
-}
-
-/** Groups an optional action by what produced it, for the room's Add area. */
-export function occurrenceActionAddGroup(
-  catalog: Catalog,
-  reference: import('@run-planner/engine/authored-project').RoomActionReference,
-  roomLocal: WorkspaceRoomLocal,
-  sourceFamily?: AcquisitionEntrySourceFamily,
-): OccurrenceActionAddGroup {
-  // Fields optional rewards group by the room's own local product.
-  if (
-    reference.kind === 'interactLocalReward' &&
-    roomLocal.kind === 'fields' &&
-    roomLocal.optionalRewards.some(
-      (candidate) =>
-        candidate.control.owner.address.kind === 'localReward' &&
-        candidate.control.owner.address.slotKey === reference.slotKey,
-    )
-  )
-    return addGroup('optionalRewards', 'Optional rewards');
-  return sourceFamilyPresentation(catalog, sourceFamily)?.group ?? addGroup('other', 'Actions');
 }
 
 /** Concise identity for a retained delivery outside evaluated lifecycle coverage. */

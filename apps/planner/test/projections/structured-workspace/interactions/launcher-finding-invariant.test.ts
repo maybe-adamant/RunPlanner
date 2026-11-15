@@ -697,7 +697,7 @@ describe('a finding never disables the launcher that repairs it', () => {
       action: createRoomActionAddress(
         createBiomeAddress('Underworld', 'F'),
         postboss.occurrenceId,
-        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: {} }),
+        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1' }),
       ),
       slotKey: 'secondRight',
       itemKey: 'TemporaryBoonRarityTrait',

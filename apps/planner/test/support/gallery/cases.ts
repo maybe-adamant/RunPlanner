@@ -1,12 +1,15 @@
 import {
+  applyProjectCommand,
   createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createShopOfferAddress,
   createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createNemesisRandomEventAddress,
@@ -21,6 +24,7 @@ import {
   rerollAppendIndex,
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
   loadDreamHeraArtificerEchoCheckpoint,
@@ -62,6 +66,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  liveRoomForProjectEvaluationAssembly,
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   simulateProject,
@@ -76,13 +81,19 @@ import {
   createCompleteFGProject,
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
-  loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPProject,
+  placeDueHermesShrineDeliveries,
   surfaceShrineDeliveriesProject,
+  surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalPomResolutions,
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  purchaseTestHermesShrineOffer,
+} from '@run-planner/test-fixtures/shared';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
   appendRoomAction,
@@ -96,6 +107,48 @@ import {
   type GalleryCase,
   type GalleryStep,
 } from './galleryCase';
+
+const surfaceO = createBiomeAddress('Surface', 'O');
+
+/** A three-phase O room where a Hermes Shrine delivery matures at Combat 1's end. */
+function shipNonFinalDeliveryProject() {
+  const { oShrine } = surfaceShrineDeliverySources;
+  const occurrenceId = createOccurrenceId('surface-o-combat02');
+  const occurrence = createOccurrenceAddress(surfaceO, occurrenceId);
+  let project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+    kind: 'ReplaceShipEncounterCount',
+    occurrence,
+    encounterCount: 3,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SelectEncounter',
+    phase: createEncounterPhaseAddress(surfaceO, occurrence, 'Combat1'),
+    encounterKey: 'IcarusCombatO',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: oShrine,
+    slotKey: 'secondLeft',
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+  project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
+    delay: 5,
+    rushed: false,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRewardWheelStore',
+    wheel: createRewardWheelAddress(surfaceO, occurrenceId, 'wheel2'),
+    storeKey: 'RunProgress',
+  });
+  project = authorTestTraitsAndRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(surfaceO, occurrenceId, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    }),
+  );
+  return authorLegalTraitOffers(placeDueHermesShrineDeliveries(project));
+}
 
 /** Adds an object on a free anchor through the engine's own placement command. */
 function placeAnchorObject(
@@ -111,6 +164,37 @@ function placeAnchorObject(
     )?.objects.find((object) => object.kind === kind)?.place;
     if (place === undefined) throw new Error(`${occurrenceId} cannot place ${kind}`);
     return place;
+  };
+}
+
+/** Picks up a room's live item from its live row, at the gap the live product names canonical. */
+function placeLiveItem(
+  biomeKey: string,
+  occurrenceId: string,
+  reference: RoomActionReference,
+): GalleryStep {
+  return (project) => {
+    const live = liveRoomForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      occurrenceAddress(project, biomeKey, occurrenceId),
+      'placements',
+    );
+    const placements = (live?.gaps ?? []).flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.verbs.filter(
+          (verb) =>
+            verb.standing !== true &&
+            verb.commands !== undefined &&
+            roomActionKey(verb.reference!) === roomActionKey(reference),
+        ),
+      ),
+    );
+    if (placements.length === 0) throw new Error(`${occurrenceId} has no live ${reference.kind}`);
+    const canonical = placements.find((verb) => verb.canonical === true);
+    if (canonical === undefined)
+      throw new Error(`${occurrenceId} names no canonical placement for ${reference.kind}`);
+    return canonical.commands![0]!;
   };
 }
 
@@ -233,11 +317,19 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
         event,
         value: { ...value, reward: { rewardType } },
       },
+      // Her interaction is a room action the player places, as the editor does.
+      appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactEncounter', phaseKey: 'Encounter' }),
     ],
     target: room('F', 'golden-f-b5-e1'),
   });
   return [
     entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }, 'ArmorBoost'),
+    entry(
+      'nemesis-free-item-death-defiance',
+      'Nemesis free item: Death Defiance, offered only while one is missing',
+      { kind: 'freeItem' },
+      'LastStandDrop',
+    ),
     entry(
       'nemesis-gold-trade',
       'Nemesis gold trade, declined',
@@ -277,7 +369,7 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Incoming boon with its offer picked',
     shows: [
       'room entered',
-      'encounter start/end',
+      'Encounter, gate row, Combat, Encounter ended',
       'incoming reward',
       'trait offer picked + dimmed',
     ],
@@ -302,18 +394,26 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b1-e1'),
   },
   {
+    id: 'devotion-door',
+    doorsExpanded: true,
+    label: 'Trial door with its chosen and spurned gods',
+    shows: ['Trial god pair icon', 'door reward picker'],
+    project: () => underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+    target: room('F', '4fcb700b-b26a-49bf-8f93-5ec021de7235'),
+  },
+  {
+    id: 'devotion-collect',
+    label: 'Trial room: the chosen and spurned gods’ Collect rows',
+    shows: ['Collect chosen boon', 'Collect spurned boon'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
     id: 'stale-incoming-reward',
     label: 'Stale incoming reward kept for repair',
     shows: ['Timeline repairs (stale row)', 'finding'],
     project: loadUnderworldFGCheckpoint,
     target: room('G', 'golden-g-b1-e1'),
-  },
-  {
-    id: 'required-unplaced',
-    label: 'Required reward pickup not placed',
-    shows: ['Timeline repairs (required unplaced)', 'Restore required action'],
-    project: () => withoutRoomActionOrder(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1'),
-    target: room('F', 'golden-f-b1-e1'),
   },
   {
     id: 'artificer-transform',
@@ -364,14 +464,14 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'gorgon-athena',
     label: 'Gorgon Athena offer',
-    shows: ['Gorgon offer', 'encounter start with Gorgon'],
+    shows: ['Gorgon offer', 'Combat with Gorgon'],
     project: loadUnderworldGorgonAthenaCheckpoint,
     target: room('G', 'golden-g-b1-e1'),
   },
   {
     id: 'fig-leaf-skip',
-    label: 'Encounter start with a Fig Leaf skip',
-    shows: ['encounter start with Fig Leaf'],
+    label: 'Combat with a Fig Leaf skip',
+    shows: ['Combat with Fig Leaf'],
     project: loadUnderworldFigLeafCheckpoint,
     target: room('F', 'golden-f-b2-e1'),
   },
@@ -398,36 +498,7 @@ export const galleryCases: readonly GalleryCase[] = [
     project: loadNemesisFieldsCheckpoint,
     target: room('H', 'golden-h-combat05'),
   },
-  {
-    id: 'optional-actions-fields',
-    label: 'Optional actions: the Fields Optional rewards list',
-    shows: ['Optional actions', 'Actions group picker items'],
-    project: loadNemesisFieldsCheckpoint,
-    target: room('H', 'golden-h-combat05'),
-    openPicker: 'Optional rewards',
-  },
   ...nemesisFamilyCases(),
-  {
-    id: 'optional-actions-nemesis',
-    label: 'Optional actions: a Nemesis pickup on the Actions line',
-    shows: ['Optional actions', 'Actions group picker items'],
-    project: loadUnderworldFGCheckpoint,
-    commands: [
-      { kind: 'SelectEncounter', phase: nemesisPhase, encounterKey: 'NemesisRandomEvent' },
-      {
-        kind: 'SelectNemesisRandomEventFamily',
-        event: createNemesisRandomEventAddress(nemesisPhase),
-        family: 'damageContest',
-      },
-      {
-        kind: 'ReplaceNemesisRandomEventInteraction',
-        event: createNemesisRandomEventAddress(nemesisPhase),
-        value: { kind: 'damageContest', result: 'failure', reward: null },
-      },
-    ],
-    target: room('F', 'golden-f-b5-e1'),
-    openPicker: 'Nemesis',
-  },
   {
     id: 'nemesis-bet',
     label: 'Nemesis combat with its kill-race bet',
@@ -453,8 +524,8 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'fields-cages',
     overview: true,
-    label: 'Fields room: cage clears, cage order and cage rewards',
-    shows: ['Fields cage clear', 'Fields cage order', 'local reward per cage'],
+    label: 'Fields room: cage Unlock rows, their encounters and released rewards',
+    shows: ['Fields cage Unlock row', 'cage-named encounter markers', 'local reward per cage'],
     project: loadUnderworldFGHICheckpoint,
     target: room('H', 'golden-h-combat09'),
   },
@@ -651,8 +722,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'wheel-next-phase',
-    label: 'Wheel room: select wheel, wheel reward and next phase',
-    shows: ['select wheel', 'wheel reward', 'next phase'],
+    label: 'Wheel room: Wheels open, select wheel and wheel reward',
+    shows: ['Wheels open', 'select wheel', 'wheel reward'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
   },
@@ -680,6 +751,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat04'),
   },
   {
+    id: 'ship-resource-elsewhere',
+    overview: true,
+    label: 'Ship room Overview: Earth placed in an earlier Ship room, named by its Location',
+    shows: ['Resources', 'placement elsewhere'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceResourcePlacement',
+        route: createRouteAddress('Surface'),
+        family: 'Pickaxe',
+        value: { biomeKey: 'O', occurrenceId: createOccurrenceId('surface-o-combat04') },
+      },
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
     id: 'spawned-fields-entry',
     label: 'Fields room: cage rewards locked on entry, each unlocked at its cage fight’s end',
     shows: ['spawn notice', 'Fields slot marks', 'locked loot', 'unlocks row'],
@@ -688,7 +775,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'spawned-h-miniboss',
-    label: 'H miniboss: reward caged at the encounter start, unlocked at its end',
+    label: 'H miniboss: reward caged as its Encounter begins, unlocked at its end',
     shows: ['spawn notice', 'locked loot', 'unlocks row'],
     project: loadUnderworldFGHCheckpoint,
     target: room('H', 'golden-h-miniboss01'),
@@ -702,8 +789,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'ship-phase-wheel',
-    roomTab: 'shipIntroActions',
-    label: 'Ship room Intro phase: the wheel and its offers',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship room combat phase: its wheel and two offers',
     shows: ['ship phase', 'wheel offers table'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     commands: [
@@ -747,9 +834,78 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat04'),
   },
   {
+    id: 'ship-select-wheel-open',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro: Select wheel between two offers, its list open',
+    shows: ['ship phase', 'select wheel'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+    openPicker: 'Combat 1 reward offer',
+  },
+  {
+    id: 'ship-two-phase-intro',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro: its fight, then the wheel Combat 1 is chosen at',
+    shows: ['ship phase', 'Wheels open', 'select wheel'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    target: room('O', 'surface-o-combat04'),
+  },
+  // A three-phase room whose Combat 1 matures a delivery, collected before Combat 2's wheel choice.
+  ...(['shipIntroActions', 'shipCombat1Actions', 'shipCombat2Actions'] as const).map(
+    (roomTab, index): GalleryCase => ({
+      id: `ship-three-phase-${index}`,
+      roomTab,
+      label: `Three-phase Ship room, tab ${index + 1}: one fight, then what comes next`,
+      shows: ['ship phase', 'Wheels open', 'select wheel', 'spawn notice', 'doors'],
+      project: shipNonFinalDeliveryProject,
+      target: room('O', 'surface-o-combat02'),
+    }),
+  ),
+  {
+    id: 'ship-three-phase-unplaced-delivery',
+    roomTab: 'shipCombat1Actions',
+    label: 'Three-phase Ship room: an unplaced delivery waits on the tab of the fight maturing it',
+    shows: ['ship phase', 'required action', 'unplaced delivery'],
+    project: shipNonFinalDeliveryProject,
+    commands: [
+      (project) => {
+        const delivery = authoredOccurrence(
+          project,
+          'O',
+          'surface-o-combat02',
+        ).roomActions.order.find(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery',
+        );
+        if (delivery === undefined) throw new Error('surface-o-combat02 places no delivery');
+        return {
+          kind: 'UnplaceGeneratedDelivery',
+          action: createRoomActionAddress(
+            surfaceO,
+            createOccurrenceId('surface-o-combat02'),
+            roomActionKey(delivery),
+          ),
+        };
+      },
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
     id: 'outcome-aetos-gorgon',
-    label: 'P combat room: Aetos wave and Gorgon condition at the Encounter outcome',
-    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    label: 'P combat room: Aetos wave and Gorgon condition on its one Encounter marker',
+    shows: ['Encounter outcome', 'merged marker', 'Aetos wave', 'Gorgon condition'],
     project: loadSurfaceNOPProject,
     commands: [athenaAmulet],
     target: room('P', 'surface-p-1-1-p_combat03'),
@@ -757,7 +913,7 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'outcome-aetos-gorgon-set',
     label: 'P combat room: Aetos wave and Gorgon condition set',
-    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    shows: ['Combat outcome', 'Aetos wave', 'Gorgon condition'],
     project: loadSurfaceNOPProject,
     commands: [
       athenaAmulet,
@@ -776,8 +932,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'outcome-aetos-unavailable',
-    label: 'P combat room stopped at its Encounter outcome: an Aetos wave the fight cannot field',
-    shows: ['stop at the encounter outcome', 'Aetos wave', 'Not reached yet'],
+    label: 'P combat room stopped at its Combat: an Aetos wave the fight cannot field',
+    shows: ['stop at Combat', 'Aetos wave', 'Not reached yet'],
     project: loadSurfaceNOPProject,
     commands: [athenaAmulet, { kind: 'ReplaceAetosWave', phase: pCombat03Phase, value: 9 }],
     target: room('P', 'surface-p-1-1-p_combat03'),
@@ -949,6 +1105,72 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
+    id: 'room-map-f-preboss-shop',
+    overview: true,
+    label: 'F Preboss holding the Shop: its map with Charon’s stall',
+    shows: ['Shop variant map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'room-map-shop-stock',
+    overview: true,
+    label: 'World Shop stock on its points: as entered on Overview, as left on the Timeline',
+    shows: ['Shop items on the map', 'bought item gone'],
+    project: loadUnderworldWorldShopTravelDealCheckpoint,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'room-map-shop-stock-pedestal',
+    overview: true,
+    label: 'Preboss Shop stock beside the Contract pedestal’s item, each marked whose',
+    shows: ['Shop items on the map', 'Contract pedestal on its point', 'Shop/Contract badges'],
+    project: loadTraitOrderChecks,
+    target: room('F', traitOrderChecks.preboss),
+  },
+  {
+    id: 'room-map-shop-stock-before-purchase',
+    label:
+      'Preboss Shop map at its pedestal collect: the pedestal item gone, every Shop item stands',
+    shows: ['stock at a Timeline row', 'collected pedestal gone'],
+    project: loadTraitOrderChecks,
+    target: room('F', traitOrderChecks.preboss),
+    mapRow: 0,
+  },
+  {
+    id: 'room-map-shop-stock-restock',
+    label:
+      'Preboss Shop map at its Travel Deal purchase: the bought item gone, its restock on its point',
+    shows: ['stock at a Timeline row', 'bought item gone', 'Travel Deal restock on its point'],
+    project: loadTraitOrderChecks,
+    target: room('F', traitOrderChecks.preboss),
+    mapRow: 1,
+  },
+  {
+    id: 'room-map-shop-stock-restock-bought',
+    label: 'Preboss Shop map at the restock’s purchase: the restock gone too',
+    shows: ['stock at a Timeline row', 'bought restock gone'],
+    project: loadTraitOrderChecks,
+    target: room('F', traitOrderChecks.preboss),
+    mapRow: 2,
+  },
+  {
+    id: 'room-map-midshop-contract-exit',
+    overview: true,
+    label: 'Midshop with its Contract door on its point',
+    shows: ['Contract exit on the map', 'Shop items on the map'],
+    project: loadUnderworldZagreusContractCheckpoint,
+    target: room('G', 'golden-g-b5-e1'),
+  },
+  {
+    id: 'room-map-f-preboss-free',
+    overview: true,
+    label: 'F Preboss holding a free reward: its empty-floor map',
+    shows: ['free-reward map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-free'),
+  },
+  {
     id: 'room-map-f-roll-entry',
     overview: true,
     label: 'F room whose flip rolls: each entry with the flip it needs',
@@ -1030,6 +1252,15 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['room map', 'doors', 'entries', 'anchors', 'Customize encounter'],
     project: loadUnderworldArachneCocoonsCheckpoint,
     target: room('G', 'golden-g-b4-e1'),
+  },
+  {
+    id: 'cocoon-reward-position',
+    overview: true,
+    label: 'G Arachne room: the cocoon reward position on its map',
+    shows: ['cocoon markers', 'Customize encounter'],
+    project: loadUnderworldArachneCocoonsCheckpoint,
+    target: room('G', 'golden-g-b4-e1'),
+    openOverviewPicker: 'Customize encounter',
   },
   {
     id: 'room-map-i-combat',
@@ -1283,28 +1514,13 @@ export const galleryCases: readonly GalleryCase[] = [
         kind: 'PurchaseHermesShrineOffer',
         occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
         generationKey: 'initial:first',
+      }),
+      (project) => ({
+        kind: 'SetHermesShrineRush',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        generationKey: 'initial:first',
         rushed: true,
       }),
-      (project) => {
-        const pickup = authoredOccurrence(
-          project,
-          'O',
-          'surface-o-combat02',
-        ).roomActions.order.find(
-          (reference) =>
-            reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === 'hermesShrineDelivery',
-        );
-        if (pickup === undefined) throw new Error('the rush placed no pickup');
-        return {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(
-            createBiomeAddress('Surface', 'O'),
-            createOccurrenceId('surface-o-combat02'),
-            roomActionKey(pickup),
-          ),
-        };
-      },
     ],
     target: room('O', 'surface-o-combat02'),
   },
@@ -1439,6 +1655,253 @@ export const galleryCases: readonly GalleryCase[] = [
     ],
     target: room('N', 'surface-n-combat05'),
   },
+  // The live row.
+  {
+    id: 'live-row-combat',
+    label: 'Live row: a combat room’s optional pickup at the frontier',
+    shows: ['live row'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'timeline-legend',
+    label: 'Timeline legend: the row kinds and purchase chances',
+    shows: ['legend'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    legendOpen: true,
+  },
+  {
+    id: 'live-row-required',
+    label: 'Live row: a room reward not picked up yet',
+    shows: ['live row', 'required pickup'],
+    project: () => withoutRoomActionOrder(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1'),
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'live-row-opening-unplaced',
+    label: 'Live row: an opening reward not picked up before the first fight',
+    shows: ['live row', 'required pickup', 'no Overview notice'],
+    project: () => withoutRoomActionOrder(loadUnderworldFGCheckpoint(), 'F', 'golden-f-start'),
+    target: room('F', 'golden-f-start'),
+  },
+  {
+    id: 'live-row-required-menu',
+    label: 'Live row: a required pickup’s verbs',
+    shows: ['live row', 'pickup menu'],
+    project: () => withoutRoomActionOrder(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1'),
+    target: room('F', 'golden-f-b1-e1'),
+    openPicker: 'Bones',
+  },
+  {
+    id: 'live-row-fields',
+    label: 'Live row: a Fields room’s optional rewards left at the frontier',
+    shows: ['live row', 'Fields slot marks'],
+    project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
+  },
+  {
+    id: 'live-row-fields-optional-menu',
+    label: 'Live row: a Fields optional reward’s verbs, with Time Piece held',
+    shows: ['live row', 'pickup menu', 'Goldify'],
+    project: loadUnderworldFGHCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
+    openPicker: 'Small Max Magick · Optional 1',
+  },
+  {
+    id: 'live-row-fields-locked',
+    label: 'Live row: a Fields room one cage in, the other cages’ rewards locked',
+    shows: ['live row', 'locked chip', 'cage unlock'],
+    project: () =>
+      withoutRoomActionOrder(loadNemesisFieldsCheckpoint(), 'H', 'golden-h-combat05', 4),
+    target: room('H', 'golden-h-combat05'),
+  },
+  {
+    id: 'live-row-fields-empty',
+    label: 'Live row: a Fields room with nothing placed',
+    shows: ['live row', 'stopped at Overview'],
+    project: () => withoutRoomActionOrder(loadNemesisFieldsCheckpoint(), 'H', 'golden-h-combat05'),
+    target: room('H', 'golden-h-combat05'),
+  },
+  {
+    id: 'live-row-ship',
+    roomTab: 'shipIntroActions',
+    label: 'Live row: a Ship room with nothing placed',
+    shows: ['live row', 'wheel choice'],
+    project: () =>
+      withoutRoomActionOrder(loadSurfaceEncounterShowcaseCheckpoint(), 'O', 'surface-o-combat04'),
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'live-row-shop',
+    label: 'Live row: a World Shop with its Travel Deal',
+    shows: ['live row', 'objects'],
+    project: loadUnderworldWorldShopTravelDealCheckpoint,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'live-row-shop-travel-deal-first',
+    label: 'Live row: a Travel Deal World Shop before its first purchase, which restocks',
+    shows: ['live row', 'object menu', 'Travel Deal refill after the purchase'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadUnderworldWorldShopTravelDealCheckpoint(),
+        'F',
+        'golden-f-preboss-shop',
+      ),
+    target: room('F', 'golden-f-preboss-shop'),
+    openPicker: 'World Shop',
+  },
+  {
+    id: 'live-row-shop-travel-deal-refill',
+    label: 'Live row: a World Shop’s stocked Travel Deal item, bought once',
+    shows: ['live row', 'object menu', 'Travel Deal refill buy'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadUnderworldWorldShopTravelDealCheckpoint(),
+        'F',
+        'golden-f-preboss-shop',
+        1,
+      ),
+    target: room('F', 'golden-f-preboss-shop'),
+    openPicker: 'World Shop',
+  },
+  {
+    id: 'live-row-postboss',
+    label: 'Live row: a Postboss with its fountain, rack and Hermes Shrine',
+    shows: ['live row', 'objects'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadSurfaceShrineTravelDealCheckpoint(),
+        'N',
+        'surface-n-preboss:postboss',
+      ),
+    target: room('N', 'surface-n-preboss:postboss'),
+  },
+  {
+    id: 'live-row-quick-buck',
+    label: 'Live row: Quick Buck’s gold left on the ground under its boon',
+    shows: ['live row', 'generated pickup'],
+    project: () =>
+      withoutRoomActionOrder(loadSurfaceNQuickBuckCheckpoint(), 'N', 'surface-n-opening', 1),
+    target: room('N', 'surface-n-opening'),
+  },
+  {
+    id: 'live-row-switch-drops',
+    label: 'Live row: a challenge switch’s drops after its use',
+    shows: ['live row', 'generated pickup'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        variantKey: 'TimeChallengeSwitch_Money',
+      }),
+      appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactChallengeSwitch' }),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'live-row-delivery',
+    label: 'Live row: a Hermes Shrine delivery left beside the room reward',
+    shows: ['live row', 'generated pickup'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadSurfaceScheduledLifecycleCheckpoint(),
+        'P',
+        'surface-p-1-1-p_combat03',
+        1,
+      ),
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  // The gap menu.
+  {
+    id: 'gap-control-hover',
+    label: 'Gap menu: the `+` on the spine above a row',
+    shows: ['gap menu'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    gap: { index: 1, open: false },
+  },
+  {
+    id: 'gap-menu-combat',
+    label: 'Gap menu: what a combat room can insert between two rows, and Reset from here',
+    shows: ['gap menu'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    gap: { index: 1, open: true },
+  },
+  {
+    id: 'gap-menu-fields',
+    label: 'Gap menu: a Fields room between two rows',
+    shows: ['gap menu', 'Fields slot marks'],
+    project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
+    gap: { index: 2, open: true },
+  },
+  {
+    id: 'gap-menu-fields-conversions',
+    label:
+      'Gap menu: an optional reward between two cages, goldified or transformed as it is placed',
+    shows: ['gap menu', 'goldify', 'transform'],
+    project: loadUnderworldFGHCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Underworld'),
+        arcanaKeys: ['MetaToRunUpgrade'],
+      },
+      ...(
+        [
+          ['F', ['ChanneledCast', 'StartingGold', 'HealthRegen', 'BonusDodge', 'SprintShield']],
+          ['G', ['LowManaDamageBonus', 'CastCount', 'MagicCrit', 'CastBuff', 'BonusHealth']],
+        ] as const
+      ).map(([biomeKey, arcanaKeys]) => ({
+        kind: 'ReplaceJudgmentArcana' as const,
+        judgment: {
+          kind: 'judgmentArcana' as const,
+          routeKey: 'Underworld',
+          biomeKey,
+          occurrenceId: createOccurrenceId(`golden-${biomeKey.toLowerCase()}-preboss-shop:boss`),
+          phaseKey: 'Encounter',
+        },
+        arcanaKeys,
+      })),
+      {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(
+          createBiomeAddress('Underworld', 'H'),
+          createOccurrenceId('golden-h-combat02'),
+          'optionalRewards',
+          'optional2',
+        ),
+        value: { rewardType: 'MetaCardPointsCommonDrop' },
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
+    gap: { index: 2, open: true },
+  },
+  {
+    id: 'gap-menu-ship',
+    roomTab: 'shipCombat1Actions',
+    label: 'Gap menu: a Ship phase between two rows',
+    shows: ['gap menu', 'ship phase'],
+    project: shipNonFinalDeliveryProject,
+    target: room('O', 'surface-o-combat02'),
+    gap: { index: 1, open: true },
+  },
   // Shops and room objects.
   {
     id: 'world-shop-travel-deal',
@@ -1478,33 +1941,6 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Stygian Well purchases with a Fateful Twist',
     shows: ['Well purchase', 'Fateful Twist', 'fountain + Phial', 'Keepsake Rack'],
     project: loadUnderworldTwistScyllaCheckpoint,
-    target: room('F', 'golden-f-preboss-shop:postboss'),
-  },
-  {
-    id: 'well-twist-unset',
-    label: 'Stygian Well Fateful Twist bought, its result not set',
-    shows: ['stop at the purchase row', 'Twist result repair', 'Not reached yet'],
-    project: loadUnderworldFGProject,
-    commands: [
-      ...(
-        [
-          ['healing', 'ArmorBoostStore'],
-          ['secondLeft', 'RandomStoreItem'],
-          ['secondRight', 'TemporaryBoonRarityTrait'],
-        ] as const
-      ).map(([slotKey, itemKey]): GalleryStep => (project) => ({
-        kind: 'ReplaceStygianWellOffer',
-        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
-        slotKey,
-        itemKey,
-      })),
-      (project) => ({
-        kind: 'SetStygianWellPurchase',
-        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
-        generationKey: 'initial:secondLeft',
-        purchased: true,
-      }),
-    ],
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
@@ -1588,25 +2024,25 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
-    id: 'optional-actions-well',
-    label: 'Optional actions: the Stygian Well list',
-    shows: ['Optional actions', 'Well picker items'],
+    id: 'live-row-well-menu',
+    label: 'Live row: the Stygian Well’s verbs',
+    shows: ['live row', 'object menu'],
     project: loadUnderworldFStygianWellCheckpoint,
     target: room('F', 'golden-f-preboss-shop:postboss'),
     openPicker: 'Stygian Well',
   },
   {
-    id: 'optional-actions-pool',
-    label: 'Optional actions: the Purging Pool list',
-    shows: ['Optional actions', 'Pool picker items'],
+    id: 'live-row-pool-menu',
+    label: 'Live row: the Pool of Purging’s verbs',
+    shows: ['live row', 'object menu'],
     project: loadUnderworldFPoolCheckpoint,
     target: room('F', 'golden-f-preboss-shop:postboss'),
     openPicker: 'Pool of Purging',
   },
   {
-    id: 'optional-actions-shop',
-    label: 'Optional actions: the World Shop list',
-    shows: ['Optional actions', 'World Shop picker items'],
+    id: 'live-row-shop-menu',
+    label: 'Live row: the World Shop’s verbs',
+    shows: ['live row', 'object menu'],
     project: loadTraitOrderChecks,
     target: room('F', traitOrderChecks.preboss),
     openPicker: 'World Shop',
@@ -1628,9 +2064,9 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('N', 'surface-n-preboss:postboss'),
   },
   {
-    id: 'optional-actions-shrine',
-    label: 'Optional actions: the Hermes Shrine list',
-    shows: ['Optional actions', 'Hermes Shrine picker items'],
+    id: 'live-row-shrine-menu',
+    label: 'Live row: the Hermes Shrine’s verbs',
+    shows: ['live row', 'object menu'],
     project: loadSurfaceShrineTravelDealCheckpoint,
     target: room('N', 'surface-n-preboss:postboss'),
     openPicker: 'Hermes Shrine',
@@ -1761,6 +2197,82 @@ export const galleryCases: readonly GalleryCase[] = [
     ],
     target: hub('N', 1),
   },
+  {
+    id: 'hub-rerolls',
+    overview: true,
+    label: 'Hub Timeline with a visit holding several rerolls, and its Overview',
+    shows: ['Hub reroll rows', 'Hub door reward chips'],
+    project: loadSurfaceNCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Surface'),
+        arcanaKeys: ['DoorReroll'],
+      },
+      ...(['combat03', 'combat05', 'combat23'] as const).map(
+        (hubSlotKey): GalleryStep =>
+          (project) => {
+            const surfaceHub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
+            const index = rerollAppendIndex(project, {
+              kind: 'hubStay',
+              hub: surfaceHub,
+              precedingVisitCount: 1,
+            });
+            if (index === undefined) throw new Error('the N Hub has no reroll position');
+            return {
+              kind: 'InsertHubReroll',
+              hub: surfaceHub,
+              hubSlotKey,
+              reward: {
+                rewardType: 'Boon',
+                payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+              },
+              index,
+            };
+          },
+      ),
+    ],
+    target: hub('N', 1),
+  },
+  {
+    id: 'room-number-doors',
+    label: 'Combat room whose doors and way out are combat rooms, each with its number',
+    shows: ['Doors opened chips', 'Leave room chip', 'room map door markers'],
+    project: loadUnderworldFGCheckpoint,
+    target: room('G', 'golden-g-b1-e1'),
+  },
+  {
+    id: 'room-number-doors-editor',
+    doorsExpanded: true,
+    label: 'Combat room’s doors editor: each door’s room with its number',
+    shows: ['door table', 'door room chips'],
+    project: loadUnderworldFGCheckpoint,
+    target: room('G', 'golden-g-b1-e1'),
+  },
+  {
+    id: 'room-number-leave-picker',
+    label: 'Leave room list: each way out with its room’s number',
+    shows: ['Leave room picker'],
+    project: loadUnderworldFGCheckpoint,
+    target: room('G', 'golden-g-b1-e1'),
+    openPicker: 'Exit door',
+  },
+  {
+    id: 'room-number-side-leave-picker',
+    label: 'Leave room list in an Ephyra main room: each side room by its numbered icon',
+    shows: ['side-visit Leave room picker'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
+    openPicker: 'Exit door',
+  },
+  {
+    id: 'hub-visit-picker',
+    label: 'Hub Timeline: a visit’s room list, each room with its number',
+    shows: ['Hub segments', 'visit room picker'],
+    project: loadSurfaceNCheckpoint,
+    target: hub('N', 2),
+    openPicker: 'Visit 2 room',
+  },
   // Progressive Timeline: a room's Timeline ends where its walk stops.
   {
     id: 'progressive-stop-at-entry',
@@ -1826,6 +2338,8 @@ export const galleryCases: readonly GalleryCase[] = [
         ),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       }),
+      // The swap takes the old reward's pickup with it; the new one is picked up again.
+      placeLiveItem('O', 'surface-o-combat04', { kind: 'interactWheelReward', wheelKey: 'wheel1' }),
     ],
     target: room('O', 'surface-o-combat04'),
   })),
@@ -2001,4 +2515,121 @@ export const galleryCases: readonly GalleryCase[] = [
     commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
     target: room('N', occurrenceId),
   })),
+  ...lastStandMarkCases(),
 ];
+
+/** The warning mark where an item offered only while the hero is missing a Last Stand is decided. */
+function lastStandMarkCases(): readonly GalleryCase[] {
+  const wellRoom = ['F', 'golden-f-b5-e1'] as const;
+  const shrineRoom = ['O', 'surface-o-combat02'] as const;
+  const shrinePurchaseRoom = shrineRoom;
+  const twistRoom = ['F', 'golden-f-preboss-shop:postboss'] as const;
+  return [
+    {
+      id: 'last-stand-well-row',
+      overview: true,
+      label: 'Last Stand mark: Kiss of Styx stocked in the Well',
+      shows: ['Well inventory mark'],
+      project: createGoldenFGHIProject,
+      commands: [
+        placeAnchorObject(...wellRoom, 'stygianWell'),
+        (project) => ({
+          kind: 'ReplaceStygianWellOffer',
+          occurrence: occurrenceAddress(project, ...wellRoom),
+          slotKey: 'healing',
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
+      target: room(...wellRoom),
+    },
+    {
+      id: 'last-stand-shrine-row',
+      overview: true,
+      label: 'Last Stand mark: Death Defiance stocked at the Hermes Shrine',
+      shows: ['Shrine inventory mark'],
+      project: loadSurfaceNOPQCheckpoint,
+      commands: [
+        placeAnchorObject(...shrineRoom, 'hermesShrine'),
+        (project) => ({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrineRoom),
+          slotKey: 'first',
+          value: { rewardType: 'LastStandDrop' },
+        }),
+      ],
+      target: room(...shrineRoom),
+    },
+    {
+      id: 'last-stand-shrine-purchase',
+      label:
+        'Last Stand mark: Death Defiance bought at a Hermes Shrine, unmarked where it is taken',
+      shows: ['Shrine purchase row without a mark'],
+      project: loadSurfaceNOPQCheckpoint,
+      commands: [
+        placeAnchorObject(...shrinePurchaseRoom, 'challengeSwitch'),
+        placeAnchorObject(...shrinePurchaseRoom, 'hermesShrine'),
+        (project) => ({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrinePurchaseRoom),
+          slotKey: 'first',
+          value: { rewardType: 'LastStandDrop' },
+        }),
+        (project) => ({
+          kind: 'PurchaseHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrinePurchaseRoom),
+          generationKey: 'initial:first',
+        }),
+      ],
+      target: room(...shrinePurchaseRoom),
+      roomTab: 'shipCombat1Actions',
+    },
+    {
+      id: 'last-stand-shop-row',
+      overview: true,
+      label: 'Last Stand mark: Death Defiance stocked in a Q World Shop slot',
+      shows: ['World Shop inventory mark'],
+      project: loadSurfaceAnvilCheckpoint,
+      commands: [
+        {
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(
+            createBiomeAddress('Surface', 'Q'),
+            createOccurrenceId('surface-q-preboss'),
+            'Survival',
+          ),
+          value: { optionKey: 'LastStandDrop', offer: { rewardType: 'LastStandDrop' } },
+        },
+      ],
+      target: room('Q', 'surface-q-preboss'),
+    },
+    {
+      id: 'last-stand-well-twist',
+      label: 'Last Stand mark: a Fateful Twist that turns into Kiss of Styx',
+      shows: ['Twist result mark'],
+      project: loadUnderworldTwistScyllaCheckpoint,
+      commands: [
+        (project) => ({
+          kind: 'ReplaceStygianWellTwistResult',
+          occurrence: occurrenceAddress(project, ...twistRoom),
+          generationKey: 'initial:secondRight',
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
+      target: room(...twistRoom),
+    },
+    {
+      id: 'last-stand-well-travel-deal',
+      label: 'Last Stand mark: Kiss of Styx as the Well’s Travel Deal restock',
+      shows: ['Travel Deal line mark'],
+      project: loadUnderworldTwistScyllaCheckpoint,
+      commands: [
+        (project) => ({
+          kind: 'ReplaceStygianWellTravelDealRefill',
+          occurrence: occurrenceAddress(project, ...twistRoom),
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
+      target: room(...twistRoom),
+    },
+  ];
+}

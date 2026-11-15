@@ -18,10 +18,11 @@ import {
   type RoomEncounterState,
   type RoomOccurrence,
 } from '../model';
-import { createDefaultRoomActionState, roomActionKey } from '../room-actions/state';
+import { declaredRequiredRoomActions, roomActionKey } from '../room-actions/state';
 import { decodeRoomActionState } from '../room-state/decoding/room-action-codec';
 import {
-  assertStygianWellPurchaseActionClosure,
+  assertFeatureRollClosure,
+  decodeRerollPins,
   decodeStygianWellState,
 } from '../room-state/decoding/well-codec';
 import { decodeRoomState } from '../room-state/codec';
@@ -57,7 +58,7 @@ import { decodeGeneratedEncounterCustomization } from '../room-state/decoding/ge
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
-  isDeliveryFlushHost,
+  hermesShrineRushAction,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -87,6 +88,7 @@ import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import {
   decodeCountedOffer,
+  decodeRerolledRewardState,
   decodeRewardState,
 } from '../room-state/decoding/reward-acquisition-codec';
 import { requireCountedBinding } from '../room-state/declaration';
@@ -250,7 +252,17 @@ function decodePurgingPoolState(
   if (room.purgingPool === undefined)
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['traitKeyBySlot'], path);
+  const hasRerollPins = Object.hasOwn(raw, 'rerollTraitKeyBySlot');
+  const hasRefresh = Object.hasOwn(raw, 'refreshTraitKeyBySlot');
+  expectExactKeys(
+    raw,
+    [
+      'traitKeyBySlot',
+      ...(hasRefresh ? ['refreshTraitKeyBySlot'] : []),
+      ...(hasRerollPins ? ['rerollTraitKeyBySlot'] : []),
+    ],
+    path,
+  );
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
   expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
   const traitKeyBySlot = Object.fromEntries(
@@ -263,8 +275,43 @@ function decodePurgingPoolState(
       return [slot, traitKey];
     }),
   ) as Readonly<Record<'left' | 'middle' | 'right', string | null>>;
+  const rerollTraitKeyBySlot = hasRerollPins
+    ? decodeRerollPins(
+        raw.rerollTraitKeyBySlot,
+        `${path}.rerollTraitKeyBySlot`,
+        room.purgingPool.slotKeys,
+        (entry, entryPath) => {
+          const traitKey = expectNonBlankString(entry, entryPath);
+          if (catalog.traits.byKey[traitKey] === undefined)
+            failProjectDocument(entryPath, 'unknown trait');
+          return traitKey;
+        },
+      )
+    : undefined;
+  const refreshTraitKeyBySlot = hasRefresh
+    ? (() => {
+        const refreshPath = `${path}.refreshTraitKeyBySlot`;
+        const pins = expectRecord(raw.refreshTraitKeyBySlot, refreshPath);
+        if (Object.keys(pins).length === 0)
+          failProjectDocument(refreshPath, 'must stock at least one slot');
+        return Object.freeze(
+          Object.fromEntries(
+            Object.entries(pins).map(([slotKey, entry]) => {
+              if (!room.purgingPool!.slotKeys.includes(slotKey as never))
+                failProjectDocument(refreshPath, `contains unknown slot ${slotKey}`);
+              const traitKey = expectNonBlankString(entry, `${refreshPath}.${slotKey}`);
+              if (catalog.traits.byKey[traitKey] === undefined)
+                failProjectDocument(`${refreshPath}.${slotKey}`, 'unknown trait');
+              return [slotKey, traitKey];
+            }),
+          ),
+        ) as Readonly<Partial<Record<'left' | 'middle' | 'right', string>>>;
+      })()
+    : undefined;
   return Object.freeze({
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
+    ...(refreshTraitKeyBySlot === undefined ? {} : { refreshTraitKeyBySlot }),
+    ...(rerollTraitKeyBySlot === undefined ? {} : { rerollTraitKeyBySlot }),
   });
 }
 
@@ -345,7 +392,14 @@ function assertHermesShrineDeliveryActionClosure(
       (offerFor(shrine, reference.generationKey) ?? null) === null
     )
       failProjectDocument(path, 'Shrine purchase actions require a stocked Shrine offer');
-  const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
+  // A rush is an interaction with a bought item; one ordered before its
+  // purchase is kept with its ordering finding.
+  for (const reference of roomActions.order)
+    if (
+      reference.kind === 'rushHermesShrineOffer' &&
+      hermesShrinePurchaseAction(roomActions.order, reference.generationKey) === undefined
+    )
+      failProjectDocument(path, 'Shrine rush actions require their purchase');
   for (const reference of roomActions.order) {
     if (
       reference.kind !== 'interactAcquisitionEntry' ||
@@ -358,23 +412,13 @@ function assertHermesShrineDeliveryActionClosure(
       parsed.routeKey === source.routeKey &&
       parsed.biomeKey === source.biomeKey &&
       parsed.sourceOccurrenceId === source.occurrenceId;
-    if (sourceIsCurrent && reference.encounterPhaseKey !== undefined)
-      failProjectDocument(
-        path,
-        'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
-      );
-    if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
-      failProjectDocument(
-        path,
-        'cross-occurrence Shrine deliveries must preserve their due encounter phase',
-      );
-    // A rushed item is optional loot: its purchase may have no ranked pickup,
-    // but a same-room pickup always belongs to one rushed purchase action.
+    // A rushed item is optional loot: its rush may have no ranked pickup,
+    // but a same-room pickup always belongs to one rush action.
     if (
       sourceIsCurrent &&
-      hermesShrinePurchaseAction(roomActions.order, parsed.generationKey)?.rushed !== true
+      hermesShrineRushAction(roomActions.order, parsed.generationKey) === undefined
     )
-      failProjectDocument(path, 'same-room Shrine delivery actions require their rushed purchase');
+      failProjectDocument(path, 'same-room Shrine delivery actions require their rush');
   }
 }
 
@@ -592,18 +636,31 @@ export function decodeRoomOccurrence(input: {
   const rerolledIncomingReward = rawOccurrence.hasRerolledIncomingReward
     ? (() => {
         const path = `${rawOccurrence.path}.rerolledIncomingReward`;
-        const binding = requireCountedBinding(contextualRoom, path);
-        const reward = decodeRewardState(
+        // A press may name a door whose room draws no counted reward; its item holds no outcomes.
+        const binding =
+          contextualRoom.incomingReward.kind === 'countedChoice'
+            ? contextualRoom.incomingReward
+            : undefined;
+        return decodeRerolledRewardState(
           rawOccurrence.rerolledIncomingReward,
           catalog,
           path,
-          { kind: 'producerLifecycle', key: binding.producerLifecycleKey },
-          routeKey,
+          (raw, acquisitionPath) => {
+            const counted = requireCountedBinding(contextualRoom, acquisitionPath);
+            const reward = decodeRewardState(
+              raw,
+              catalog,
+              acquisitionPath,
+              { kind: 'producerLifecycle', key: counted.producerLifecycleKey },
+              routeKey,
+            );
+            return Object.freeze({
+              ...reward,
+              offer: decodeCountedOffer(reward.offer, catalog, counted, `${path}.offer`),
+            });
+          },
+          (offer) => binding?.allowedRewardTypes.includes(offer.rewardType) === true,
         );
-        return Object.freeze({
-          ...reward,
-          offer: decodeCountedOffer(reward.offer, catalog, binding, `${path}.offer`),
-        });
       })()
     : undefined;
   const roomActions = decodeRoomActionState(
@@ -649,25 +706,25 @@ export function decodeRoomOccurrence(input: {
     const referencePath = `${rawOccurrence.path}.roomActions.order[${index}]`;
     if (!(lockedExits ?? []).includes(reference.exitKey))
       failProjectDocument(`${referencePath}.exitKey`, 'presses a door that is not locked');
-    for (const [decisionKey, value] of Object.entries(reference.customization ?? {})) {
+  }
+  for (const [exitKey, decisions] of Object.entries(encounters.customizationByLockedExit ?? {})) {
+    const doorPath = `${rawOccurrence.path}.encounters.customizationByLockedExit.${exitKey}`;
+    if (!(lockedExits ?? []).includes(exitKey))
+      failProjectDocument(doorPath, 'customizes the fight of a door that is not locked');
+    for (const [decisionKey, value] of Object.entries(decisions)) {
       const issue = unlockExitCustomizationIssue(catalog, room.gameName, decisionKey, value);
-      if (issue !== undefined)
-        failProjectDocument(`${referencePath}.customization.${decisionKey}`, issue);
+      if (issue !== undefined) failProjectDocument(`${doorPath}.${decisionKey}`, issue);
     }
   }
   if (
-    roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length !==
+    roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length >
     (keepsakeRack === undefined ? 0 : 1)
   )
     failProjectDocument(
       `${rawOccurrence.path}.roomActions.order`,
-      'a keepsake rack owns exactly one interactKeepsakeRack action',
+      'a keepsake rack owns at most one interactKeepsakeRack action',
     );
-  assertStygianWellPurchaseActionClosure(
-    stygianWell,
-    roomActions,
-    `${rawOccurrence.path}.roomActions.order`,
-  );
+  assertFeatureRollClosure(stygianWell, purgingPool, roomActions, rawOccurrence.path);
   for (const [index, reference] of roomActions.order.entries()) {
     const feature =
       reference.kind === 'rerollStygianWell'
@@ -1150,7 +1207,7 @@ export function decodeRoomOccurrence(input: {
   });
   if (
     fountainRarityResult !== undefined &&
-    !createDefaultRoomActionState(contextualRoom).order.some(
+    !declaredRequiredRoomActions(contextualRoom).some(
       (reference) => reference.kind === 'useFountain',
     )
   )
@@ -1214,6 +1271,7 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries.${SEA_STAR_DUPLICATE_ENTRY_KEY}`,
         'does not match the Sea Star retained-or-fresh duplicate shape',
       );
+    // The proc is an observation: its duplicate lies live until its owner picks it up.
     const expectedAction = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey,
@@ -1222,11 +1280,11 @@ export function decodeRoomOccurrence(input: {
     if (
       roomActions.order.filter(
         (reference) => roomActionKey(reference) === roomActionKey(expectedAction),
-      ).length !== 1
+      ).length > 1
     )
       failProjectDocument(
         `${rawOccurrence.path}.roomActions.order`,
-        'must retain the exact Sea Star duplicate action',
+        'holds at most one Sea Star duplicate action',
       );
   }
   return decodedOccurrence;

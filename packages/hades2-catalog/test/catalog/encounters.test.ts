@@ -1688,6 +1688,7 @@ describe('encounter envelope catalog', () => {
           { rewardType: 'RoomMoneyDrop', enteredBiome: { min: 2 }, requirement: 'none' },
           { rewardType: 'TalentDrop', enteredBiome: {}, requirement: 'talentLegal' },
         ],
+        unavailableWhileHeldTraitKeys: ['ReserveManaHitShieldBoon'],
         response: ['accept', 'decline'],
         pickupRequiredOnAccept: true,
       },
@@ -2016,5 +2017,167 @@ describe('field NPC encounters', () => {
         CatalogContractError,
       );
     }
+  });
+});
+
+describe('encounter scripts', () => {
+  const catalog = createCatalog(declarations);
+  const scripts = (predicate: (key: string) => boolean) =>
+    Object.fromEntries(
+      catalog.encounterDefinitions.values
+        .filter((definition) => predicate(definition.key))
+        .map((definition) => [definition.key, definition.script]),
+    );
+
+  it('declares the gate that starts each gated encounter', () => {
+    expect(
+      Object.fromEntries(
+        catalog.encounterDefinitions.values
+          .filter((definition) => definition.script.gate.kind !== 'none')
+          .map((definition) => [definition.key, definition.script.gate]),
+      ),
+    ).toEqual({
+      OpeningGeneratedF: { kind: 'useItemRole', role: 'self' },
+      OpeningGeneratedN: { kind: 'useItemRole', role: 'self' },
+      DevotionTestF: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestG: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestI: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestO: { kind: 'useItemRole', role: 'chosenSource' },
+      GeneratedO: { kind: 'wheelUse' },
+      IcarusCombatO: { kind: 'wheelUse' },
+      GeneratedH: { kind: 'cageActivation' },
+      GeneratedH_Treant2: { kind: 'cageActivation' },
+      GeneratedH_Screamer2: { kind: 'cageActivation' },
+      MournerIntro: { kind: 'cageActivation' },
+      LamiaIntro: { kind: 'cageActivation' },
+      LovesickIntro: { kind: 'cageActivation' },
+      LycanthropeIntro: { kind: 'cageActivation' },
+      NemesisCombatH: { kind: 'cageActivation' },
+    });
+  });
+
+  it('declares the Ship phase and Nemesis event script steps', () => {
+    expect(
+      scripts((key) =>
+        ['GeneratedO_Intro01', 'HeraclesCombatO', 'NemesisRandomEvent', 'GeneratedF'].includes(key),
+      ),
+    ).toEqual({
+      GeneratedF: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
+        gate: { kind: 'none' },
+        waitReadyBeforeEnd: false,
+        endsByInteraction: false,
+        endsWithBossDefeated: false,
+        hostsOutcome: ['gorgon'],
+      },
+      GeneratedO_Intro01: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
+        gate: { kind: 'none' },
+        waitReadyBeforeEnd: true,
+        endsByInteraction: false,
+        endsWithBossDefeated: false,
+        hostsOutcome: [],
+      },
+      HeraclesCombatO: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
+        gate: { kind: 'none' },
+        waitReadyBeforeEnd: true,
+        endsByInteraction: false,
+        endsWithBossDefeated: false,
+        hostsOutcome: [],
+      },
+      NemesisRandomEvent: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
+        gate: { kind: 'none' },
+        waitReadyBeforeEnd: false,
+        endsByInteraction: true,
+        endsWithBossDefeated: false,
+        hostsOutcome: ['nemesisRandomEvent'],
+      },
+    });
+  });
+
+  it('declares the switch and locked-door fights as press fights', () => {
+    const press = (key: string) => {
+      const script = catalog.encounterDefinitions.byKey[key]?.script;
+      return script === undefined
+        ? undefined
+        : {
+            beginTrigger: script.beginTrigger,
+            endEffects: script.endEffects,
+            records: script.records,
+            generatedAt: script.generatedAt,
+          };
+    };
+    const switchFight = {
+      beginTrigger: 'pressRow',
+      endEffects: 'none',
+      records: true,
+      generatedAt: 'entry',
+    };
+    expect({
+      TimeChallengeG: press('TimeChallengeG'),
+      PerfectClearChallengeF: press('PerfectClearChallengeF'),
+      EliteChallengeQ: press('EliteChallengeQ'),
+      GeneratedG_ExtraDoor: press('GeneratedG_ExtraDoor'),
+      pressFights: catalog.encounterDefinitions.values.filter(
+        (definition) => definition.script.beginTrigger === 'pressRow',
+      ).length,
+    }).toEqual({
+      TimeChallengeG: switchFight,
+      PerfectClearChallengeF: switchFight,
+      EliteChallengeQ: switchFight,
+      GeneratedG_ExtraDoor: {
+        beginTrigger: 'pressRow',
+        endEffects: 'none',
+        records: false,
+        generatedAt: 'start',
+      },
+      pressFights: 25,
+    });
+  });
+
+  it('derives the outcomes an encounter hosts from its declared facts', () => {
+    const hosted = (key: string) => catalog.encounterDefinitions.byKey[key]?.script.hostsOutcome;
+    expect({
+      GeneratedP: hosted('GeneratedP'),
+      NemesisCombatF: hosted('NemesisCombatF'),
+      ArtemisCombatF: hosted('ArtemisCombatF'),
+    }).toEqual({
+      GeneratedP: ['aetosWave', 'gorgon'],
+      NemesisCombatF: ['goldBet'],
+      ArtemisCombatF: [],
+    });
+  });
+
+  it('rejects an unknown gate', () => {
+    const raw = input();
+    expect(() =>
+      createCatalog({
+        ...raw,
+        encounterDefinitions: raw.encounterDefinitions.map((definition) =>
+          definition.key === 'GeneratedF'
+            ? { ...definition, script: { gate: { kind: 'mystery' } } as never }
+            : definition,
+        ),
+      }),
+    ).toThrowError(
+      new CatalogContractError(
+        `encounterDefinitions[${raw.encounterDefinitions.findIndex((definition) => definition.key === 'GeneratedF')}].script.gate.kind`,
+        'unknown encounter gate mystery',
+      ),
+    );
   });
 });

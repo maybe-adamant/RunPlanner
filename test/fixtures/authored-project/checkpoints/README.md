@@ -13,11 +13,18 @@ reachability, and recipe-backed canonical-byte integrity. Engine domain suites
 own the reached scenario and export workflows.
 
 `npm run fixtures:checkpoints:regenerate` rewrites only recipe-backed
-checkpoints through `encodeProjectDocument`; normal integrity checks verify
-their recipe equality. This is not save migration: migrate source saves before
+checkpoints through `encodeProjectDocument`, writing only those whose content
+beyond the schema revision line changed, so a revision bump alone touches none;
+normal integrity checks verify their recipe equality. This is not save migration: migrate source saves before
 regeneration when the schema changes. Imported user-authored checkpoints keep
 canonical loader and integrity coverage and are not reconstructed by the
 command.
+
+A saved checkpoint with no recipe changes only through the engine's own
+transforms, never by hand: when a rule a transform owns changes (such as the
+item content `stampRoomActionItemContent` records on rows), rerun that
+transform over the saved document and keep its output, so the checkpoint holds
+what a migrated user plan would.
 
 A fixture migration preserves each scenario's intent, passes current strict
 decoding and regenerates canonical bytes and hashes. A one-to-many migration

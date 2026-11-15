@@ -16,6 +16,7 @@ import {
   loadSurfaceScheduledLifecycleCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -36,6 +37,13 @@ import type {
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
+import type {
+  RoomSpawnedLoot,
+  SpawnCause,
+  SpawnMoment,
+  SpawnMomentKind,
+} from '@run-planner/engine/simulation';
+import { projectSpawnedLoot } from '@planner/projections/structured-workspace/assembly/occurrence-spawned-loot-projection';
 
 function roomOf(project: ProjectDocument, biomeKey: string, occurrenceId: OccurrenceId) {
   const node = projectStructuredWorkspaceFixture(project)
@@ -74,7 +82,7 @@ const grouped = (groups: readonly WorkspaceSpawnGroup[]) =>
 const items = (groups: readonly WorkspaceSpawnGroup[]) => groups.flatMap((group) => group.items);
 
 const placement = (item: WorkspaceSpawnedItem) =>
-  `${item.participation} ${item.placement.kind}${item.place === undefined ? '' : ` ${item.place.badge}`}`;
+  `${item.participation} ${item.placed ? 'placed' : 'unplaced'}${item.place === undefined ? '' : ` ${item.place.badge}`}`;
 
 function notice(entries: readonly WorkspaceRoomLifecycleTimelineEntry[], key: string) {
   const found = entries.find(
@@ -118,26 +126,8 @@ describe('spawn notices', () => {
     )!;
     expect(items(spawned.groups)[0]).toMatchObject({
       actionKey: reward.key,
-      placement: { kind: 'placed', owner: reward.address },
+      placed: true,
     });
-    const drop = items(spawned.groups)[3]!;
-    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
-    expect(drop.placement.intent.command.kind).toBe('PlaceClockedTraitPickup');
-    // The engine says its Pom Slice asks for its Pom once placed.
-    expect(drop.hint).toBe('Pick up Pom Slice — choose its Pom');
-  });
-
-  it('places spawned optional loot from its spawn row, not the Optional actions', () => {
-    const room = roomOf(
-      loadSurfaceScheduledLifecycleCheckpoint(),
-      'P',
-      createOccurrenceId('surface-p-1-1-p_combat03'),
-    );
-    const actions = room.roomActions!;
-    const drop = items(notice(actions.timeline.entries, 'encounterEnd:Combat').groups)[3]!;
-    expect(drop.placement.kind).toBe('unplaced');
-    expect(actions.rows.find((row) => row.key === drop.actionKey)?.rank).toBeNull();
-    expect(actions.optionalRows.map((row) => row.key)).not.toContain(drop.actionKey);
   });
 
   it('notifies an O combat phase at its end and again after its wheel reward', () => {
@@ -160,6 +150,104 @@ describe('spawn notices', () => {
     ]);
   });
 
+  it('notifies an earlier O phase’s end effects as the next wheel opens', () => {
+    const entries = roomOf(surfaceShrineDeliveriesProject(), 'O', oOccurrenceIds.combat01)
+      .roomActions!.timeline.entries;
+    const opens = sequence(entries).indexOf('wheelsOpen:wheel1');
+    expect(sequence(entries).slice(opens, opens + 2)).toEqual([
+      'wheelsOpen:wheel1',
+      'spawned wheelsOpen:Intro',
+    ]);
+  });
+
+  it('notifies an H miniboss’s caged reward at the marker that begins its encounter', () => {
+    const entries = roomOf(
+      loadUnderworldFGHCheckpoint(),
+      'H',
+      createOccurrenceId('golden-h-miniboss01'),
+    ).roomActions!.timeline.entries;
+    // Its encounter's begin shows as one marker with its Combat.
+    expect(sequence(entries)).toEqual([
+      'roomEntered',
+      'encounterStarted:Encounter',
+      'spawned encounterBegun:Encounter',
+      'encounterEnd:Encounter',
+      'spawned unlock:encounterEnd:Encounter',
+      'action interactIncomingReward',
+      'doorsOpened',
+    ]);
+  });
+
+  it('attaches each notice after its cause, unlocks first, a Ship begin at its Combat', () => {
+    const room = roomOf(surfaceShrineDeliveriesProject(), 'O', oOccurrenceIds.combat04);
+    const entries = room.roomActions!.timeline.entries.filter((entry) => entry.kind !== 'spawned');
+    const rows = room.roomActions!.rows;
+    const reward = rows.find((row) => row.reference.kind === 'interactWheelReward')!;
+    const automatic = { kind: 'automatic' } as const;
+    const event = (kind: 'encounterEnd' | 'encounterBegun'): SpawnCause => ({
+      kind: 'event',
+      event:
+        kind === 'encounterEnd'
+          ? { kind, key: 'encounterEnd:Combat1', phaseKey: 'Combat1', trigger: automatic }
+          : {
+              kind,
+              key: 'encounterBegun:Combat1',
+              phaseKey: 'Combat1',
+              trigger: automatic,
+              markers: 'merged',
+            },
+    });
+    const moment = (kind: SpawnMomentKind, cause: SpawnCause): SpawnMoment => ({
+      key: `${kind}:Combat1`,
+      kind,
+      phaseKey: 'Combat1',
+      cause,
+      items: [],
+    });
+    const loot: RoomSpawnedLoot = {
+      owner: room.roomActions!.owner,
+      unlocks: [
+        {
+          key: 'encounterEnd:Combat1',
+          kind: 'encounterEnd',
+          phaseKey: 'Combat1',
+          cause: event('encounterEnd'),
+          items: [],
+        },
+      ],
+      moments: [
+        // An H-style begin: in a Ship its Encounter hides behind Wheels open and shows at Combat.
+        moment('encounterBegun', event('encounterBegun')),
+        moment('encounterEnd', event('encounterEnd')),
+        moment('afterEncounterReward', { kind: 'action', action: reward.address }),
+        moment('wheelsOpen', { kind: 'timelineEnd' }),
+      ],
+      actionSpawns: [],
+    };
+    const placed = sequence(
+      projectSpawnedLoot(catalog, loot, entries, rows, { kind: 'none' }).entries,
+    );
+    const after = (key: string, count: number) =>
+      placed.slice(placed.indexOf(key), placed.indexOf(key) + count);
+    expect(placed).not.toContain('encounterBegun:Combat1');
+    expect(after('encounterStarted:Combat1', 2)).toEqual([
+      'encounterStarted:Combat1',
+      'spawned encounterBegun:Combat1',
+    ]);
+    expect(after('encounterEnd:Combat1', 4)).toEqual([
+      'encounterEnd:Combat1',
+      'spawned unlock:encounterEnd:Combat1',
+      'spawned encounterEnd:Combat1',
+      'action interactWheelReward',
+    ]);
+    expect(after('action interactWheelReward', 2)).toEqual([
+      'action interactWheelReward',
+      'spawned afterEncounterReward:Combat1',
+    ]);
+    // The Timeline's end follows everything, its last entry included.
+    expect(placed.at(-1)).toBe('spawned wheelsOpen:Combat1');
+  });
+
   it('notifies Fields cage and optional rewards on entry, each marked by its slot', () => {
     const room = roomOf(
       loadUnderworldFGHCheckpoint(),
@@ -175,12 +263,6 @@ describe('spawn notices', () => {
       'optional unplaced O1',
       'optional unplaced O2',
     ]);
-    // Its optional rewards are placed from their chips alone.
-    const optionalKeys = room.roomActions!.optionalRows.map((row) => row.key);
-    for (const item of spawned.filter((candidate) => candidate.participation === 'optional')) {
-      expect(item.placement.kind).toBe('unplaced');
-      expect(optionalKeys).not.toContain(item.actionKey);
-    }
   });
 
   it('lists Quick Buck’s gold under the reward pickup that grants it', () => {
@@ -219,15 +301,17 @@ describe('outcome-dependent loot', () => {
   );
   /** Nemesis answered, her optional result placed right after her. */
   function answered(value: AuthoredNemesisRandomEventOutcome, rewardType: string) {
-    const project = replaceNemesisRandomEventInteraction(
-      applyProjectCommand(createGoldenFGHIProject(), catalog, {
-        kind: 'SelectEncounter',
-        phase,
-        encounterKey: 'NemesisRandomEvent',
-      }),
-      createNemesisRandomEventAddress(phase),
-      value,
-      { rewardType },
+    const project = collectTestRequiredItems(
+      replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        createNemesisRandomEventAddress(phase),
+        value,
+        { rewardType },
+      ),
     );
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
@@ -254,39 +338,30 @@ describe('outcome-dependent loot', () => {
     ).roomActions!;
   }
 
-  /** The event's stretch of the Timeline, from her encounter's start to its end. */
-  const eventSequence = (actions: ReturnType<typeof answered>) => {
-    const all = sequence(actions.timeline.entries);
-    return all.slice(
-      all.indexOf('encounterStart:Encounter'),
-      all.indexOf('encounterEnd:Encounter') + 1,
-    );
-  };
+  /** What her talk row spawned, by its source row's kind and its grouped items. */
+  const spawnedUnderRow = (actions: ReturnType<typeof answered>) =>
+    (actions.actionSpawns ?? []).map((spawn) => [
+      JSON.parse(spawn.sourceActionKey)[0],
+      grouped(spawn.groups),
+    ]);
 
-  it('announces a Nemesis contest’s result after her outcome', () => {
+  it('lists a Nemesis contest’s result under her talk row, with no marker for her', () => {
     const actions = answered(
       { kind: 'damageContest', result: 'failure' },
       'RoomRewardConsolationPrize',
     );
-    expect(eventSequence(actions)).toEqual([
-      'encounterStart:Encounter',
-      'action interactEncounter',
-      'encounterOutcome:Encounter',
-      'spawned encounterOutcome:Encounter',
-      'encounterEnd:Encounter',
+    const all = sequence(actions.timeline.entries);
+    expect(all).toContain('action interactEncounter');
+    expect(all.filter((entry) => entry.includes(':Encounter'))).toEqual([]);
+    expect(spawnedUnderRow(actions)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^\[Nemesis\]: /)]],
     ]);
-    expect(actions.actionSpawns ?? []).toEqual([]);
   });
 
-  it('keeps a Nemesis free item under her row, with no outcome to announce', () => {
+  it('keeps a Nemesis free item under her row', () => {
     const actions = answered({ kind: 'freeItem' }, 'HealDrop');
-    expect(eventSequence(actions)).toEqual([
-      'encounterStart:Encounter',
-      'action interactEncounter',
-      'encounterEnd:Encounter',
-    ]);
-    expect(actions.actionSpawns?.map((spawn) => JSON.parse(spawn.sourceActionKey)[0])).toEqual([
-      'interactEncounter',
+    expect(spawnedUnderRow(actions)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^\[Nemesis\]: /)]],
     ]);
   });
 });
@@ -307,7 +382,7 @@ describe('converted and copied loot', () => {
     const replacement = actions.rows.find((row) => row.sourceFamily?.kind === 'artificer')!;
     expect(items(spawn!.groups)[0]).toMatchObject({
       actionKey: replacement.key,
-      placement: { kind: 'placed', owner: replacement.address },
+      placed: true,
     });
   });
 
@@ -321,18 +396,17 @@ describe('converted and copied loot', () => {
         source: expect.objectContaining({ name: 'Sea Star' }),
         item: expect.objectContaining({
           actionKey: copy.key,
-          placement: { kind: 'placed', owner: copy.address },
+          placed: true,
         }),
       }),
     ]);
-    // Her accepted trade's result spawns at her outcome, not under her row.
-    expect(actions.actionSpawns ?? []).toEqual([]);
-    expect(grouped(notice(actions.timeline.entries, 'encounterOutcome:Encounter').groups)).toEqual([
-      `[Nemesis]: ${original.labelParts?.name ?? original.label}`,
+    // Her accepted trade's result spawns under her talk row.
+    expect(actions.actionSpawns?.map((spawn) => grouped(spawn.groups))).toEqual([
+      [`[Nemesis]: ${original.labelParts?.name ?? original.label}`],
     ]);
   });
 
-  it('lists a rushed Shrine item under the purchase that rushes it', () => {
+  it('lists a rushed Shrine item under its rush', () => {
     const actions = galleryRoom(
       'shrine-rush-travel-deal',
       'N',
@@ -340,29 +414,12 @@ describe('converted and copied loot', () => {
     ).roomActions!;
     const rush = actions.rows.find(
       (row) =>
-        row.reference.kind === 'purchaseHermesShrineOffer' &&
+        row.reference.kind === 'rushHermesShrineOffer' &&
         row.reference.generationKey === 'initial:first',
     )!;
     const spawn = actions.actionSpawns?.find((entry) => entry.sourceActionKey === rush.key);
     expect(grouped(spawn!.groups)).toEqual(['[Hermes]: Big Heal']);
     expect(items(spawn!.groups).map(placement)).toEqual(['optional placed']);
-  });
-
-  it('places a rushed item left behind from its spawn row; the Add area keeps only objects', () => {
-    const room = galleryRoom('optional-actions-rush-unplaced', 'O', 'surface-o-combat02');
-    const actions = room.roomActions!;
-    const pickup = actions.rows.find((row) => row.sourceFamily?.kind === 'hermesShrineDelivery')!;
-    expect(pickup.rank).toBeNull();
-    const rush = actions.rows.find((row) => row.reference.kind === 'purchaseHermesShrineOffer')!;
-    const spawn = actions.actionSpawns!.find((entry) => entry.sourceActionKey === rush.key)!;
-    const item = items(spawn.groups)[0]!;
-    expect(item.actionKey).toBe(pickup.key);
-    if (item.placement.kind !== 'unplaced') throw new Error('the rushed item is placed');
-    expect(item.placement.intent.command.kind).toBe('InsertRoomAction');
-    // Beside the Shrine and switch objects, only the switch's use remains to add.
-    expect(actions.optionalRows.map((row) => row.reference.kind)).toEqual([
-      'interactChallengeSwitch',
-    ]);
   });
 
   it('leaves the World Shop’s Travel Deal refill a World Shop purchase', () => {
@@ -372,8 +429,7 @@ describe('converted and copied loot', () => {
       'golden-f-preboss-shop',
     ).roomActions!;
     const refill = actions.rows.find((row) => row.sourceFamily?.kind === 'shopTravelDealRefill')!;
-    expect(refill.addGroup).toMatchObject({ object: 'worldShop' });
+    expect(refill.sourceFamily?.kind).toBe('shopTravelDealRefill');
     expect(actions.actionSpawns ?? []).toEqual([]);
-    expect(actions.optionalRows).toEqual([]);
   });
 });

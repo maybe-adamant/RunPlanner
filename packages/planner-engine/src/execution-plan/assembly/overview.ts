@@ -1,12 +1,14 @@
-import { unlockExitPhaseKey } from '../../simulation/encounters/unlock-exit';
-import { CHALLENGE_SWITCH_PHASE_KEY } from '../../simulation/encounters/challenge-switch-phase';
+import { unlockExitPhaseKey } from '../../authored-project/locked-exits';
+import { CHALLENGE_SWITCH_PHASE_KEY } from '../../authored-project/acquisition/challenge-switch';
 import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
+  purgingPoolRerollPins,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
   stygianWellGenerationTwistResultKey,
+  stygianWellPurchasedGenerationKeys,
   type FeatureRerollAction,
 } from '../../authored-project/feature-rolls';
 import { wellOccurrenceView } from '../../simulation/rewards/biome/encounter-acquisition/well-purchase';
@@ -16,16 +18,23 @@ import {
   createEncounterPhaseAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
+  type RoomAnchorObjectKind,
 } from '../../authored-project/addresses';
 import {
   hermesShrineDeliveryEntryKey,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
 } from '../../authored-project/hermes-shrine-delivery';
+import type { ForcedRewardType } from '../../authored-project/clockwork-doors';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position';
 import { fieldsSpatialPositions } from '../../simulation/fields/spatial';
-import { roomObjectAnchorPositions } from '../../simulation/room-layout/object-anchor-positions';
+import { performedRoomActions } from '../../simulation/room-actions';
+import {
+  roomObjectAnchorPositions,
+  type RoomObjectAnchorPosition,
+} from '../../simulation/room-layout/object-anchor-positions';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import {
@@ -43,6 +52,7 @@ import type {
   ExecutionInfernalContract,
   ExecutionPhantomExit,
   ExecutionKeepsakeEquipResults,
+  ExecutionAdditionalExit,
   ExecutionOverview,
   ExecutionReward,
   ExecutionTimelineTransaction,
@@ -72,6 +82,17 @@ export function executionKeepsakeEquipResults(
 }
 
 /**
+ * The plan's producer label for a forced reward, which runs no producer.
+ * `ClockworkGoalRoom` is a published protocol label, not a catalog profile.
+ */
+function forcedRewardWireProducer(rewardType: ForcedRewardType): string {
+  switch (rewardType) {
+    case 'ClockworkGoal':
+      return 'ClockworkGoalRoom';
+  }
+}
+
+/**
  * A room's incoming reward: as its door first offers it (`generated`), or as
  * it is entered after the door's rerolls (`acquired`).
  */
@@ -79,10 +100,10 @@ export function executionReward(
   room: CanonicalAuthoredRoom,
   view: 'generated' | 'acquired' = 'acquired',
 ): ExecutionReward | undefined {
-  if (room.clockworkReward === 'goal') {
+  if (room.forcedRewardType !== undefined) {
     return Object.freeze({
-      rewardType: 'ClockworkGoal',
-      producerLifecycleKey: 'ClockworkGoalRoom',
+      rewardType: room.forcedRewardType,
+      producerLifecycleKey: forcedRewardWireProducer(room.forcedRewardType),
     });
   }
   const incoming =
@@ -278,16 +299,8 @@ function executionAdditionalExits(
   if (batch === undefined || batch.additional.length === 0) return undefined;
   const declaration = catalog.rooms.byKey[room.gameName];
   return Object.freeze(
-    batch.additional.map((exit) => {
-      // A Chaos gate spawns at its stored point, else its default.
-      const spawnPointIndex =
-        exit.key !== 'chaos' || declaration === undefined
-          ? exit.spawnPointIndex
-          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex)
-              ?.spawnPointIndex;
-      return Object.freeze({
-        kind: exit.key,
-        ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
+    batch.additional.map((exit): ExecutionAdditionalExit => {
+      const base = {
         owner: semanticAddressKey(exit.origin),
         room: Object.freeze({
           id: exit.room.occurrenceId,
@@ -303,7 +316,20 @@ function executionAdditionalExits(
                 generationKey: exit.chaosOrigin.generationKey,
               }),
             }),
-      });
+      };
+      if (exit.key === 'zagreusContract')
+        return Object.freeze({ kind: 'zagreusContract' as const, ...base });
+      // A Chaos gate spawns at its stored point, else its draw.
+      const spawnPointIndex =
+        declaration === undefined
+          ? exit.spawnPointIndex
+          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
+      if (spawnPointIndex === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} publishes a Chaos gate without a spawn point`,
+        );
+      return Object.freeze({ kind: 'chaos' as const, spawnPointIndex, ...base });
     }),
   );
 }
@@ -530,22 +556,23 @@ function shrinePurchase(
   readonly deliverySourceKey?: string;
   readonly purchase?: { readonly rushed: boolean };
 } {
-  const action = hermesShrinePurchaseAction(
-    room.roomActionRoster.rows.map((row) => row.reference),
-    generationKey,
-  );
-  return action === undefined
+  const order = room.roomActionRoster.rows.map((row) => row.reference);
+  return hermesShrinePurchaseAction(order, generationKey) === undefined
     ? {}
     : {
         deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey),
-        purchase: Object.freeze({ rushed: action.rushed }),
+        purchase: Object.freeze({
+          rushed:
+            hermesShrineRushAction(performedRoomActions(room.roomActionRoster), generationKey) !==
+            undefined,
+        }),
       };
 }
 
 function executionHermesShrine(
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['hermesShrine'] | undefined {
+): Unanchored<'hermesShrine'> | undefined {
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
@@ -593,30 +620,38 @@ function executionHermesShrine(
   return Object.freeze({ offers });
 }
 
+/**
+ * One Well roll's offers: every slot it stocks once the walk assessed the roll.
+ * An unassessed roll, never reached, publishes only its stored slots.
+ */
 function executionWellOffers(
   room: CanonicalAuthoredRoom,
   rollKey: string,
+  offeredSlotKeys: readonly (typeof STYGIAN_WELL_SLOT_KEYS)[number][] | undefined,
 ): readonly ExecutionWellOffer[] {
   const view = wellOccurrenceView(room);
-  const purchased = room.stygianWell?.purchasedGenerationKeys ?? [];
+  const purchased = stygianWellPurchasedGenerationKeys(performedRoomActions(room.roomActionRoster));
   return Object.freeze(
     STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
+      // A slot bought earlier in the room is not restocked by a reroll.
+      if (offeredSlotKeys !== undefined && !offeredSlotKeys.includes(slotKey)) return [];
       const generationKey = stygianWellGenerationKey(rollKey, slotKey);
       const offerKey = stygianWellGenerationItemKey(view, generationKey);
-      if (offerKey === null || offerKey === undefined) return [];
+      if ((offerKey === null || offerKey === undefined) && offeredSlotKeys === undefined) return [];
+      if (offerKey === null || offerKey === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Well offer ${generationKey}`,
+        );
+      if (!purchased.includes(generationKey) || offerKey !== 'RandomStoreItem')
+        return [Object.freeze({ generationKey, offerKey })];
       const twistResultKey = stygianWellGenerationTwistResultKey(view, generationKey);
-      return [
-        Object.freeze({
-          generationKey,
-          offerKey,
-          ...(!purchased.includes(generationKey) ||
-          offerKey !== 'RandomStoreItem' ||
-          twistResultKey === undefined ||
-          twistResultKey === null
-            ? {}
-            : { twistResultKey }),
-        }),
-      ];
+      if (twistResultKey === undefined || twistResultKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Fateful Twist result for ${generationKey}`,
+        );
+      return [Object.freeze({ generationKey, offerKey, twistResultKey })];
     }),
   );
 }
@@ -631,45 +666,92 @@ function rankedFeatureRerolls(room: CanonicalAuthoredRoom, kind: FeatureRerollAc
 
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
-): ExecutionOverview['stygianWell'] | undefined {
+  biome: PublishedBiomeEvaluation,
+): Unanchored<'stygianWell'> | undefined {
   if (room.stygianWell === undefined) return undefined;
-  const rerolls = rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) =>
-    Object.freeze({
-      rollKey: reroll.rerollId,
-      offers: executionWellOffers(room, reroll.rerollId),
-    }),
+  const owner = executionRoomOwnerKey(room);
+  const assessed = biome.rewards.stygianWellAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
   );
+  const rerolls = rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) => {
+    const roll = assessed?.actions.flatMap((action) =>
+      'roll' in action && action.roll.rollKey === reroll.rerollId ? [action.roll] : [],
+    )[0];
+    // The game blanks a slot bought before the reroll instead of restocking it.
+    const boughtSlots =
+      roll === undefined
+        ? []
+        : STYGIAN_WELL_SLOT_KEYS.filter((slotKey) => !roll.offeredSlotKeys.includes(slotKey));
+    return Object.freeze({
+      rollKey: reroll.rerollId,
+      offers: executionWellOffers(room, reroll.rerollId, roll?.offeredSlotKeys),
+      ...(boughtSlots.length === 0 ? {} : { boughtSlots: Object.freeze(boughtSlots) }),
+    });
+  });
   return Object.freeze({
-    offers: executionWellOffers(room, INITIAL_ROLL_KEY),
+    offers: executionWellOffers(
+      room,
+      INITIAL_ROLL_KEY,
+      assessed === undefined ? undefined : STYGIAN_WELL_SLOT_KEYS,
+    ),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
 
+/**
+ * One Pool list: every slot it shows once the walk assessed the list. An
+ * unassessed list, never reached or on a route without the Pool, publishes
+ * only its stored slots.
+ */
 function executionPoolTraits(
+  room: CanonicalAuthoredRoom,
   traitKeyBySlot: Readonly<Partial<Record<(typeof PURGING_POOL_SLOT_KEYS)[number], string | null>>>,
+  offeredSlotKeys: readonly (typeof PURGING_POOL_SLOT_KEYS)[number][] | undefined,
 ) {
   return Object.freeze(
     PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
+      // The list shows as many slots as there are eligible traits, up to three.
+      if (offeredSlotKeys !== undefined && !offeredSlotKeys.includes(slotKey)) return [];
       const traitKey = traitKeyBySlot[slotKey];
-      return traitKey === undefined || traitKey === null
-        ? []
-        : [Object.freeze({ slotKey, traitKey })];
+      if ((traitKey === undefined || traitKey === null) && offeredSlotKeys === undefined) return [];
+      if (traitKey === undefined || traitKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Pool trait ${slotKey}`,
+        );
+      return [Object.freeze({ slotKey, traitKey })];
     }),
   );
 }
 
 function executionPurgingPool(
   room: CanonicalAuthoredRoom,
-): ExecutionOverview['purgingPool'] | undefined {
-  if (room.purgingPool === undefined) return undefined;
+  biome: PublishedBiomeEvaluation,
+): Unanchored<'purgingPool'> | undefined {
+  const pool = room.purgingPool;
+  if (pool === undefined) return undefined;
+  const owner = executionRoomOwnerKey(room);
+  const assessed = biome.rewards.purgingPoolAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
+  );
   const rerolls = rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
     Object.freeze({
       rollKey: reroll.rerollId,
-      traits: executionPoolTraits(reroll.kind === 'rerollPurgingPool' ? reroll.traitKeyBySlot : {}),
+      traits: executionPoolTraits(
+        room,
+        purgingPoolRerollPins(pool, reroll.rerollId),
+        assessed?.rolls?.[reroll.rerollId]?.offeredSlotKeys,
+      ),
     }),
   );
+  const refresh = pool.refreshTraitKeyBySlot;
   return Object.freeze({
-    traits: executionPoolTraits(room.purgingPool.traitKeyBySlot),
+    traits: executionPoolTraits(room, pool.traitKeyBySlot, assessed?.assessment.offeredSlotKeys),
+    ...(refresh === undefined
+      ? {}
+      : {
+          refreshTraits: executionPoolTraits(room, refresh, assessed?.refresh?.offeredSlotKeys),
+        }),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
@@ -682,25 +764,32 @@ function executionFieldsLayout(
   if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
   if (room.fieldsSpatial === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Fields layout`);
-  // Each active slot stands on its stored point, else its default.
+  // Each active slot stands on its stored point, else its draw.
   const positions = fieldsSpatialPositions(catalog, room);
-  const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) =>
-    positions.find(
+  const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) => {
+    const pointId = positions.find(
       (position) =>
         position.target.kind === kind &&
         (position.target.kind === 'nemesis' || position.target.slotKey === slotKey),
     )?.pointId;
+    if (pointId === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Fields ${kind} point${slotKey === undefined ? '' : ` ${slotKey}`}`,
+      );
+    return pointId;
+  };
   const cagePoints = room.encounterPhases.flatMap((phase) => {
     const attachment = phase.rewardAttachment;
     if (attachment?.kind !== 'localReward' || attachment.groupKey !== 'cages') return [];
-    const pointId = pointOf('cage', attachment.slotKey);
-    return pointId === undefined ? [] : [Object.freeze({ slotKey: attachment.slotKey, pointId })];
+    return [
+      Object.freeze({ slotKey: attachment.slotKey, pointId: pointOf('cage', attachment.slotKey) }),
+    ];
   });
   const optionalRewards = (room.fieldsOptionalRewards ?? []).map((optional) => {
-    const pointId = pointOf('optional', optional.slotKey);
     return Object.freeze({
       slotKey: optional.slotKey,
-      ...(pointId === undefined ? {} : { pointId }),
+      pointId: pointOf('optional', optional.slotKey),
       reward: executionRewardFromOffer(
         optional.offer,
         optional.producerLifecycleKey,
@@ -719,9 +808,10 @@ function executionFieldsLayout(
 }
 
 /**
- * The entered room's flip and entry the runtime steers: fixed by the room or
- * its arrival door, or authored or defaulted where the game rolls or chooses.
- * A value derived from the previous exit stays native.
+ * The entered room's flip and its entry, unless the room has no entry points:
+ * fixed by the room, authored or drawn where the game rolls or chooses, or
+ * derived from the arrival door, which `derived` names so the runtime checks
+ * rather than steers it.
  */
 function executionRoomLayout(
   room: CanonicalAuthoredRoom,
@@ -734,33 +824,47 @@ function executionRoomLayout(
   );
   if (settlement === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its layout`);
-  const flipped = settlement.flip.kind === 'derived' ? undefined : settlement.flip.value;
-  const entry =
-    settlement.entry.kind === 'fixed' || settlement.entry.kind === 'choice'
-      ? settlement.entry.point
-      : undefined;
-  if (flipped === undefined && entry === undefined) return undefined;
+  const entry = settlement.entry.kind === 'unknown' ? undefined : settlement.entry.point;
+  const derived = [
+    ...(settlement.flip.kind === 'derived' ? (['flipped'] as const) : []),
+    ...(settlement.entry.kind === 'derived' ? (['entry'] as const) : []),
+  ];
   return Object.freeze({
-    ...(flipped === undefined ? {} : { flipped }),
+    flipped: settlement.flip.value,
     ...(entry === undefined
       ? {}
       : {
           entry: Object.freeze({ startPointId: entry.startPointId, endPointId: entry.endPointId }),
         }),
+    ...(derived.length === 0 ? {} : { derived: Object.freeze(derived) }),
   });
 }
 
+/** An anchor object's publication before `anchored` adds the anchor it stands on. */
+type Unanchored<Kind extends RoomAnchorObjectKind> = Omit<
+  NonNullable<ExecutionOverview[Kind]>,
+  'anchorId'
+>;
+
 /**
- * An object's publication with the anchor it stands on, stored or defaulted;
- * the Well on its room's pin stays native.
+ * An object's publication with the anchor it stands on: stored, drawn or the
+ * Well's pin. Only an over-capacity room leaves a published object no anchor,
+ * which a finding blocks.
  */
 function anchored<T extends object>(
+  room: CanonicalAuthoredRoom,
+  object: RoomAnchorObjectKind,
   published: T | undefined,
-  position: { readonly anchorId: number; readonly source: string } | undefined,
-): T | undefined {
-  return published === undefined || position === undefined || position.source === 'pinned'
-    ? published
-    : Object.freeze({ ...published, anchorId: position.anchorId });
+  anchors: ReadonlyMap<RoomAnchorObjectKind, RoomObjectAnchorPosition>,
+): (T & { readonly anchorId: number }) | undefined {
+  if (published === undefined) return undefined;
+  const anchorId = anchors.get(object)?.anchorId;
+  if (anchorId === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} publishes its ${object} without an anchor`,
+    );
+  return Object.freeze({ ...published, anchorId });
 }
 
 type ResolvedEncounterCustomization = NonNullable<
@@ -974,7 +1078,7 @@ function executionChallengeSwitch(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['challengeSwitch'] {
+): Unanchored<'challengeSwitch'> | undefined {
   const observed = room.challengeSwitch;
   if (observed === undefined || !room.entered) return undefined;
   const prepared = biome.rewards.challengeSwitchEncounters?.find(
@@ -1133,8 +1237,8 @@ export function assembleExecutionOverview(
   const phantomExit = executionPhantomExit(room, biome);
   const hermesShrine = executionHermesShrine(room, biome);
   const rewardWheels = executionRewardWheels(room);
-  const stygianWell = executionStygianWell(room);
-  const purgingPool = executionPurgingPool(room);
+  const stygianWell = executionStygianWell(room, biome);
+  const purgingPool = executionPurgingPool(room, biome);
   const additional = executionAdditionalExits(catalog, room, batch);
   const anchors = roomObjectAnchorPositions(
     catalog,
@@ -1143,6 +1247,12 @@ export function assembleExecutionOverview(
     semanticAddressKey(room.origin),
   );
   const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
+  const anchoredObjects = {
+    hermesShrine: anchored(room, 'hermesShrine', hermesShrine, anchors),
+    stygianWell: anchored(room, 'stygianWell', stygianWell, anchors),
+    purgingPool: anchored(room, 'purgingPool', purgingPool, anchors),
+    challengeSwitch: anchored(room, 'challengeSwitch', challengeSwitch, anchors),
+  };
   const lockedExits = executionLockedExits(room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   const recordedPhases = new Map(
@@ -1267,15 +1377,15 @@ export function assembleExecutionOverview(
     ...(shop === undefined ? {} : { shop }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
-    ...(hermesShrine === undefined
+    ...(anchoredObjects.hermesShrine === undefined
       ? {}
-      : { hermesShrine: anchored(hermesShrine, anchors.get('hermesShrine'))! }),
-    ...(stygianWell === undefined
+      : { hermesShrine: anchoredObjects.hermesShrine }),
+    ...(anchoredObjects.stygianWell === undefined
       ? {}
-      : { stygianWell: anchored(stygianWell, anchors.get('stygianWell'))! }),
-    ...(purgingPool === undefined
+      : { stygianWell: anchoredObjects.stygianWell }),
+    ...(anchoredObjects.purgingPool === undefined
       ? {}
-      : { purgingPool: anchored(purgingPool, anchors.get('purgingPool'))! }),
+      : { purgingPool: anchoredObjects.purgingPool }),
     ...(layout === undefined ? {} : { layout }),
     ...(fields === undefined ? {} : { fields }),
     ...(!room.hasKeepsakeRack
@@ -1285,9 +1395,9 @@ export function assembleExecutionOverview(
             room.keepsakeRack === undefined ? {} : { keepsakeKey: room.keepsakeRack.keepsakeKey },
           ),
         }),
-    ...(challengeSwitch === undefined
+    ...(anchoredObjects.challengeSwitch === undefined
       ? {}
-      : { challengeSwitch: anchored(challengeSwitch, anchors.get('challengeSwitch'))! }),
+      : { challengeSwitch: anchoredObjects.challengeSwitch }),
     ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(!room.hasRequiredFountain
       ? {}

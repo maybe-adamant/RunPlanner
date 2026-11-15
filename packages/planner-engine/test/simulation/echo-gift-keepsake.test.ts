@@ -2,7 +2,7 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { settleTestEdit } from '@run-planner/test-fixtures/shared';
+import { collectTestRequiredItems, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
@@ -997,6 +997,7 @@ describe('Echo Gift Gift Gift', () => {
       ),
       keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
+    project = collectTestRequiredItems(project);
     const iReplay = createKeepsakeEquipResultAddress(
       createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
       'experimentalHammer',

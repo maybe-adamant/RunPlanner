@@ -9,6 +9,16 @@ import { validateRoomLayoutClosure } from '../../src/compiler/rooms/layout-closu
 
 const input = cloneCatalogInput;
 
+/** The rooms that declare their own lifecycle, plus any a test specializes. */
+function specializedLifecycleRooms(...extra: readonly string[]): ReadonlySet<string> {
+  return new Set([
+    ...declarations.rooms
+      .filter((room) => room.lifecycleProfileKey !== undefined)
+      .map((room) => room.gameName),
+    ...extra,
+  ]);
+}
+
 describe('room-layout compiler closure', () => {
   it('closes Preboss policies against complete layout, room, and exit-policy collections', () => {
     const fixture = input();
@@ -140,27 +150,21 @@ describe('room-layout compiler closure', () => {
         catalog.exitCompatibilityPolicies,
         catalog.routes,
         catalog.rewards.shops,
+        specializedLifecycleRooms(),
       ),
     ).toThrow(/none is only valid when every supported normal-door source is width one/);
   });
 
   it('retains uncertain specialized lifecycle sources in the takeover width domain', () => {
     const catalog = createCatalog(declarations);
-    const rooms = createCollection(
-      catalog.rooms.values.map((room) =>
-        room.gameName === 'Q_Combat12' ? { ...room, lifecycleProfileKey: 'StoryPickupRoom' } : room,
-      ),
-      'rooms',
-      (room) => room.gameName,
-      'gameName',
-    );
     expect(() =>
       validateRoomLayoutClosure(
-        rooms,
+        catalog.rooms,
         catalog.biomeLayouts,
         catalog.exitCompatibilityPolicies,
         catalog.routes,
         catalog.rewards.shops,
+        specializedLifecycleRooms('Q_Combat12'),
       ),
     ).toThrow(/none is only valid when every supported normal-door source is width one/);
   });
@@ -197,6 +201,7 @@ describe('room-layout compiler closure', () => {
         catalog.exitCompatibilityPolicies,
         catalog.routes,
         catalog.rewards.shops,
+        specializedLifecycleRooms(),
       ),
     ).toThrow(
       new CatalogContractError(
@@ -230,6 +235,7 @@ describe('room-layout compiler closure', () => {
         catalog.exitCompatibilityPolicies,
         catalog.routes,
         catalog.rewards.shops,
+        specializedLifecycleRooms(),
       ),
     ).toThrow(
       new CatalogContractError(

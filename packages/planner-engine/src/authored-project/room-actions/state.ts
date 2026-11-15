@@ -4,7 +4,7 @@ import type {
   RoomActionReference,
   RoomActionState,
 } from '../model';
-import { missingRerollTarget } from '../rerolls';
+import { biomeRerolledOwners, missingRerollTarget } from '../rerolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -13,13 +13,17 @@ import {
   encounterEnvelopeSlots,
   directEncounterDefinitionKeyForSlot,
 } from '../room-state/encounter-envelope';
-import { createOccurrenceAddress, semanticAddressKey } from '../addresses';
+import {
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+} from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrineDeliverySourceAddress,
   hermesShrinePurchaseAction,
-  isDeliveryFlushHost,
+  hermesShrineRushAction,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -46,8 +50,10 @@ import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
+  purgingPoolRerollPins,
   purgingPoolRerolls,
   stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
 } from '../feature-rolls';
 
@@ -55,23 +61,62 @@ export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
 }
 
-/** Declaration-owned required actions for a newly materialized room occurrence. */
-export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionState {
+/** The room declaration's own required actions: its forced drop and its fountain. */
+export function declaredRequiredRoomActions(room: RoomDeclaration): readonly RoomActionReference[] {
   const hasFountain =
     room.hasRequiredFountain ||
     (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
-  return Object.freeze({
-    order: Object.freeze([
-      ...(room.requiredReward !== undefined ? [{ kind: 'collectRequiredReward' as const }] : []),
-      ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
-    ]),
-  });
+  return Object.freeze([
+    ...(room.requiredReward !== undefined ? [{ kind: 'collectRequiredReward' as const }] : []),
+    ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
+  ]);
 }
 
 /**
  * Complete structural action domain for one authored occurrence of the
  * topology, which holds the doors and cages its rerolls name.
  */
+/**
+ * The reward offer the room's producer draws on: its scope's (a route-start
+ * reward, the materialized offer), else the occurrence's, a rerolled door's
+ * being its effective press's.
+ */
+export function roomIncomingRewardOffer(
+  biome: import('../addresses').BiomeAddress,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  occurrence: RoomOccurrence,
+  scope?: {
+    readonly incomingRewardOffer?: ResolvedRewardOffer | null;
+    /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
+    readonly incomingRewardState?: AuthoredRewardState | null;
+  },
+): ResolvedRewardOffer | undefined {
+  if (scope?.incomingRewardState !== undefined) return scope.incomingRewardState?.offer;
+  if (scope?.incomingRewardOffer !== undefined && scope.incomingRewardOffer !== null)
+    return scope.incomingRewardOffer;
+  if (
+    occurrence.state.kind !== 'counted' &&
+    occurrence.state.kind !== 'fixed' &&
+    occurrence.state.kind !== 'anomaly' &&
+    occurrence.state.kind !== 'ephyraCombat' &&
+    occurrence.state.kind !== 'freeReward'
+  )
+    return undefined;
+  // A rerolled door's room acquires its effective press's reward; its first draw is inert.
+  const rerolled =
+    occurrence.rerolledIncomingReward === undefined
+      ? undefined
+      : biomeRerolledOwners(biome, topology).get(
+          semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId)),
+        )?.effectiveOffer;
+  const reward = rerolled ?? occurrence.state.reward;
+  return reward === undefined || reward === null
+    ? undefined
+    : 'offer' in reward
+      ? reward.offer
+      : reward;
+}
+
 export function activeRoomActionReferences(
   catalog: Catalog,
   biome: import('../addresses').BiomeAddress,
@@ -94,7 +139,7 @@ export function activeRoomActionReferences(
   const rawRoom = catalog.rooms.byKey[occurrence.gameName];
   if (rawRoom === undefined) return Object.freeze([]);
   const room = resolveEntryDeclaration(rawRoom, routePosition);
-  const declarationActions = createDefaultRoomActionState(room).order;
+  const declarationActions = declaredRequiredRoomActions(room);
   const references: RoomActionReference[] = declarationActions.filter(
     (reference) => reference.kind !== 'useFountain',
   );
@@ -137,27 +182,13 @@ export function activeRoomActionReferences(
         );
     }
   }
-  // A rerolled door's room acquires its rerolled reward; its first draw is inert.
-  const stateReward =
-    occurrence.state.kind === 'counted' ||
-    occurrence.state.kind === 'fixed' ||
-    occurrence.state.kind === 'anomaly' ||
-    occurrence.state.kind === 'ephyraCombat' ||
-    occurrence.state.kind === 'freeReward'
-      ? (occurrence.rerolledIncomingReward ?? occurrence.state.reward)
-      : undefined;
-  const reward =
-    scope?.incomingRewardState !== undefined
-      ? scope.incomingRewardState
-      : (scope?.incomingRewardOffer ?? stateReward);
+  const offer = roomIncomingRewardOffer(biome, topology, occurrence, scope);
   if (
-    reward !== undefined &&
-    reward !== null &&
+    offer !== undefined &&
     (scope?.incomingRewardActive === undefined || scope.incomingRewardActive)
   ) {
     const binding = scope?.incomingRewardBinding ?? room.incomingReward;
     const lifecycleKey = binding.kind === 'none' ? undefined : binding.producerLifecycleKey;
-    const offer = 'offer' in reward ? reward.offer : reward;
     const lifecycle =
       lifecycleKey === undefined
         ? undefined
@@ -165,6 +196,7 @@ export function activeRoomActionReferences(
             offer.rewardType
           ];
     for (const binding of lifecycle?.acquisitionLifecycle ?? []) {
+      if (binding.automatic === true) continue;
       references.push(
         Object.freeze({
           kind: 'interactIncomingReward',
@@ -216,7 +248,7 @@ export function activeRoomActionReferences(
     if (
       reference.target.kind === 'wheelOffer'
         ? !activeWheels.has(reference.target.wheelKey)
-        : missingRerollTarget(topology, occurrence.occurrenceId, reference.target) !== undefined
+        : missingRerollTarget(topology, occurrence.occurrenceId, reference) !== undefined
     )
       continue;
     references.push(reference);
@@ -262,7 +294,7 @@ export function activeRoomActionReferences(
     for (const reroll of purgingPoolRerolls(occurrence.roomActions.order)) {
       references.push(reroll);
       for (const slotKey of PURGING_POOL_SLOT_KEYS)
-        if (reroll.traitKeyBySlot[slotKey] !== undefined)
+        if (purgingPoolRerollPins(occurrence.purgingPool, reroll.rerollId)[slotKey] !== undefined)
           sales.push(
             Object.freeze({ kind: 'sellPurgingPoolTrait', slotKey, rollKey: reroll.rerollId }),
           );
@@ -277,7 +309,7 @@ export function activeRoomActionReferences(
   }
   if (occurrence.stygianWell !== undefined) {
     references.push(...stygianWellRerolls(occurrence.roomActions.order));
-    const purchased = occurrence.stygianWell.purchasedGenerationKeys ?? [];
+    const purchased = stygianWellPurchasedGenerationKeys(occurrence.roomActions.order);
     // Purchase participation and rank survive an invalidating source edit.
     // The active action then reaches the missing source finding and remains
     // directly repairable by restoring this generation's offer.
@@ -293,7 +325,7 @@ export function activeRoomActionReferences(
       references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
   }
   if (occurrence.hermesShrine !== undefined) {
-    // A purchase participates by its action, which owns its rush.
+    // A purchase participates by its action; its rush, by its own on the bought item.
     for (const generationKey of [
       'initial:first',
       'initial:secondLeft',
@@ -301,7 +333,10 @@ export function activeRoomActionReferences(
       'travelDealRefill',
     ] as const) {
       const action = hermesShrinePurchaseAction(occurrence.roomActions.order, generationKey);
-      if (action !== undefined) references.push(action);
+      if (action === undefined) continue;
+      references.push(action);
+      const rush = hermesShrineRushAction(occurrence.roomActions.order, generationKey);
+      if (rush !== undefined) references.push(rush);
     }
   }
   for (const phase of envelopeSlots) {
@@ -421,25 +456,15 @@ export function activeRoomActionReferences(
           hermesShrineDeliverySourceAddress(shrineDelivery),
           createOccurrenceAddress(biome, occurrence.occurrenceId),
         );
-        const flushHost = isDeliveryFlushHost(room, routePosition);
-        // A retained cross-occurrence entry is not a timeline action until
-        // settlement ranks it at its reached delivery contact; dormant payload
-        // alone never re-admits a retracted delivery. The fourth-biome Preboss
-        // flush is the sole phase-less cross-occurrence contact and uses
-        // post-outgoing.
-        if (
-          !sourceIsCurrent &&
-          (existingReference === undefined ||
-            (reference.encounterPhaseKey === undefined && !flushHost))
-        )
-          continue;
+        // A retained cross-occurrence entry is not a timeline action until it is
+        // placed; dormant payload alone never re-admits a retracted delivery.
+        if (!sourceIsCurrent && existingReference === undefined) continue;
         if (sourceIsCurrent) {
           const order = occurrence.roomActions.order;
-          if (hermesShrinePurchaseAction(order, shrineDelivery.generationKey)?.rushed !== true)
-            continue;
+          if (hermesShrineRushAction(order, shrineDelivery.generationKey) === undefined) continue;
           if (
             shrineDelivery.generationKey === 'travelDealRefill' &&
-            firstRushedInitialPurchase(order) === undefined
+            firstInitialRush(order) === undefined
           )
             continue;
         }

@@ -45,25 +45,23 @@ import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../
 import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
-import { BiomeRewardSimulationContractError } from '../biome-contract';
-import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
+import type { GorgonPhaseCandidateSupport, NemesisRandomEventAssessment } from '../../model';
 import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import { advanceReachedBranch, advanceRewardBranch } from '../../branch-lifecycle';
-import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
-import {
-  settleOwnedAcquisitionSite,
-  withRoomStoredSourceProducts,
-} from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import {
   settleEncounterTraitOffer,
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
 } from '../../trait-settlement/coordinator';
-import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
+import { addRewardFinding, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import { nemesisGeneratedPickupSiteKey } from '../../../../authored-project/acquisition/pickup-producers';
+import {
+  nemesisRandomEventFamilyRefusal,
+  nemesisTraitTradeTraitKeys,
+} from './nemesis-random-event';
 import {
   applyTraitOfferTransition,
   invalidatedTraitOffers,
@@ -107,9 +105,10 @@ export interface EncounterSettlementTransition {
     readonly requiredCount: number;
     readonly rarity: import('../../../../catalog-schema').InRunTraitRarity;
   };
-  readonly nemesisCandidate?: {
+  /** Her event's domains at her interaction, joined to the support her spawn published. */
+  readonly nemesisAssessment?: {
     readonly key: string;
-    readonly value: NemesisRandomEventCandidateSupport;
+    readonly value: NemesisRandomEventAssessment;
   };
   readonly blockGorgonPhaseKey?: string;
   readonly gorgonEvaluationBlocked: boolean;
@@ -636,75 +635,20 @@ export function applyEncounterSettlementTransition(inputs: {
         catalog,
         room,
         event.phaseKey,
-        spawnIncomingRewardAtEncounterCompletion(catalog, room, roomEncounterKeys, branch),
-      ),
-    );
-    const rewards =
-      room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
-    if (room.lifecycleProfileKey === 'FieldsCombatRoom' || rewards.length === 0)
-      return Object.freeze({
-        branch: advanceReachedBranch(reached, event.sequence),
-        findings: Object.freeze([...findings.values()]),
-        roleFrontiers: Object.freeze(roleFrontiers),
-        traitChildSettlements: Object.freeze(traitChildSettlements),
-        traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
-        gorgonEvaluationBlocked,
-        ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
-      });
-    if (rewards.length !== 1 || rewards[0] === undefined)
-      throw new BiomeRewardSimulationContractError(
-        `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
-      );
-    const timelineOwner = room.roomActionRoster.rows.find(
-      (candidate) =>
-        !candidate.stale &&
-        candidate.rank !== null &&
-        candidate.reference.kind === 'interactLocalReward' &&
-        candidate.reference.groupKey === 'cages' &&
-        candidate.reference.slotKey === rewards[0]!.slotKey,
-    )?.owner;
-    const materialized = mapReached(reached, (branch) =>
-      consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
-    );
-    const settlement = settleOwnedAcquisitionSite(
-      catalog,
-      materialized,
-      {
-        siteOwner: rewards[0].origin,
-        pointKey: event.phaseKey,
-        entryKey: rewards[0].slotKey,
-        source: withRoomStoredSourceProducts(
+        spawnIncomingRewardAtEncounterCompletion(
           catalog,
           room,
-          Object.freeze({
-            ...rewards[0],
-            instanceProvenance: 'free',
-            presentsMaterializedScreen: true,
-          }),
+          roomEncounterKeys,
+          branch,
+          event.sequence,
         ),
-        ...(timelineOwner === undefined ? {} : { timelineOwner }),
-        historySequence: event.sequence,
-        authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
-      },
-      (state) =>
-        createBiomeRewardFacts({
-          catalog,
-          state,
-          source: room,
-          currentRoom: room,
-          sourceDeclaration: declaration,
-          view: view.preOutgoing ?? view.entry,
-          hubBoardLookups: 'notConsulted',
-        }),
-      undefined,
-      chronology(snapshot, room, event),
+        event.sequence,
+      ),
     );
-    mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-    roleFrontiers.push(...(settlement.roleFrontiers ?? []));
-    for (const checkpoint of settlement.traitChildSettlements ?? [])
-      recordChild(checkpoint, room.origin);
+    // Fields cages spawn and settle their own contacts at room entry and their
+    // pickups, so a cage encounter's completion spawns nothing here.
     return Object.freeze({
-      branch: settlement.branch,
+      branch: advanceReachedBranch(reached, event.sequence),
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -730,7 +674,7 @@ export function applyEncounterSettlementTransition(inputs: {
     event.phaseKey,
     semanticAddressKey(event.origin),
   );
-  let nemesisCandidate: EncounterSettlementTransition['nemesisCandidate'];
+  let nemesisAssessment: EncounterSettlementTransition['nemesisAssessment'];
   if (
     event.kind === 'encounterInteractionReached' &&
     event.interaction === 'encounter' &&
@@ -792,15 +736,6 @@ export function applyEncounterSettlementTransition(inputs: {
             (variant.requirement === 'pomLegal' && runProgressLegal('StackUpgrade')) ||
             (variant.requirement === 'hammerEarlyOrLate' && runProgressLegal('WeaponUpgrade')) ||
             (variant.requirement === 'talentLegal' && talentLegal));
-        const equipped = Object.values(branch.state.traitHistory.equippedTraits).filter((trait) => {
-          const declaration = catalog.traits.byKey[trait.traitKey];
-          return (
-            declaration !== undefined &&
-            trait.providerKind === 'olympian' &&
-            trait.rarity !== undefined
-          );
-        });
-        const common = equipped.filter((trait) => trait.rarity === 'Common');
         return Object.freeze({
           freeItemRewardTypes: Object.freeze([...policy.freeItem.resultRewardTypes]),
           goldTradeRewardTypes: Object.freeze(
@@ -818,29 +753,24 @@ export function applyEncounterSettlementTransition(inputs: {
                   : true,
             ),
           ),
-          traitTradeTraitKeys: Object.freeze(
-            (common.length === 0 ? equipped : common).map((trait) => trait.traitKey),
+          traitTradeTraitKeys: nemesisTraitTradeTraitKeys(
+            catalog,
+            branch.state.traitHistory.equippedTraits,
           ),
         });
       })(reached);
-      const candidate = Object.freeze({
-        origin: owner,
-        familyKeys: Object.freeze([
-          'freeItem',
-          'goldTrade',
-          'damageTrade',
-          'traitTrade',
-          'damageContest',
-        ] as const),
-        goldTradeResponses: policy.goldTrade.response,
-        damageTradeResponses: policy.damageTrade.response,
-        traitTradeResponses: policy.traitTrade.response,
-        damageContestResults: Object.freeze(['success', 'failure'] as const),
-        traitTradeRewardType: policy.traitTrade.fixedResultRewardType,
-        damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
-        ...(assessment === undefined ? {} : { assessment }),
-      });
-      nemesisCandidate = Object.freeze({ key: semanticAddressKey(owner), value: candidate });
+      if (assessment !== undefined)
+        nemesisAssessment = Object.freeze({ key: semanticAddressKey(owner), value: assessment });
+      // Her damage lines turn ineligible when a declared trait was picked up after she spawned,
+      // and the game then draws her event again.
+      const requeued =
+        reached === undefined || outcome?.kind !== 'damageTrade'
+          ? undefined
+          : nemesisRandomEventFamilyRefusal(
+              catalog,
+              'damageTrade',
+              reached.state.traitHistory.equippedTraits,
+            );
       const result =
         room.acquisitionSites?.[`nemesisGenerated:${encodeURIComponent(event.phaseKey)}`]?.entries
           .result;
@@ -879,6 +809,20 @@ export function applyEncounterSettlementTransition(inputs: {
           })());
       if (familyMissing) {
         // Room preparation reports the missing family; the interaction settles nothing.
+      } else if (requeued !== undefined) {
+        const finding = rewardFinding('nemesisEventUnavailable', interactionOwner, {
+          kind: outcome.kind,
+          reason: requeued.kind,
+          ...(requeued.kind === 'heldTrait' ? { traitKey: requeued.traitKey } : {}),
+        });
+        findings.set(
+          findingIdentityKey(finding),
+          Object.freeze({
+            finding,
+            atomicRegion: ownerRegion(owner),
+            chronology: chronology(snapshot, room, event),
+          }),
+        );
       } else if (interactionMissing || !legal) {
         const finding = rewardFinding(
           interactionMissing ? 'nemesisOutcomeMissing' : 'nemesisOutcomeUnavailable',
@@ -984,7 +928,7 @@ export function applyEncounterSettlementTransition(inputs: {
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
     traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
-    ...(nemesisCandidate === undefined ? {} : { nemesisCandidate }),
+    ...(nemesisAssessment === undefined ? {} : { nemesisAssessment }),
     gorgonEvaluationBlocked,
     ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
   });

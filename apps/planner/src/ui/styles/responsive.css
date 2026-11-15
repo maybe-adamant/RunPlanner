@@ -133,11 +133,6 @@
     flex-wrap: wrap;
   }
 
-  .fields-batch-editor,
-  .fields-batch-summary {
-    grid-template-columns: 1fr;
-  }
-
   .biome-hub-rail-visits {
     margin-left: 12px;
   }

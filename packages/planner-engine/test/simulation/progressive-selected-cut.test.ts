@@ -52,6 +52,7 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
   surfaceEncounterShowcaseProject,
+  surfaceNSteadyGrowthFrontierProject,
   surfaceTravelDealRefillAnvilProject,
   surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
@@ -63,7 +64,11 @@ import {
   loadUnderworldFGProject,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import {
+  collectTestRequiredItems,
+  replaceTestShopOfferActions,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadUnderworldFGCheckpoint,
@@ -76,7 +81,6 @@ import {
 import {
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPQCheckpoint,
-  loadSurfaceNSteadyGrowthFrontierCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
@@ -299,7 +303,8 @@ function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
   ];
   const room = rooms.find((candidate) => candidate.occurrenceId === stop.room.occurrenceId);
   if (room === undefined) throw new Error(`${stop.room.occurrenceId} is not materialized`);
-  const entry = room.roomLifecycleTimeline.entries[stop.entryIndex];
+  const entries = room.roomLifecycleTimeline.entries;
+  const entry = entries[evaluation.roomStopEntryIndex!];
   return {
     room: stop.room.occurrenceId,
     kind: stop.kind,
@@ -886,18 +891,30 @@ describe('room Timeline block', () => {
       action: createRoomActionAddress(goldenFBiome, shopId, rowKey(refillRow)),
       toIndex: 1,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: refill,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-    });
+    // Another refill is a new item: its pickup goes, and the owner picks it up again before the Boon.
+    const pickUpRefill = (current: ProjectDocument) =>
+      applyProjectCommand(current, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, shopId, rowKey(refillRow)),
+        reference: refillRow,
+        index: 1,
+      });
+    project = pickUpRefill(
+      settleTestEdit(project, {
+        kind: 'ReplaceShopOffer',
+        offer: refill,
+        value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      }),
+    );
     project = authorLegalTraitOffers(project);
     // A new refill source resets its offer: the purchased Boon's offer stays authored.
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: refill,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-    });
+    project = pickUpRefill(
+      settleTestEdit(project, {
+        kind: 'ReplaceShopOffer',
+        offer: refill,
+        value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      }),
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     const f = biomeEvaluation(project, 'F');
     const refillTrait = createTraitOfferAddress(refill, 'source');
@@ -1309,11 +1326,13 @@ describe('room stop', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
-    return applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-      encounterCount: 3,
-    });
+    return collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        encounterCount: 3,
+      }),
+    );
   }
 
   function lockedExitTaken() {
@@ -1410,7 +1429,7 @@ describe('room stop', () => {
       },
     ];
     for (const command of commands) project = applyProjectCommand(project, catalog, command);
-    return project;
+    return collectTestRequiredItems(project);
   }
 
   const fPostboss = createOccurrenceId('golden-f-preboss-shop:postboss');
@@ -1531,7 +1550,7 @@ describe('room stop', () => {
           },
         }),
       'P',
-      { room: prebossShop, kind: 'overview', at: 'before', entry: 'cleanup' },
+      { room: prebossShop, kind: 'overview', at: 'before', entry: 'doorsOpened' },
     ],
     [
       'a Timeline row: the first row of the blocking product',
@@ -1548,7 +1567,7 @@ describe('room stop', () => {
       'an unplaced required pickup: where the walk stopped, at its spawn after the encounter',
       () => withRoomActions(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1', () => false),
       'F',
-      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'cleanup' },
+      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'doorsOpened' },
     ],
     [
       'an unplaced Fields cage: the walk stops before that cage starts',
@@ -1571,7 +1590,7 @@ describe('room stop', () => {
         room: 'golden-h-combat02',
         kind: 'timeline',
         at: 'before',
-        entry: 'encounterStart:Cage03',
+        entry: 'encounterBegun:Cage03',
       },
     ],
     [
@@ -1583,7 +1602,7 @@ describe('room stop', () => {
           value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
         }),
       'F',
-      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'doorsOpened' },
     ],
     [
       'a phase-start contact: its own entry, reached (Fig Leaf)',
@@ -1598,7 +1617,7 @@ describe('room stop', () => {
         room: 'golden-f-b3-e1',
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterStart:Encounter',
+        entry: 'encounterStarted:Encounter',
       },
     ],
     [
@@ -1618,7 +1637,7 @@ describe('room stop', () => {
         room: nLocalOccurrenceId('combat02', 'sideDoor1'),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterStart:Encounter',
+        entry: 'encounterStarted:Encounter',
       },
     ],
     [
@@ -1629,7 +1648,7 @@ describe('room stop', () => {
         room: pOccurrenceId('P_Combat03', 1, 1),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterOutcome:Combat',
+        entry: 'encounterStarted:Combat',
       },
     ],
     [
@@ -1640,7 +1659,7 @@ describe('room stop', () => {
         room: pOccurrenceId('P_Combat03', 1, 1),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterOutcome:Combat',
+        entry: 'encounterStarted:Combat',
       },
     ],
     [
@@ -1661,7 +1680,7 @@ describe('room stop', () => {
     ],
     [
       "an encounter end's due outcome: that end, reached (Steady Growth, Hub main room)",
-      loadSurfaceNSteadyGrowthFrontierCheckpoint,
+      surfaceNSteadyGrowthFrontierProject,
       'N',
       {
         room: 'surface-n-combat11',
@@ -1674,7 +1693,7 @@ describe('room stop', () => {
       "a Ship wheel offer: its Wheels open, reached; the wheel's later choice row is not",
       partialWheel,
       'O',
-      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'wheelsOpen' },
+      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'wheelsOpen:Combat1' },
     ],
     [
       // The replacement's row comes later; the walk stops inside the source's settlement.
@@ -1716,21 +1735,16 @@ describe('room stop', () => {
       { room: 'surface-n-combat05', kind: 'exit', at: 'before', entry: 'end' },
     ],
     [
-      "an encounter end's due Shrine delivery not placed: that end, reached",
+      "an encounter end's due Shrine delivery not placed: its deadline, the doors opening",
       shrineDeliveryUnplaced,
       'O',
-      {
-        room: 'surface-o-devotion',
-        kind: 'timeline',
-        at: 'entry',
-        entry: 'encounterEnd:Encounter',
-      },
+      { room: 'surface-o-devotion', kind: 'timeline', at: 'before', entry: 'doorsOpened' },
     ],
     [
       "the doors' store unavailable at generation: the doors opening, reached (Chaos)",
       chaosTimePiece,
       'F',
-      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'doorsOpened' },
     ],
     [
       'a Well Twist result unset: its purchase row',
@@ -1822,8 +1836,8 @@ describe('room stop', () => {
         phase: 'encounterResolution',
         origin: createRoomActionAddress(goldenFBiome, fPostboss, wellPurchaseRow),
         evidence: {
-          reason: 'requiredFirst',
-          detail: `must follow ${roomActionKey({ kind: 'useFountain' })}, a required action of an earlier window`,
+          reason: 'beforeEnabler',
+          point: { kind: 'doorsOpened' },
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         },
       },

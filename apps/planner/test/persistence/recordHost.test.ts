@@ -78,6 +78,8 @@ describe('record host adapters', () => {
     await host.rawSaves.write('open-p1', '000-Profile1.sav', Uint8Array.of(1, 2));
     await host.rawSaves.move('open-p1', 'p1-1-2');
     await host.rawSaves.delete('p1-1-2');
+    await host.rawSaves.size();
+    await host.rawSaves.reveal();
     expect(invoke.mock.calls).toEqual([
       ['raw_saves_folders'],
       ['raw_saves_list', { folder: 'open-p1' }],
@@ -89,6 +91,8 @@ describe('record host adapters', () => {
       ],
       ['raw_saves_move', { from: 'open-p1', to: 'p1-1-2' }],
       ['raw_saves_delete', { folder: 'p1-1-2' }],
+      ['raw_saves_size'],
+      ['raw_saves_reveal'],
     ]);
   });
 
@@ -103,13 +107,16 @@ describe('record host adapters', () => {
       getItem: (key) => values.get(key) ?? null,
       setItem: (key, value) => void values.set(key, value),
     }));
-    expect(preference.read()).toEqual({ enabled: false, folder: null });
-    preference.write({ enabled: true, folder: 'D:/Saves' });
-    expect(preference.read()).toEqual({ enabled: true, folder: 'D:/Saves' });
+    expect(preference.read()).toEqual({ enabled: false, folder: null, keepRawSaves: false });
+    preference.write({ enabled: true, folder: 'D:/Saves', keepRawSaves: true });
+    expect(preference.read()).toEqual({ enabled: true, folder: 'D:/Saves', keepRawSaves: true });
+    // A setting stored before full recordings could be kept reads as not keeping them.
+    values.set('run-planner.recording', JSON.stringify({ enabled: true, folder: null }));
+    expect(preference.read()).toEqual({ enabled: true, folder: null, keepRawSaves: false });
     const blocked = createBrowserRecordingPreference(() => {
       throw new Error('blocked');
     });
-    blocked.write({ enabled: true, folder: null });
-    expect(blocked.read()).toEqual({ enabled: true, folder: null });
+    blocked.write({ enabled: true, folder: null, keepRawSaves: false });
+    expect(blocked.read()).toEqual({ enabled: true, folder: null, keepRawSaves: false });
   });
 });

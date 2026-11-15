@@ -59,7 +59,10 @@ export const iRooms = [
   {
     gameName: 'I_Story01',
     noReroll: true,
-    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    // RoomDataI.lua:3054,3086: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel'], {
+      unspacedFamilies: ['Pickaxe', 'Shovel'],
+    }),
     label: 'Hades',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,

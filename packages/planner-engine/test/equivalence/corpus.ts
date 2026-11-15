@@ -4,29 +4,15 @@ import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
 import {
   createCompleteFGAnomalyProject,
-  createCompleteFGIxionChaosProject,
-  createCompleteFGProject,
   createFConversionFrontierProject,
   createFInvalidLaterConversionProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,
   createGContractAvailabilityProject,
-  createGoldenFGHIProject,
-  createGoldenFGHProject,
-  createUnderworldFPoolCheckpoint,
-  createUnderworldFWellCheckpoint,
-  loadUnderworldFMidshopPomFrontierProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQShopTraitProject,
-  createSurfaceNOHermesShrineDeliveryCheckpoint,
   createSurfaceNShrineSideRoomDeliveryCheckpoint,
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
-  loadSurfaceNOPQProject,
-  surfaceAnvilProject,
-  surfaceEncounterShowcaseProject,
-  surfaceOrdinaryHexPathProject,
-  surfaceSeleneHexPathProject,
-  surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
 import {
   createFreshFileFProject,
@@ -39,9 +25,13 @@ import {
   withRetainedFreshFileIntroCustomization,
   withRetainedFreshFilePostboss,
 } from '@run-planner/test-fixtures/fresh-file';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, stockTestProject } from '@run-planner/test-fixtures/shared';
 
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import {
+  surfaceNORerollsProject,
+  underworldFRerollsProject,
+} from '../execution-plan/support/rerolls-fixture';
 import {
   createEchoHammerReplayMissingProject,
   createEchoReplayUnresolvedHammerProject,
@@ -64,32 +54,42 @@ const entry = (
   entryCatalog: Catalog = catalog,
 ): EquivalenceEntry => Object.freeze({ name, project, catalog: entryCatalog });
 
+/** Execution fixtures built from a checkpoint's exact project, hashed by that checkpoint's entry. */
+const checkpointExecutionFixtures = new Set([
+  'fg',
+  'underworld-fgh',
+  'underworld-fghi',
+  'fg-ixion-chaos',
+  'fg-anomaly-roster',
+  'automatic-boss',
+  'surface-n',
+  'dream-mixed-prefix',
+  'surface-scheduled-lifecycle',
+  'underworld-generated-composition',
+  'underworld-arachne-cocoons',
+  'surface-n-phial-intermediate-fountain',
+  'surface-selene-hex-path',
+]);
+
 /**
- * Every project the equivalence lane hashes, each built through its owning
- * fixture builder. Names are stable baseline keys.
+ * Every distinct project the equivalence lane hashes, each built through its
+ * owning fixture builder. Names are stable baseline keys.
  */
 export function equivalenceCorpus(): readonly EquivalenceEntry[] {
   const frontier = freshFileRouteFrontierWalk();
   const fieldsIssueSteps = freshFileHFieldsIssueSteps();
   return Object.freeze([
-    ...executionFixtures.map((fixture) =>
-      entry(`execution/${fixture.name}`, fixture.project, fixture.catalog?.() ?? catalog),
-    ),
+    ...executionFixtures
+      .filter((fixture) => !checkpointExecutionFixtures.has(fixture.name))
+      .map((fixture) =>
+        entry(`execution/${fixture.name}`, fixture.project, fixture.catalog?.() ?? catalog),
+      ),
     ...checkpointRegistry.map(({ entry: checkpoint, load }) =>
       entry(`checkpoint/${checkpoint.id}`, load),
-    ),
-    entry('underworld/createGoldenFGHProject', createGoldenFGHProject),
-    entry('underworld/createGoldenFGHIProject', createGoldenFGHIProject),
-    entry('underworld/createCompleteFGProject', () => createCompleteFGProject()),
-    entry('underworld/createCompleteFGAnomalyProject(true)', () =>
-      createCompleteFGAnomalyProject(true),
     ),
     entry('underworld/createCompleteFGAnomalyProject(false)', () =>
       createCompleteFGAnomalyProject(false),
     ),
-    entry('underworld/createCompleteFGIxionChaosProject', createCompleteFGIxionChaosProject),
-    entry('underworld/createUnderworldFWellCheckpoint', () => createUnderworldFWellCheckpoint()),
-    entry('underworld/createUnderworldFPoolCheckpoint', createUnderworldFPoolCheckpoint),
     ...(['GiftDrop', 'MetaCurrencyDrop', 'MetaCardPointsCommonDrop'] as const).map((rewardType) =>
       entry(
         `underworld/createFConversionFrontierProject(${rewardType})`,
@@ -104,10 +104,6 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
       'underworld/createFMidshopUnresolvedBlindBoxBeforePomProject',
       createFMidshopUnresolvedBlindBoxBeforePomProject,
     ),
-    entry(
-      'underworld/loadUnderworldFMidshopPomFrontierProject',
-      loadUnderworldFMidshopPomFrontierProject,
-    ),
     ...[true, false].map((entered) =>
       entry(
         `underworld/createGContractAvailabilityProject(${entered})`,
@@ -119,12 +115,9 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     entry('underworld/fPoolSaleCleared', createFPoolSaleClearedProject),
     entry('underworld/echoReplayUnresolvedHammer', createEchoReplayUnresolvedHammerProject),
     entry('underworld/fWellDuplicateRefill', createFWellDuplicateRefillProject),
-    entry('surface/loadSurfaceNOPQProject', loadSurfaceNOPQProject),
-    entry('surface/surfaceAnvilProject', surfaceAnvilProject),
-    entry('surface/createSurfaceNOHermesShrineDeliveryCheckpoint', () =>
-      createSurfaceNOHermesShrineDeliveryCheckpoint(),
+    entry('underworld/underworldFRerollsProject', () =>
+      stockTestProject(underworldFRerollsProject()),
     ),
-    entry('surface/surfaceShrineTravelDealProject', surfaceShrineTravelDealProject),
     entry(
       'surface/createSurfaceNShrineSideRoomDeliveryCheckpoint',
       createSurfaceNShrineSideRoomDeliveryCheckpoint,
@@ -133,35 +126,29 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
       'surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint',
       createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
     ),
-    entry('surface/surfaceEncounterShowcaseProject', surfaceEncounterShowcaseProject),
     entry(
       'surface/createRepresentativeNOPQShopTraitProject',
       createRepresentativeNOPQShopTraitProject,
     ),
-    entry('surface/surfaceOrdinaryHexPathProject', surfaceOrdinaryHexPathProject),
-    entry('surface/surfaceSeleneHexPathProject', surfaceSeleneHexPathProject),
+    entry('surface/surfaceNORerollsProject', surfaceNORerollsProject),
     entry(
       'surface/oShipWheelPickupBeforeDeferredEndEffects',
       createOShipWheelPickupBeforeDeferredEndEffectsProject,
     ),
-    entry('fresh-file/createFreshFileRouteProject', createFreshFileRouteProject),
     entry('fresh-file/createFreshFileFProject', createFreshFileFProject),
     entry('fresh-file/createFreshFileFirstSequence', () => createFreshFileFirstSequence()),
     entry('fresh-file/createMatureCombat01Sequence', createMatureCombat01Sequence),
     entry('fresh-file/createFreshFileGeneratedComposition', createFreshFileGeneratedComposition),
-    ...(['min', 'max'] as const).map((cageOutcome) =>
-      entry(`fresh-file/withNewHFieldsRoom(${cageOutcome})`, () =>
-        withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', cageOutcome),
-      ),
+    // The max outcome is hFieldsIssues/00.
+    entry('fresh-file/withNewHFieldsRoom(min)', () =>
+      withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'min'),
     ),
+    // A Well and Pool its route never spawns, which loading a plan saved before 103.3 drops.
     entry('fresh-file/withRetainedFreshFilePostboss(all)', () =>
       withRetainedFreshFilePostboss(createFreshFileFProject(), {
         well: true,
         poolSaleTraitKey: 'ApolloWeaponBoon',
       }),
-    ),
-    entry('fresh-file/withRetainedFreshFilePostboss(emptyPool)', () =>
-      withRetainedFreshFilePostboss(createFreshFileFProject(), { poolSaleTraitKey: null }),
     ),
     entry('fresh-file/withRetainedFreshFileIntroCustomization', () =>
       withRetainedFreshFileIntroCustomization(
@@ -171,8 +158,11 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     ...fieldsIssueSteps.map((document, index) =>
       entry(`fresh-file/hFieldsIssues/${String(index).padStart(2, '0')}`, () => document),
     ),
-    ...frontier.map((document, index) =>
-      entry(`fresh-file/frontier/${String(index).padStart(2, '0')}`, () => document),
-    ),
+    // The walk's last step is the complete route, execution/fresh-file-fghi.
+    ...frontier
+      .slice(0, -1)
+      .map((document, index) =>
+        entry(`fresh-file/frontier/${String(index).padStart(2, '0')}`, () => document),
+      ),
   ]);
 }

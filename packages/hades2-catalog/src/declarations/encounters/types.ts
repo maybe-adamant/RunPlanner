@@ -1,5 +1,7 @@
 import type {
   EncounterDefinition,
+  EncounterEnvelopeKind,
+  EncounterGate,
   EncounterSlotActivation,
   EncounterPhaseKind,
   GeneratedEncounterSelection,
@@ -40,13 +42,30 @@ export interface RawEncounterEnvelopeSlotDeclaration {
 
 export interface RawEncounterEnvelopeDeclaration {
   readonly key: string;
+  readonly kind: EncounterEnvelopeKind;
   readonly slots: readonly RawEncounterEnvelopeSlotDeclaration[];
+}
+
+/**
+ * The encounter's trigger script, each value cited to its game line. Absent
+ * values are the game default: `StartEncounter` starts combat itself
+ * (RoomLogic.lua:1856-1859) and nothing else applies.
+ */
+export interface RawEncounterScriptDeclaration {
+  readonly gate?: EncounterGate;
+  readonly waitReadyBeforeEnd?: true;
+  /** A fight a row's press begins and starts, with no end effects; absent for the room's own encounters. */
+  readonly press?: {
+    readonly records: boolean;
+    readonly generatedAt: 'entry' | 'start';
+  };
 }
 
 export interface RawEncounterDefinitionDeclaration {
   readonly key: string;
   readonly label: string;
   readonly kind: EncounterPhaseKind;
+  readonly script?: RawEncounterScriptDeclaration;
   readonly countsEncounterDepth: boolean;
   /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses?: boolean;
@@ -56,6 +75,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly hostsGorgon?: boolean;
   readonly aetosWaves?: readonly number[];
   readonly skipEndEncounterEffects?: boolean;
+  /** Native `SkipBossTraits`: a boss fight that runs no post-boss effects. */
+  readonly skipBossTraits?: true;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
   readonly enemyTriggeredIntroduction?: boolean;
@@ -73,6 +94,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
+  /** The room reward this encounter spawns can never be duplicated (Sea Star). */
+  readonly incomingRewardCannotDuplicate?: true;
   /**
    * A kill-contest bet on the encounter's end: the bet is the held gold up to
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.
@@ -111,6 +134,8 @@ export interface RawEncounterDefinitionDeclaration {
         readonly enteredBiome: { readonly min?: number; readonly max?: number };
         readonly requirement: 'none' | 'pomLegal' | 'talentLegal';
       }[];
+      /** Held traits that make her damage lines ineligible (`NoHitShieldAvailable`). */
+      readonly unavailableWhileHeldTraitKeys: readonly string[];
       readonly response: readonly ['accept', 'decline'];
       readonly pickupRequiredOnAccept: true;
     };

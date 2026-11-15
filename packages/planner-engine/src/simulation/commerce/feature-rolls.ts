@@ -6,7 +6,6 @@ import {
 } from '../../authored-project/feature-rolls';
 import type {
   PurgingPoolSlotKey,
-  PurgingPoolState,
   RoomActionReference,
   StygianWellSlotKey,
 } from '../../authored-project/model';
@@ -75,24 +74,16 @@ export function initialStygianWellRollWalk(): Extract<
   });
 }
 
-/** The initial list fills as many slots as there are eligible traits, pinned slots first. */
+/** The list on show when the Pool opens, with the slots it shows. */
 export function initialPurgingPoolRollWalk(
-  pool: PurgingPoolState,
+  offeredSlotKeys: readonly PurgingPoolSlotKey[],
   eligibleCount: number,
 ): Extract<FeatureRollWalk, { readonly feature: 'purgingPool' }> {
   return Object.freeze({
     feature: 'purgingPool',
     rollKey: INITIAL_ROLL_KEY,
     eligibleCount,
-    offeredSlotKeys: purgingPoolRerollSlots(
-      Object.fromEntries(
-        PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
-          const traitKey = pool.traitKeyBySlot[slotKey];
-          return traitKey === null ? [] : [[slotKey, traitKey]];
-        }),
-      ),
-      eligibleCount,
-    ),
+    offeredSlotKeys: Object.freeze([...offeredSlotKeys]),
     sold: Object.freeze([]),
     rerollCount: 0,
   });

@@ -170,7 +170,7 @@ function validateRewardWheelProduct(
 
 function validateFieldsCageSlots(
   layout: ExecutionFieldsLayout,
-  encounterPhases: readonly { readonly slotKey: string }[],
+  encounterPhases: readonly { readonly slotKey: string; readonly encounterKey: string }[],
   label: string,
 ): void {
   const activeCagePhases = encounterPhases.filter((phase) => /^Cage\d+$/.test(phase.slotKey));
@@ -178,11 +178,17 @@ function validateFieldsCageSlots(
     if (phase.slotKey !== `Cage${String(index + 1).padStart(2, '0')}`)
       fail(`${label}.cagePoints must use canonical ordered cage slots`);
   });
-  // A cage without a point stays native; a listed one names an active cage in order.
-  const activeSlots = activeCagePhases.map((_, index) => `cage${index + 1}`);
-  const ranks = layout.cagePoints.map((point) => activeSlots.indexOf(point.slotKey));
-  if (ranks.some((rank, index) => rank < 0 || (index > 0 && rank <= ranks[index - 1]!)))
+  // Every active cage stands on its point, in cage order.
+  if (
+    layout.cagePoints.length !== activeCagePhases.length ||
+    layout.cagePoints.some((point, index) => point.slotKey !== `cage${index + 1}`)
+  )
     fail(`${label}.cagePoints must use canonical ordered cage slots`);
+  const nemesis = encounterPhases.some((phase) => phase.encounterKey === 'NemesisRandomEvent');
+  if (nemesis && layout.nemesisPointId === undefined)
+    fail(`${label}.nemesisPointId is required for a planned Nemesis`);
+  if (!nemesis && layout.nemesisPointId !== undefined)
+    fail(`${label}.nemesisPointId requires a NemesisRandomEvent phase`);
 }
 
 function validateShopTransactionOwners(
@@ -387,8 +393,9 @@ function roomGuideDescription(value: unknown, label: string) {
           : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
       });
     }
-    case 'purchaseHermesShrineOffer': {
-      exact(record, ['kind', 'generationKey', 'rewardType', 'rushed'], [], label);
+    case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer': {
+      exact(record, ['kind', 'generationKey', 'rewardType'], [], label);
       const generationKey = stringValue(record.generationKey, `${label}.generationKey`);
       if (
         ![
@@ -403,7 +410,6 @@ function roomGuideDescription(value: unknown, label: string) {
         kind,
         generationKey: generationKey as import('../model').ExecutionHermesShrineGenerationKey,
         rewardType: stringValue(record.rewardType, `${label}.rewardType`),
-        rushed: booleanValue(record.rushed, `${label}.rushed`),
       });
     }
     case 'sellPurgingPoolTrait': {
@@ -531,8 +537,12 @@ function roomGuide(value: unknown, timelineValue: ExecutionOccurrence['timeline'
       if (transactionOwner !== undefined && !transactionOwners.has(transactionOwner))
         fail(`${rowLabel}.transactionOwner must name one occurrence transaction`);
       const description = roomGuideDescription(record.description, `${rowLabel}.description`);
-      if (description.kind === 'purchaseHermesShrineOffer' && transactionOwner !== undefined)
-        fail(`${rowLabel}.transactionOwner is not published for Shrine purchases`);
+      if (
+        (description.kind === 'purchaseHermesShrineOffer' ||
+          description.kind === 'rushHermesShrineOffer') &&
+        transactionOwner !== undefined
+      )
+        fail(`${rowLabel}.transactionOwner is not published for Shrine purchases or rushes`);
       return Object.freeze({
         key,
         description,

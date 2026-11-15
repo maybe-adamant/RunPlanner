@@ -45,7 +45,12 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers, requireTraits } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  stockTestProject,
+  authorTestTraitsAndRequiredItems,
+  requireTraits,
+} from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
   createCompleteFGProject,
@@ -77,6 +82,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { decisionContainingOccurrence } from '@planner-test/support/occurrence-workbench';
 import {
+  doorsEditor,
+  expandDoors,
   renderBiomeClearAction,
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
@@ -171,9 +178,15 @@ async function openPositionOptions(user: { click: (element: Element) => Promise<
 }
 
 const positionOption = (point: number) =>
-  within(screen.getByRole('listbox')).getByRole('option', { name: new RegExp(`P${point}$`) });
+  within(screen.getByRole('listbox')).getByRole('option', {
+    name: new RegExp(`P${point}$`),
+  });
 
-const positionAny = () => within(screen.getByRole('listbox')).getByRole('option', { name: /\?$/ });
+/** The first point the gate can take. */
+const positionAvailable = () =>
+  within(screen.getByRole('listbox'))
+    .getAllByRole('option')
+    .find((option) => option.getAttribute('aria-disabled') !== 'true')!;
 
 function authoredNaturalChaosFixture(pointCount?: 'single' | 'multiple') {
   const base = createGoldenFGHIProject();
@@ -451,7 +464,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('edits a multi-point Chaos position, returns it to the game, and restores it with Undo', async () => {
+  it('edits a multi-point Chaos position and restores it with Undo', async () => {
     const { located, project, source } = authoredNaturalChaosFixture('multiple');
     const view = renderOccurrenceWorkbench(
       project,
@@ -464,21 +477,20 @@ describe('DecisionWorkbench', () => {
       chaosExitOf(view.application.store.getState().projectWorkspace.history!.present)
         ?.spawnPointIndex;
     const options = await openPositionOptions(view.user);
-    // Unset, then each spawn point.
-    expect(options).toHaveLength(points.length + 1);
+    // Each spawn point, and no choice returning the gate to the game.
+    expect(options).toHaveLength(points.length);
+    const stored = spawnPoint();
+    const chosen = points.find((point) => point !== stored)!;
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(positionOption(2));
-    expect(spawnPoint()).toBe(2);
+    await view.user.click(positionOption(chosen));
+    expect(spawnPoint()).toBe(chosen);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    await openPositionOptions(view.user);
-    await view.user.click(positionAny());
-    expect(spawnPoint()).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(spawnPoint()).toBe(2);
+    expect(spawnPoint()).toBe(stored);
     await view.user.click(screen.getByRole('button', { name: 'Chaos Gate' }));
     expect(positionPicker()).toBeNull();
 
@@ -555,7 +567,7 @@ describe('DecisionWorkbench', () => {
     await openPositionOptions(view.user);
     // The retained point is listed but cannot be picked again.
     expect(positionOption(4).getAttribute('aria-disabled')).toBe('true');
-    await view.user.click(positionAny());
+    await view.user.click(positionAvailable());
     expect(positionPicker()).toBeNull();
   });
 
@@ -653,7 +665,7 @@ describe('DecisionWorkbench', () => {
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     expect(positionPicker()).toHaveProperty('disabled', false);
     await openPositionOptions(view.user);
-    await view.user.click(positionAny());
+    await view.user.click(positionAvailable());
     expect(positionPicker()).toBeNull();
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();
@@ -710,15 +722,14 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(contract.querySelector('hr')).toBeNull();
-    // The contract is taken from the Leave row, which follows the doors.
-    const room = within(contract).getByRole('img', { name: 'Reward: Champion of Elysium' });
-    expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    // The contract is taken from the Leave row.
     expect(await exitChoices()).toContain('Infernal Contract');
     await pickExit(decisionView.user, 'Infernal Contract');
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Infernal Contract exit' }).dataset.picked).toBe(
-        'true',
-      ),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Infernal Contract exit' }).dataset
+          .picked,
+      ).toBe('true'),
     );
     cleanup();
 
@@ -807,7 +818,9 @@ describe('DecisionWorkbench', () => {
     act(() => {
       const authored = view.application.store.getState().projectWorkspace.history?.present;
       if (authored === undefined) throw new Error('N project is missing');
-      view.application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(authored)));
+      view.application.store.dispatch(
+        authoredProjectReplaced(authorTestTraitsAndRequiredItems(authored)),
+      );
     });
     await waitFor(() =>
       expect(
@@ -958,7 +971,9 @@ describe('DecisionWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Door 1 unspecified room offer' }),
+      ).toBeTruthy(),
     );
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
@@ -1129,7 +1144,8 @@ describe('DecisionWorkbench', () => {
       within(card).getByRole('button', { name: `View map of ${target.room.label}` }),
     );
 
-    const mapDialog = screen.getByRole('dialog');
+    const mapDialog = screen.getAllByRole('dialog').find((dialog) => dialog !== doorsEditor());
+    if (mapDialog === undefined) throw new Error('the map dialog is missing');
     expect(within(mapDialog).getByRole('heading', { name: target.room.label })).toBeTruthy();
     expect(mapDialog.querySelector(`[data-hint="${target.room.gameName}"]`)).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -1256,12 +1272,14 @@ describe('DecisionWorkbench', () => {
       firstNodeOfKind('ordinaryBatch'),
     );
 
-    const selector = screen.getByLabelText('Fields door roll');
+    const selector = screen.getByRole('button', { name: 'Fields door roll' });
     const fieldsEditor = selector.closest('.fields-batch-editor');
     expect(fieldsEditor).not.toBeNull();
     expect(selector.closest('.batch-reward-pool')).toBeNull();
-    expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
-    expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+    // The run's Maximum rolls follow the picker on its one line.
+    expect(fieldsEditor?.querySelector('.fields-batch-summary')?.textContent).toMatch(
+      /^· Max \d+\/\d+$/,
+    );
   });
 
   it('marks a Vow of Forfeit realization on the forfeited door reward control', () => {
@@ -1276,7 +1294,7 @@ describe('DecisionWorkbench', () => {
       reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'WeaponUpgrade' },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     renderDecisionWorkbench(
       project,
       'Underworld',
@@ -1300,7 +1318,8 @@ describe('DecisionWorkbench', () => {
       vowKey: 'BoonSkipShrineUpgrade',
       rank: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // The vow changes the F boons, so the Postboss Pool list is redrawn as an edit would.
+    project = authorLegalTraitOffers(stockTestProject(authorLegalTraitOffers(project)));
     renderDecisionWorkbench(
       project,
       'Underworld',
@@ -1392,8 +1411,9 @@ describe('DecisionWorkbench', () => {
 
     const noteOn = (words: string) =>
       screen.getByRole('group', { name: words }).getAttribute('aria-description');
-    expect(noteOn('Cages per combat room')).toBe('No room here uses the cage count');
-    expect(noteOn('Fields door roll')).toBe('Max still affects later Fields rolls');
+    // One hint, on the roll, tells the roll still happens without cages.
+    expect(noteOn('Fields door roll')).toContain('Rolled even when no room has cages.');
+    expect(screen.queryByRole('group', { name: 'Cages per combat room' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Reward' })).toBeNull();
   });
 
@@ -1538,7 +1558,7 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
 
-    await view.user.click(screen.getByLabelText('Fields door roll'));
+    await view.user.click(screen.getByRole('button', { name: 'Fields door roll' }));
     const required = within(screen.getByRole('listbox')).getByText('Maximum');
     const requiredItem = required.closest('[cmdk-item]');
     expect(requiredItem?.getAttribute('data-candidate-state')).toBe('forced');
@@ -1574,7 +1594,7 @@ describe('DecisionWorkbench', () => {
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
 
-    const trigger = screen.getByLabelText('Fields door roll');
+    const trigger = screen.getByRole('button', { name: 'Fields door roll' });
     await view.user.click(trigger);
     const maximum = within(screen.getByRole('listbox')).getByText('Maximum');
     const item = maximum.closest('[cmdk-item]');
@@ -1602,10 +1622,9 @@ describe('DecisionWorkbench', () => {
     });
     renderDecisionWorkbench(blockHCombat05Trait(), 'Underworld', 'H', subjectForOwner(owner));
 
-    const summary = screen.getByText('Prior Max outcomes').closest('.fields-batch-summary');
+    const summary = document.querySelector('.fields-batch-summary');
     if (!(summary instanceof HTMLElement)) throw new Error('Fields summary is missing');
-    expect(within(summary).getByText('1 / 2')).toBeTruthy();
-    expect(within(summary).queryByText('Unavailable')).toBeNull();
+    expect(summary.textContent).toContain('Max 1/2');
   });
 
   it('distinguishes a forced effective reward pool from the authored base pool', () => {
@@ -1723,7 +1742,12 @@ describe('DecisionWorkbench', () => {
 
     // The ship decided the pool: a fixed value under the same label, never a picker.
     expect(screen.getByRole('group', { name: 'Reward Pool' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Reward Pool' })).toBeNull();
+    // Only the wheel the room's last phase opens picks a pool.
+    expect(
+      screen
+        .queryAllByRole('button', { name: 'Reward Pool' })
+        .filter((button) => button.closest('[aria-label="Combat 1 reward"]') === null),
+    ).toEqual([]);
     cleanup();
 
     const ordinaryOwner = createExitDecisionAddress(oBiome, {
@@ -2114,22 +2138,17 @@ describe('DecisionWorkbench', () => {
     );
     if (!target.selected) {
       await pickExit(view.user, `Door ${target.index}`);
+      expandDoors();
       await waitFor(() =>
-        expect(
-          screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-        ).toHaveLength(1),
+        expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1),
       );
     }
     const targetCard = doorRow(`Door ${target.index}`);
-    expect(screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ })).toHaveLength(
-      1,
-    );
-    await view.user.click(
-      within(targetCard).getByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-    );
+    expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1);
+    await view.user.click(within(targetCard).getByRole('button', { name: 'Make Anomaly' }));
     const anomalyCard = screen
       .getAllByLabelText(/ room offer$/)
-      .find((card) => within(card).queryByRole('button', { name: /^Restore / }));
+      .find((card) => within(card).queryByRole('button', { name: 'Restore door' }));
     if (anomalyCard === undefined) throw new Error('Authored Anomaly target card is missing');
     expect(within(anomalyCard).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     const commands = dispatch.mock.calls

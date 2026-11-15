@@ -6,6 +6,7 @@ import {
   type TimelineReorderItem,
   type TimelineReorderSession,
 } from './useTimelineReorder';
+import { TextGlyph } from '@planner/ui/controls/TextGlyph';
 
 function positionY(root: HTMLElement | null, position: TimelineReorderItem['positions'][number]) {
   const bounds = reorderAnchorElement(root, position.anchor)?.getBoundingClientRect();
@@ -176,7 +177,7 @@ export function TimelineReorderHandle({
       ref={button}
       type="button"
     >
-      <span aria-hidden="true">⠿</span>
+      <TextGlyph name="grip" />
     </button>
   );
 }
@@ -203,7 +204,7 @@ export function TimelineReorderStatus({ session }: { readonly session: TimelineR
           }}
         >
           <div className="room-action-drag-header">
-            <span aria-hidden="true">⠿</span>
+            <TextGlyph name="grip" />
             <strong>{lift.item.label}</strong>
           </div>
           <span className="room-action-drag-feedback" data-unavailable={!!position?.unavailable}>

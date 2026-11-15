@@ -18,6 +18,8 @@ import {
   createRoomActionAddress,
   roomActionKey,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   semanticAddressKey,
   type AuthoredNemesisRandomEventOutcome,
   type ProjectDocument,
@@ -37,12 +39,19 @@ import {
   goldenHBiome,
   replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+  withItemContent,
+} from '@run-planner/test-fixtures/shared';
 import { reachedFrontier } from '../support/reward-frontier';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,
   MaterializedBiomePrefix,
 } from '../../src/simulation/materialization';
+
+const eventRoom = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
 
 function evaluatedRoom(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   const biome = simulateProject(catalog, project).route?.biomes.find(
@@ -64,7 +73,7 @@ function evaluatedRoom(project: ProjectDocument, biomeKey: string, occurrenceId:
   return room;
 }
 
-/** Positions of the event's encounter seams, its interaction and its result pickup. */
+/** Positions of any encounter markers for the event, its interaction and its result pickup. */
 function eventTimeline(room: CanonicalAuthoredRoom, phaseKey: string) {
   const entries = room.roomLifecycleTimeline.entries;
   const boundary = (key: string) =>
@@ -72,9 +81,9 @@ function eventTimeline(room: CanonicalAuthoredRoom, phaseKey: string) {
   const action = (key: string) =>
     entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
   return {
-    start: boundary(`encounterStart:${phaseKey}`),
+    begun: boundary(`encounterBegun:${phaseKey}`),
+    start: boundary(`encounterStarted:${phaseKey}`),
     interaction: action(roomActionKey({ kind: 'interactEncounter', phaseKey })),
-    outcome: boundary(`encounterOutcome:${phaseKey}`),
     end: boundary(`encounterEnd:${phaseKey}`),
     result: action(
       roomActionKey({
@@ -111,25 +120,30 @@ describe('Nemesis random events', () => {
   }
 
   function selectEvent(project = createGoldenFGHIProject()) {
-    return applyProjectCommand(project, catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'NemesisRandomEvent',
-    });
+    return collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      }),
+    );
   }
 
   function selectFamily(
     project: ProjectDocument,
     family: AuthoredNemesisRandomEventOutcome['kind'],
   ) {
-    return applyProjectCommand(project, catalog, {
-      kind: 'SelectNemesisRandomEventFamily',
-      event: createNemesisRandomEventAddress(phase),
-      family,
-    });
+    return collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectNemesisRandomEventFamily',
+        event: createNemesisRandomEventAddress(phase),
+        family,
+      }),
+    );
   }
 
-  function insertOptionalResult(project: ProjectDocument) {
+  function insertOptionalResult(unplaced: ProjectDocument) {
+    const project = collectTestRequiredItems(unplaced);
     const selected = occurrence(project);
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
@@ -224,7 +238,7 @@ describe('Nemesis random events', () => {
         value,
         { rewardType },
       );
-      if (optional) project = insertOptionalResult(project);
+      project = optional ? insertOptionalResult(project) : collectTestRequiredItems(project);
 
       const evaluated = simulateProjectAssembly(catalog, project).evaluation;
       expect(evaluated.findings).not.toContainEqual(
@@ -245,17 +259,15 @@ describe('Nemesis random events', () => {
           ),
         ),
       ).toBe(true);
-      // Answering Nemesis ends the event: her interaction sits inside its encounter, its
-      // outcome follows it and the result she drops follows the encounter end.
+      // No encounter runs for her: her talk row hosts the event, and the result she
+      // drops follows it.
       const timeline = eventTimeline(
         evaluatedRoom(project, goldenFBiome.biomeKey, goldenFOccurrenceId(5, 1)),
         'Encounter',
       );
-      expect(timeline.start).toBeGreaterThan(0);
-      expect(timeline.interaction).toBeGreaterThan(timeline.start);
-      expect(timeline.outcome).toBe(timeline.interaction + 1);
-      expect(timeline.end).toBe(timeline.outcome + 1);
-      expect(timeline.result).toBeGreaterThan(timeline.end);
+      expect([timeline.begun, timeline.start, timeline.end]).toEqual([-1, -1, -1]);
+      expect(timeline.interaction).toBeGreaterThan(0);
+      expect(timeline.result).toBeGreaterThan(timeline.interaction);
       if (removedTraitKey !== undefined) {
         expect(
           reachedFrontier(f.rewards).every(
@@ -355,8 +367,21 @@ describe('Nemesis random events', () => {
       encounterKey: 'GeneratedF',
     });
     expect(occurrence(restored).state).toEqual(before);
-    expect(occurrence(restored).roomActions.order).toContainEqual(
-      expect.objectContaining({ kind: 'interactIncomingReward' }),
+    // The restored reward is live again for the owner to pick up.
+    expect(
+      assembleRoomActionDomain({
+        producer: true,
+        routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+        catalog,
+        biome: goldenFBiome,
+        topology: restored.route.biomes[0]!.topology!,
+        occurrence: occurrence(restored),
+      }).contributions,
+    ).toContainEqual(
+      expect.objectContaining({
+        participation: 'required',
+        reference: expect.objectContaining({ kind: 'interactIncomingReward' }),
+      }),
     );
     const laterPhase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -381,6 +406,7 @@ describe('Nemesis random events', () => {
     );
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -406,9 +432,28 @@ describe('Nemesis random events', () => {
       throw new Error('missing blocked F evaluation');
     expect(blocked.coverage.blockedAt).toEqual(event);
     expect(blocked.coverage.roomTimeline).toBeUndefined();
-    expect(
-      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(familyMissing, event),
-    ).toBeUndefined();
+    // She queues her event as she spawns on entry: its families are reached with the Overview,
+    // its domains only with her interaction.
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      familyMissing,
+      event,
+    );
+    expect(entered?.familyKeys).toHaveLength(5);
+    expect(entered?.assessment).toBeUndefined();
+    const unplaced = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'goldTrade',
+    });
+    expect(occurrence(unplaced).roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'interactEncounter' }),
+    );
+    const beforeInteraction = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, unplaced),
+      event,
+    );
+    expect(beforeInteraction?.familyKeys).toHaveLength(5);
+    expect(beforeInteraction?.assessment).toBeUndefined();
     const assembly = simulateProjectAssembly(catalog, selectFamily(project, 'goldTrade'));
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
@@ -463,6 +508,62 @@ describe('Nemesis random events', () => {
     ).toBe(false);
   });
 
+  it('refuses her damage trade on entry while the hero holds the Demeter hit shield', () => {
+    const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+    let shielded = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: shieldRoom,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    shielded = applyProjectCommand(shielded, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(shieldRoom, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+          { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+          { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    } as never);
+    shielded = selectEvent(collectTestRequiredItems(shielded));
+    const event = createNemesisRandomEventAddress(phase);
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, shielded),
+      event,
+    );
+    expect(entered?.unavailableFamilies).toEqual({
+      damageTrade: { kind: 'heldTrait', traitKey: 'ReserveManaHitShieldBoon' },
+    });
+    // A retained refused family keeps its value and stops the walk at her room's Overview.
+    const refused = simulateProjectAssembly(catalog, selectFamily(shielded, 'damageTrade'));
+    expect(occurrence(refused.project).encounters.nemesisRandomEventByPhase?.Encounter?.kind).toBe(
+      'damageTrade',
+    );
+    expect(refused.evaluation.findings).toEqual([
+      expect.objectContaining({
+        code: 'nemesisEventUnavailable',
+        origin: event,
+        evidence: {
+          kind: 'damageTrade',
+          reason: 'heldTrait',
+          traitKey: 'ReserveManaHitShieldBoon',
+        },
+      }),
+    ]);
+    expect(
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(refused, event)?.assessment,
+    ).toBeUndefined();
+    const allowed = simulateProjectAssembly(catalog, selectFamily(shielded, 'goldTrade'));
+    expect(allowed.evaluation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'nemesisEventUnavailable' }),
+    );
+  });
+
   it('blocks an unavailable trait trade at the event before its required child can settle', () => {
     let project = createGoldenFGHIProject();
     const unavailableTrait = catalog.traitGivers.values.find(
@@ -480,7 +581,10 @@ describe('Nemesis random events', () => {
       { kind: 'traitTrade', traitKey: unavailableTrait, response: 'accept' },
       { rewardType: 'RoomMoneyTripleDrop' },
     );
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    const evaluation = simulateProjectAssembly(
+      catalog,
+      collectTestRequiredItems(project),
+    ).evaluation;
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable' }),
     );
@@ -498,12 +602,7 @@ describe('Nemesis random events', () => {
   });
 
   it('reports unresolved interaction detail at the required action after family selection', () => {
-    let project = selectEvent();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SelectNemesisRandomEventFamily',
-      event: createNemesisRandomEventAddress(phase),
-      family: 'freeItem',
-    });
+    const project = selectFamily(selectEvent(), 'freeItem');
     const interaction = createRoomActionAddress(
       goldenFBiome,
       goldenFOccurrenceId(5, 1),
@@ -540,6 +639,7 @@ describe('Nemesis random events', () => {
     if (occurrence === undefined) throw new Error('missing declined event occurrence');
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -585,6 +685,14 @@ describe('Nemesis random events', () => {
       event,
       family: 'traitTrade',
     });
+    // The Passive event's family is an entry fact; only its domains wait on her row.
+    const unplaced = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      event,
+    );
+    expect(unplaced?.familyKeys).toHaveLength(5);
+    expect(unplaced?.assessment).toBeUndefined();
+    project = collectTestRequiredItems(project);
 
     // The real route acquires Hestia from Cage03, then Apollo from Cage02.
     // This Fields room's first cage is a money drop rather than a Pom, so the
@@ -613,12 +721,11 @@ describe('Nemesis random events', () => {
       expect(assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),
       );
-      // The Passive event brackets its interaction wherever it sits among the cages.
+      // The Passive event has no markers wherever her row sits among the cages.
       const room = evaluatedRoom(project, goldenHBiome.biomeKey, occurrenceId);
       const timeline = eventTimeline(room, 'Passive');
-      expect(timeline.interaction).toBe(timeline.start + 1);
-      expect(timeline.outcome).toBe(timeline.interaction + 1);
-      expect(timeline.end).toBe(timeline.outcome + 1);
+      expect(timeline.interaction).toBeGreaterThan(0);
+      expect([timeline.begun, timeline.start, timeline.end]).toEqual([-1, -1, -1]);
       expect(room.roomActionRoster.issues).toEqual([]);
     }
 
@@ -681,6 +788,7 @@ describe('Nemesis random events', () => {
         { kind: 'traitTrade', traitKey: 'HeraCastBoon', response },
         response === 'accept' ? { rewardType: 'RoomMoneyTripleDrop' } : null,
       );
+      project = collectTestRequiredItems(project);
       project = applyProjectCommand(project, catalog, {
         kind: 'MoveRoomAction',
         action: createRoomActionAddress(
@@ -709,6 +817,102 @@ describe('Nemesis random events', () => {
     expect(withTrade('accept')).toEqual([undefined]);
   });
 
+  it('discards the result and its Sea Star duplicate when the event or contest result changes', () => {
+    const address = createNemesisRandomEventAddress(phase);
+    const source = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+          'nemesisGenerated:Encounter',
+        ),
+        'result',
+      ),
+      'self',
+    );
+    const result = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
+    const duplicated = (outcome: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
+      let project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(selectEvent(), address, outcome, { rewardType }),
+      );
+      if (
+        !occurrence(project).roomActions.order.some(
+          (reference) => roomActionKey(reference) === roomActionKey(result),
+        )
+      )
+        project = insertOptionalResult(project);
+      return applyProjectCommand(project, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition: source,
+        procced: true,
+      });
+    };
+    const duplicateSites = (project: ProjectDocument) =>
+      Object.keys(occurrence(project).acquisitionSites ?? {}).filter((siteKey) =>
+        siteKey.startsWith('seaStarDuplicate:'),
+      );
+    const roundTrips = (project: ProjectDocument) =>
+      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+        project,
+      );
+
+    // Another event with the same reward is another source.
+    const traded = duplicated({ kind: 'damageTrade', response: 'accept' }, 'MaxHealthDrop');
+    expect(duplicateSites(traded)).toHaveLength(1);
+    expect(occurrence(traded).roomActions.order).toContainEqual(
+      withItemContent(traded, eventRoom, result),
+    );
+    const contested = replaceNemesisRandomEventInteraction(
+      traded,
+      address,
+      { kind: 'damageContest', result: 'success' },
+      { rewardType: 'MaxHealthDrop' },
+    );
+    expect(duplicateSites(contested)).toEqual([]);
+    expect(occurrence(contested).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
+    );
+    roundTrips(contested);
+    const free = duplicated({ kind: 'freeItem' }, 'ArmorBoost');
+    expect(duplicateSites(free)).toHaveLength(1);
+    const family = applyProjectCommand(free, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event: address,
+      family: 'goldTrade',
+    });
+    expect(duplicateSites(family)).toEqual([]);
+    expect(occurrence(family).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
+    );
+    roundTrips(family);
+
+    // A contest won and then lost spawns another item.
+    const won = duplicated({ kind: 'damageContest', result: 'success' }, 'MaxHealthDrop');
+    expect(duplicateSites(won)).toHaveLength(1);
+    const lost = replaceNemesisRandomEventInteraction(
+      won,
+      address,
+      { kind: 'damageContest', result: 'failure' },
+      { rewardType: 'RoomRewardConsolationPrize' },
+    );
+    expect(duplicateSites(lost)).toEqual([]);
+    roundTrips(lost);
+    // The same contest result keeps its item and duplicate.
+    expect(
+      duplicateSites(
+        replaceNemesisRandomEventInteraction(
+          won,
+          address,
+          { kind: 'damageContest', result: 'success' },
+          { rewardType: 'MaxHealthDrop' },
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
   it('requires a contest Pom pickup while consumable contest results stay optional', () => {
     const result = {
       kind: 'interactAcquisitionEntry' as const,
@@ -716,40 +920,50 @@ describe('Nemesis random events', () => {
       entryKey: 'result',
     };
     const contest = (rewardType: string) => {
-      const project = replaceNemesisRandomEventInteraction(
-        selectEvent(),
-        createNemesisRandomEventAddress(phase),
-        { kind: 'damageContest', result: 'success' },
-        { rewardType },
+      // The result spawns once the owner's interaction is placed.
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          selectEvent(),
+          createNemesisRandomEventAddress(phase),
+          { kind: 'damageContest', result: 'success' },
+          { rewardType },
+        ),
       );
       const selected = occurrence(project);
       const contribution = assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
         topology: project.route.biomes[0]!.topology!,
         occurrence: selected,
-      }).contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(result),
-      );
+      }).contributions.find((entry) => roomActionKey(entry.reference) === roomActionKey(result));
       return { project, selected, contribution };
     };
     const pom = contest('StackUpgrade');
     expect(pom.contribution).toMatchObject({ participation: 'required' });
-    expect(pom.selected.roomActions.order).toContainEqual(result);
+    expect(pom.selected.roomActions.order).toContainEqual(
+      withItemContent(pom.project, eventRoom, result),
+    );
     const action = createRoomActionAddress(
       goldenFBiome,
       pom.selected.occurrenceId,
       roomActionKey(result),
     );
-    expect(() =>
-      applyProjectCommand(pom.project, catalog, { kind: 'RemoveRoomAction', action }),
-    ).toThrow(/required room action cannot be removed/);
+    // Removing the required pickup leaves the Pom live on the ground with its finding.
+    const removed = applyProjectCommand(pom.project, catalog, { kind: 'RemoveRoomAction', action });
+    expect(occurrence(removed).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
+    );
+    expect(simulateProjectAssembly(catalog, removed).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'roomActionPlacementRequired', origin: action }),
+    );
 
     const talent = contest('TalentDrop');
     expect(talent.contribution).toMatchObject({ participation: 'optional' });
-    expect(talent.selected.roomActions.order).not.toContainEqual(result);
+    expect(talent.selected.roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
+    );
   });
 
   it('places the H event beside four optionals when the room has spare physical capacity', () => {
@@ -782,6 +996,9 @@ describe('Nemesis random events', () => {
       { kind: 'freeItem' },
       { rewardType: 'ArmorBoost' },
     );
+    // The owner places the event's interaction; the walk stops before it until
+    // the Nemesis point is set, so it takes the engine's schedule.
+    project = scheduleTestRequiredRoomActions(project, catalog, goldenHBiome);
     const selected = project.route.biomes
       .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
@@ -789,6 +1006,7 @@ describe('Nemesis random events', () => {
     expect(selected.state.optionalRewards).toEqual(retainedOptionals);
     expect(selected.state.optionalRewardCount).toBe(4);
     const eventAction = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
@@ -796,14 +1014,12 @@ describe('Nemesis random events', () => {
       occurrence: selected,
     }).contributions.find(
       (contribution) =>
-        contribution.kind === 'action' &&
         contribution.reference.kind === 'interactEncounter' &&
         contribution.reference.phaseKey === 'Passive',
     );
     expect(eventAction).toMatchObject({
-      kind: 'action',
       participation: 'required',
-      window: { kind: 'fields', phaseKey: 'Passive' },
+      bounds: expect.objectContaining({ spawn: { kind: 'encounterEnd', phaseKey: 'Passive' } }),
       dependencies: [],
     });
     expect(selected.roomActions.order).toContainEqual({

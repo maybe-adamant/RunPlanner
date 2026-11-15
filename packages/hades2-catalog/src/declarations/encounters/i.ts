@@ -97,6 +97,8 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'DevotionTestI',
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestI],
     label: 'Devotion combat',

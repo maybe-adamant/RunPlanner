@@ -10,7 +10,7 @@ import {
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { draftAttemptScore } from '../src/generator';
-import { draftNpcHostConditions, draftNpcHosts } from '../src/npc-windows';
+import { draftNpcHostConditions, draftNpcHosts, draftNpcWindowOpen } from '../src/npc-windows';
 import { draftBasket } from './support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
@@ -61,6 +61,38 @@ describe('draftNpcHostConditions', () => {
         'Underworld',
       ),
     ).toBeUndefined();
+  });
+});
+
+describe('draftNpcWindowOpen', () => {
+  /** A biome whose Heracles fight came `roomsAfter` entered rooms before the room now leaving. */
+  const leavingAfter = (roomsAfter: number) =>
+    ({
+      evaluation: {
+        route: {
+          biomes: [
+            {
+              biomeKey: 'N',
+              history: {
+                ledgers: {
+                  encounterRecords: [{ encounterKey: 'HeraclesCombatN', sequence: 1 }],
+                  roomAppearances: Array.from({ length: roomsAfter + 1 }, (_, index) => ({
+                    sequence: index * 2,
+                  })),
+                  counters: { biomeDepthCache: 10 },
+                },
+              },
+            },
+          ],
+        },
+      },
+    }) as unknown as ProjectEvaluationAssembly;
+
+  it('opens the next room exactly the gap after the last NPC room', () => {
+    const conditions = draftNpcHostConditions(definition('ArtemisCombatN'), 'Surface')!;
+    // The next room is `roomsAfter + 1` rooms after Heracles; the gap is six.
+    expect(draftNpcWindowOpen(leavingAfter(5), 'N', conditions)).toBe(true);
+    expect(draftNpcWindowOpen(leavingAfter(4), 'N', conditions)).toBe(false);
   });
 });
 

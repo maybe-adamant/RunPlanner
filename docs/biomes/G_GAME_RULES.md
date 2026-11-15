@@ -43,7 +43,7 @@ implementation coverage is recorded directly in this map and its focused tests.
 | Ordinary combat identity               | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition                                                                | implemented           | Combat composition becomes an authored or validated output   |
 | Locked extra exits                     | Doors after the first may lock after target creation; each needs a counting, reward-free fight to open                    | **Exact:** authored per-door lock observation, optional per-door unlock fight with its depth and gold effects                                                         | implemented           | --                                                           |
 | Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the host set             | **Exact:** closed replacement, retained offer, authored outcome, and hidden fresh host return                                                                         | implemented           | --                                                           |
-| Natural Chaos                          | Declared G sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return                                                                   | implemented           | --                                                           |
+| Natural Chaos                          | Declared G sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, previous-nine offer spacing, fixed Chaos room, fresh ordinary return                                                                   | implemented           | --                                                           |
 | Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                                                                                        | implemented           | --                                                           |
 | Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                                                                                    | implemented           | Probability analysis or exact RNG replay is introduced       |
 | Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                                                                                          | implemented           | --                                                           |
@@ -119,10 +119,10 @@ is too late for the room's own doors but moves every later room's
 eligibility, including G's early and late combat pools.
 
 The planner authors the observation: a lock host's `lockedExits` lists the
-doors that locked (never the first; never beside a switch), each pressed door
+doors that locked (never the first; never beside a switch), each locked door
+may carry its fight's customization whether pressed or not, each pressed door
 is an optional `unlockExit` action in the doors-open window after the room's
-required actions, carrying its fight's customization, and a reroll of a
-locked door follows its press. The press folds the fight's start and
+required actions, and a reroll of a locked door follows its press. The press folds the fight's start and
 completion, its depth rise and its kill gold; no record, no end effect, no
 reward. Leaving through a door still locked is a finding on the exit
 selection. The lock rolls themselves are chance, never simulated.
@@ -139,8 +139,9 @@ replaced. `Devotion` and `SpellDrop` are invalid-but-editable retained offers.
 
 The replacement uses one of the seven declared B maps (default `B_Combat01`),
 fixed `GeneratedAnomalyB` with an optional ordered enemy roster that survives a
-map change, and authored success. Its offer is consumed on
-creation; success acquires it and failure does not. On selected entry it
+map change, and authored success. Its offer is consumed on creation; success
+acquires it and failure does not. The acquired reward never duplicates: Sea
+Star copies neither it nor an Artificer replacement of it. On selected entry it
 consumes the once-per-route cap, generates one fresh hidden G continuation
 before its own commit, then commits as an ordinary room. The displaced G room
 never contributes phantom creation, reward, or history. Revert restores the

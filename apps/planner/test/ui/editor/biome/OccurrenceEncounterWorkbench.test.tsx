@@ -42,7 +42,12 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestShopOfferActions,
+  settleTestEdit,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGAnomalyProject,
@@ -77,6 +82,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { takeAtStop, takeLive } from '@planner-test/support/live-row';
 import {
   dormantShopProject,
   insertRoomAction,
@@ -129,25 +135,20 @@ function queryTimelineRow(label: string | RegExp): HTMLElement | null {
 }
 
 /** Spawned items not yet collected, each a chip in its spawn row. */
-function unplacedSpawnChips(): HTMLButtonElement[] {
+function unplacedSpawnChips(): HTMLElement[] {
   return [
-    ...document.querySelectorAll<HTMLButtonElement>(
-      '[data-spawned-loot] button.timeline-chip:not([data-spawn-placed])',
+    ...document.querySelectorAll<HTMLElement>(
+      '[data-spawned-loot] .timeline-chip:not([data-spawn-placed])',
     ),
   ];
 }
 
-/** Places a spawned optional pickup from its chip. */
+/** Picks up a spawned optional pickup from the live row. */
 async function addOptionalAction(
   user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
   name: string | RegExp,
 ): Promise<void> {
-  const chip = unplacedSpawnChips().find((candidate) => {
-    const label = candidate.getAttribute('aria-label') ?? '';
-    return typeof name === 'string' ? label === name : name.test(label);
-  });
-  if (chip === undefined) throw new Error(`no spawned pickup ${String(name)}`);
-  await user.click(chip);
+  await takeLive(user, typeof name === 'string' ? name : name, 'Pick up');
 }
 
 /** The spawned pickups not yet collected, each named by its source and itself. */
@@ -162,6 +163,19 @@ type EncounterUser = ReturnType<typeof renderOccurrenceWorkbench>['user'];
 /** Saves the open encounter draft as one edit. */
 async function saveEncounter(user: EncounterUser, dialog: HTMLElement) {
   await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+}
+/** Opens the shown phase's wheel offers, which its Wheels opened line holds in a popover. */
+function openWheelOffers(): void {
+  const trigger = screen.getByRole('button', { name: 'Edit offers' });
+  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+}
+/** Opens the Select wheel list of Phase 1's wheel. */
+async function openWheelPicks(user: EncounterUser): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: 'Phase 1 reward offer' }));
+  return screen.findByRole('listbox');
+}
+async function pickWheelOffer(user: EncounterUser, offer: string) {
+  await user.click(within(await openWheelPicks(user)).getByRole('option', { name: offer }));
 }
 async function reopenEncounter(user: EncounterUser): Promise<HTMLElement> {
   await user.click(screen.getByRole('button', { name: 'Customize encounter' }));
@@ -1203,6 +1217,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     ).toBe(condition);
     await view.user.click(condition);
+    // The Gorgon's Athena is talked to from the live row.
+    await takeLive(view.user, 'Gorgon', /^Talk to/);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Edit Trait · Pick trait' })).toBeTruthy();
     });
@@ -1244,11 +1260,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         selectedOptionKey: 'option1',
       },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'AthenaCombatP',
-    });
+    project = collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'AthenaCombatP',
+      }),
+    );
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('button', {
@@ -1256,8 +1274,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     }) as HTMLButtonElement;
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
-    // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
-    openNotReached();
+    // Talked to before the blocked Athena offer, the Gorgon row is reached with its unsupported support.
+    // The blocked offer stops the walk, so the Gorgon is taken through the gap above the stop.
+    await takeAtStop(view.user, 'Gorgon', /^Talk to/);
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -1517,10 +1536,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         traitOffersByAcquisitionRole: { hiddenSource: null },
       }),
     );
-    expect(authoredOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
-    ]);
+    expect(authoredOccurrence()?.roomActions.order).toEqual(
+      withItemContents(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        [
+          { kind: 'interactEncounter', phaseKey: 'Encounter' },
+          { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+        ],
+      ),
+    );
 
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
@@ -1570,11 +1595,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(false);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'mysteryBoon',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+      ),
+    );
     expect(hasAcquiredMysteryBoon()).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(hasAcquiredMysteryBoon()).toBe(false);
@@ -1709,18 +1736,20 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(queryTimelineRow(/^Collect Psyche/)).toBeNull();
     expect(screen.queryByRole('button', { name: /^How to take Psyche/ })).toBeNull();
     await addOptionalAction(view.user, /^Psyche/);
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'psyche',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'psyche' },
+      ),
+    );
     const orderedPsycheRow = timelineRow(/^Collect Psyche/);
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     // The Time Piece conversion is the row's verb choice.
     await view.user.click(
       within(orderedPsycheRow).getByRole('button', { name: /^How to take Psyche: Collect/ }),
     );
-    await view.user.click(screen.getByRole('option', { name: /^Goldify · Time Piece/ }));
+    await view.user.click(screen.getByRole('option', { name: 'Goldify' }));
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
@@ -1802,22 +1831,23 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    // Adding appends the pickup at its last legal position.
-    await addOptionalAction(view.user, /^Max Magick/);
+    // The context-invalid participant stops the walk: picking it up adds the pickup above it.
+    await takeAtStop(view.user, /^Max Magick/, 'Pick up');
 
+    const present = view.application.store.getState().projectWorkspace.history!.present;
     expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
+      present.route?.biomes
+        .find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )
-        ?.roomActions.order.at(-1),
-    ).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'maxMana',
-    });
+        )?.roomActions.order,
+    ).toContainEqual(
+      withItemContent(present, createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: narcissusSite,
+        entryKey: 'maxMana',
+      }),
+    );
   });
 
   it('keeps the incoming reward in the room banner across tabs without another editor', () => {
@@ -2051,6 +2081,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         'Encounter',
       ),
     });
+    project = collectTestRequiredItems(project);
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Overview');
 
@@ -2096,11 +2127,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
-    openRoomTab('Combat 2 Timeline');
+    openRoomTab('Phase 2 Timeline');
     // The room stops at its Overview, so the phase's banner waits until it is repaired there.
     expect(screen.queryByLabelText('Encounter started')).toBeNull();
     openRoomTab('Room Overview');
-    const phase = screen.getByLabelText('Combat 2 encounter phase');
+    const phase = screen.getByLabelText('Phase 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
@@ -2122,7 +2153,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       historyLength,
     );
     expect(phase.dataset.readOnly).toBeUndefined();
-    const encounter = within(phase).getByRole('button', { name: 'Combat 2' });
+    const encounter = within(phase).getByRole('button', { name: 'Phase 2' });
     await view.user.click(encounter);
     await waitFor(() => {
       expect(encounter.getAttribute('data-candidate-state')).toBe('impossible');
@@ -2180,14 +2211,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => {
       expect(count.dataset.candidateState).toBe('forced');
-      expect(screen.getByRole('option', { name: /^Intro \+ 1 combat/ })).toBeTruthy();
+      expect(screen.getByRole('option', { name: /^Intro \+ 1 phase/ })).toBeTruthy();
     });
     await view.user.click(screen.getByRole('button', { name: /^Unavailable/ }));
     expect(
-      screen.getByRole('option', { name: /^Intro \+ 2 combats/ }).getAttribute('aria-disabled'),
+      screen.getByRole('option', { name: /^Intro \+ 2 phases/ }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(
-      screen.getByText('Intro + 2 combats is unavailable at this point in the route.'),
+      screen.getByText('Intro + 2 phases is unavailable at this point in the route.'),
     ).toBeTruthy();
     await view.user.keyboard('{Escape}');
     expect(screen.getByRole('tab', { name: 'Room Overview' })).toBeTruthy();
@@ -2204,30 +2235,34 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       within(screen.getByLabelText('Intro ship phase')).getByText('Room entered'),
     ).toBeTruthy();
-    // The wheel chosen after the Intro opens on the Intro Timeline, then is taken.
+    // The wheel Phase 1 is chosen at opens on the Intro Timeline, named for it, then is taken.
     const intro = screen.getByLabelText('Intro ship phase');
-    const wheelOpen = within(intro).getByLabelText('Wheels open');
+    const wheelOpen = within(intro).getByLabelText('Wheels opened · Phase 1');
+    // Its encounter begins as its wheels open, so no Encounter marker ends the Intro.
+    expect(within(intro).getAllByLabelText('Encounter started · Intro')).toHaveLength(1);
     const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
-    expect(within(intro).getByLabelText('Combat 1 reward')).toBeTruthy();
+    openWheelOffers();
+    expect(screen.getByLabelText('Phase 1 reward')).toBeTruthy();
     expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
     expect(
       wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
-    expect(within(intro).queryByText('Doors open')).toBeNull();
+    expect(within(intro).queryByText('Doors opened')).toBeNull();
     // Each phase is one Timeline tab, shown by its phase name.
     expect(
       screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
-    ).toEqual(['Room Overview', 'Intro Timeline', 'Combat 1 Timeline']);
+    ).toEqual(['Room Overview', 'Intro Timeline', 'Phase 1 Timeline']);
     expect(screen.getByRole('tab', { name: 'Intro Timeline' }).textContent).toBe('Intro');
-    openRoomTab('Combat 1 Timeline');
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    openRoomTab('Phase 1 Timeline');
+    const combatOne = screen.getByLabelText('Phase 1 ship phase');
     expect(combatOne).toBeTruthy();
-    expect(within(combatOne).queryByRole('heading', { name: 'Combat 1' })).toBeNull();
+    expect(within(combatOne).queryByRole('heading', { name: 'Phase 1' })).toBeNull();
     expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Encounter started')).toBeTruthy();
-    expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Doors open')).toBeTruthy();
+    expect(within(combatOne).getByLabelText('Encounter started · Phase 1')).toBeTruthy();
+    expect(within(combatOne).queryByLabelText('Encounter started')).toBeNull();
+    expect(within(combatOne).queryByLabelText('Phase 1 reward')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Phase 2 Timeline' })).toBeNull();
+    expect(within(combatOne).getByText('Doors opened')).toBeTruthy();
     expect(within(combatOne).queryByText('Outgoing generation')).toBeNull();
     act(() =>
       view.application.store.dispatch(
@@ -2235,7 +2270,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     openRoomTab('Intro Timeline');
-    expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
+    expect(screen.getByLabelText('Phase 1 reward')).toBeTruthy();
   });
 
   it('keeps one Select wheel beside the opened wheel while its choice has no place', () => {
@@ -2252,8 +2287,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     const selectWheel = within(intro).getAllByRole('listitem', { name: 'Select wheel' });
     expect(selectWheel).toHaveLength(1);
     expect(
-      within(intro).getByLabelText('Wheels open').compareDocumentPosition(selectWheel[0]!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      within(intro)
+        .getByLabelText('Wheels opened · Phase 1')
+        .compareDocumentPosition(selectWheel[0]!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
   });
 
@@ -2273,46 +2309,47 @@ describe('OccurrenceEncounterWorkbench', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
 
     openRoomTab('Intro Timeline');
-    const ship = screen.getByLabelText('Combat 1 reward');
+    openWheelOffers();
+    const ship = screen.getByLabelText('Phase 1 reward');
     const trigger = getByHint(ship, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     expect(trigger.textContent).toMatch(/Apollo.*\(Red Onion\)/);
     expect(within(ship).queryByText(/^Forfeit →/)).toBeNull();
     expect(getAllByHint(ship, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
 
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     // The row names its converted reward by icon, with the reward as its accessible name.
-    expect(within(actions).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
+    expect(within(actions).getAllByRole('img', { name: 'Red Onion' }).length).toBeGreaterThan(0);
     expect(actions.textContent).not.toContain('(Red Onion)');
     expect(actions.textContent).not.toContain('Forfeit');
   });
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
       encounterCount: 3,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2320,12 +2357,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelPicked',
       wheel,
       pickedOfferIndex: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -2356,8 +2394,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       )?.roomTab,
     ).toBe('shipCombat1Actions');
     openRoomTab('Intro Timeline');
-    const ship = screen.getByLabelText('Ship combat structure');
-    expect(within(ship).queryByText('Choose Combat 1 wheel')).toBeNull();
+    const ship = screen.getByLabelText('Ship phase structure');
+    expect(within(ship).queryByText('Choose Phase 1 wheel')).toBeNull();
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -2368,16 +2406,17 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
 
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     expect(
-      within(screen.getByLabelText('Combat 1 reward')).getAllByRole('button', { name: 'Reward' })
+      within(screen.getByLabelText('Phase 1 reward')).getAllByRole('button', { name: 'Reward' })
         .length,
     ).toBeGreaterThan(0);
     expect(
-      within(screen.getByLabelText('Combat 1 reward')).queryByRole('button', {
+      within(screen.getByLabelText('Phase 1 reward')).queryByRole('button', {
         name: /Edit Trait/,
       }),
     ).toBeNull();
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const traitLauncher = within(actions).getByRole('button', { name: /Edit Trait/ });
     const actionRow = traitLauncher.closest<HTMLElement>('[data-room-action-key]');
@@ -2425,6 +2464,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
       value: { rewardType: 'MaxManaDrop' },
     });
+    project = collectTestRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -2432,27 +2472,28 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    openRoomTab('Combat 1 Timeline');
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
-    // The Combat 2 wheel opens on the Combat 1 Timeline it follows.
-    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
-    const restoredWheel = screen.getByLabelText('Combat 2 reward');
+    openRoomTab('Phase 1 Timeline');
+    const combatOne = screen.getByLabelText('Phase 1 ship phase');
+    // The Phase 2 wheel opens on the Phase 1 Timeline it follows.
+    expect(within(combatOne).queryByText('Choose Phase 2 wheel')).toBeNull();
+    openWheelOffers();
+    const restoredWheel = screen.getByLabelText('Phase 2 reward');
     expect(
       within(restoredWheel).getByRole('button', { name: /^Reward pool$/i }).textContent,
     ).toContain('Major Reward');
     expect(within(restoredWheel).getByRole('button', { name: 'Offers' }).textContent).toContain(
       '2',
     );
-    openRoomTab('Combat 2 Timeline');
-    const combatTwo = screen.getByLabelText('Combat 2 ship phase');
-    expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
+    openRoomTab('Phase 2 Timeline');
+    const combatTwo = screen.getByLabelText('Phase 2 ship phase');
+    expect(within(combatTwo).queryByRole('heading', { name: 'Phase 2' })).toBeNull();
     expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatTwo).getByText('Encounter started')).toBeTruthy();
+    expect(within(combatTwo).getByLabelText('Encounter started · Phase 2')).toBeTruthy();
     // The wheel reward row keeps its full name; its phase tab already names the phase.
     expect(
-      within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Combat 2 reward/ }),
+      within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Phase 2 reward/ }),
     ).toBeTruthy();
-    expect(within(combatTwo).getByText('Doors open')).toBeTruthy();
+    expect(within(combatTwo).getByText('Doors opened')).toBeTruthy();
     expect(within(combatTwo).queryByText('Outgoing generation')).toBeNull();
 
     act(() =>
@@ -2464,12 +2505,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    // The edit that orphans the Combat 2 wheel rows removes them; the wheel's configuration stays.
-    await waitFor(() =>
-      expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull(),
-    );
+    // The edit that orphans the Phase 2 wheel rows removes them; the wheel's configuration stays.
+    await waitFor(() => expect(screen.queryByRole('tab', { name: 'Phase 2 Timeline' })).toBeNull());
     expect(screen.queryByRole('tab', { name: 'Inactive Actions' })).toBeNull();
-    expect(screen.queryByText('Choose Combat 2 wheel')).toBeNull();
+    expect(screen.queryByText('Choose Phase 2 wheel')).toBeNull();
     expect(shipWheel2(view.application.store.getState().projectWorkspace.history!.present)).toEqual(
       shipWheel2(project),
     );
@@ -2484,8 +2523,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(screen.queryByRole('tab', { name: 'Inactive Actions' })).toBeNull());
-    openRoomTab('Combat 2 Timeline');
-    expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy();
+    openRoomTab('Phase 2 Timeline');
+    expect(screen.getByLabelText('Phase 2 ship phase')).toBeTruthy();
     expect(screen.queryByLabelText('Ship action repairs')).toBeNull();
     expect(shipWheel2(view.application.store.getState().projectWorkspace.history!.present)).toEqual(
       shipWheel2(project),
@@ -2509,6 +2548,14 @@ describe('OccurrenceEncounterWorkbench', () => {
       encounterKey: 'IcarusCombatO',
     });
     project = authorLegalTraitOffers(project);
+    // The owner meets Icarus in Phase 2 before dropping the phase.
+    project = insertRoomAction(
+      project,
+      oBiome,
+      occurrenceId,
+      reference,
+      occurrenceRoomActionOrder(project, 'Surface', 'O', occurrenceId)?.length ?? 0,
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -2518,7 +2565,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderWorkspace(project, 'Surface', 'O');
     act(() => view.application.store.dispatch(semanticOwnerNavigated(action)));
     const repairs = await screen.findByLabelText('Ship action repairs');
-    expect(screen.queryByLabelText('Combat 2 ship phase')).toBeNull();
+    expect(screen.queryByLabelText('Phase 2 ship phase')).toBeNull();
     const staleNpc = within(repairs).getByText('Resolve Combat2 encounter').closest('li');
     if (staleNpc === null) throw new Error('Dormant Combat2 NPC action is missing');
     expect(screen.getAllByText('Resolve Combat2 encounter')).toHaveLength(1);
@@ -2557,7 +2604,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
@@ -2569,8 +2616,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     const repairs = screen.getByLabelText('Ship action repairs');
     expect(within(repairs).getByText('Clear Ship combat')).toBeTruthy();
     expect(screen.getAllByText('Clear Ship combat')).toHaveLength(1);
-    openRoomTab('Combat 1 Timeline');
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    openRoomTab('Phase 1 Timeline');
+    const combatOne = screen.getByLabelText('Phase 1 ship phase');
     expect(within(combatOne).queryByText('Clear Ship combat')).toBeNull();
   });
 
@@ -2604,18 +2651,18 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => {
       expect(
-        screen.getByRole('option', { name: 'Intro + 2 combats' }).getAttribute('aria-disabled'),
+        screen.getByRole('option', { name: 'Intro + 2 phases' }).getAttribute('aria-disabled'),
       ).not.toBe('true');
       expect(
         screen
-          .getByRole('option', { name: 'Intro + 2 combats' })
+          .getByRole('option', { name: 'Intro + 2 phases' })
           .getAttribute('data-candidate-state'),
       ).toBe('possible');
     });
 
-    await view.user.click(screen.getByRole('option', { name: 'Intro + 2 combats' }));
-    openRoomTab('Combat 2 Timeline');
-    await waitFor(() => expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy());
+    await view.user.click(screen.getByRole('option', { name: 'Intro + 2 phases' }));
+    openRoomTab('Phase 2 Timeline');
+    await waitFor(() => expect(screen.getByLabelText('Phase 2 ship phase')).toBeTruthy());
     expect(
       occurrenceState(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -2634,22 +2681,22 @@ describe('OccurrenceEncounterWorkbench', () => {
       'wheel1',
       'offer2',
     );
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2657,7 +2704,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
     const view = renderOccurrenceWorkbench(
       project,
       'Surface',
@@ -2666,13 +2714,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     openRoomTab('Intro Timeline');
-    let rewardWheel = screen.getByLabelText('Combat 1 reward');
+    openWheelOffers();
+    let rewardWheel = screen.getByLabelText('Phase 1 reward');
     const offerGrid = within(rewardWheel).getByRole('group', { name: 'Wheel offers' });
     const offerRows = () => within(offerGrid).getAllByRole('article');
     expect(offerRows()).toHaveLength(1);
     expect(offerRows()[0]?.getAttribute('data-picked')).toBe('true');
     // A one-offer wheel has nothing to pick.
-    expect(screen.queryByRole('button', { name: 'Combat 1 reward offer' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Phase 1 reward offer' })).toBeNull();
     expect(within(rewardWheel).queryByRole('article', { name: 'R Offer' })).toBeNull();
 
     act(() =>
@@ -2689,7 +2738,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(offerRows()).toHaveLength(2);
     expect(offerRows()[1]?.getAttribute('data-picked')).not.toBe('true');
-    expect(screen.getByRole('group', { name: 'Combat 1 reward offer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Phase 1 reward offer' })).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(
@@ -2700,24 +2749,23 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
-        name: 'R Offer',
-      }),
-    );
+    await pickWheelOffer(view.user, 'R Offer');
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .pickedOfferIndex,
     ).toBe(2);
 
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
+    // The picked offer lies on the ground until it is picked up from the live row.
+    await takeLive(view.user, 'Hermes', 'Pick up');
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
         name: 'Edit Trait · Pick trait',
       }),
     ).toBeTruthy();
     openRoomTab('Intro Timeline');
-    rewardWheel = screen.getByLabelText('Combat 1 reward');
+    openWheelOffers();
+    rewardWheel = screen.getByLabelText('Phase 1 reward');
 
     act(() =>
       view.application.store.dispatch(
@@ -2755,9 +2803,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(screen.queryByRole('combobox', { name: 'Picked offer' })).toBeNull();
     expect(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' }))
-        .getAllByRole('button')
-        .map((chip) => chip.getAttribute('aria-label')),
+      within(await openWheelPicks(view.user))
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('aria-label')),
     ).toEqual(['L Offer', 'R Offer']);
   });
 
@@ -2771,7 +2819,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     openRoomTab('Intro Timeline');
-    const wheel = screen.getByLabelText('Combat 1 reward');
+    openWheelOffers();
+    const wheel = screen.getByLabelText('Phase 1 reward');
     const pool = within(wheel).getByRole('button', { name: /^Reward pool$/i });
     await view.user.click(pool);
     await view.user.click(await screen.findByRole('button', { name: 'Unavailable (1)' }));
@@ -2815,11 +2864,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     await authorOffer('L Offer', 'Big Bones');
     await authorOffer('R Offer', 'Big Ashes');
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
-        name: 'R Offer',
-      }),
-    );
+    await pickWheelOffer(view.user, 'R Offer');
     await waitFor(() =>
       expect(
         shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
@@ -2954,9 +2999,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(line().previousElementSibling?.textContent).toContain('slot 1');
     // The Restock line is a notice under the purchase, which stays an action.
     expect(line().classList).toContain('timeline-row-notice');
-    expect(line().querySelector('.timeline-notice-dot')).not.toBeNull();
+    expect(line().hasAttribute('data-timeline-hook')).toBe(true);
     expect(line().previousElementSibling?.classList).not.toContain('timeline-row-notice');
-    expect(line().previousElementSibling?.querySelector('.timeline-notice-dot')).toBeNull();
     // The line reads Restock beside the Travel Deal icon; its picker shows no label of its own.
     expect(within(line()).getByText('Restock').tagName).toBe('STRONG');
     expect(within(line()).queryByText('Item', { selector: 'label' })).toBeNull();
@@ -2974,7 +3018,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
-    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item');
+    await pickRoomObjectAction(view.user, 'World Shop', /Travel Deal$/);
     const purchase = () => timelineRow('Buy Mystery Boon · Travel Deal Offer');
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');

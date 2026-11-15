@@ -46,25 +46,26 @@ export function roomAnchorObjectHosted(
 }
 
 /**
- * Where a present object stands: its stored anchor (the owner's choice, kept
- * even where it is invalid), the Well's pin, or its stable default.
+ * Where a present object stands: its stored anchor (kept even where it is
+ * invalid), the Well's pin, or, while none is stored, its stable draw, which
+ * settlement stores once the walk reaches the room.
  */
 export interface RoomObjectAnchorPosition {
   readonly anchorId: number;
-  readonly source: 'chosen' | 'pinned' | 'default';
+  readonly source: 'stored' | 'pinned' | 'drawn';
 }
 
 /**
  * Every present object's anchor. Hosted objects without a stored anchor claim
- * in native order, each taking its stable-default best of the anchors no
- * stored anchor, pin or earlier claim holds; an object past the room's anchor
- * count, or left no free anchor, has none.
+ * in native order, each drawing its stable best of the anchors no stored
+ * anchor, pin or earlier claim holds; an object past the room's anchor count,
+ * or left no free anchor, has none.
  */
 export function roomObjectAnchorPositions(
   catalog: Catalog,
   room: RoomAnchorObjectLeaves,
   routeKey: string,
-  /** The occurrence's semantic key, which seeds its defaults. */
+  /** The occurrence's semantic key, which seeds its draws. */
   ownerKey: string,
 ): ReadonlyMap<RoomAnchorObjectKind, RoomObjectAnchorPosition> {
   const declaration = catalog.rooms.byKey[room.gameName];
@@ -76,7 +77,7 @@ export function roomObjectAnchorPositions(
   for (const kind of ROOM_ANCHOR_OBJECT_ORDER) {
     const anchorId = room[kind]?.anchorId;
     if (anchorId === undefined) continue;
-    positions.set(kind, Object.freeze({ anchorId, source: 'chosen' }));
+    positions.set(kind, Object.freeze({ anchorId, source: 'stored' }));
     taken.add(anchorId);
   }
   let held = 0;
@@ -95,7 +96,7 @@ export function roomObjectAnchorPositions(
       anchorIds.filter((id) => !taken.has(id)),
     );
     if (anchorId === undefined) continue;
-    positions.set(kind, Object.freeze({ anchorId, source: 'default' }));
+    positions.set(kind, Object.freeze({ anchorId, source: 'drawn' }));
     taken.add(anchorId);
   }
   return positions;

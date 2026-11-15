@@ -1,11 +1,10 @@
 import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
-import { roomObjectInteractions } from './object-interaction-seams';
+import { lockedDoorFights, roomObjectInteractions } from './object-interaction-seams';
 import { createRoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type SemanticAddress,
 } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
@@ -31,11 +30,11 @@ import { BiomeRewardSimulationContractError } from './biome-contract';
 import { isRoomLifecycleOwner, publishRunStateThroughCoverage } from '../run-state';
 import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { selectedTraitOfferProducts } from './selected-trait-products';
-import { createRerollSurfaceCandidateArtifacts } from './reroll-surfaces';
 import type { ChronologyAccumulation } from './chronology-accumulator';
 import { type ChronologyWalkContext, type ChronologyWalkState } from './chronology-walk';
 import {
   publishBiomeRewardEvaluationAssembly,
+  type OverviewStop,
   type BiomeRewardEvaluationAssembly,
 } from './publication';
 
@@ -121,7 +120,7 @@ export function publishChronology(
   /** The last history sequence the published walk reached; producer acquisitions stop there. */
   reachedThrough = Number.POSITIVE_INFINITY,
   /** The room whose Overview the cut stops: its Timeline is unreached. */
-  overviewStopped?: SemanticAddress,
+  overviewStopped?: OverviewStop,
 ): BiomeRewardEvaluationAssembly {
   const { catalog, snapshot } = context;
   // Object interactions append to a Timeline, so a room stopped at its Overview offers none.
@@ -132,12 +131,23 @@ export function publishChronology(
           ...walk,
           roomActionEnds: new Map(
             [...walk.roomActionEnds].filter(
-              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped),
+              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped.room),
+            ),
+          ),
+          roomActionContacts: new Map(
+            [...walk.roomActionContacts].filter(
+              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped.room),
             ),
           ),
         });
+  // A pickup taken before its room's Timeline converts at the state the walk stopped on,
+  // unless the room's Overview stopped on something its placement does not answer.
+  const placementWalk = overviewStopped?.placement === true ? walk : interactionWalk;
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
+  const takenPeeks = Object.freeze(
+    [...accumulation.forfeitPeeks.values()].filter((peek) => peek.takes),
+  );
   const traitProducts = selectedTraitOfferProducts(
     walk.branch,
     immutableFindingRegions.flatMap((entry) =>
@@ -198,6 +208,7 @@ export function publishChronology(
     targetHistory: accumulation.targetHistory,
     frontier: walk.branch === undefined ? undefined : publicRewardBranch(walk.branch),
     findings: immutableFindings,
+    ...(takenPeeks.length === 0 ? {} : { forfeitPeeks: takenPeeks }),
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     hubDepartures: accumulation.hubDepartures,
@@ -350,7 +361,15 @@ export function publishChronology(
     acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
       catalog,
       accumulation.acquisitionConversionContexts,
-      accumulation.fixedAcquisitionRealizations,
+      {
+        frontier: walk.branch?.state,
+        peeks: accumulation.forfeitPeeks,
+        roomFrontiers: new Map(
+          [...placementWalk.roomActionEnds].map(([roomKey, end]) => [roomKey, end.branch]),
+        ),
+        // One placed before a reached row converts at the state that row meets.
+        roomActionContacts: placementWalk.roomActionContacts,
+      },
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
       accumulation.derivedAcquisitionEntryContexts,
@@ -393,9 +412,6 @@ export function publishChronology(
         ]),
       ),
     ),
-    rerollSurfaceArtifacts: createRerollSurfaceCandidateArtifacts(
-      accumulation.rerollSurfaceCapabilities,
-    ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(
       new Map(
         [...walk.stygianWellAssessments.values()].map(({ origin, entry, actions }) => [
@@ -405,15 +421,19 @@ export function publishChronology(
       ),
       stygianWellInteractions(context, interactionWalk),
     ),
-    objectInteractionArtifacts: createRoomObjectInteractionArtifacts(
-      roomObjectInteractions(
-        context,
-        interactionWalk,
-        accumulation.derivedAcquisitionEntryContexts,
-      ),
-      interactionWalk.challengeSwitchEncounters,
-      interactionWalk.unlockExitEncounters,
-    ),
+    objectInteractionArtifacts: (() => {
+      const doorFights = lockedDoorFights(context, interactionWalk);
+      return createRoomObjectInteractionArtifacts(
+        roomObjectInteractions(
+          context,
+          interactionWalk,
+          accumulation.derivedAcquisitionEntryContexts,
+          doorFights,
+        ),
+        interactionWalk.challengeSwitchEncounters,
+        doorFights,
+      );
+    })(),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,
     through,

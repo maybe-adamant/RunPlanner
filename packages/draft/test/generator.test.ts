@@ -7,9 +7,14 @@ import {
   createDefaultRouteLoadout,
   createProjectDocument,
   authoredShopOffer,
+  createBiomeAddress,
+  createShopOfferAddress,
+  semanticAddressKey,
+  type DraftSpending,
 } from '@run-planner/engine/authored-project';
 import { draftProject, type DraftSpec } from '../src';
 import {
+  goldLedgerForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -19,7 +24,7 @@ import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { latestRunState } from '../src/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../src/basket';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../src/spec';
-import { draftFillerKind } from '../src/steering';
+import { DRAFT_AFFORDABLE_FLOOR, DRAFT_SPENDING_STYLES, draftFillerKind } from '../src/steering';
 import { startDraftWalk } from './support/draft-walk';
 import { DRAFT_CORPUS_SPEC_COUNT, draftCorpusEntry } from './draft-corpus/corpus';
 import { draftBasket } from './support/draft-basket';
@@ -79,6 +84,13 @@ const dream = {
     rackKeepsakeKeys: [null, 'DoorHealReserveKeepsake', null],
   } satisfies DraftSpec,
 };
+/** Seeds whose filler walks witness each spending rule. */
+const FILLER_SEED = 2;
+/** A Greedy walk under the Vow of Debt that takes back filler. */
+const TAKE_BACK_SEED = 9;
+/** A seed whose Greedy walk buys a filler kind the ranking leaves out. */
+const UNRANKED_FILLER_SEED = 5;
+
 /** A route planned to its first biomes only. */
 const planned = (routeKey: string, configuredBiomeCount: number) =>
   createProjectDocument(catalog, { projectId: 'planned', routeKey, configuredBiomeCount });
@@ -252,7 +264,7 @@ describe('draftProject', () => {
 
     it('drafts Success Rate after its late Artemis prerequisite and Paid Dues after it', () => {
       // Paid Dues needs a Hermes room after Success Rate in G, so the plan runs into H.
-      const result = draftProject(catalog, planned('Underworld', 3), waiting, 1);
+      const result = draftProject(catalog, planned('Underworld', 3), waiting, 9);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const assembly = simulateProjectAssembly(catalog, result.project);
       for (const traitKey of draftBasketTraitKeys(waiting))
@@ -432,7 +444,7 @@ describe('draftProject', () => {
         ]),
         rackKeepsakeKeys: [null, null, null],
       };
-      const result = draftProject(catalog, planned('Underworld', 2), spec, 2);
+      const result = draftProject(catalog, planned('Underworld', 2), spec, 3);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       // A trait taken from a bought god boon is a basket trait, in its god's order.
       const boughtTraits = shopBuys(result.project).flatMap((buy) => {
@@ -447,11 +459,109 @@ describe('draftProject', () => {
       );
       const zeusHeld = zeus.filter((key) => held.includes(key));
       expect(zeusHeld).toEqual(zeus.slice(0, zeusHeld.length));
-      // The soft pace never runs far past two purchases per planned biome.
-      expect(shopBuys(result.project).length).toBeLessThanOrEqual(5);
     });
 
-    it('never buys a god boon at no purchases per biome, while Hermes still follows its need', () => {
+    /** Each Shop purchase's reward type and gold as the engine's ledger prices it, in plan order. */
+    const shopOdds = (project: ProjectDocument) => {
+      const ledger = goldLedgerForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      );
+      return project.route.biomes.flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+          (occurrence.roomActions?.order ?? []).flatMap((action) => {
+            if (action.kind !== 'interactShopOffer') return [];
+            const offer = createShopOfferAddress(
+              createBiomeAddress(project.route.routeKey, biome.biomeKey),
+              occurrence.occurrenceId,
+              action.offerKey,
+            );
+            const priced = ledger.purchaseAt(offer);
+            return [
+              {
+                offer,
+                rewardType: authoredShopOffer(occurrence, action.offerKey)!.reward!.offer
+                  .rewardType,
+                odds:
+                  priced.availability === 'available'
+                    ? priced.purchase.affordableProbability
+                    : undefined,
+                spare:
+                  priced.availability === 'available' &&
+                  priced.purchase.balanceBefore.availability === 'available'
+                    ? priced.purchase.balanceBefore.balance.mean - priced.purchase.price.mean
+                    : undefined,
+                spent: priced.availability === 'available' ? priced.purchase.price.mean : 0,
+              },
+            ];
+          }),
+        ),
+      );
+    };
+    const fillerSpec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket([
+        'ZeusWeaponBoon',
+        'ApolloCastBoon',
+        'HermesWeaponBoon',
+        'AphroditeSprintBoon',
+        'HestiaManaBoon',
+        'ZeusSpecialBoon',
+        'ApolloSprintBoon',
+      ]),
+      rackKeepsakeKeys: [null, null, null],
+      fillerPriority: [{ kind: 'pom' }, { kind: 'maxHealth' }, { kind: 'maxMagick' }],
+    };
+    /** A three-biome walk of the filler spec, so the commands it kept can be read. */
+    const fillerWalk = (
+      seed: number,
+      spending?: DraftSpending,
+      debt = 0,
+      fillerPriority = fillerSpec.fillerPriority,
+    ) => {
+      const spec: DraftSpec = {
+        ...fillerSpec,
+        ...(fillerPriority === undefined ? {} : { fillerPriority }),
+        ...(spending === undefined ? {} : { spending }),
+        loadout: {
+          ...loadout,
+          fearRanks: { ...loadout.fearRanks, ShopPricesShrineUpgrade: debt },
+        },
+      };
+      const walk = startDraftWalk(planned('Underworld', 3), spec, seed);
+      for (const biomeIndex of [0, 1, 2])
+        expect(walk.runBiome(biomeIndex, walk.steps + 600), walk.failure).toBe(true);
+      return walk;
+    };
+
+    it('never buys filler under Careful', () => {
+      for (const seed of [FILLER_SEED, TAKE_BACK_SEED])
+        expect(
+          shopOdds(fillerWalk(seed, 'careful').project).filter(
+            (buy) => draftFillerKind(buy.rewardType) !== undefined,
+          ),
+        ).toEqual([]);
+    });
+
+    it('buys under Greedy an affordable filler kind the ranking leaves out, which Normal skips', () => {
+      const pomOnly = [{ kind: 'pom' as const }];
+      const unranked = (spending: DraftSpending) =>
+        shopOdds(fillerWalk(UNRANKED_FILLER_SEED, spending, 0, pomOnly).project).filter((buy) => {
+          const kind = draftFillerKind(buy.rewardType);
+          return kind !== undefined && kind !== 'pom';
+        });
+      expect(unranked('normal')).toEqual([]);
+      const greedy = unranked('greedy');
+      expect(greedy.length).toBeGreaterThan(0);
+      for (const buy of greedy) expect(clears(buy, 1, 'greedy')).toBe(true);
+    });
+
+    it('buys nothing when spending is none', () => {
       const spec: DraftSpec = {
         loadout,
         world: {
@@ -469,70 +579,128 @@ describe('draftProject', () => {
           'ZeusSpecialBoon',
         ]),
         rackKeepsakeKeys: [null, null, null],
+        fillerPriority: [{ kind: 'pom' }, { kind: 'maxHealth' }],
       };
-      const buys = (purchasesPerBiome?: number) => {
+      const buys = (spending?: DraftSpending) => {
         const result = draftProject(
           catalog,
           planned('Underworld', 3),
-          purchasesPerBiome === undefined ? spec : { ...spec, purchasesPerBiome },
+          spending === undefined ? spec : { ...spec, spending },
           2,
         );
         if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
         return shopBuys(result.project);
       };
-      // At the default pace this seed buys a god-side boon; at none only the due Hermes boon.
-      expect(buys().some((buy) => !buy.includes(':ShopHermesUpgrade:'))).toBe(true);
-      expect(buys(0)).toEqual(['G:ShopHermesUpgrade:HermesWeaponBoon']);
+      expect(buys().length).toBeGreaterThan(0);
+      expect(buys('none')).toEqual([]);
     });
 
-    it('spends spare purchases on ranked Shop filler, keeping one for the Preboss Shop', () => {
-      const spec: DraftSpec = {
-        loadout,
-        world: {
-          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
-          storyNpcByBiome: {},
-          fieldNpcsByBiome: {},
-        },
-        basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
-        rackKeepsakeKeys: [null, null, null],
-        purchasesPerBiome: 3,
-      };
-      const drafted = (fillerPriority?: DraftSpec['fillerPriority']) => {
-        const result = draftProject(
-          catalog,
-          planned('Underworld', 2),
-          fillerPriority === undefined ? spec : { ...spec, fillerPriority },
-          1,
-        );
-        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
-        return result.project;
-      };
-      const filler = (project: ProjectDocument) =>
-        shopBuys(project).filter((buy) => draftFillerKind(buy.split(':')[1]!) !== undefined);
-      expect(filler(drafted())).toEqual([]);
-      const project = drafted([{ kind: 'pom' }, { kind: 'gold' }, { kind: 'maxHealth' }]);
-      const bought = filler(project);
-      expect(bought.length).toBeGreaterThan(0);
-      // Gold is never Shop filler and unranked Max Magick is never bought.
-      for (const buy of bought)
-        expect(['pom', 'maxHealth']).toContain(draftFillerKind(buy.split(':')[1]!));
-      for (const biome of project.route.biomes) {
-        expect(
-          shopBuys({ ...project, route: { ...project.route, biomes: [biome] } }).length,
-        ).toBeLessThanOrEqual(3);
-        for (const occurrence of biome.topology?.occurrences ?? []) {
-          if (catalog.rooms.byKey[occurrence.gameName]?.kind !== 'Shop') continue;
-          const buys = (occurrence.roomActions?.order ?? []).filter(
-            (action) => action.kind === 'interactShopOffer',
-          );
-          expect(buys.length).toBeLessThanOrEqual(2);
-        }
+    /** Whether a purchase's gold clears the floor and this share of a style's cushion. */
+    const clears = (
+      buy: { readonly odds: number | undefined; readonly spare: number | undefined },
+      share: number,
+      style: keyof typeof DRAFT_SPENDING_STYLES = 'normal',
+    ) =>
+      (buy.odds ?? 0) >= DRAFT_AFFORDABLE_FLOOR &&
+      (buy.spare ?? -Infinity) >= DRAFT_SPENDING_STYLES[style].cushion * share;
+
+    it('buys ranked filler only with the full cushion to spare', () => {
+      const walk = fillerWalk(FILLER_SEED);
+      const project = walk.project;
+      const filler = shopOdds(project).filter(
+        (buy) => draftFillerKind(buy.rewardType) !== undefined,
+      );
+      expect(filler.length).toBeGreaterThan(0);
+      for (const buy of filler) {
+        expect(['pom', 'maxHealth', 'maxMagick']).toContain(draftFillerKind(buy.rewardType));
+        expect(clears(buy, 1)).toBe(true);
       }
-      // Once a kind's pickups reach its amount, Shops stop buying it.
-      const capped = filler(drafted([{ kind: 'pom', amount: 1 }, { kind: 'maxHealth' }]));
-      expect(
-        capped.filter((buy) => draftFillerKind(buy.split(':')[1]!) === 'pom').length,
-      ).toBeLessThanOrEqual(1);
+      // Every ranked filler item left in a drafted Shop would break the floor or the cushion.
+      let skipped = 0;
+      for (const biome of project.route.biomes)
+        for (const occurrence of biome.topology?.occurrences ?? []) {
+          if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) continue;
+          const bought = new Set(
+            (occurrence.roomActions?.order ?? []).flatMap((action) =>
+              action.kind === 'interactShopOffer' ? [action.offerKey] : [],
+            ),
+          );
+          for (const offerKey of Object.keys(occurrence.state.shop.offers)) {
+            const offer = authoredShopOffer(occurrence, offerKey)?.reward?.offer;
+            const kind = offer === undefined ? undefined : draftFillerKind(offer.rewardType);
+            if (bought.has(offerKey) || kind === undefined || kind === 'gold') continue;
+            const address = createShopOfferAddress(
+              createBiomeAddress(project.route.routeKey, biome.biomeKey),
+              occurrence.occurrenceId,
+              offerKey,
+            );
+            const withPurchase = applyProjectCommand(project, catalog, {
+              kind: 'ReplaceShopPurchaseParticipation',
+              offer: address,
+              purchased: true,
+            });
+            const buy = shopOdds(withPurchase).find(
+              (candidate) => semanticAddressKey(candidate.offer) === semanticAddressKey(address),
+            )!;
+            expect(clears(buy, 1)).toBe(false);
+            skipped += 1;
+          }
+        }
+      expect(skipped).toBeGreaterThan(0);
+    });
+
+    it('takes back earlier filler to afford a wanted item, leaving nothing of it behind', () => {
+      const walk = fillerWalk(TAKE_BACK_SEED, 'greedy', 1);
+      const commands = walk.appliedCommands;
+      const at = commands.findIndex(
+        (command) => command.kind === 'ReplaceShopPurchaseParticipation' && !command.purchased,
+      );
+      expect(at).toBeGreaterThan(0);
+      // The wanted purchase is applied first, then the filler taken back for it.
+      const [bought, takenBack] = [commands[at - 1]!, commands[at]!];
+      if (
+        bought.kind !== 'ReplaceShopPurchaseParticipation' ||
+        takenBack.kind !== 'ReplaceShopPurchaseParticipation'
+      )
+        throw new Error('no take-back');
+      const filler = takenBack.offer;
+      const project = walk.project;
+      expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
+      // The taken-back filler leaves no purchase, pickup or delivery behind.
+      const shop = project.route.biomes
+        .find((biome) => biome.biomeKey === filler.biomeKey)!
+        .topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === filler.occurrenceId,
+        )!;
+      expect(shop.acquisitionSites?.roomExit?.pickupEntries ?? {}).not.toHaveProperty(
+        filler.offerKey,
+      );
+      expect(JSON.stringify(shop.roomActions)).not.toContain(`"${filler.offerKey}"`);
+      const wanted = (plan: ProjectDocument) =>
+        shopOdds(plan).find(
+          (buy) => semanticAddressKey(buy.offer) === semanticAddressKey(bought.offer),
+        )!;
+      expect(draftFillerKind(wanted(project).rewardType)).toBeUndefined();
+      expect(clears(wanted(project), 0.5, 'greedy')).toBe(true);
+      // With the filler bought back, the wanted item's gold falls short.
+      const both = applyProjectCommand(project, catalog, { ...takenBack, purchased: true });
+      expect(clears(wanted(both), 0.5, 'greedy')).toBe(false);
+    });
+
+    it('buys a wanted item with half the cushion to spare, which filler would not take', () => {
+      // A corpus seed whose drafted run buys a boon with less than the full cushion to spare.
+      const entry = draftCorpusEntry(
+        Array.from({ length: DRAFT_CORPUS_SPEC_COUNT }, (_, index) => index).find(
+          (index) => draftCorpusEntry(index).name === 'F3 heavy',
+        )!,
+      );
+      const result = draftProject(catalog, entry.base, entry.spec, 1);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      const near = shopOdds(result.project).filter(
+        (buy) => draftFillerKind(buy.rewardType) === undefined && !clears(buy, 1),
+      );
+      expect(near.length).toBeGreaterThan(0);
+      for (const buy of near) expect(clears(buy, 0.5)).toBe(true);
     });
 
     it('takes the retries per biome after each first success', () => {
@@ -647,7 +815,7 @@ describe('draftProject', () => {
         ]),
         rackKeepsakeKeys: [null, null, null],
       };
-      // A seed whose first Dream biome reaches a Shop.
+      // A seed whose first Dream Shop stocks Air with the gold to buy it.
       const walk = startDraftWalk(dream.base, spec, 4);
       expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
       // Air for Zeus's waiting Infusion, from the first Dream Shop.

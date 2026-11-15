@@ -270,20 +270,22 @@ export interface ExecutionReroll {
 }
 
 /**
- * A room's horizontal flip and entry as derived from the previous room's exit
- * or authored where the game rolls; each is absent while the game decides it.
+ * An entered room's flip and entry; the entry is absent only for a room
+ * without entry points. `derived` names the values the arrival door decides,
+ * which the runtime checks instead of steering.
  */
 export interface ExecutionRoomLayout {
-  readonly flipped?: boolean;
+  readonly flipped: boolean;
   readonly entry?: {
     readonly startPointId: number;
     readonly endPointId: number;
   };
+  readonly derived?: readonly ('flipped' | 'entry')[];
 }
 
 /**
- * Inputs consumed by native Mourning Fields setup: the authored point of each
- * slot that has one; a slot without a point stays native.
+ * Inputs consumed by native Mourning Fields setup: the point of each active
+ * cage and optional reward, and of a planned Nemesis.
  */
 export interface ExecutionFieldsLayout {
   readonly cagePoints: readonly {
@@ -292,7 +294,7 @@ export interface ExecutionFieldsLayout {
   }[];
   readonly optionalRewards: readonly {
     readonly slotKey: string;
-    readonly pointId?: number;
+    readonly pointId: number;
     readonly reward: ExecutionReward;
   }[];
   readonly nemesisPointId?: number;
@@ -861,33 +863,43 @@ export interface ExecutionOverview {
         readonly rushed: boolean;
       };
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on. */
+    readonly anchorId: number;
   };
   readonly stygianWell?: {
-    /** The initial roll's pinned slots; the others stay native. */
+    /** The initial roll's three slots. */
     readonly offers: readonly ExecutionWellOffer[];
     /**
      * Each Well reroll in action order: the k-th native reroll installs the
-     * k-th entry. Only pinned slots are listed; the others stay native, and
-     * slots bought earlier stay blank.
+     * k-th entry. Every restocked slot is listed, and the slots bought before
+     * it, which the game leaves blank, in `boughtSlots`; together they are
+     * the three slots.
      */
     readonly rerolls?: readonly {
       readonly rollKey: string;
       readonly offers: readonly ExecutionWellOffer[];
+      readonly boughtSlots?: readonly ('healing' | 'secondLeft' | 'secondRight')[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on, its room's pin when pinned. */
+    readonly anchorId: number;
   };
   readonly purgingPool?: {
-    /** The initial list's pinned slots; the others stay native. */
+    /** The entry list the room generates on entry, slot by slot. */
     readonly traits: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string;
     }[];
     /**
+     * The list the Pool regenerates when it first opens because the fountain
+     * use changed a listed boon's rarity; absent when the entry list stays.
+     */
+    readonly refreshTraits?: readonly {
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string;
+    }[];
+    /**
      * Each Pool reroll in action order: the k-th native reroll installs the
-     * k-th entry. Only pinned slots are listed; the others stay native.
+     * k-th entry, slot by slot.
      */
     readonly rerolls?: readonly {
       readonly rollKey: string;
@@ -896,8 +908,8 @@ export interface ExecutionOverview {
         readonly traitKey: string;
       }[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on. */
+    readonly anchorId: number;
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   /**
@@ -913,8 +925,8 @@ export interface ExecutionOverview {
       readonly enemy: { readonly choiceKey: string; readonly nativeId: string };
       readonly attributeKeys: readonly string[];
     };
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on. */
+    readonly anchorId: number;
   };
   /**
    * The doors observed locked when the room's doors open, in exit order
@@ -930,24 +942,32 @@ export interface ExecutionOverview {
     };
   }[];
   readonly fountain?: { readonly aromaticPhialTarget?: string };
-  /** The room's fixed or authored flip and entry; absent ones stay native. */
+  /** An entered room's flip and entry, each steered or, where `derived`, checked. */
   readonly layout?: ExecutionRoomLayout;
   /** Authored Fields points; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
-  readonly additional?: readonly {
-    readonly kind: 'chaos' | 'zagreusContract';
-    /** Chaos only; one-based index into numerically sorted native SecretPoint IDs. */
-    readonly spawnPointIndex?: number;
-    readonly owner: string;
-    readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
-    readonly ixionOrigin?: {
-      readonly sourceBiomeKey: string;
-      readonly sourceOccurrenceId: string;
-      readonly generationKey: string;
-    };
-  }[];
+  readonly additional?: readonly ExecutionAdditionalExit[];
 }
+
+interface ExecutionAdditionalExitBase {
+  readonly owner: string;
+  readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+  readonly ixionOrigin?: {
+    readonly sourceBiomeKey: string;
+    readonly sourceOccurrenceId: string;
+    readonly generationKey: string;
+  };
+}
+
+/** A Chaos gate, on its stored SecretPoint, or a Zagreus Contract exit, which has none. */
+export type ExecutionAdditionalExit =
+  | (ExecutionAdditionalExitBase & {
+      readonly kind: 'chaos';
+      /** One-based index into numerically sorted native SecretPoint IDs. */
+      readonly spawnPointIndex: number;
+    })
+  | (ExecutionAdditionalExitBase & { readonly kind: 'zagreusContract' });
 
 export type ExecutionResourcePolicy = ResourceExecutionPolicy;
 export type ExecutionResourcePointDisposition = ResourcePointDisposition;
@@ -1151,11 +1171,10 @@ export type ExecutionRoomGuideDescription =
       readonly twistResultKey?: string;
     }
   | {
-      /** Informational: Shrine purchases have no Timeline transaction. */
-      readonly kind: 'purchaseHermesShrineOffer';
+      /** Informational: Shrine purchases and rushes have no Timeline transaction. */
+      readonly kind: 'purchaseHermesShrineOffer' | 'rushHermesShrineOffer';
       readonly generationKey: ExecutionHermesShrineGenerationKey;
       readonly rewardType: string;
-      readonly rushed: boolean;
     }
   | {
       readonly kind: 'sellPurgingPoolTrait';

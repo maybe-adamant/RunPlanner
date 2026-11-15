@@ -196,6 +196,18 @@ their native consumers:
 | Start effects        | `SkipEncounterStart`, `ForceEncounterStart`, `DelayedStart`, start callback                                                          | `StartEncounter`/`StartEncounterEffects`; `Begin{Arachne,Artemis,Icarus,Heracles,Nemesis,Crawler,PerfectClear}Encounter` call start effects, `BeginAthenaEncounter` only in a single-encounter room, `ShipsEncounterSetup` after wheel selection |
 | Envelope termination | `BlockMultipleEncounters`                                                                                                            | `SetupRoomMultipleEncountersData` stops phase assembly                                                                                                                                                                                           |
 
+A `DelayedStart` encounter does not start combat at `StartEncounter`
+(`RoomLogic.lua:1856-1859`): a gate (the Opening reward pickup through
+`BeginOpeningEncounter`, `RoomLogic.lua:1844`; the Devotion choice,
+`EncounterLogic.lua:1729`; the Ship wheel, `RoomLogic.lua:1442-1446`) or the
+encounter's own intro or `Begin*Encounter` step calls `StartEncounterEffects`
+(`RoomLogic.lua:1795-1846`, `EncounterLogic.lua:1824-1967`). The planner models
+the gates; the delay itself has no simulation effect. The step that starts a
+miniboss's combat after its intro is not traced. `SkipShipsEncounterSetup`
+(the generated O Intro and Heracles's O Intro, `EncounterData_Generated.lua:945`,
+`EncounterData_Heracles.lua:120`) binds only Ship Intro slots, which carry no
+wheel, so the slot's wheel attachment already decides that no wheels open.
+
 Native nil and false are the same policy. Runtime progress is not policy:
 `HandleEncounterPreSpawns` clears `CanEncounterSkip` after a failed roll,
 `SetupRoomMultipleEncountersData` sets later phases' `SkipEncounterStart` and

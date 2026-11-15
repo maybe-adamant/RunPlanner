@@ -146,7 +146,6 @@ function dreamIShopContact(
     occurrence,
     role: 'prebossShop',
     entered: true,
-    lifecycleProfileKey: 'PrebossShopRoom',
     loadout: project.route!.loadout,
   });
   const evaluation = simulateProject(catalog, project);

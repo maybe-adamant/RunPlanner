@@ -1,6 +1,7 @@
 import { ordinaryPositionFor } from '../../../support/route-position';
 import {
   applyProjectCommand,
+  clockworkExitRewards,
   createBiomeAddress,
   createBiomeFieldAddress,
   createExitDecisionAddress,
@@ -31,6 +32,7 @@ import {
   type HistoryStateView,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
@@ -200,7 +202,7 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
     [{ occurrenceId: occurrence('entered-preboss'), gameName: 'I_PreBoss02' }],
     1,
   );
-  return project;
+  return scheduleTestRequiredRoomActions(project, catalog, biome);
 }
 
 function projectWithPickedStory(): ProjectDocument {
@@ -225,11 +227,15 @@ function projectWithPickedStory(): ProjectDocument {
   project = appendBatch(project, combat05, [{ occurrenceId: combat06, gameName: 'I_Combat06' }], 1);
   project = appendBatch(project, combat06, [{ occurrenceId: combat07, gameName: 'I_Combat07' }], 1);
   project = appendBatch(project, combat07, [{ occurrenceId: combat08, gameName: 'I_Combat08' }], 1);
-  return appendBatch(
-    project,
-    combat08,
-    [{ occurrenceId: occurrence('picked-story-preboss'), gameName: 'I_PreBoss02' }],
-    1,
+  return scheduleTestRequiredRoomActions(
+    appendBatch(
+      project,
+      combat08,
+      [{ occurrenceId: occurrence('picked-story-preboss'), gameName: 'I_PreBoss02' }],
+      1,
+    ),
+    catalog,
+    biome,
   );
 }
 
@@ -257,14 +263,18 @@ function projectWithExhaustedLimitDomain(): ProjectDocument {
     selection: createExitSelectionAddress(biome, { kind: 'occurrence', occurrenceId: combat15 }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
-  return appendBatch(
-    project,
-    combat18,
-    [
-      { occurrenceId: occurrence('exhausted-preboss'), gameName: 'I_PreBoss02' },
-      { occurrenceId: occurrence('exhausted-combat21'), gameName: 'I_Combat21' },
-    ],
-    2,
+  return scheduleTestRequiredRoomActions(
+    appendBatch(
+      project,
+      combat18,
+      [
+        { occurrenceId: occurrence('exhausted-preboss'), gameName: 'I_PreBoss02' },
+        { occurrenceId: occurrence('exhausted-combat21'), gameName: 'I_Combat21' },
+      ],
+      2,
+    ),
+    catalog,
+    biome,
   );
 }
 
@@ -439,6 +449,46 @@ describe('canonical I Clockwork materialization and history', () => {
     ]);
   });
 
+  it("answers each exit decision's Clockwork door rewards as its batch materializes them", () => {
+    const project = completeProject();
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
+    const seen = new Set<string | undefined>();
+    for (const batch of batches(snapshot)) {
+      const rewards = clockworkExitRewards(catalog, project, batch.origin);
+      for (const reward of rewards.values()) seen.add(reward);
+      expect(
+        batch.targets.map((target) => rewards.get(target.origin.exitKey)),
+        batch.source.kind === 'occurrence' ? batch.source.occurrenceId : batch.source.decisionKey,
+      ).toEqual(
+        batch.targets.map((target) =>
+          target.room.forcedRewardType === 'ClockworkGoal'
+            ? 'goal'
+            : target.room.countsTowardClockworkGoal === true
+              ? 'counted'
+              : undefined,
+        ),
+      );
+    }
+    expect(seen).toEqual(new Set(['goal', 'counted']));
+    // No Clockwork rewards while the non-goal cap is unauthored.
+    expect(
+      clockworkExitRewards(
+        catalog,
+        createIProject('i-uncapped'),
+        createExitDecisionAddress(biome, {
+          kind: 'occurrence',
+          occurrenceId: occurrence('combat07'),
+        }),
+      ).size,
+    ).toBe(0);
+  });
+
   it('carries H route state and advances Clockwork counters only at picked producer points', () => {
     const completeFixture = completeProject();
     const snapshot = materializeBiome(
@@ -587,10 +637,11 @@ describe('canonical I Clockwork materialization and history', () => {
         incomingReward: { offer: { rewardType: 'Story' } },
       },
     });
-    expect(storyTarget?.room.clockworkReward).toBeUndefined();
+    expect(storyTarget?.room.forcedRewardType).toBeUndefined();
+    expect(storyTarget?.room.countsTowardClockworkGoal).toBeUndefined();
     expect(
       storyTarget?.room.roomLifecycleTimeline.boundaries.map((boundary) => boundary.kind),
-    ).toEqual(['roomEntered', 'cleanup']);
+    ).toEqual(['roomEntered', 'doorsOpened']);
     expect(
       storyTarget?.room.roomLifecycleTimeline.entries.some(
         (entry) => entry.kind === 'action' && entry.action.reference.kind === 'interactEncounter',

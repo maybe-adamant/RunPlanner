@@ -46,6 +46,15 @@ export {
   seaStarDuplicateSourceIsActive,
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
+export { clockworkExitRewards, type ClockworkDoorReward } from './clockwork-doors';
+export {
+  biomePlanContentSource,
+  roomActionContentMatches,
+  roomActionItemContent,
+  roomActionReferenceContent,
+  withRoomActionContent,
+  type RoomActionContentSource,
+} from './room-actions/item-content';
 export { directEncounterDefinitionKeyForSlot } from './room-state/encounter-envelope';
 export {
   resolveEntryDeclaration,
@@ -60,15 +69,22 @@ export {
   authoredAcquisitionSources,
   type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
-export {
-  type RoomLifecycleStructure,
-  type RoomLifecycleStructurePhase,
-} from './room-actions/lifecycle-structure';
+export { roomLifecycleProfileKey, type RoomLifecycleRole } from './room-actions/lifecycle-profile';
+export type {
+  RoomActionBounds,
+  RoomEvent,
+  RoomEventPoint,
+  RoomEventGraph,
+  RoomEventGraphPhase,
+  RoomEventTrigger,
+} from './room-actions/event-graph';
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
   assessRoomActionInsertion,
+  isPlacementBlocker,
   roomActionInsertionRefusal,
   roomActionOrderContext,
+  type RoomActionBoundBlocker,
   type RoomActionInsertionAssessment,
   type RoomActionOrderContext,
   type RoomActionOrderIssue,
@@ -320,10 +336,18 @@ export {
 export { phantomPlaceholderDraw, phantomPlaceholderRewardTypes } from './phantom-exit';
 export {
   biomeRerolledOwners,
+  effectiveRewardAt,
+  hubRerollOwner,
   hubStayRows,
   rerollAppendIndex,
+  rerolledRecordOf,
+  rerolledRewardOf,
+  rerollPressHeld,
+  rerollResult,
   rerollSurfaceKey,
   rerollTargetOwner,
+  resolveRerollTarget,
+  roomRerollOwner,
   sourceRerolledOwners,
   type HubStayRow,
   type HubStayRows,
@@ -344,28 +368,33 @@ export {
 } from './screen-rerolls';
 export {
   INITIAL_ROLL_KEY,
+  PURGING_POOL_REFRESH_ROLL_KEY,
   featureRerolls,
   parseStygianWellGenerationKey,
+  purgingPoolRerollPins,
   purgingPoolRerolls,
   purgingPoolRollTraitKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationSlot,
   stygianWellGenerationKey,
   stygianWellGenerationTwistResultKey,
+  stygianWellPurchasedGenerationKeys,
+  stygianWellRerollPins,
   stygianWellRerolls,
   type FeatureRerollAction,
   type RollFeature,
 } from './feature-rolls';
 export {
   applyProjectCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
   type AcquisitionOutcomeCommand,
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
-export type { PositionedObjectCommand } from './commands/chosen-index';
+export type { PositionedCommand } from './commands/chosen-index';
+export type { DerivedPickupPlacementCommand } from './commands/types';
 export { authoredTraitOfferAt } from './commands/trait-offer';
 export {
   forcedChaosOccurrenceKeys,
@@ -426,6 +455,7 @@ export {
   type AuthoredBiomePlan,
   type AuthoredRoomState,
   type AuthoredRewardState,
+  type RerolledRewardState,
   type AuthoredAnvilResult,
   type AuthoredHexActivation,
   type AuthoredNemesisBetOutcome,
@@ -437,6 +467,7 @@ export {
   type AuthoredRoutePlan,
   type AuthoredDraftSpec,
   type DraftRoomForcing,
+  type DraftSpending,
   type DraftFillerKind,
   type DraftFillerRank,
   type ResourcePlacement,
@@ -463,6 +494,7 @@ export {
   type ProjectDocument,
   type RoomOccurrence,
   type RoomLayout,
+  type RoomActionContent,
   type RoomActionReference,
   type RoomEncounterState,
   type ShopOfferState,
@@ -472,10 +504,12 @@ export {
   type PurgingPoolRerollAction,
   type PurgingPoolSlotKey,
   type RerollTarget,
+  type ResolvedRerollTarget,
   type ShopState,
   hermesShrineInitialSlotKey,
 } from './model';
 export { roomActionKey } from './room-actions/state';
+export { rerollActionKey } from './room-actions/key';
 export { lockableExitKeys } from './locked-exits';
 export {
   createInitialExitDecision,

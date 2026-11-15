@@ -47,7 +47,11 @@ import {
   editTestRoomActionOrder,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  replaceTestPlacedItem,
   settleTestEdit,
+  stockTestProject,
 } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
 import {
@@ -137,7 +141,7 @@ export function loadUnderworldFGProject(): ProjectDocument {
 /** Short F-only witness: Travel Deal refills a consequential forced Postboss Well. */
 export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectDocument {
   let project = createCompleteFGProject();
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 2)),
     value: { rewardType: 'WeaponUpgrade' },
@@ -159,7 +163,7 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
     value: { rewardType: 'HermesUpgrade' },
@@ -284,7 +288,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
       gameName: options.prebossSource,
     });
     if (options.prebossSource === 'G_Combat14') {
-      project = applyProjectCommand(project, catalog, {
+      project = replaceTestPlacedItem(project, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(
           goldenGBiome,
@@ -311,6 +315,12 @@ export function createCompleteFGAnomalyProject(success = true): ProjectDocument 
   project = applyProjectCommand(project, catalog, {
     kind: 'SwitchTargetToAnomaly',
     target: createTargetAddress(goldenGBiome, source, 'exit2'),
+  });
+  // The room after the Anomaly is entered by another door: its stored entry no longer applies.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRoomLayout',
+    occurrence: createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(4, 1)),
+    layout: {},
   });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceAnomalySuccess',
@@ -689,7 +699,7 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
       blessingValues: { damageBonus: 0.2 },
     },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 export interface GContractAvailabilityFixture {
@@ -884,7 +894,7 @@ export function underworldZagreusContractProject(): ProjectDocument {
     pedestal,
     collected: true,
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 /** Complete F/G route with reached Judgment and Crystal Figurine Boss outcomes. */
@@ -1225,7 +1235,7 @@ export function createFConversionFrontierProject(
 ): FConversionFrontierFixture {
   const occurrenceId = goldenFOccurrenceId(1, 1);
   const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
-  let project = applyProjectCommand(createFConversionLoadoutProject(), catalog, {
+  let project = replaceTestPlacedItem(createFConversionLoadoutProject(), {
     kind: 'ReplaceIncomingReward',
     reward,
     value: { rewardType },
@@ -1254,12 +1264,12 @@ export function createFConversionFrontierProject(
 export function createFInvalidLaterConversionProject(): FConversionFrontierFixture {
   const reachedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
   const blockedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
-  let project = applyProjectCommand(createFConversionLoadoutProject(), catalog, {
+  let project = replaceTestPlacedItem(createFConversionLoadoutProject(), {
     kind: 'ReplaceIncomingReward',
     reward: reachedReward,
     value: { rewardType: 'MetaCurrencyDrop' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: blockedReward,
     value: { rewardType: 'MetaCurrencyDrop' },
@@ -1389,17 +1399,21 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     reward: forcedReward,
     value: replacement.offer,
   });
+  project = collectTestRequiredItems(project);
   const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,
     simulateProjectAssembly(catalog, project),
   ).traitOfferStartingOutcome(forcedTrait, replacement.giver.key);
   if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: forcedTrait,
-    value: traitDraft,
-  });
+  // The changed H boons leave its Pool's stored lists stale, as an edit would redraw them.
+  return stockTestProject(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: forcedTrait,
+      value: traitDraft,
+    }),
+  );
 }
 
 /** Golden H whose Echo copies a last Talent Drop; the copy's Path screen is unauthored. */
@@ -1444,7 +1458,7 @@ export function createEchoTalentDropReplayProject(): ProjectDocument {
     ['golden-h-combat02', 'cage1', 'SpellDrop'],
     ['golden-h-combat03', 'cage2', 'RoomMoneyDrop'],
   ] as const)
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage(createOccurrenceId(occurrenceId), slotKey),
       value: { rewardType },
@@ -1452,7 +1466,7 @@ export function createEchoTalentDropReplayProject(): ProjectDocument {
   project = authorLegalTraitOffers(project);
   const talent = cage(combat09, 'cage2');
   project = editTestRoomActionOrder(
-    applyProjectCommand(project, catalog, {
+    replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: talent,
       value: { rewardType: 'TalentDrop' },
@@ -1525,8 +1539,7 @@ export function createEchoGoldIAnvilDuplicateProject(
   const site = createAcquisitionSiteAddress(shop, 'roomExit');
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'PremiumProgress',
   });
   return duplicateResult === undefined

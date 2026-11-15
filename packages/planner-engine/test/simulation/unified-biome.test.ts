@@ -28,7 +28,12 @@ import {
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import {
@@ -60,12 +65,12 @@ function traitContext(project: ReturnType<typeof createProjectDocument>, routeKe
 function legalHFieldsProject() {
   const biome = createBiomeAddress('Underworld', 'H');
   let project = createGoldenFGHProject();
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, createOccurrenceId('golden-h-miniboss01')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function legalOProject() {
@@ -93,12 +98,12 @@ function legalOProject() {
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceRewardWheelOffer',
     offer: createRewardWheelOfferAddress(biome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
     value: { rewardType: 'HermesUpgrade' },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function legalIProject() {
@@ -221,7 +226,12 @@ function legalIProject() {
       selectedOptionKey: 'option1',
     },
   });
-  return authorLegalTraitOffers(project);
+  // I is evaluated on its own, below the route walk.
+  return scheduleTestRequiredRoomActions(
+    authorTestTraitsAndRequiredItems(project),
+    catalog,
+    createBiomeAddress('Underworld', 'I'),
+  );
 }
 
 function incompleteFPrefixProject() {
@@ -275,14 +285,16 @@ function incompleteFPrefixProject() {
     reward: createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
     value: { rewardType: 'GiftDrop' },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLevelResolution',
-    levelResolution: createLevelResolutionAddress(
-      createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
-      'self',
-    ),
-    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(
+        createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
+        'self',
+      ),
+      value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+    }),
+  );
 }
 
 function createBatchTargets(
@@ -476,11 +488,10 @@ describe('unified biome simulation', () => {
     ]);
     for (const target of takeover.targets) {
       expect(
-        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).not.toContain('outgoingGeneration');
-      expect(
-        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).toContain('exitUsable');
+        target.room.roomActionRoster.eventGraph.events.some(
+          (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+        ),
+      ).toBe(false);
     }
     const selectedPreboss = takeover.targets.find((target) => target.room.entered)?.room;
     expect(
@@ -720,7 +731,7 @@ describe('unified biome simulation', () => {
   ] as const)(
     'gives %s takeover batches their declaration-owned shop and free-reward roles',
     (biomeKey, project) => {
-      const legalProject = authorLegalTraitOffers(project);
+      const legalProject = authorTestTraitsAndRequiredItems(project);
       const biome = simulateProject(catalog, legalProject).route?.biomes.find(
         (candidate) => candidate.biomeKey === biomeKey,
       );
@@ -778,11 +789,10 @@ describe('unified biome simulation', () => {
     expect(enteredSideRooms.length).toBeGreaterThan(0);
     for (const sideRoom of enteredSideRooms) {
       expect(
-        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).not.toContain('outgoingGeneration');
-      expect(
-        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).toContain('exitUsable');
+        sideRoom.roomActionRoster.eventGraph.events.some(
+          (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+        ),
+      ).toBe(false);
       expect(
         biome.history.events.some(
           (event) =>

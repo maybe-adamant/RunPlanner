@@ -17,9 +17,10 @@ scratch serialization output.
   handoff. This is part of generation, not a later cleanup pass.
   `npm run format:check` enforces the same format. Do not manually wrap lines
   or reformat unrelated fixtures during semantic changes.
-- Regenerate only fixtures whose semantic product changed. For a protocol-wide
-  scalar such as the version number, use a bounded mechanical edit rather than
-  rebuilding otherwise unchanged products.
+- Regeneration (`npm run fixtures:execution`) writes only fixtures whose
+  content changed; the schema pair and fingerprint lines are ignored, so a
+  fixture keeps the stamp it was generated under. A schema revision bump with
+  no content change touches no fixture. Do not hand-edit the stamp.
 - This corpus is the only copy. The game module's Lua tests read it in place;
   run `npm run test:game-module` after changing a fixture.
 - Before handoff, inspect fixture `git diff --numstat` and a representative

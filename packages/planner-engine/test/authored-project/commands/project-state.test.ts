@@ -1,7 +1,4 @@
-import {
-  purchaseTestHermesShrineOffer,
-  testHermesShrinePurchaseAction,
-} from '@run-planner/test-fixtures/shared';
+import { purchaseTestHermesShrineOffer, withItemContent } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -17,6 +14,7 @@ import {
   createBiomeAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createRouteAddress,
   decodeProjectDocument,
   deriveRouteLoadout,
@@ -27,12 +25,49 @@ import {
   ProjectCommandContractError,
   ProjectDocumentContractError,
   redoProjectHistory,
+  roomActionKey,
   undoProjectHistory,
   type AuthoredTraitOfferTraits,
+  type HermesShrineGenerationKey,
+  type OccurrenceAddress,
+  type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+
+/** Buys a Shrine item rushed and picks up its same-room pickup at the end of the room. */
+function purchaseRushedAndPickUp(
+  project: ProjectDocument,
+  occurrence: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+): ProjectDocument {
+  const purchased = purchaseTestHermesShrineOffer(project, catalog, occurrence, generationKey, {
+    delay: 2,
+    rushed: true,
+  });
+  const pickup: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey: hermesShrineDeliveryEntryKey(occurrence, generationKey),
+  };
+  const order =
+    purchased.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? [];
+  return applyProjectCommand(purchased, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+      occurrence.occurrenceId,
+      roomActionKey(pickup),
+    ),
+    reference: pickup,
+    index: order.length,
+  });
+}
 
 describe('authored-project project-state commands', () => {
   it('adds and removes an ordinary Shrine shell atomically without admitting forced hosts', () => {
@@ -185,11 +220,15 @@ describe('authored-project project-state commands', () => {
       rewardType: 'HealBigDrop',
       delay: 2,
     });
-    expect(postboss?.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-      rushed: false,
-    });
+    expect(postboss?.roomActions.order).toContainEqual(
+      withItemContent(purchased, occurrence, {
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: 'initial:first',
+      }),
+    );
+    expect(postboss?.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'rushHermesShrineOffer' }),
+    );
     expect(postboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
     );
@@ -212,8 +251,9 @@ describe('authored-project project-state commands', () => {
 
     expect(() =>
       applyProjectCommand(purchased, catalog, {
-        kind: 'SetHermesShrinePurchaseRush',
-        action: testHermesShrinePurchaseAction(occurrence, 'initial:first'),
+        kind: 'SetHermesShrineRush',
+        occurrence,
+        generationKey: 'initial:first',
         rushed: 'no' as never,
       }),
     ).toThrow(ProjectCommandContractError);
@@ -246,11 +286,13 @@ describe('authored-project project-state commands', () => {
     expect(clearedPostboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );
-    expect(clearedPostboss?.roomActions.order).not.toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
-    });
+    expect((clearedPostboss?.roomActions.order ?? []).map(roomActionKey)).not.toContain(
+      roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
+      }),
+    );
     const refillRushed = purchaseTestHermesShrineOffer(
       refilled,
       catalog,
@@ -261,11 +303,12 @@ describe('authored-project project-state commands', () => {
     const rushedPostboss = refillRushed.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
-    expect(rushedPostboss?.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'travelDealRefill',
-      rushed: true,
-    });
+    expect(rushedPostboss?.roomActions.order).toContainEqual(
+      withItemContent(refillRushed, occurrence, {
+        kind: 'rushHermesShrineOffer',
+        generationKey: 'travelDealRefill',
+      }),
+    );
     expect(rushedPostboss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries).toHaveProperty(
       hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
     );
@@ -291,20 +334,18 @@ describe('authored-project project-state commands', () => {
       completionBiome,
       createOccurrenceId('surface-n-preboss:postboss'),
     );
-    const completion = purchaseTestHermesShrineOffer(
+    const completion = purchaseRushedAndPickUp(
       applyProjectCommand(loadSurfaceNOProject(), catalog, {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: completionOccurrence,
         slotKey: 'first',
         value: { rewardType: 'HealBigDrop' },
       }),
-      catalog,
       completionOccurrence,
       'initial:first',
-      { delay: 2, rushed: true },
     );
     const ordinaryOccurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const ordinary = purchaseTestHermesShrineOffer(
+    const ordinary = purchaseRushedAndPickUp(
       applyProjectCommand(
         applyProjectCommand(loadSurfaceNOProject(), catalog, {
           kind: 'SetHermesShrinePresence',
@@ -319,10 +360,8 @@ describe('authored-project project-state commands', () => {
           value: { rewardType: 'HealBigDrop' },
         },
       ),
-      catalog,
       ordinaryOccurrence,
       'initial:first',
-      { delay: 2, rushed: true },
     );
     const mutate = (
       document: Record<string, unknown>,
@@ -382,14 +421,39 @@ describe('authored-project project-state commands', () => {
         'must be 2 through 8',
       );
 
+      const isRush = (reference: Record<string, unknown>) =>
+        reference.kind === 'rushHermesShrineOffer';
       const unrushedPickup = encoded();
-      editOrder(unrushedPickup, (order) =>
-        order.map((reference) =>
-          isPurchase(reference) ? { ...reference, rushed: false } : reference,
+      editOrder(unrushedPickup, (order) => order.filter((reference) => !isRush(reference)));
+      expect(() => decodeProjectDocument(unrushedPickup, catalog), name).toThrow(
+        'same-room Shrine delivery actions require their rush',
+      );
+
+      // A rush belongs to a bought item; one ordered before it keeps its finding.
+      const unboughtRush = encoded();
+      editOrder(unboughtRush, (order) =>
+        order.filter(
+          (reference) => !isPurchase(reference) || reference.generationKey !== 'initial:first',
         ),
       );
-      expect(() => decodeProjectDocument(unrushedPickup, catalog), name).toThrow(
-        'same-room Shrine delivery actions require their rushed purchase',
+      expect(() => decodeProjectDocument(unboughtRush, catalog), name).toThrow(
+        'Shrine rush actions require their purchase',
+      );
+      const earlyRush = encoded();
+      editOrder(earlyRush, (order) => [
+        ...order.filter(isRush),
+        ...order.filter((reference) => !isRush(reference)),
+      ]);
+      expect(() => decodeProjectDocument(earlyRush, catalog), name).not.toThrow();
+
+      const legacyRushed = encoded();
+      editOrder(legacyRushed, (order) =>
+        order.map((reference) =>
+          isPurchase(reference) ? { ...reference, rushed: true } : reference,
+        ),
+      );
+      expect(() => decodeProjectDocument(legacyRushed, catalog), name).toThrow(
+        'is not a project document field',
       );
 
       const phasedPurchase = encoded();
@@ -426,7 +490,6 @@ describe('authored-project project-state commands', () => {
         (occurrence.roomActions as { order: unknown[] }).order.push({
           kind: 'purchaseHermesShrineOffer',
           generationKey: 'travelDealRefill',
-          rushed: false,
         });
       });
       expect(() => decodeProjectDocument(nullRefillPurchase, catalog), name).toThrow(
@@ -447,13 +510,7 @@ describe('authored-project project-state commands', () => {
       slotKey: 'first',
       value: { rewardType: 'GiftDrop' },
     });
-    const authored = purchaseTestHermesShrineOffer(
-      inventoryAuthored,
-      catalog,
-      occurrence,
-      'initial:first',
-      { delay: 2, rushed: true },
-    );
+    const authored = purchaseRushedAndPickUp(inventoryAuthored, occurrence, 'initial:first');
     const occurrenceState = authored.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
@@ -462,11 +519,13 @@ describe('authored-project project-state commands', () => {
       delay: 2,
     });
     const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:first');
-    expect(occurrenceState?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-    });
+    expect(occurrenceState?.roomActions.order).toContainEqual(
+      withItemContent(authored, occurrence, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
+    );
     expect(
       occurrenceState?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.levelResolutionsByAcquisitionRole?.self,

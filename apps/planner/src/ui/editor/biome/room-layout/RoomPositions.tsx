@@ -27,11 +27,11 @@ import {
 } from '../room-map/roomMapHighlight';
 import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 
-/** An unset position: it stands on the engine's default. */
-const unset = '?';
+/** No position known yet. */
+const unknown = '—';
 
 /** Marks an entry whose pair mirrors the room. */
-const mirrored = '⇋';
+const mirrored = '↔';
 
 interface PositionChoice<T> {
   readonly key: string;
@@ -215,13 +215,13 @@ function entryNumber(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair):
   return number === undefined ? 'Entry' : `E${number}`;
 }
 
-/** The compact entry the closed control shows: `E1 ⇋`. */
+/** The compact entry the closed control shows: `E1 ↔`. */
 function entryName(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
   const name = entryNumber(layout, pair);
   return pair.flipped ? `${name} ${mirrored}` : name;
 }
 
-/** The entry as the open list spells it: `E1 · Flipped (⇋)`. */
+/** The entry as the open list spells it: `E1 · Flipped (↔)`. */
 function entryOption(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
   const name = entryNumber(layout, pair);
   return pair.flipped ? `${name} · Flipped (${mirrored})` : name;
@@ -258,19 +258,19 @@ function EntryRow({
           ...(layout.flipped === undefined ? {} : { flipped: layout.flipped }),
         };
   const row = (content: ReactNode) => (
-    <OverviewRow label="Entry" preview={rowPreview}>
-      {content}
+    <OverviewRow label="Entry">
+      <LayoutChip preview={rowPreview}>{content}</LayoutChip>
     </OverviewRow>
   );
   switch (state.kind) {
     case 'unknown':
-      return row(<span className="room-layout-value">{unset}</span>);
+      return row(<span className="room-layout-value">{unknown}</span>);
     case 'unreached':
       return row(
         <PositionPicker<string>
           ariaLabel="Entry"
           choices={[]}
-          current={unset}
+          current={unknown}
           disabledHint={candidateWaitingHint}
           id={id}
           onSelect={() => undefined}
@@ -328,12 +328,12 @@ function EntryRow({
           ariaLabel="Entry"
           choices={state.choices.map((choice) => ({
             key: choice.key,
-            label: choice.pair === null ? unset : entryOption(layout, choice.pair),
+            label: entryOption(layout, choice.pair),
             value: choice.key,
-            preview: choice.pair === null ? picking : pairPreview(choice.pair),
+            preview: pairPreview(choice.pair),
           }))}
-          current={shown === undefined ? unset : entryName(layout, shown)}
-          currentOption={shown === undefined ? unset : entryOption(layout, shown)}
+          current={shown === undefined ? unknown : entryName(layout, shown)}
+          currentOption={shown === undefined ? unknown : entryOption(layout, shown)}
           findingTarget={target}
           id={id}
           invalid={stale !== undefined}
@@ -362,9 +362,8 @@ function LayoutChip({
 }
 
 /**
- * A present object's anchor chip: its authored or default anchor, picked
- * among the free anchors, `?` returning it to its default. The Well's pin is
- * shown, not picked.
+ * A present object's anchor chip: its stored anchor, picked among the free
+ * anchors. The Well's pin is shown, not picked.
  */
 function ObjectAnchorChip({
   interactions,
@@ -383,12 +382,12 @@ function ObjectAnchorChip({
   );
   const anchor = object.anchor;
   if (anchor === undefined) return null;
-  const nameOf = (anchorId: number | null | undefined): string => {
-    if (anchorId === null || anchorId === undefined) return unset;
+  const nameOf = (anchorId: number | undefined): string => {
+    if (anchorId === undefined) return unknown;
     const number = objectSlots.anchors.find((candidate) => candidate.anchorId === anchorId)?.number;
-    return number === undefined ? unset : `A${number}`;
+    return number === undefined ? unknown : `A${number}`;
   };
-  const at = anchor.pinned ?? anchor.anchorId ?? anchor.defaultAnchorId;
+  const at = anchor.pinned ?? anchor.anchorId;
   const label = heldObjectShortName(object.object);
   const id = semanticOwnerControlElementId(object.anchorAddress);
   const target = findingTarget(object.anchorAddress, id);
@@ -406,9 +405,7 @@ function ObjectAnchorChip({
                 key: choice.key,
                 label: nameOf(choice.anchorId),
                 value: choice.key,
-                ...(choice.anchorId === null
-                  ? {}
-                  : { preview: { kind: 'anchor' as const, anchorId: choice.anchorId } }),
+                preview: { kind: 'anchor' as const, anchorId: choice.anchorId },
               }))
         }
         current={nameOf(at)}
@@ -425,9 +422,9 @@ function ObjectAnchorChip({
 
 /**
  * A Fields slot's point chip: its reward's icon wearing the slot's number,
- * then its point, picked among the points the engine leaves it, `?` leaving
- * it to the game. A point a sibling holds is not offered. While the chip is
- * hovered or its list is open, the map numbers the free points of its family.
+ * then its stored point, picked among the points the engine leaves it. A point
+ * a sibling holds is not offered. While the chip is hovered or its list is
+ * open, the map numbers the free points of its family.
  */
 function FieldsSlotChip({
   control,
@@ -447,8 +444,9 @@ function FieldsSlotChip({
   const candidates = useWorkspaceInteraction(interaction);
   const assessed = candidates.result;
   const id = semanticOwnerControlElementId(control.address);
-  const nameOf = (pointId: number | null): string =>
-    interaction.choices.find((choice) => choice.value === pointId)?.label ?? unset;
+  const nameOf = (pointId: number | undefined): string =>
+    interaction.choices.find((choice) => choice.value === pointId)?.label ?? unknown;
+  const at = control.pointId ?? undefined;
   // Points the slot's siblings stand on; the map shows their occupants instead.
   const held = new Set(
     fields.spatial.flatMap((sibling) =>
@@ -458,16 +456,15 @@ function FieldsSlotChip({
     ),
   );
   const choices = interaction.choices.flatMap((choice) => {
-    if (choice.value === interaction.selected) return [];
+    // The point it stands on is not offered.
+    if (choice.value === interaction.selected || choice.value === at) return [];
     const option = assessed?.find((candidate) => candidate.value === choice.value);
     const result =
       option?.evaluation.kind === 'fieldsSpatialPoint' ? option.evaluation.result : undefined;
     // A point a sibling holds stays off the list, before assessment too, as on the map; one the
     // slot cannot take is listed, disabled.
     if (
-      result === undefined
-        ? choice.value !== null && held.has(choice.value)
-        : result.assignable && !result.selectedPossible
+      result === undefined ? held.has(choice.value) : result.assignable && !result.selectedPossible
     )
       return [];
     return [
@@ -482,7 +479,7 @@ function FieldsSlotChip({
     ];
   });
   const marks: readonly RoomMapPointMark[] = choices.flatMap((choice) =>
-    choice.value === null || held.has(choice.value)
+    held.has(choice.value)
       ? []
       : [
           {
@@ -497,12 +494,12 @@ function FieldsSlotChip({
     ...(pointId === null ? {} : { pointId }),
     marks,
   });
-  const point = nameOf(control.pointId);
+  const point = nameOf(at);
   const icon = fieldsSlotIcon(fields, control.target);
   const badge = fieldsSlotBadge(fields, control.target);
   return (
-    <LayoutChip preview={preview(control.pointId)}>
-      <PositionPicker<number | null>
+    <LayoutChip preview={preview(at ?? null)}>
+      <PositionPicker<number>
         ariaLabel={`${control.label}, point ${point}`}
         choiceLabel={`${control.label} point`}
         choices={choices.map((choice) => ({ ...choice, preview: preview(choice.value) }))}
@@ -513,7 +510,7 @@ function FieldsSlotChip({
         id={id}
         onOpen={() => candidates.activate()}
         onSelect={(pointId) => executeIntent(interaction.intentFor(pointId))}
-        openPreview={preview(control.pointId)}
+        openPreview={preview(at ?? null)}
         triggerBadge={icon === undefined ? undefined : badge}
         triggerIcon={icon}
       />

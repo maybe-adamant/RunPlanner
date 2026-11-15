@@ -3,14 +3,14 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type AcquisitionSiteAddress,
+  type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type { AuthoredRewardState } from '../../../authored-project/model';
+import type { AuthoredRewardState, RoomActionReference } from '../../../authored-project/model';
 import { shopOfferGeneration, type ShopOfferGeneration } from '../../../authored-project/shop';
 import type { AcquisitionEntrySourceFamily } from '../../../authored-project/acquisition/entry-source-family';
 import type { Catalog } from '../../../catalog-schema';
 import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
 import type { FindingEvidence } from '../../model';
-import type { HistoryFindingChronology } from '../../finding-regions';
 import type { RewardBranchState } from '../branch-primitives';
 import {
   assessArtificerConversion,
@@ -18,13 +18,29 @@ import {
   assessTimePieceConversion,
 } from './conversions';
 import type { AcquisitionSource } from './source';
-import type { DerivedAcquisitionEntryFrontier, FixedAcquisitionRealization } from './contracts';
+import type { DerivedAcquisitionEntryFrontier } from './contracts';
+import type { SimulationState } from '../../state/model';
+import { forfeitedPickupOf } from '../../state/pending-resource-pickups';
+import {
+  forfeitRealization,
+  forfeitWouldTake,
+  type ForfeitPeek,
+} from '../biome/offer-lifecycle/spawned-trait-offers';
 import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
 import {
   createHexActivationCandidateCapability,
   type HexActivationCandidateCapability,
   type HexActivationContext,
 } from '../../hex-activation';
+
+/** The row that places a delivery or clocked drop. */
+export function timedPickupReference(entry: AcquisitionEntryAddress): RoomActionReference {
+  return Object.freeze({
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: entry.site.pointKey,
+    entryKey: entry.entryKey,
+  });
+}
 
 export interface DerivedAcquisitionEntryCandidateCapability {
   readonly kind: DerivedAcquisitionEntryFrontier['kind'];
@@ -34,6 +50,16 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
+  /**
+   * A due delivery's or clocked drop's phase on the Timeline: its due spawn's,
+   * or the next wheel phase when that wheel's choice waits on it.
+   */
+  readonly phaseKey?: string;
+  /** Where a due delivery or clocked drop meets its room, and how the editor names it. */
+  readonly contact?: import('../../room-actions').RoomActionContact;
+  readonly label?: import('../../room-actions').RoomActionRowLabel;
+  /** The row that places a due delivery or clocked drop, which a placed row matches. */
+  readonly reference?: RoomActionReference;
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
@@ -94,6 +120,18 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.encounterPhaseKey === undefined
       ? {}
       : { encounterPhaseKey: first.encounterPhaseKey }),
+    ...(first.dueContact === undefined
+      ? {}
+      : {
+          ...(first.dueContact.phaseKey === undefined
+            ? {}
+            : { phaseKey: first.dueContact.phaseKey }),
+          contact: first.dueContact.contact,
+          label: first.dueContact.label,
+        }),
+    ...(first.kind === 'hermesShrineDelivery' || first.kind === 'clockedTraitPickup'
+      ? { reference: timedPickupReference(first.address) }
+      : {}),
     ...(first.participation === undefined ? {} : { participation: first.participation }),
     ...(first.retainedSourceMismatch === undefined
       ? {}
@@ -148,23 +186,43 @@ export interface AcquisitionConversionCandidateCapability {
   readonly anvil?: AnvilCandidateCapability;
   readonly hexActivation?: HexActivationCandidateCapability;
 }
+/** What a loose pickup's source is, read from the room that spawned it. */
+export interface UnsettledPickupSource {
+  readonly offer: import('../../../reward-kernel').ResolvedRewardOffer;
+  readonly producerLifecycleKey: string;
+  readonly instanceProvenance: 'free' | 'paid';
+  readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
+}
+
+/** The conversions a role not yet taken could make where its row would be placed. */
+export type PlacementConversionCapability = Required<
+  Pick<
+    AcquisitionConversionCandidateCapability,
+    'timePieceAssessment' | 'artificerAssessment' | 'seaStarAssessment'
+  >
+>;
+
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
     address: AcquisitionRoleAddress,
   ) => AcquisitionConversionCandidateCapability | undefined;
+  /**
+   * For a role whose pickup the walk spawned and did not take: the same
+   * conversion questions its contact would ask where its row would be
+   * placed, at the state the reached row `before` meets, or, without one,
+   * where the room's reached actions end and its row would append. Undefined
+   * once the role settled, or where that point was not reached.
+   */
+  readonly atPlacement: (
+    room: SemanticAddress,
+    address: AcquisitionRoleAddress,
+    source: UnsettledPickupSource,
+    before?: string,
+  ) => PlacementConversionCapability | undefined;
   readonly atReplacement: (address: AcquisitionEntryAddress) =>
     | {
         readonly address: AcquisitionRoleAddress;
         readonly capability: AcquisitionConversionCandidateCapability;
-      }
-    | undefined;
-  /** History position of the contact that produced this role's capability. */
-  readonly positionAt: (address: AcquisitionRoleAddress) => HistoryFindingChronology | undefined;
-  /** A Forfeit realization fixed ahead of this role's pickup contact, with its position. */
-  readonly fixedAt: (address: AcquisitionRoleAddress) =>
-    | {
-        readonly capability: AcquisitionConversionCandidateCapability;
-        readonly position: HistoryFindingChronology;
       }
     | undefined;
 }
@@ -188,22 +246,45 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly hexActivationContext?: HexActivationContext;
     }
   >,
-  fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
+  spawned: {
+    /** The reached state the walk published, holding each uncollected spawned object. */
+    readonly frontier: SimulationState | undefined;
+    readonly peeks: ReadonlyMap<string, ForfeitPeek>;
+    /** The state where each entered room's reached actions end, by room. */
+    readonly roomFrontiers?: ReadonlyMap<string, RewardBranchState>;
+    /** The state each reached row of an entered room meets before it settles, by room and row. */
+    readonly roomActionContacts?: ReadonlyMap<string, ReadonlyMap<string, RewardBranchState>>;
+  } = { frontier: undefined, peeks: new Map() },
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
-  const privateFixedRealizations = new Map(fixedRealizations);
-  // A forfeit fixed before the pickup contact realizes the role without any
-  // settlement-time conversion assessment.
-  const fixedCapability = (
-    fixed: FixedAcquisitionRealization,
-  ): AcquisitionConversionCandidateCapability =>
-    Object.freeze({ realizedAcquisition: fixed.realizedAcquisition });
+  const roomFrontiers = new Map(spawned.roomFrontiers ?? []);
+  const roomActionContacts = new Map(spawned.roomActionContacts ?? []);
+  const privatePeeks = new Map(spawned.peeks);
+  // Before its pickup, a role reads what Forfeit made of its spawned object
+  // or, while it has not spawned, the game's Onion preview of it.
+  const forfeited = (address: AcquisitionRoleAddress): ConcreteAcquisitionEvent | undefined => {
+    const frontier = spawned.frontier;
+    if (frontier === undefined) return undefined;
+    const recorded = forfeitedPickupOf(frontier, address.owner, address.acquisitionRole);
+    if (recorded !== undefined) return recorded;
+    const peek = privatePeeks.get(semanticAddressKey(address.owner));
+    if (peek?.takes !== true) return undefined;
+    const binding = catalog.rewards.producerLifecycles.byKey[
+      peek.producerLifecycleKey
+    ]?.rewardTypes.byKey[peek.offer.rewardType]?.acquisitionLifecycle.find(
+      (candidate) => candidate.role === address.acquisitionRole,
+    );
+    return binding === undefined ||
+      !forfeitWouldTake(catalog, frontier, peek, Number.MAX_SAFE_INTEGER)
+      ? undefined
+      : forfeitRealization(catalog, peek.offer, binding, 'RoomRewardConsolationPrize');
+  };
   const at = (address: AcquisitionRoleAddress) => {
     const key = semanticAddressKey(address);
     const entry = privateContexts.get(key);
     if (entry === undefined) {
-      const fixed = privateFixedRealizations.get(key);
-      return fixed === undefined ? undefined : fixedCapability(fixed);
+      const realizedAcquisition = forfeited(address);
+      return realizedAcquisition === undefined ? undefined : Object.freeze({ realizedAcquisition });
     }
     const anvil = createAnvilCandidateCapability(catalog, entry);
     const hexActivation =
@@ -255,8 +336,59 @@ export function createAcquisitionConversionCandidateArtifacts(
       ...(hexActivation === undefined ? {} : { hexActivation }),
     });
   };
+  const atPlacement = (
+    room: SemanticAddress,
+    address: AcquisitionRoleAddress,
+    pickup: UnsettledPickupSource,
+    before?: string,
+  ): PlacementConversionCapability | undefined => {
+    if (privateContexts.has(semanticAddressKey(address))) return undefined;
+    const roomKey = semanticAddressKey(room);
+    const branch =
+      before === undefined
+        ? roomFrontiers.get(roomKey)
+        : roomActionContacts.get(roomKey)?.get(before);
+    const binding = catalog.rewards.producerLifecycles.byKey[
+      pickup.producerLifecycleKey
+    ]?.rewardTypes.byKey[pickup.offer.rewardType]?.acquisitionLifecycle.find(
+      (candidate) => candidate.role === address.acquisitionRole,
+    );
+    if (branch === undefined || binding === undefined) return undefined;
+    const source: AcquisitionSource = Object.freeze({
+      origin: address.owner,
+      offer: pickup.offer,
+      producerLifecycleKey: pickup.producerLifecycleKey,
+      instanceProvenance: pickup.instanceProvenance,
+      // Eligibility only; it publishes no replacement screen.
+      presentsMaterializedScreen: false,
+      ...(pickup.dispositionByAcquisitionRole === undefined
+        ? {}
+        : { dispositionByAcquisitionRole: pickup.dispositionByAcquisitionRole }),
+    });
+    const role = {
+      role: address.acquisitionRole,
+      lifecyclePoint: binding.lifecyclePoint,
+      ...(binding.blocksArtificerConversion === true
+        ? { blocksArtificerConversion: true as const }
+        : {}),
+    };
+    const realized = forfeited(address);
+    return Object.freeze({
+      timePieceAssessment: assessTimePieceConversion(
+        catalog,
+        branch,
+        source,
+        role.role,
+        role.lifecyclePoint,
+        realized,
+      ),
+      artificerAssessment: assessArtificerConversion(catalog, branch, source, role),
+      seaStarAssessment: assessSeaStarDuplication(catalog, branch, source, role, realized),
+    });
+  };
   return Object.freeze({
     at,
+    atPlacement,
     atReplacement: (replacement: AcquisitionEntryAddress) => {
       const replacementKey = semanticAddressKey(replacement);
       for (const entry of privateContexts.values()) {
@@ -266,35 +398,12 @@ export function createAcquisitionConversionCandidateArtifacts(
       }
       return undefined;
     },
-    positionAt: (address: AcquisitionRoleAddress) => {
-      const key = semanticAddressKey(address);
-      const sequence =
-        privateContexts.get(key)?.historySequence ??
-        privateFixedRealizations.get(key)?.historySequence;
-      return sequence === undefined
-        ? undefined
-        : Object.freeze({ kind: 'history' as const, sequence, boundary: 'at' as const });
-    },
-    fixedAt: (address: AcquisitionRoleAddress) => {
-      const fixed = privateFixedRealizations.get(semanticAddressKey(address));
-      return fixed === undefined
-        ? undefined
-        : Object.freeze({
-            capability: fixedCapability(fixed),
-            position: Object.freeze({
-              kind: 'history' as const,
-              sequence: fixed.historySequence,
-              boundary: 'at' as const,
-            }),
-          });
-    },
   });
 }
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
   return Object.freeze({
     at: () => undefined,
+    atPlacement: () => undefined,
     atReplacement: () => undefined,
-    positionAt: () => undefined,
-    fixedAt: () => undefined,
   });
 }

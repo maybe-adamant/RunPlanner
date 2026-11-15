@@ -29,7 +29,6 @@ import type { TopologyCommand } from '../types';
 import { replaceDecision, appendDecision, appendOccurrence, updateTopology } from './construction';
 import { defaultOccurrence } from '../../topology/construction';
 import { appendCompletedHubChain } from './takeover';
-import { reconcileHubRerolledRewards } from '../rerolls';
 
 function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
   return Object.freeze({
@@ -286,9 +285,15 @@ export function updateHub(
     const impact = describeHubSlotClosureImpact(topology, descriptor.hubKey, target.hubSlotKey);
     if (impact === undefined)
       failCommand(command, `Hub slot ${target.hubSlotKey} has no open target`);
+    // The slot's presses redrew the reward on its door, which goes with it.
     const replacement: HubDecision = Object.freeze({
       ...hub,
       openTargets: Object.freeze(hub.openTargets.filter((candidate) => candidate !== target)),
+      actions: Object.freeze(
+        hub.actions.filter(
+          (action) => action.kind !== 'reroll' || action.hubSlotKey !== target.hubSlotKey,
+        ),
+      ),
     });
     return updateTopology(
       document,
@@ -372,13 +377,7 @@ function replaceHubActions(
     actions: Object.freeze(actions),
     ...(fountainUsed && fountainRarityResult !== undefined ? { fountainRarityResult } : {}),
   });
-  // A slot's rerolls after its visit no longer redraw what that visit enters,
-  // and a dropped press no longer redraws its slot.
-  return updateTopology(
-    document,
-    located,
-    reconcileHubRerolledRewards(catalog, located, replaceDecision(topology, reordered), hub),
-  );
+  return updateTopology(document, located, replaceDecision(topology, reordered));
 }
 
 function normalizedHubActions(
@@ -397,7 +396,6 @@ function normalizedHubActions(
           kind: 'reroll',
           rerollId: action.rerollId,
           hubSlotKey: action.hubSlotKey,
-          reward: action.reward,
         });
     }
   });

@@ -69,6 +69,9 @@ export function normalizeAcquisitionLifecycle(
     ) {
       fail(`${bindingPath}.blocksArtificerConversion`, 'must be true when present');
     }
+    if (binding.automatic !== undefined && binding.automatic !== true) {
+      fail(`${bindingPath}.automatic`, 'must be true when present');
+    }
     if (effect !== undefined) {
       requireClosedValue(
         effect.kind,
@@ -101,6 +104,7 @@ export function normalizeAcquisitionLifecycle(
       ...(binding.blocksArtificerConversion === true
         ? { blocksArtificerConversion: true as const }
         : {}),
+      ...(binding.automatic === true ? { automatic: true as const } : {}),
     });
   });
   if (seenRoles.size !== rewardType.acquisitionRoles.values.length) {

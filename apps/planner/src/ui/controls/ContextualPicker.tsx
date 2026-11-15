@@ -21,6 +21,7 @@ import type {
   ContextualPickerModel,
   ContextualPickerSection,
 } from '@planner/projections/contextual/contextualPicker';
+import { TextGlyph } from './TextGlyph';
 
 interface ContextualPickerProps<T> {
   readonly findingTarget?: FindingTargetProps;
@@ -48,6 +49,8 @@ interface ContextualPickerProps<T> {
   readonly model: ContextualPickerModel<T>;
   /** The option under the pointer or keyboard highlight while the list is open. */
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
+  /** Runs once the closed list hands focus back; preventing it keeps focus where it moved. */
+  readonly onCloseAutoFocus?: (event: Event) => void;
   readonly onOpenChange?: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
   readonly open?: boolean;
@@ -87,6 +90,8 @@ interface ContextualPickerProps<T> {
   }[];
   /** An image shown before an option's text. */
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
+  /** An option's own face in place of its text, such as a room with its number. */
+  readonly itemFace?: (item: ContextualPickerItem<T>) => ReactNode;
   /** An image shown at the start of an option's trailing figures. */
   readonly itemTrailIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** An add list: nothing in it is ever selected, so its options keep no check column. */
@@ -364,7 +369,7 @@ function PickerContent<T>({
               onClick={() => setCollapsibleOpen((value) => !value)}
               type="button"
             >
-              <span aria-hidden="true">{collapsibleOpen ? '▾' : '▸'}</span>
+              <TextGlyph name={collapsibleOpen ? 'expanded' : 'collapsed'} />
               {collapsible.label} ({collapsible.items.length})
             </button>
           )}
@@ -397,6 +402,7 @@ export function ContextualPicker<T>({
   loading = false,
   model,
   onActiveChange,
+  onCloseAutoFocus,
   onOpenChange,
   onSelect,
   open: controlledOpen,
@@ -414,6 +420,7 @@ export function ContextualPicker<T>({
   triggerUnknown = false,
   triggerBadge,
   triggerParts,
+  itemFace,
   itemIcon,
   itemTrailIcon,
   insertion = false,
@@ -603,6 +610,7 @@ export function ContextualPicker<T>({
             className="contextual-picker-popover"
             data-multi-stage={!closeOnSelect || undefined}
             collisionPadding={12}
+            {...(onCloseAutoFocus === undefined ? {} : { onCloseAutoFocus })}
             side={side}
             sideOffset={6}
           >
@@ -610,6 +618,7 @@ export function ContextualPicker<T>({
               {...(cancelLabel === undefined ? {} : { cancelLabel })}
               choicesLabel={choicesLabel}
               insertion={insertion}
+              itemFace={itemFace}
               itemIcon={itemIcon}
               itemTrailIcon={itemTrailIcon}
               key={choiceLabel ?? 'default'}
@@ -644,6 +653,7 @@ export function ContextualPickerPopover<T>({
   itemIcon,
   model,
   onActiveChange,
+  onCloseAutoFocus,
   onOpenChange,
   onSelect,
   open,
@@ -662,6 +672,8 @@ export function ContextualPickerPopover<T>({
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   readonly model: ContextualPickerModel<T>;
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
+  /** Runs once the closed list hands focus back; preventing it keeps focus where it moved. */
+  readonly onCloseAutoFocus?: (event: Event) => void;
   readonly onOpenChange: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
   readonly open: boolean;
@@ -686,6 +698,7 @@ export function ContextualPickerPopover<T>({
           className="contextual-picker-popover"
           {...(collisionBoundary == null ? {} : { collisionBoundary })}
           collisionPadding={12}
+          {...(onCloseAutoFocus === undefined ? {} : { onCloseAutoFocus })}
           side={side}
           sideOffset={side === 'right' ? 8 : 6}
           sticky="always"

@@ -24,9 +24,11 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
     case 'roomActionPlacementRequired':
       return 'place';
     case 'roomActionOrderUnavailable':
-      // An action ordered after a checkpoint that no longer exists should not exist.
-      return finding.evidence.checkpointUnavailable === true ? 'delete' : 'move';
-    // A press the game refuses or the pool cannot pay for is removed.
+      // An action waiting on a point its room never reaches should not exist.
+      return finding.evidence.unavailable === true ? 'delete' : 'move';
+    // A press the game refuses or the pool cannot pay for, or a row for an
+    // item replaced since, is removed.
+    case 'roomActionItemReplaced':
     case 'rerollUnavailable':
     case 'rerollTargetUnavailable':
     case 'rerollPoolExceeded':
@@ -34,6 +36,9 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
     case 'nemesisOutcomeMissing':
     case 'nemesisOutcomeUnavailable':
       return finding.evidence.kind === 'traitTrade' ? 'nemesisTrait' : 'nemesisReward';
+    // Her row stands after a pickup that turns her event ineligible: it is repaired by order.
+    case 'nemesisEventUnavailable':
+      return 'move';
     default:
       return undefined;
   }
@@ -98,13 +103,6 @@ function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefi
     (finding.code === 'hexActivationMissing' || finding.code === 'hexActivationUnavailable')
   )
     return 'hexActivation';
-  if (
-    finding.code === 'rerolledRewardMismatch' &&
-    (finding.origin.kind === 'incomingReward' ||
-      finding.origin.kind === 'localReward' ||
-      finding.origin.kind === 'rewardWheelOffer')
-  )
-    return 'rerolledReward';
   // Stone findings arise only for a chosen proc or a required Stone, whose checkbox is fixed.
   if (
     finding.origin.kind === 'traitOffer' &&

@@ -8,6 +8,7 @@ import {
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createRouteAddress,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -20,6 +21,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import {
   leaveOptionNames,
   openLeavePicker,
@@ -148,12 +150,12 @@ describe('main room side visits on its Timeline', () => {
       `Returned from ${secondLabel}`,
       'Leave room',
     ]);
-    // The first exit offers the Hub and every open side room; it cannot end the plan.
+    // The first exit offers the Hub, every open side room and ending the plan.
     const firstOptions = leaveOptionNames(await openLeavePicker(view.user, roomCard(), 0));
     expect(firstOptions[0]).toBe('Hub');
     expect(firstOptions).toContain(`${firstLabel} (picked)`);
     expect(firstOptions).toContain(secondLabel);
-    expect(firstOptions).not.toContain('End plan here');
+    expect(firstOptions.at(-1)).toBe('End plan here');
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
     // A later exit offers no room visited before it.
     const secondOptions = leaveOptionNames(await openLeavePicker(view.user, roomCard(), 1));
@@ -180,7 +182,7 @@ describe('main room side visits on its Timeline', () => {
     expect(visitOrder(view.application)).toEqual([first, second]);
   });
 
-  it('ends the plan at an exit after a side visit as that side room, and continues it', async () => {
+  it('ends the plan at an exit after a side visit back at the Hub there, and continues it', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);
     const [first, second] = visitOrder(view.application);
@@ -192,7 +194,35 @@ describe('main room side visits on its Timeline', () => {
         name: 'End plan here',
       }),
     );
-    expect(planEnd()).toEqual({ biomeKey: 'N', occurrenceId: first });
+    expect(planEnd()).toEqual({ biomeKey: 'N', occurrenceId: combat05.occurrenceId });
+    expect(visitOrder(view.application)).toEqual([first]);
+    expect(rowNames()).toEqual(['Leave room', `Returned from ${firstLabel}`, 'Leave room']);
+    expect(leaveOptionNames(await openLeavePicker(view.user, roomCard(), 1)).at(-1)).toBe(
+      'End plan here (picked)',
+    );
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: secondLabel }),
+    );
+    expect(planEnd()).toBeUndefined();
+    expect(visitOrder(view.application)).toEqual([first, second]);
+  });
+
+  it('shows a plan ending in a side room at the exit after it, and continues it', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const [first, second] = visitOrder(view.application);
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplacePlanEnd',
+          route: createRouteAddress('Surface'),
+          planEnd: { biomeKey: 'N', occurrenceId: first! },
+        }),
+      ),
+    );
+    await openTimeline(view, combat05);
+    const firstLabel = sideLabel(view.application, first!);
+    const secondLabel = sideLabel(view.application, second!);
+    const planEnd = () => presentProject(view.application).route.planEnd;
     expect(visitOrder(view.application)).toEqual([first, second]);
     // The later exit stays as authored, past the end, and every row after the end reads as not
     // walked, the return from the side room the plan ends in among them.
@@ -214,16 +244,15 @@ describe('main room side visits on its Timeline', () => {
     expect(pastEndRows()).toEqual([]);
   });
 
-  it('names each return Returned with its side room', async () => {
+  it('names each return Returned with its side room by its numbered icon alone', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);
     const [first] = visitOrder(view.application);
     const firstLabel = sideLabel(view.application, first!);
     const row = within(roomCard()).getByRole('listitem', { name: `Returned from ${firstLabel}` });
     expect(row.querySelector('.timeline-banner-title')?.textContent).toBe('Returned');
-    expect(row.querySelector('.timeline-leave-text')?.textContent).toBe(
-      firstLabel.replace(/^Side Room /, 'SR '),
-    );
+    expect(row.querySelector('.timeline-leave-text')).toBeNull();
+    expect(row.querySelectorAll('.timeline-return-room .artwork-label-icon')).toHaveLength(1);
   });
 
   it('puts Melinoë where the marked row finds her: the entry, then each side door she is back from', async () => {

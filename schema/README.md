@@ -31,17 +31,59 @@ npm run test:schema:migrate
 
 ## History
 
-Schema 103 changes no saved shape: it marks the plans saved after the settlement
-rules for [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+Revision 103.2 stores every position the game would place at random once the
+walk reaches its room: a rolled flip, an entry the game picks among several,
+an anchor object's anchor, a Fields cage, optional reward or Nemesis point and
+a Chaos gate's spawn point. The edit that first reaches the room stores the
+stable draw the engine used to derive on every evaluation; after that a
+position changes only when the owner changes it. A revision changes no saved
+shape: a plan saved under 103.0 or 103.1 has its reached blank stock and
+positions filled once when it opens, and plans sent under 103.1 read as
+outdated.
+
+Schema 103 marks the plans saved after the settlement rules for
+[rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
 and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
-covered every edit. The migration accepts schema 102 through its final
-revision 1, lifts the version and settles the plan once, silently, removing
+covered every edit, and moves row state onto the item that holds it. A Well
+or Pool reroll action keeps only its `rerollId`: its pins move to the Well's
+`rerollOfferKeyBySlot` or the Pool's `rerollTraitKeyBySlot` under that id,
+and every Fateful Twist result, the initial roll's and the Travel Deal
+restock's included, to the Well's `twistResultKeyByGeneration` under its
+generation key. The Well's `purchasedGenerationKeys` goes: its purchase
+actions, which the codec held equal to it, are its purchases. A locked door's
+fight customization moves from its `unlockExit` press to the door, in the
+room's `encounters.customizationByLockedExit` keyed by exit key; the press
+keeps only its `exitKey`. A Shrine rush is its own room action: a stored
+`rushed: true` purchase becomes the purchase directly followed by its
+`rushHermesShrineOffer` action, and every purchase loses the flag. A Hermes
+delivery's or clocked drop's pickup row loses its `encounterPhaseKey`: the
+walk names the phase it falls due at. A door,
+cage, wheel or Hub reroll press keeps its `rerollId` and target, and a cage
+press loses its `slotKey`: each press's reward moves to the rerolled owner's
+`results` under its id (`rerolledIncomingReward`, `rerolledCages[slot]` or
+`rerolledOffers[offer]`), beside `pressId`, the press whose item it is, and
+that item's outcomes in `acquisition`. A rerolled reward that recorded its
+press keeps its outcomes on it, else on the owner's last press; an entered
+reward its press did not draw becomes that press's result, and the pickup
+rows of its owner are stamped again; a press with no entered reward starts
+its outcomes unresolved. A rerolled reward with no press, and a press whose
+door, room, cage or Hub slot is gone, are dropped, and so, silently, are the
+outcomes of a rerolled reward its owner cannot draw, or whose presses are all
+Hub presses after their slot's visit, since no press of it is then effective. The
+migration accepts schema 102 through its final revision 1, lifts the version,
+makes those moves (losslessly, before strict decoding; a press stood only at
+a locked door, once per door; the moves touch disjoint fields) and settles
+the plan once, silently, removing
 only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk
-without it, reaching the plan's end, never holds; a countdown Hermes delivery
-whose purchase is gone; and an unselected door its source room no longer
-has, with the rooms behind it. A takeover batch gains the Preboss doors it
+without it, reaching the plan's end, never holds; a countdown Hermes delivery, its
+payload with it, whose purchase is gone or whose Shrine slot stocks another
+reward; an Echo
+replay the walk reaches holding another reward than its last, silently, with
+its pickup; the outcomes of a rerolled reward whose recorded press is not its
+owner's effective one; and an
+unselected door its source room no longer has, with the rooms behind it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
 Rows whose loss the plan cannot show stay with their findings: a Travel Deal
 refill or a duplicate the saved plan already shows unproduced, a drop whose
@@ -49,8 +91,8 @@ producer is held or may lie past where the walk stops, every door or cage
 reroll whose reward is gone, and a taken door its room lost; a removal in the
 same settlement, such as a stale purchase's, can still take a refill or
 duplicate with its trigger. Rows the walk does not reach stay untouched. A plan
-that does not decode, or whose settlement throws or faults, keeps the
-version-only lift. The plan wire's schema pair becomes 103.0.
+that does not decode, or whose settlement throws or faults, keeps the lift
+with its moves, without settlement. The plan wire's schema pair becomes 103.0.
 
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional
@@ -74,8 +116,9 @@ entry) and each object's `anchorId`; a Fields block no longer carries the
 entry, and a slot without a point is omitted.
 
 The migration moves each Fields room's `spatial.entryStartPointId` to
-`layout.entryStartPointId`, omitting an unset one; nothing else changes. It
-needs no catalog and accepts schema 101 through its final revision 2. An entry
+`layout.entryStartPointId`, omitting an unset one, and gives a plan saved
+before revision 2 the bounty site its Heracles phases own (below), which reads
+the catalog. It accepts schema 101 through its final revision 2. An entry
 saved before the derivation existed may now be reported unavailable where the
 previous room's door rules it out.
 
@@ -83,7 +126,9 @@ Revision 101.2 adds Heracles's bounty as a pickup: a phase whose encounter
 credits a kill bounty owns a `heraclesBounty:<phase>` acquisition site with its
 `bounty` money drop, collected by a required `interactAcquisitionEntry`
 action. The plan wire gains that acquisition (`HeraclesBountyPickup`) and its
-guide row. A room saved earlier has neither until its next edit derives them.
+guide row. Strict decoding requires the site, so the schema 101 → 102
+migration adds it, with its unresolved money drop, to a plan saved earlier;
+the collect row stays the owner's to place, as after selecting the fight.
 The start state gains an unpaid Personal Loan's `storedGold` trait field, the
 keepsake block's required `fatedStatus` and a required top-level
 `talentPoints`, which replaces `hex.talentPoints` so Moon Beam's points
@@ -91,8 +136,9 @@ publish without a Spell.
 A Boss room's `overview.requiredReward` (its forced drop's consumable,
 resource and amount) replaces `overview.effectNeutralRequiredReward`, and its
 `collectRequiredReward` guide row carries the same `drop`.
-A revision adds only saved entries an earlier save may lack, so it has no
-transition; plans sent under 101.1 read as outdated.
+Apart from the bounty site, the revision adds only saved entries an earlier
+save may lack, so it has no transition of its own; plans sent under 101.1 read
+as outdated.
 
 Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
 after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
@@ -174,8 +220,21 @@ source and cycle: a trait offer that gives Steady Growth owns
 from 1. A room's encounter state no longer has `steadyGrowthTargetByPhase` or
 `transcendentEmbryoBlessingByPhase`.
 
-The migration drops the phase-keyed outcomes; each reached interval then reports
-its missing target or blessing until it is chosen again.
+The migration drops the phase-keyed outcomes from the document; the loader and
+the offline tool read them at schema 98 and hand them to the 102 → 103 step,
+which, before its upgrade settlement, puts each back on the source cycle the
+walk lands at that room's encounter end, as the edit authoring it would,
+repeating while a recovered cycle lets the next one land. An outcome no cycle
+lands at yet, such as one past a blank only the upgrade settlement fills, is
+retried on the settled plan, which settles again after each retry that
+recovers one, a few times at most. An outcome stays dropped when no cycle
+lands there by then, when cycles of two sources land there as it is recovered
+(a source's cycle that lands there only later is not checked), or when the
+engine refuses it or reports it unavailable there; that cycle reports its
+missing target or blessing until it is chosen again. A recovery that throws or
+faults recovers none, and the plan settles without them; a plan migrated by
+the offline tool to an older schema than the current one keeps them dropped. A
+plan saved at 99 or later is never read for them.
 
 Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
 `retriesPerBiome` and `resourceRoomChance`. A revision adds only optional saved

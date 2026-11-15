@@ -352,4 +352,44 @@ describe('draft encounter keepsakes', () => {
       ]),
     );
   });
+
+  it('drafts through Olympus with Heracles ending a room’s encounters and its reward collected', () => {
+    const surface = createProjectDocument(catalog, {
+      projectId: 'p',
+      routeKey: 'Surface',
+      configuredBiomeCount: 3,
+    });
+    const result = draftProject(
+      catalog,
+      surface,
+      {
+        loadout: { ...defaultLoadout, startingKeepsakeKey: 'AthenaEncounterKeepsake' },
+        world: {
+          godKeys: ['Zeus', 'Hera', 'Demeter', 'Ares'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: { P: ['Heracles'] },
+        },
+        basketByGiver: {},
+        rackKeepsakeKeys: [null, null, null],
+      },
+      1,
+    );
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    expect(simulateProjectAssembly(catalog, result.project).evaluation.findings).toEqual([]);
+    const olympus = result.project.route.biomes.find((biome) => biome.biomeKey === 'P')!;
+    const heracles = olympus.topology!.occurrences.filter(
+      (occurrence) => occurrence.encounters.encounterKeyByPhase.Intro === 'HeraclesCombatP',
+    );
+    expect(heracles).toHaveLength(1);
+    // His fight is the room's last, so its reward is taken after it.
+    expect(heracles[0]!.roomActions.order.map((action) => action.kind)).toContain(
+      'interactIncomingReward',
+    );
+    expect(result.report.targets).toContainEqual({
+      kind: 'fieldNpc',
+      key: 'Heracles',
+      biomeKey: 'P',
+      met: true,
+    });
+  });
 });

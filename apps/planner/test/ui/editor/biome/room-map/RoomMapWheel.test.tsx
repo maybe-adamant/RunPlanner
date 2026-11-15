@@ -12,7 +12,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -22,6 +21,7 @@ import {
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { pressWithPickedResult } from '@planner-test/support/reroll-press';
 
 afterEach(() => cleanup());
 
@@ -107,9 +107,12 @@ describe('room map ship wheel', () => {
     const { phases, room } = shipRoom(cardHolder());
     const intro = phases.find((phase) => phase.wheel?.key === 'wheel1')!;
     const spots = wheelSpots(room.gameName);
+    const wheelsOpenRow = () =>
+      timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!;
 
     const one = render(cardHolder());
     await one.user.click(screen.getByRole('tab', { name: `${intro.label} Timeline` }));
+    await one.user.click(wheelsOpenRow());
     expect(wheelOffers().map(placed)).toEqual([spots.wheel]);
     expect(mapPoints().some((point) => point.getAttribute('aria-label')?.startsWith('Door'))).toBe(
       false,
@@ -124,6 +127,7 @@ describe('room map ship wheel', () => {
       }),
     );
     await two.user.click(screen.getByRole('tab', { name: `${intro.label} Timeline` }));
+    await two.user.click(wheelsOpenRow());
     expect(wheelOffers().map((point) => [point.getAttribute('aria-label'), placed(point)])).toEqual(
       [
         ['L Offer', spots.left],
@@ -131,7 +135,9 @@ describe('room map ship wheel', () => {
       ],
     );
 
+    // The last phase opens no wheel: its map shows the doors.
     const last = phases.at(-1)!;
+    expect(last).not.toBe(intro);
     await two.user.click(screen.getByRole('tab', { name: `${last.label} Timeline` }));
     expect(wheelOffers()).toEqual([]);
     expect(mapPoints().some((point) => point.getAttribute('aria-label')?.startsWith('Door'))).toBe(
@@ -150,25 +156,18 @@ describe('room map ship wheel', () => {
       .targets(undefined)
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
-    const resolver = interaction.pendingReward(targetKey!);
-    const rewards = resolver
-      .model(await resolver.load(), 'type')
-      .sections.flatMap((section) => section.items)
-      .filter((item) => !item.disabled && item.value.payload === undefined)
-      .map((item) => item.value as ResolvedRewardOffer);
-    const first = intro.wheel!.offers[0]!.control.offer;
-    const reward = rewards.find((candidate) => candidate.rewardType !== first?.rewardType)!;
-    const rerolled = applyProjectCommand(
+    const rerolled = await pressWithPickedResult(
       base,
-      catalog,
-      interaction.appendIntent(targetKey!, reward).command,
+      intro.wheelRerolls!.interactionKey,
+      targetKey!,
+      intro.wheel?.offers[0]?.control.offer,
     );
 
     const { user } = render(rerolled);
     await user.click(screen.getByRole('tab', { name: `${intro.label} Timeline` }));
     const face = () => wheelOffers()[0]!.querySelector('.room-map-door-face')?.innerHTML;
 
-    await user.click(timelineRows().find((row) => row.hasAttribute('data-doors-open'))!);
+    await user.click(timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!);
     const firstDraw = face();
     const pressRow = timelineRows().find((row) => row.hasAttribute('data-door-press'))!;
     const pressedFace = within(pressRow)

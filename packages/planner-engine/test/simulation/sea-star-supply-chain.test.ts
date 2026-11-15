@@ -30,6 +30,7 @@ import {
 } from '../../src/simulation';
 import { assembleExecutionProduct } from '../../src/execution-plan';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
+import { procTestSeaStar, replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 
 const nBiome = createBiomeAddress('Surface', 'N');
 const oBiome = createBiomeAddress('Surface', 'O');
@@ -143,7 +144,8 @@ function repairReached(project: ProjectDocument): ProjectDocument {
 function seaStarSupplyChainProject(): ProjectDocument {
   let project = surfaceScheduledLifecycleWithQSupplyChainSlicesProject();
   const miniBoss = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-miniBoss01'));
-  project = applyProjectCommand(project, catalog, {
+  // Each swap is a new item, which the owner picks up again.
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: miniBoss,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
@@ -156,7 +158,7 @@ function seaStarSupplyChainProject(): ProjectDocument {
     'option3',
   );
   const devotion = createIncomingRewardAddress(oBiome, createOccurrenceId('surface-o-devotion'));
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: devotion,
     value: {
@@ -215,11 +217,7 @@ describe('Sea Star on a Supply Chain Pom Slice', () => {
   function duplicate(project: ProjectDocument) {
     const slice = qSlice(project, 'pom1');
     const source = createAcquisitionRoleAddress(slice.address, 'self');
-    const duplicated = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSeaStarResult',
-      acquisition: source,
-      procced: true,
-    });
+    const duplicated = procTestSeaStar(project, catalog, slice.occurrenceAddress, source);
     const entry = createAcquisitionEntryAddress(
       seaStarDuplicateAcquisitionSite(slice.occurrenceAddress, source),
       SEA_STAR_DUPLICATE_ENTRY_KEY,

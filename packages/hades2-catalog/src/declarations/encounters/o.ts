@@ -14,6 +14,8 @@ import { devotionMoneyStore, godCombatMoneyStore, thessalyMoneyStore } from './m
 export const oEncounterDefinitions = [
   {
     key: 'GeneratedO_Intro01',
+    // Inherits the Ships event list ending in WaitForNextEncounterReady (EncounterData_Generated.lua:924; EncounterSets.lua:490).
+    script: { waitReadyBeforeEnd: true },
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.GeneratedO_Intro01],
     label: 'Ship intro',
@@ -24,6 +26,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'GeneratedO',
+    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Generated.lua:826; EncounterSets.lua:476, 490; RoomLogic.lua:1442-1446).
+    script: { gate: { kind: 'wheelUse' }, waitReadyBeforeEnd: true },
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.GeneratedO],
     label: 'Ship combat',
@@ -34,6 +38,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatO',
+    // Starts at BeginHeraclesEncounter; the list ends in WaitForNextEncounterReady (EncounterData_Heracles.lua:118; EncounterSets.lua:593).
+    script: { waitReadyBeforeEnd: true },
     killBounty: heraclesKillBounty,
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatO],
@@ -73,6 +79,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'IcarusCombatO',
+    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Icarus.lua:80; EncounterSets.lua:559, 566; RoomLogic.lua:1442-1446).
+    script: { gate: { kind: 'wheelUse' }, waitReadyBeforeEnd: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.IcarusCombatO],
     label: 'Icarus combat',
@@ -132,6 +140,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'DevotionTestO',
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestO],
     label: 'Devotion combat',

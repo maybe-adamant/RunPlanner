@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createMemoryRecordHost } from '@planner-test/support/memoryRecordHost';
 import { sampleSaveBytes } from '@planner-test/support/syntheticSave';
 import type { LuaValue } from '@planner/workspace/run-recording/luabins';
-import type { RecordingPreference } from '@planner/persistence/recordHost';
+import type { RecordingPreference, RecordingSettings } from '@planner/persistence/recordHost';
 import {
   createRecordingSessionReducer,
   type RecordingSessionState,
@@ -32,7 +32,11 @@ function setup(
     state = reducer(state, action);
     return action;
   }) as PlannerStore['dispatch'];
-  let saved = { enabled: options.enabled ?? false, folder: null as string | null };
+  let saved: RecordingSettings = {
+    enabled: options.enabled ?? false,
+    folder: null,
+    keepRawSaves: false,
+  };
   const preference: RecordingPreference = {
     read: () => saved,
     write: (value) => void (saved = { ...value }),
@@ -78,7 +82,7 @@ describe('recording controller', () => {
       problem: null,
     });
     await context.controller.setEnabled(true);
-    expect(context.saved()).toEqual({ enabled: true, folder: null });
+    expect(context.saved()).toEqual({ enabled: true, folder: null, keepRawSaves: false });
     expect(context.state().status).toEqual({ kind: 'watching', folder: '/saves/Hades II' });
     await playSurfaceOpening(context);
     expect(context.state().status).toEqual({
@@ -225,12 +229,20 @@ describe('recording controller', () => {
     await context.controller.start();
     expect(context.host.watched()).toBe('/saves/Hades II');
     await context.controller.setFolder('/elsewhere/Hades II');
-    expect(context.saved()).toEqual({ enabled: true, folder: '/elsewhere/Hades II' });
+    expect(context.saved()).toEqual({
+      enabled: true,
+      folder: '/elsewhere/Hades II',
+      keepRawSaves: false,
+    });
     expect(context.state().status).toEqual({ kind: 'watching', folder: '/elsewhere/Hades II' });
     await context.controller.setEnabled(false);
     expect(context.host.watched()).toBeNull();
     expect(context.state().status).toEqual({ kind: 'off' });
-    expect(context.saved()).toEqual({ enabled: false, folder: '/elsewhere/Hades II' });
+    expect(context.saved()).toEqual({
+      enabled: false,
+      folder: '/elsewhere/Hades II',
+      keepRawSaves: false,
+    });
   });
 
   it('shows a folder that cannot be watched as an error', async () => {

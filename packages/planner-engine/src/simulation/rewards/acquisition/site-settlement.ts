@@ -262,6 +262,9 @@ export function settleOwnedAcquisitionSite(
         sourceEntryKey: request.entryKey,
         sourceOrigin: source.origin,
         sourceReward,
+        ...(source.blocksSeaStarDuplication === true
+          ? { sourceBlocksSeaStarDuplication: true as const }
+          : {}),
         replacement: source.artificerReplacementByAcquisitionRole?.[binding.role] ?? null,
         acquisitionRole: binding.role,
         participation: 'mandatory',
@@ -456,6 +459,8 @@ export function settleArtificerReplacementAcquisition(
     readonly sourceEntryKey: string;
     readonly sourceOrigin: SemanticAddress;
     readonly sourceReward: AuthoredRewardState;
+    /** The source could never duplicate, which its replacement inherits (GiftLogic.lua:24-36). */
+    readonly sourceBlocksSeaStarDuplication?: true;
     readonly timelineOwner?: SemanticAddress;
     readonly replacement?: AuthoredRewardState | null;
     readonly acquisitionRole: string;
@@ -557,7 +562,9 @@ export function settleArtificerReplacementAcquisition(
         presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
         ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
-        ...(!sourceCanDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
+        ...(!sourceCanDuplicate || request.sourceBlocksSeaStarDuplication === true
+          ? { blocksSeaStarDuplication: true as const }
+          : {}),
       }),
       Object.freeze({ ...binding, historySequence: request.historySequence }),
       request.facts,

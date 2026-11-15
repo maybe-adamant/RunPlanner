@@ -144,9 +144,7 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       ...(draft.godBoonsByBiome === undefined ? {} : { godBoonsByBiome: draft.godBoonsByBiome }),
       ...(draft.perGodCap === undefined ? {} : { perGodCap: draft.perGodCap }),
       ...(draft.roomForcing === undefined ? {} : { roomForcing: draft.roomForcing }),
-      ...(draft.purchasesPerBiome === undefined
-        ? {}
-        : { purchasesPerBiome: draft.purchasesPerBiome }),
+      ...(draft.spending === undefined ? {} : { spending: draft.spending }),
       ...(draft.retriesPerBiome === undefined ? {} : { retriesPerBiome: draft.retriesPerBiome }),
       ...(draft.resourceRoomChance === undefined
         ? {}

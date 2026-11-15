@@ -113,11 +113,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 621442
+              }
             },
             {
               "occurrenceId": "a6b19a5f-d499-48d1-ae59-30aed524f968",
@@ -284,7 +292,12 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage1"
+                    "slotKey": "cage1",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   },
                   {
                     "kind": "completeFieldsCage",
@@ -293,7 +306,11 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage2"
+                    "slotKey": "cage2",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   },
                   {
                     "kind": "completeFieldsCage",
@@ -302,32 +319,53 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage3"
+                    "slotKey": "cage3",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   },
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "optionalRewards",
-                    "slotKey": "optional1"
+                    "slotKey": "optional1",
+                    "content": [
+                      "MetaCurrencyDrop"
+                    ]
                   },
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "optionalRewards",
-                    "slotKey": "optional2"
+                    "slotKey": "optional2",
+                    "content": [
+                      "GiftDrop"
+                    ]
                   },
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "optionalRewards",
-                    "slotKey": "optional3"
+                    "slotKey": "optional3",
+                    "content": [
+                      "MetaCardPointsCommonDrop"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "[\"acquisitionSite\",\"Dream\",\"H\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"H\\\",\\\"a6b19a5f-d499-48d1-ae59-30aed524f968\\\"]\",\"artificerSource:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional2%22%5D\"]",
-                    "entryKey": "artificer:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional2%22%5D:self"
+                    "entryKey": "artificer:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional2%22%5D:self",
+                    "content": [
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "[\"acquisitionSite\",\"Dream\",\"H\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"H\\\",\\\"a6b19a5f-d499-48d1-ae59-30aed524f968\\\"]\",\"artificerSource:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional1%22%5D\"]",
-                    "entryKey": "artificer:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional1%22%5D:self"
+                    "entryKey": "artificer:%5B%22localReward%22%2C%22Dream%22%2C%22H%22%2C%22a6b19a5f-d499-48d1-ae59-30aed524f968%22%2C%22optionalRewards%22%2C%22optional1%22%5D:self",
+                    "content": [
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -483,7 +521,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ApolloUpgrade"
+                    ]
                   }
                 ]
               },
@@ -579,7 +622,11 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage1"
+                    "slotKey": "cage1",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   },
                   {
                     "kind": "completeFieldsCage",
@@ -588,7 +635,11 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage2"
+                    "slotKey": "cage2",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
@@ -812,7 +863,11 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage1"
+                    "slotKey": "cage1",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   },
                   {
                     "kind": "completeFieldsCage",
@@ -821,7 +876,11 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage2"
+                    "slotKey": "cage2",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   },
                   {
                     "kind": "completeFieldsCage",
@@ -830,12 +889,17 @@
                   {
                     "kind": "interactLocalReward",
                     "groupKey": "cages",
-                    "slotKey": "cage3"
+                    "slotKey": "cage3",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   }
                 ]
               },
               "additionalExits": [],
               "layout": {
+                "flipped": false,
                 "entryStartPointId": 755863
               }
             },
@@ -1136,9 +1200,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "TemporaryHealExpirationTrait",
+                  "secondLeft": "MetaCurrencyRange",
+                  "secondRight": "ExtendedShopTrait"
                 }
               },
               "keepsakeRack": {

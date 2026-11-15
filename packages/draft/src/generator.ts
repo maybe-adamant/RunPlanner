@@ -113,11 +113,15 @@ export function draftProject(
   );
   let attempts = 0;
   const faults: SettlementFault[] = [];
+  /** Rooms this draft's earlier biomes entered; their Shops' filler may be taken back. */
+  let draftedRooms: ReadonlySet<string> = new Set();
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best:
       | {
           assembly: ProjectEvaluationAssembly;
           faults: readonly SettlementFault[];
+          draftedPhases: ReadonlySet<string>;
+          draftedRooms: ReadonlySet<string>;
           score: number;
           localMet: boolean;
         }
@@ -141,6 +145,7 @@ export function draftProject(
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
         schedule,
         world,
+        draftedRooms,
       );
       if (!walk.runBiome(biomeIndex, budget.maxStepsPerBiome)) {
         reasons.push(walk.failure ?? 'unknown');
@@ -163,7 +168,14 @@ export function draftProject(
         score > best.score ||
         (score === best.score && localMet && !best.localMet)
       )
-        best = { assembly: walk.assembly, faults: walk.faults, score, localMet };
+        best = {
+          assembly: walk.assembly,
+          faults: walk.faults,
+          draftedPhases: walk.draftedPhases,
+          draftedRooms: walk.draftedRooms,
+          score,
+          localMet,
+        };
       // An unmet scheduled Hermes or Hammer some decision could take here earns one retry.
       if (
         localMet &&
@@ -177,14 +189,17 @@ export function draftProject(
       if (localMet) supplyRetried = true;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
-    // Only the chosen attempt's encounters are drafted, before the next biome builds on them.
+    // The chosen attempt's encounters the walk left undrafted are drafted before the next biome
+    // builds on them.
     const encounters = draftEncounters(
       catalog,
       best.assembly,
       biomeKey,
       createDraftRng((seed * 2_246_822_519 + biomeIndex * 7_919 + 1) >>> 0),
+      best.draftedPhases,
     );
     current = encounters.assembly;
+    draftedRooms = best.draftedRooms;
     faults.push(...best.faults, ...encounters.faults);
   }
   const evaluation = current.evaluation;

@@ -20,6 +20,7 @@ import {
   type NemesisRandomEventAssessment,
 } from '@run-planner/engine/simulation';
 
+import { collectTestRequiredItems, procTestSeaStar } from '../shared';
 import {
   goldenFBiome,
   goldenFOccurrenceId,
@@ -52,7 +53,7 @@ function candidateAssessment(
     family: 'freeItem',
   });
   const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
-    simulateProjectAssembly(catalog, reached),
+    simulateProjectAssembly(catalog, collectTestRequiredItems(reached)),
     event,
   );
   if (capability === undefined)
@@ -120,7 +121,7 @@ export function createNemesisTraitTradeCheckpoint(): ProjectDocument {
     { kind: 'traitTrade', traitKey, response: 'accept' },
     { rewardType: 'RoomMoneyTripleDrop' },
   );
-  return project;
+  return collectTestRequiredItems(project);
 }
 
 /** H's physical-four Fields room with one reserved Nemesis position and a freely ordered free result. */
@@ -159,6 +160,7 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     { kind: 'freeItem' },
     { rewardType },
   );
+  project = collectTestRequiredItems(project);
   const selected = project.route.biomes
     .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
@@ -167,7 +169,9 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     (action) => action.kind === 'completeFieldsCage',
   );
   if (firstCageIndex < 0) throw new Error('H Nemesis fixture has no cage action');
-  return insertGeneratedResult(project, goldenHBiome, occurrenceId, 'Passive', firstCageIndex + 1);
+  return collectTestRequiredItems(
+    insertGeneratedResult(project, goldenHBiome, occurrenceId, 'Passive', firstCageIndex + 1),
+  );
 }
 
 /** Accepted Pom/Hammer event result before one of its mutually exclusive acquisition dispositions. */
@@ -191,16 +195,17 @@ export function createNemesisPomCheckpoint(): ProjectDocument {
     { kind: 'goldTrade', response: 'accept' },
     { rewardType },
   );
-  return project;
+  return collectTestRequiredItems(project);
 }
 
 /** Accepted Pom/Hammer event result with its Sea Star duplicate child authored on the ordinary pickup path. */
 export function createNemesisPomSeaStarCheckpoint(): ProjectDocument {
-  return applyProjectCommand(createNemesisPomCheckpoint(), catalog, {
-    kind: 'ReplaceSeaStarResult',
-    acquisition: nemesisPomResultAcquisition(),
-    procced: true,
-  });
+  return procTestSeaStar(
+    createNemesisPomCheckpoint(),
+    catalog,
+    createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+    nemesisPomResultAcquisition(),
+  );
 }
 
 export function nemesisPomResultAcquisition() {

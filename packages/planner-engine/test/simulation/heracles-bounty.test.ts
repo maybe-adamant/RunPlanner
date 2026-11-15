@@ -11,6 +11,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createTraitOfferAddress,
   HERACLES_BOUNTY_ENTRY_KEY,
   heraclesBountySiteKey,
@@ -23,18 +24,33 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldLedgerForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  nextRequiredPlacement,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
   type GoldRoomSpending,
 } from '@run-planner/engine/simulation';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
-  authorLegalTraitOffers,
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
+import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
+  procTestSeaStar,
+  replaceTestPlacedItem,
   supportedTraitOffer,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   assembleExecutionProduct,
@@ -46,6 +62,7 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import { factsWithHistory } from '@run-planner/engine/reward-kernel';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
+import { canonicalRoom } from '../support/live-room';
 import { baseFacts } from './shop-trait-purchase-support';
 
 const combat05 = nOccurrenceId('combat05');
@@ -72,7 +89,7 @@ const rewardRow: RoomActionReference = Object.freeze({
 });
 
 function withHeracles(project: ProjectDocument): ProjectDocument {
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
@@ -102,8 +119,9 @@ function withSeaStar(project: ProjectDocument): ProjectDocument {
     reward: createIncomingRewardAddress(nBiome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  let current = applyProjectCommand(project, catalog, boon(nOccurrenceId('prehub')));
-  current = applyProjectCommand(current, catalog, boon(nOccurrenceId('combat10')));
+  // Each swap is a new item, which the owner picks up again.
+  let current = replaceTestPlacedItem(project, boon(nOccurrenceId('prehub')));
+  current = replaceTestPlacedItem(current, boon(nOccurrenceId('combat10')));
   return withTrait(current, nOccurrenceId('prehub'), 'source', 'Poseidon', 'DoubleRewardBoon');
 }
 
@@ -132,7 +150,7 @@ const bountyGains = (room: GoldRoomSpending) =>
 describe('Heracles’s bounty', () => {
   it('drops one required bounty pickup after his fight, which pays the bounty', () => {
     const project = withHeracles(loadSurfaceNCheckpoint());
-    expect(order(project)).toEqual([rewardRow, bountyRow]);
+    expect(order(project)).toEqual(withItemContents(project, room, [rewardRow, bountyRow]));
     const gold = spending(project);
     const [bounty] = bountyGains(gold);
     expect(bounty).toMatchObject({
@@ -200,11 +218,146 @@ describe('Heracles’s bounty', () => {
       phase,
       encounterKey: 'GeneratedN',
     });
-    expect(order(replaced)).not.toContainEqual(bountyRow);
+    expect(order(replaced).map(roomActionKey)).not.toContain(roomActionKey(bountyRow));
     const remaining = replaced.route.biomes
       .find((biome) => biome.biomeKey === 'N')!
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === combat05)!;
     expect(remaining.acquisitionSites?.[bountySite.pointKey]).toBeUndefined();
+  });
+
+  it('is due before his own phase ends in a Ship room, so before the next wheel’s choice', () => {
+    const shipId = oOccurrenceIds.combat01;
+    const ship = createOccurrenceAddress(oBiome, shipId);
+    const shipBiome = createBiomeAddress(ship.routeKey, ship.biomeKey);
+    const intro = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: shipId },
+      'Intro',
+    );
+    const bounty: RoomActionReference = Object.freeze({
+      kind: 'interactAcquisitionEntry',
+      siteKey: heraclesBountySiteKey('Intro'),
+      entryKey: HERACLES_BOUNTY_ENTRY_KEY,
+    });
+    const choice: RoomActionReference = Object.freeze({
+      kind: 'chooseRewardWheel',
+      wheelKey: 'wheel1',
+    });
+    const project = collectTestRequiredItems(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: intro,
+        encounterKey: 'HeraclesCombatO',
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toEqual([]);
+    const rows = canonicalRoom(assembly, ship)!.roomActionRoster.rows;
+    // Heracles waits for the room to be ready before his encounter ends.
+    expect(rows.find((row) => row.key === roomActionKey(bounty))?.bounds).toEqual({
+      spawn: { kind: 'encounterEnd', phaseKey: 'Intro' },
+      deadline: { kind: 'endEffects', phaseKey: 'Intro' },
+    });
+    expect(rows.map((row) => row.key).slice(0, 2)).toEqual([
+      roomActionKey(bounty),
+      roomActionKey(choice),
+    ]);
+    // Taken after the wheel's choice, it leaves the choice waiting on it.
+    const late = editTestRoomActionOrder(project, catalog, ship, (current) => [
+      ...current.filter((action) => roomActionKey(action) !== roomActionKey(bounty)),
+      ...current.filter((action) => roomActionKey(action) === roomActionKey(bounty)),
+    ]);
+    expect(simulateProjectAssembly(catalog, late).evaluation.issue?.reasons).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: createRoomActionAddress(shipBiome, shipId, roomActionKey(choice)),
+        evidence: expect.objectContaining({ requiredAction: roomActionKey(bounty) }),
+      }),
+    ]);
+  });
+
+  /** P_Combat02 with its Intro selected and its reward row removed, so the live room must offer it. */
+  const pId = pOccurrenceId('P_Combat02', 2, 1);
+  const pRoom = createOccurrenceAddress(pBiome, pId);
+  const pPhase = (phaseKey: string) =>
+    createEncounterPhaseAddress(pBiome, { kind: 'occurrence', occurrenceId: pId }, phaseKey);
+  const pRewardAction = createRoomActionAddress(
+    createBiomeAddress(pRoom.routeKey, pRoom.biomeKey),
+    pId,
+    roomActionKey(rewardRow),
+  );
+  const withPIntro = (project: ProjectDocument, encounterKey: string): ProjectDocument =>
+    applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase: pPhase('Intro'),
+        encounterKey,
+      }),
+      catalog,
+      { kind: 'RemoveRoomAction', action: pRewardAction },
+    );
+  /** Takes each required item the live room offers until it offers none. */
+  const collectP = (project: ProjectDocument) => {
+    let assembly = simulateProjectAssembly(catalog, project);
+    const placed: string[] = [];
+    for (;;) {
+      const next = nextRequiredPlacement(catalog, assembly, pRoom, new Set(placed));
+      if (!next.reached) throw new Error('P room is not reached');
+      if (next.placement === undefined) return { assembly, placed: placed.sort() };
+      placed.push(roomActionKey(next.placement.reference));
+      project = applyProjectCommand(project, catalog, next.placement.command);
+      assembly = simulateProjectAssembly(catalog, project);
+    }
+  };
+  const lootMoments = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
+    spawnedLootForProjectEvaluationAssembly(catalog, assembly, pRoom)!.moments.map((moment) => [
+      moment.key,
+      moment.items.map((item) => item.source.kind),
+    ]);
+
+  it('spawns a P room’s reward at his fight’s end when he ends the room’s encounters', () => {
+    // HeraclesCombatP blocks the room's later encounters, so his fight is its last and
+    // spawns its reward (`BlockMultipleEncounters`, `SpawnRoomReward`).
+    const project = withPIntro(loadSurfaceNOPQProject(), 'HeraclesCombatP');
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
+      ['roomActionPlacementRequired', pRewardAction],
+    ]);
+    // The dormant Combat phase never plays: the walk waits at Doors open, not before it.
+    const biome = assembly.evaluation.route.biomes.find((entry) => entry.biomeKey === 'P');
+    expect(biome?.coverage.kind === 'prefix' ? biome.coverage.roomStop : undefined).toMatchObject({
+      anchor: { kind: 'event', eventKey: 'doorsOpened' },
+      placement: true,
+    });
+    expect(lootMoments(assembly)).toEqual([['encounterEnd:Intro', ['roomReward', 'generated']]]);
+    const collected = collectP(project);
+    const introBounty = { ...bountyRow, siteKey: heraclesBountySiteKey('Intro') };
+    expect(collected.placed).toEqual([roomActionKey(introBounty), roomActionKey(rewardRow)].sort());
+    expect(collected.assembly.evaluation.findings).toEqual([]);
+  });
+
+  it('keeps a P room’s Combat when his Intro selection is invalid, so its repair reaches that reward', () => {
+    // Heracles fights once a run, so after his N fight his P selection is unavailable.
+    const nHeracles = collectTestRequiredItems(withHeracles(loadSurfaceNOPQProject()));
+    const invalid = simulateProjectAssembly(catalog, withPIntro(nHeracles, 'HeraclesCombatP'));
+    expect(invalid.evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
+      ['encounterUnavailable', pPhase('Intro')],
+    ]);
+    // An invalid selection terminates nothing: Combat stays a played phase of the room.
+    expect(
+      encounterPhaseSequenceStatusForProjectEvaluationAssembly(invalid, pPhase('Combat')),
+    ).toMatchObject({ kind: 'active' });
+    // The walk stops at the room's Overview, so nothing spawns there yet.
+    expect(lootMoments(invalid)).toEqual([]);
+    expect(nextRequiredPlacement(catalog, invalid, pRoom, new Set())).toEqual({ reached: true });
+    // Repairing the Intro plays both phases: the reward spawns at Combat's end.
+    const repaired = withPIntro(nHeracles, 'GeneratedP_PreCombat');
+    expect(lootMoments(simulateProjectAssembly(catalog, repaired))).toEqual([
+      ['encounterEnd:Combat', ['roomReward']],
+    ]);
+    const collected = collectP(repaired);
+    expect(collected.placed).toEqual([roomActionKey(rewardRow)]);
+    expect(collected.assembly.evaluation.findings).toEqual([]);
   });
 
   it('pays its base unmultiplied, re-multiplied only by a money multiplier taken while it lies', () => {
@@ -246,11 +399,19 @@ describe('Heracles’s bounty', () => {
 
   it('pays again for a Sea Star duplicate', () => {
     const project = withHeracles(withSeaStar(loadSurfaceNCheckpoint()));
-    const duplicated = applyProjectCommand(project, catalog, {
+    // The proc only observes the copy: it lies live, required by Doors open, until picked up.
+    const observed = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: bountySource,
       procced: true,
     });
+    expect(
+      simulateProjectAssembly(catalog, observed).evaluation.findings.map((finding) => [
+        finding.code,
+        finding.evidence,
+      ]),
+    ).toEqual([['roomActionPlacementRequired', { deadline: 'doorsOpened' }]]);
+    const duplicated = procTestSeaStar(project, catalog, room, bountySource);
     const gold = spending(duplicated);
     const paid = bountyGains(gold);
     expect(paid.map((gain) => [gain.kind, gain.amount?.mean])).toEqual([

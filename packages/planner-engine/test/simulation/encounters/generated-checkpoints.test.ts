@@ -17,7 +17,7 @@ import {
 import { assessGeneratedEncounter } from '../../../src/simulation/encounters/generation';
 import { targetRewardGenerationCheckpoint } from '../../../src/simulation/encounters/generation-preparation';
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 
 function customize(project: ProjectDocument, phase: EncounterPhaseAddress) {
   const assembly = simulateProjectAssembly(catalog, project);
@@ -82,7 +82,7 @@ describe('generated budget preparation evidence', () => {
       },
     );
     const { project: customized, value: authored } = customize(
-      authorLegalTraitOffers(project),
+      authorTestTraitsAndRequiredItems(project),
       phase,
     );
     const { assembly, biome } = completeBiome(customized, 'G');

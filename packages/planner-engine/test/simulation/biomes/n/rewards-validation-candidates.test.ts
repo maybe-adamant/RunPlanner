@@ -40,9 +40,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   replaceTestShopOfferActions,
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   authorTestArtificerReplacement,
   hubVisitActions,
+  replaceTestPlacedItem,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
@@ -59,7 +61,7 @@ import {
 import { reachedFrontier } from '../../../support/reward-frontier';
 
 function completeN(project = loadSurfaceNProject()) {
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   if (biome?.authoring !== 'complete') throw new Error('N fixture did not complete');
@@ -402,7 +404,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('permits the audited ten-target peer-source repeat without changing physical-board ownership', () => {
-    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNProject(), {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('combat12'),
@@ -413,7 +415,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     const withSources = (sources: Readonly<Record<string, string>>) =>
       Object.entries(sources).reduce(
         (current, [slotKey, source]) =>
-          applyProjectCommand(current, catalog, {
+          settleTestEdit(current, {
             kind: 'ReplaceIncomingReward',
             reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
             value: boon(source),
@@ -468,7 +470,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       combat11: 'PoseidonUpgrade',
       combat10: 'AresUpgrade',
     } as const;
-    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNProject(), {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       actions: hubVisitActions(Object.keys(hubSources)),
@@ -477,7 +479,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       [nOccurrenceIds.opening, 'ApolloUpgrade'],
       [nOccurrenceIds.preHub, 'HeraUpgrade'],
     ] as const) {
-      project = applyProjectCommand(project, catalog, {
+      project = settleTestEdit(project, {
         ...(occurrenceId === nOccurrenceIds.opening
           ? {
               kind: 'ReplaceStartingReward' as const,
@@ -491,14 +493,14 @@ describe('N Hub rewards, validation, and candidates', () => {
       });
     }
     for (const [slotKey, source] of Object.entries(hubSources)) {
-      project = applyProjectCommand(project, catalog, {
+      project = settleTestEdit(project, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
       });
     }
 
-    const { biome } = validN(authorLegalTraitOffers(project));
+    const { biome } = validN(authorTestTraitsAndRequiredItems(project));
     const acquiredSources = new Set(
       biome.rewards.frontier?.events.flatMap((event) =>
         event.kind === 'concreteAcquisition' &&
@@ -515,13 +517,13 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('treats Hub board generation independently from its six-room acquisition order', () => {
-    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNProject(), {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'story'),
       occurrenceId: nOccurrenceId('story'),
       localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('story'),
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
       value: {
@@ -571,7 +573,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
 
     for (const slotKey of ['combat10', 'combat01'] as const) {
-      project = applyProjectCommand(project, catalog, {
+      project = settleTestEdit(project, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
         value: {
@@ -581,7 +583,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       });
     }
     expect(validN(project).biome.validity).toBe('valid');
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       actions: hubVisitActions([
@@ -1082,7 +1084,8 @@ describe('N Hub rewards, validation, and candidates', () => {
   it('retains an entered local reward finding on local and aggregate Hub order candidates', () => {
     let project = loadSurfaceNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
-      project = applyProjectCommand(project, catalog, {
+      // The owner picks up each swapped side-room reward.
+      project = replaceTestPlacedItem(project, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', slotKey)),
         value: { rewardType: 'AirBoost' },
@@ -1757,12 +1760,12 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('keeps the Ephyra HubRewards bag independent from an Artificer conversion', () => {
     const owner = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1'));
-    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNProject(), {
       kind: 'ReplaceManualArcanaSelection',
       route: createRouteAddress('Surface'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceIncomingReward',
       reward: owner,
       value: { rewardType: 'MetaCurrencyDrop' },

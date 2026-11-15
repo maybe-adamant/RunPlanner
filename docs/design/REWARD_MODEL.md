@@ -131,7 +131,11 @@ producer-lifecycle profile enumerates the reward types it supports, supplies
 one default point for their roles, and may explicitly override the complete
 role binding for a supported reward type. The `RoomReward` profile binds
 ordinary roles to `roomRewardPickup`, while its declaration binds Devotion's
-`chosenSource` to `beforeCombat` and `spurnedSource` to `afterCombat`. Catalog
+`chosenSource` to `beforeCombat` and `spurnedSource` to `afterCombat`. A binding
+may be automatic: the game grants the role at its point with nothing to pick
+up, so no room action takes it and the point acquires it on its own. The
+Zagreus contract's `InfernalContractBoon` is the one such role, granted at
+`afterCombat` once every enemy is dead and before the room's gems spawn. Catalog
 normalization expands that declaration into one exact role-complete lifecycle
 per supported reward type. It does not invent timing for reward types outside
 the profile or dispatch on reward names in core code.
@@ -821,20 +825,22 @@ Non-Mystery children remain on the refill slot; a Mystery's sparse acquisition
 child exists only while purchased and resolves against the later
 pre-acquisition context, not the refill-generation context.
 
-A Shrine of Hermes refill is caused by the first rushed initial
-`purchaseHermesShrineOffer` in timeline order made while Travel Deal is held,
-when it closes the Shrine screen, not by collecting the rushed
-item; a rush without the trait leaves the refill to a later rush. The refill is
-realized at that purchase, replaces its slot, and removing the optional rushed
-pickup leaves the refill and its own delivery intact. Reordering or re-rushing
-purchases, or gaining Travel Deal earlier or later in the room, can change the
-source; a retained refill item outside the new source's group is kept and
-reported `hermesShrineTravelDealRefillUnavailable` at the refill offer. A
-purchased refill ranked before any rushed initial purchase, or before any rush
-made with Travel Deal, keeps its item and reports the same finding at its
-purchase row with reason `noRushedPurchase` or `travelDealInactive`. Authoring
-keeps the refill purchase after the first rushed initial purchase only, since
-trait state is a simulation product.
+A Shrine of Hermes refill is caused by the first initial
+`rushHermesShrineOffer` in timeline order made while Travel Deal is held, when
+it closes the Shrine screen, not by collecting the rushed item; a rush without
+the trait leaves the refill to a later rush. A rush is its own row on the
+bought item, which the game allows any time later in the same visit, and the
+walk settles it at that row; the published plan still performs it with its
+purchase. The refill is realized at that rush, replaces its slot, and removing
+the optional rushed pickup leaves the refill and its own delivery intact.
+Reordering or re-rushing purchases, or gaining Travel Deal earlier or later in
+the room, can change the source; a retained refill item outside the new
+source's group is kept and reported `hermesShrineTravelDealRefillUnavailable`
+at the refill offer. A purchased refill ranked before any initial rush, or
+before any rush made with Travel Deal, keeps its item and reports the same
+finding at its purchase row with reason `noRushedPurchase` or
+`travelDealInactive`. Authoring keeps the refill purchase after the first
+initial rush only, since trait state is a simulation product.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,
@@ -869,7 +875,8 @@ the shop reprices without it afterwards. Nothing else changes a price.
 - A Shrine order rounds the shop price, then rounds again after the factor of
   its delivery delay. A rush pays the impatience multiple of the base price,
   less what the order cost, at the multiplier after the room's first purchase;
-  a buy-and-rush is one action paying both.
+  the order is priced on its purchase row and the rush on its rush row, both
+  where the purchase settles.
 - A Fateful Twist that grants a Voucher outside the room's Travel Deal
   purchase multiplies the rounded prices of the Well items still on show and
   rounds again. After the Travel Deal purchase the Well reprices from base, as
@@ -1065,7 +1072,8 @@ offers only on entry and advances exactly its purchased slots through
 purchase-time acquisition.
 
 The lifecycle point is producer-specific. A normal room reward emits its
-concrete acquisition on pickup, a Devotion emits its chosen and spurned source
+concrete acquisition on pickup, an automatic role as its point is reached, a
+Devotion emits its chosen and spurned source
 at distinct points, and a purchased Blind Box first emits its box use and then
 validates and emits its authored hidden source. The concrete acquisition
 declaration then projects the typed history writes. Store-entry identity never
@@ -1098,7 +1106,7 @@ source owner, lifecycle binding, and requiredness; each generated entry is
 still one ordinary concrete acquisition. Nemesis's free-item and contest
 results are optional, while an accepted trade result is required after its
 required encounter interaction. Quick Buck and Buried Treasure entries are
-optional, and taking their trait adds them to the room's order
+optional, spawned when their trait is taken and placed by the owner
 ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Artificer replacements and fresh full-Pom Sea Star duplicates are
 required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does
@@ -1139,13 +1147,16 @@ nor convertible. A fight left early claims nothing.
 Heracles's bounty uses the producer its encounter's kill bounty names
 (`HeraclesBountyPickup`) at the phase's `heraclesBounty` site: one required
 `RoomMoneyDrop` that his encounter's end drops for every phase that fights his
-encounter, and none for a Fig Leaf skip. No action spawns it, so its row
-follows his phase's combat checkpoint rather than a source row. It is an
+encounter, and none for a Fig Leaf skip. No action spawns it: its row spawns
+at his own phase's encounter end, and since the game counts it among the
+room's required objects, it is due before his encounter ends where his script
+waits for the room to be ready (O), and otherwise before the next wheel's
+choice or Doors open. It is an
 ordinary pickup: last-reward eligible, so Echo's replay recreates it, and
 duplicable by Sea Star through the authored duplicate; neither Time Piece nor
 the Artificer converts it. Selecting or replacing his encounter derives the
-site and takes the required row in the same command; a room saved before the
-site existed has neither until its next edit.
+site and takes the required row in the same command; a plan saved before the
+site existed gains the site when it opens, its row left for the owner to place.
 
 Paid Shop entries are a different lifecycle: purchase is their sole atomic
 interaction and cannot open Time Piece, Artificer, Sea Star, or another

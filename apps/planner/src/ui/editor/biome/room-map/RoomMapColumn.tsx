@@ -1,11 +1,11 @@
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { roomMapMarkers } from '@planner/projections/roomMapMarkers';
-import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
-import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
+import { roomMapImageFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
 import {
+  ContractDoorMark,
   RoomMapNumber,
   RoomMapLegend,
   RoomMapSideDoors,
@@ -27,8 +27,8 @@ const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
 
 /**
- * The room's map beside its controls: its doors, Chaos gate, entries, anchors
- * and Fields points, mirrored when the room is flipped. A Ship phase a wheel
+ * The room's map beside its controls: its doors, Chaos gate, Contract door, entries, anchors,
+ * Fields points and Shop stock, mirrored when the room is flipped. A Ship phase a wheel
  * follows shows the wheel's offers in place of the doors.
  */
 export function RoomMapColumn({
@@ -40,6 +40,7 @@ export function RoomMapColumn({
   map,
   placements,
   roomIdentity,
+  shop = false,
   sideDoors = [],
   stage,
   title,
@@ -60,13 +61,16 @@ export function RoomMapColumn({
   readonly map: WorkspaceRoomMap;
   /** A different room never inherits this map's pan and zoom. */
   readonly roomIdentity: string;
+  /** The occurrence holds a shop: shown on its room's Shop variant where one exists. */
+  readonly shop?: boolean | undefined;
   readonly stage: RoomMapStage;
   readonly title: string;
 }) {
   const highlight = useRoomMapHighlight();
   const pointers = useRoomMapPointers();
-  const calibration = roomMapCalibrations[gameName];
-  if (calibration === undefined) return null;
+  const image = roomMapImageFor(gameName, shop);
+  if (image === undefined) return null;
+  const { asset, calibration } = image;
   // The flip a previewed entry sets shows the room that way.
   const shownFlip =
     highlight?.kind === 'entry' && highlight.flipped !== undefined ? highlight.flipped : flipped;
@@ -98,6 +102,7 @@ export function RoomMapColumn({
       ? undefined
       : chips.find((chip) => chip.additionalExit === undefined && chip.doorIndex === doorIndex);
   const chaosChip = chips.find((chip) => chip.additionalExit === 'chaos');
+  const contractChip = chips.find((chip) => chip.additionalExit === 'zagreusContract');
   const wheel = markers.wheel;
   const wheelSpots =
     wheelChips === undefined
@@ -118,7 +123,7 @@ export function RoomMapColumn({
   return (
     <section aria-label={`${title} map`} className="room-map-column">
       <RoomMapViewport
-        asset={roomMapAssetFor(gameName)}
+        asset={asset}
         controlsPlacement="collapsible-overlay"
         key={roomIdentity}
         mirrored={shownFlip}
@@ -178,6 +183,28 @@ export function RoomMapColumn({
                   </span>
                 )}
                 <RoomMapNumber value={gatePosition} />
+              </span>
+            )}
+            {markers.contractExit === undefined ? null : (
+              <span
+                aria-label={contractChip === undefined ? 'Contract door' : chipName(contractChip)}
+                className="room-map-door"
+                data-closed={!open || undefined}
+                data-contract
+                data-preview={highlight?.kind === 'contractExit' || undefined}
+                data-ring={(open && contractChip === undefined) || undefined}
+                data-taken={(taken && contractChip?.picked) || undefined}
+                role="img"
+                {...markerPlacement(markers.contractExit, open && contractChip !== undefined)}
+                {...pointers({ kind: 'contractExit' })}
+              >
+                {!open || contractChip === undefined ? (
+                  <ContractDoorMark />
+                ) : (
+                  <span aria-hidden="true" className="room-map-door-face">
+                    <DoorChipFace chip={contractChip} />
+                  </span>
+                )}
               </span>
             )}
             {(wheelSpots ?? []).map(({ at, chip }) => (

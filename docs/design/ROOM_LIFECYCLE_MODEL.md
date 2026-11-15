@@ -51,7 +51,7 @@ flowchart LR
   control to the already-generated selected target.
 
 Within this skeleton the occurrence's [Room Action order](#room-action-order)
-places purchases, pickups and interactions in their legal windows.
+places purchases, pickups and interactions within their bounds.
 
 ### Key terms
 
@@ -133,7 +133,7 @@ The editor must not persist lifecycle operations or history snapshots.
 Application and React code may label and group lifecycle facts, but must not
 position a semantic boundary by comparing display labels, biome names, or
 incidental numeric action ranks when the profile or roster already owns the
-relevant window or checkpoint relation.
+relevant bound or checkpoint relation.
 
 ## Lifecycle Operations
 
@@ -206,7 +206,10 @@ outgoing store from the final active wheel. The acquisition event also records
 that wheel's selected store in entered-store history before a later phase or
 room can evaluate reward-ratio support, so a two-wheel room contributes two
 ordered store entries; dormant wheel capacity emits no lifecycle or
-store-ledger event.
+store-ledger event. A wheel candidate replay projects the acquisition
+checkpoint the history lacks, its phase's fight run once from the wheel's
+generation point: Wheels open for a wheel whose choice the walk has not
+reached, where the room's reached history ends for a dormant one.
 
 Do not introduce an unrestricted callback or event DSL. Add or split an
 operation, effect, or event kind only when audited game behavior has an
@@ -276,6 +279,23 @@ occurrences execute their own preparation and lifecycle in authored
 ordered history therefore supports ordinary rooms, O/P/H multi-phase rooms,
 and N side-room occurrences without a second encounter engine.
 
+**What starts an encounter.** Every encounter starts either automatically
+or right after a placed trigger row. It starts automatically at room entry,
+or at the previous encounter's end: an ordered multi-encounter room's next
+encounter and a Ship phase's next Wheels open follow that end with no row
+between them. Otherwise it starts right after its trigger row: the Opening or
+Devotion pickup, the wheel choice or the cage Unlock, and its Encounter and
+Combat markers stand right after that row, so moving the row moves them and
+the fight. A challenge switch press and a locked-door press begin and start
+their fight, a press fight outside the room's envelope, at once: its merged
+Encounter and Combat marker stands right after the press, after Doors open. A
+press fight never runs end effects, and the walk runs it as the press's own
+phase events. Eris's talk starts no fight. The Timeline names that row as the
+trigger of each marker it starts and that stands right after it; a marker
+whose row is unplaced, or ranked where the marker cannot follow it, names
+none, and an automatic start, an encounter's end, Wheels open and Doors open
+never do.
+
 **Noncombat and Story encounters.** The game still records and runs a Story
 encounter through `StartEncounter`, but its `EncounterType = NonCombat` skips
 combat start/end effects. The planner preserves the encounter identity,
@@ -291,7 +311,7 @@ encounter. Its phase has Encounter and Encounter ended boundaries, the
 interaction inside them, its [outcome](#encounter-outcome) right after the
 interaction, and the event's result pickup after the end. In Fields
 the Passive event orders among the cages by its interaction, each boundary
-directly around it. The boundaries only shape the Timeline and window
+directly around it. The boundaries only shape the Timeline and row
 positions: no encounter start or completion is executed for a Fields Passive
 event, and its history is unchanged.
 
@@ -358,7 +378,11 @@ Every phase's encounter identity and composition are fixed on entry from
 predecessor state and earlier phases' records, including Ship phases (whether
 the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
 encounters and introductions; the Nemesis random-event family is part of that
-identity. The Timeline keeps each phase read-only at its start and end, the
+identity. Her family is read from the state she spawns in: a family that state
+cannot queue (her damage trade while the hero holds the Demeter hit shield,
+her boon trade without a sellable god boon) is the event's Overview finding,
+and a damage trade whose shield is picked up before she is answered is her
+interaction's finding, since the game draws her event again there. The Timeline keeps each phase read-only at its start and end, the
 order it controls (Fields cage order, Ship phase seams and wheel picks) and the
 events decided in the encounter: Fig Leaf at its start (including P's
 pre-combat cascade, which suppresses execution without changing the recorded
@@ -374,12 +398,20 @@ lifecycle events or a second room model. The
 [simulation authority](SIMULATION_AND_VALIDATION.md#selected-cut) owns what a
 block in each stage publishes.
 
-The Postboss Purging Pool inventory is the declared exception: Overview content
-pinned at fountain use. The Pool unlocks only when the required fountain is
-used, and nothing between that use and opening the Pool removes a listed boon or
-changes its rarity, so it opens with the inventory present at fountain use
+One rule divides the two. The Overview holds the facts no in-room action can
+change: each encounter's identity and wave make-up, a boss's stage picks (a
+fixed part of its encounter script), stocks, which objects are present, and the
+room's layout. The Timeline holds what depends on in-room events or their
+order: Fig Leaf, the Gorgon condition, Aetos, purchases and interactions. The
+Postboss Purging Pool's entry list is therefore an Overview fact, generated
+from the boons held on entry. The Pool unlocks only at the required fountain
+use, whose rarity effects can change a listed boon; opening the Pool then
+regenerates its list, so a fountain use that changes a listed boon makes the
+regenerated list a Timeline fact of that use
 ([source audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#source-contacts-and-realized-hosts);
-[Room features](#room-features-at-cleanup)).
+[Room features](#room-features-at-cleanup)). Plan settings shown on the entry
+room (its biome's settings, the start room's identity) are plan choices, not
+facts of the room.
 
 ## Room Action Order
 
@@ -397,14 +429,17 @@ order, evaluates each action against history from earlier authored actions,
 and never retries another permutation. A later plan compiler consumes
 the same order without choosing a different witness order.
 
-Mandatory entries derive their required classification and legal lifecycle
-window from the engine's structural action domain; membership and position
-are the required participation and chronology. The activating command inserts
-the reference (the authored model owns that membership delta) at the default
-position the [roster](#roster) schedules. Optional Shop purchases, spawned pickups
-and Fields optionals use the same order with explicit membership controls. A
-deliberately malformed missing-required reference remains explicit repair
-state. No producer owns a parallel purchase or pickup order, and an outgoing
+Mandatory entries derive their required classification and their bounds in
+the room's events from the engine's structural action domain; membership and position
+are the required participation and chronology. Only the owner places a row:
+a room is created with none, and no command, settlement or upgrade inserts a
+required interaction on its own, whether a pickup (a room reward, a Boss's
+forced drop, a cage reward, a due delivery, Gold Gold Gold's duplicate) or an
+action on an object (a fountain use, a contact, a cage's completion, a wheel's
+choice). An unplaced required row is ordinary incomplete state: its item lies
+live and the walk stops at its deadline with its placement finding. Optional
+Shop purchases, spawned pickups and Fields optionals use the same order with
+explicit membership controls. No producer owns a parallel purchase or pickup order, and an outgoing
 decision never adopts the source room's chronology: the editor derives
 per-row membership and one ranked Room Timeline surface on the producing
 occurrence.
@@ -413,8 +448,8 @@ Resetting a room from a point keeps the order up to that point and lets
 everything after it go, so the walk's frontier returns there. Banners are
 events the walk announces and are never removed; a reset from a banner keeps
 the actions that bring it about and drops those after it, and later banners
-reappear only as the walk reaches them again. Required rows stay in place
-until automatic placement is withdrawn, since the order may not omit them.
+reappear only as the walk reaches them again. Required rows go too: their
+items are live again and the walk shows their findings.
 
 ### Roster
 
@@ -436,23 +471,25 @@ no second order authority.
 
 An insertion or a move is judged by its prefix, the way the walk reaches it.
 An action placed at position k is legal when the rows before it, with it at k,
-are valid as the walk reaches k: no row up to k follows a row of a later
-window, every explicit dependency of those rows is among the rows before them,
+are valid as the walk reaches k: no row up to k stands past its own deadline,
+which a row before it passes by opening at or after it, every explicit dependency of those rows is among the rows before them,
 and every checkpoint they wait on is met there. The doors-open checkpoint
 counts every placed required action, those after k included, as the walk
 does, so a doors-open action needs each of them before it. A left switch
 press ends the room, so it is valid only as the room's last row: nothing may
 follow it, and the press itself is refused at k while any row follows it,
 which is the press's own validity rather than a veto from a later row. A
-required action's window closes at its deadline, so a ranked required action
-of an earlier window placed after k also refuses k: the walk cannot progress
-past it. The walk applies the same rule to the authored order, stopping at the
+ranked required action placed after k whose deadline a row up to k passes also
+refuses k: the walk cannot take it in time. The walk applies the same rule to the authored order, stopping at the
 first row such an action follows, before that row settles: a Postboss Well,
 Pool, Shrine or switch row before the fountain use that unlocks the exits is
 never reached. A required action placed at a phase the room does not play
 sets no deadline; its placement is its own finding. An unplaced required
-action of an earlier window does not refuse k; the walk's own deadline stop
-leaves k unreached. Every other row after k takes no part: a later row the
+action does not refuse k; the walk's own deadline stop
+leaves k unreached. A gate row is the exception: a row up to k that opens
+past a phase's gate (a Ship wheel's choice, a gate pickup) whose row is not
+placed waits behind it, since that phase's combat never starts first, so k
+is refused, even as the row's canonical restore. Every other row after k takes no part: a later row the
 edit invalidates carries its own issue when the walk reaches it. A prefix that
 is already invalid stops the walk before k, so k is refused unless the edit repairs that prefix. A
 move is judged as an insertion at its target, and a group placed together is
@@ -460,11 +497,14 @@ judged through its last row, each row by its own prefix. The judgement is
 structural; it never reads affordability or other simulated state, which
 stays a finding.
 
-Insert and move proposals carry the typed dependency and fixed-window
-blockers of that prefix, each naming its affected action and its prerequisite
-or conflicting action windows; a required action of an earlier window after k
-is its own blocker naming the action that must come first. An action whose window follows its authored order (the Postboss rack) never
-takes part in window crossing or required-first order.
+Insert and move proposals carry the typed dependency and bound blockers of
+that prefix, each naming its affected action: a row standing before its spawn
+or enabler can happen (naming the required action ordered after it that must
+come first, the unplaced gate row it waits behind, or that the point never
+happens in the room), or past its
+deadline (naming the nearest earlier action whose opening passes it). The
+Postboss keepsake rack is not a required room object: it stands wherever it
+is placed, and no bound of its own or of another row is judged against it.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
@@ -479,17 +519,19 @@ Shop, Shrine or Well at a chosen position accepts exactly the authorable
 indices and the command's own default, and refuses any other with a contract
 error; a generic optional insertion, such as a challenge switch press or a
 locked door press, still accepts any index and reports a bad position as a
-finding. A rushed Shrine item's optional pickup moves with its purchase,
-directly after it, since the item spawns as the Shrine closes. An engine
-authoring query publishes each purchase command's authorable indices, judged
-the same way.
+finding. A Shrine rush follows its purchase, and a rushed item's optional
+pickup follows its rush, since the item spawns as the rush closes the Shrine. A purchase and
+a generated pickup's placement share one rule: the command places its action
+by default, then moves it to the chosen index, judged by that index's prefix.
+An engine authoring query publishes each such command's authorable indices by
+the same rule.
 
-Defaults are anchored differently. When a command newly activates required
-actions, or restores one without a chosen position, the engine extends the
-order with their deterministic canonical schedule, anchored to the front:
-each lands before the first retained action of a later window (or of the same
-window and later contribution order), after its dependencies; existing rows
-keep their relative order. That slot is a default, not a deadline, and may
+Defaults are anchored differently. A required action's canonical restore is
+its deterministic default, anchored to the front: before the first retained
+action that opens later (or opens at the same point and comes later in
+contribution order), after its dependencies. It is advice, marked on the
+roster's insertion and the live room's placement, and the slot an insertion without a chosen position
+takes; nothing applies it on its own, and it is not a deadline, so it may
 precede other legal indices. Purchases and other object interactions are
 anchored to the end: without a chosen position they append, their latest legal
 point. An unrelated retained-invalid row or a pre-existing missing
@@ -498,7 +540,7 @@ Missing required authorship remains a supported incomplete state with one
 canonical restore position among its legal ones.
 
 Active required roster rows also expose `requiredScope`: `phase` when their
-fixed window or dependency chain constrains them to encounter progression,
+bounds or dependency chain constrains them to encounter progression,
 otherwise `room`. Optional and stale rows have no required scope. This derived
 classification does not change participation, legal order, or authored state.
 Fields cage rewards remain room-scoped despite their source phase; a contact
@@ -537,7 +579,7 @@ Procedure, first match wins:
    duplicate, a matured trait drop) is removed.
 4. **Otherwise unable to happen but repairable another way**: invalid, with a
    finding (a Shop purchase past the god cap, a Purging Pool sale the game
-   refuses, a Well or Pool purchase whose roll changed, a row out of order, a
+   refuses, a Well or Pool purchase whose roll a later reroll replaced, a row out of order, a
    trait drop whose trait is held but now matures in another room).
 
 Every removal:
@@ -545,19 +587,14 @@ Every removal:
 - happens in the edit that causes it, in the same Undo step, through the
   command that owns the row's removal;
 - leaves the spawn's own choices with the source or feature that owns them (a
-  delivered item's offer, a refill's item and hidden god), so restoring the
-  source restores them; only the row goes;
+  refill's item and hidden god), so restoring the source restores them; only
+  the row goes. A Hermes delivery is the exception: its payload is the item
+  its purchase or rush produced, so it goes with them as a replaced item
+  (below);
 - is silent in the room the edit addresses, where it happens on the Timeline
   being edited, and announced prominently in any other room, naming the room;
   an edit that addresses no single room (a route, biome or Hub owner)
-  announces every removal;
-- yields to continuity: when a producer changes rather than disappears (a
-  reward swapped for another kind), its spawn rows, in the former reward's
-  declared role order, take the new reward's pickup roles in its declared
-  order (main pickup first), each at its old position where the order allows
-  and otherwise at the role's default, instead of being removed and placed
-  again; leftover old rows are removed and leftover roles keep their default
-  places.
+  announces every removal.
 
 Never removed:
 
@@ -581,8 +618,11 @@ silently, removing only what the saved plan itself shows had its context or
 source and lost it:
 every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
 stands before while no Echo produces it; a matured trait drop whose producing
-trait a walk without it never holds and that reaches the plan's end; and a
-countdown delivery whose purchase is gone. Every batch's doors settle as
+trait a walk without it never holds and that reaches the plan's end; a
+countdown delivery whose purchase is gone; and the replaced deliveries,
+rerolled rewards and Echo replays below, as the saved plan and its walk show
+them, with no announcement: an Echo replay the walk reaches holding another reward than the
+walk's last goes there, its pickup with it. Every batch's doors settle as
 above. Whatever the plan cannot show had its source stays with its finding,
 as the never-removed list keeps it: a Travel Deal refill or a duplicate the
 saved plan already shows unproduced, a drop whose producer is held or may lie
@@ -592,6 +632,12 @@ refill or duplicate with its trigger. Rows the
 walk does not reach and rows of rooms the run does not enter stay untouched;
 a stale row a plan still holds, such as one in a room the walk did not reach,
 goes at the next edit of its room.
+
+Loading a plan saved before schema 103.3 silently removes a Stygian Well or
+Pool of Purging its route never spawns in that room, kept from before the
+route excluded it (a Fresh File Postboss's), with its purchase, sale and
+reroll rows. Loading any plan removes a pickup row for an automatic reward
+role (the Zagreus contract's Champion of Elysium), which no room action takes.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it
@@ -603,23 +649,86 @@ never removed from a distance, only marked. Removal and return as side
 effects of unrelated edits are hidden behaviour, and retained dead rows bloat
 projects over a long edit history.
 
-| Case                                                | Step       | Outcome                                 |
-| --------------------------------------------------- | ---------- | --------------------------------------- |
-| Phase or wheel the room no longer plays             | 1          | removed, silent                         |
-| Artificer replacement, reward set back to normal    | 2          | removed, silent                         |
-| Refill or rushed Shrine pickup, its purchase undone | 2          | removed, silent                         |
-| Hermes delivery, its Shrine purchase undone         | 2          | removed, announced in the delivery room |
-| Artificer card unequipped upstream                  | 3          | transform invalid                       |
-| Travel Deal no longer held                          | 3          | refill purchase invalid                 |
-| Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
-| Matured trait drop, trait lost                      | 3          | removed, announced                      |
-| Door or cage reroll, the reward it rerolls gone     | 1          | removed, silent                         |
-| Door its source room no longer has, not taken       | 1          | removed, announced in the source room   |
-| Door its source room no longer has, taken           | 4          | invalid                                 |
-| Reroll of a door the game refuses or not available  | 4          | invalid                                 |
-| Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
-| Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
-| Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |
+| Case                                               | Step | Outcome                                 |
+| -------------------------------------------------- | ---- | --------------------------------------- |
+| Phase or wheel the room no longer plays            | 1    | removed, silent                         |
+| Artificer replacement, reward set back to normal   | 2    | removed, silent                         |
+| Refill pickup, its purchase undone                 | 2    | removed, silent                         |
+| Rushed Shrine pickup, its rush undone              | 2    | discarded, silent                       |
+| Hermes delivery, its Shrine purchase undone        | 2    | discarded, announced in its room        |
+| Artificer card unequipped upstream                 | 3    | transform invalid                       |
+| Travel Deal no longer held                         | 3    | refill purchase invalid                 |
+| Gold Gold Gold duplicate, boon swapped away        | 3    | removed, announced in the shop room     |
+| Matured trait drop, trait lost                     | 3    | removed, announced                      |
+| Door or cage reroll, the reward it rerolls gone    | 1    | removed, silent                         |
+| Reroll, its room rebuilt without its first draw    | 1    | removed with its item, announced        |
+| Door its source room no longer has, not taken      | 1    | removed, announced in the source room   |
+| Door its source room no longer has, taken          | 4    | invalid                                 |
+| Reroll of a door the game refuses or not available | 4    | invalid                                 |
+| Hub board reroll, its slot closed                  | 1    | removed with the slot, announced        |
+| Hub board reroll, its slot entered                 | 4    | invalid                                 |
+| Trait drop, trait held but matures elsewhere       | 4    | invalid                                 |
+| Reward swapped, a pickup role it no longer has     | 1    | removed, silent; the new reward is live |
+| Item replaced: same key, different content         | 1    | removed; the new item is live           |
+
+A pickup, purchase or sale row records the content of the item it acts on
+([item content](AUTHORED_PROJECT_MODEL.md#item-content-on-rows)); its key does
+not. The row applies while it recorded no content, while its item is not
+observed, or while both hold the same content. Otherwise its item was
+replaced: a swap that keeps the key (Zeus Boon to Hera Boon at the same point
+and role, a door, cage or wheel reward redrawn by a press, a Shop option, a
+Well or Pool pin changed to another value, a Shrine restock, another wheel
+pick) leaves the row on an item that is no longer there. Such a row stays
+ranked in the roster as an **item-replaced** row: never executed, it stops
+the walk with its finding and its item counts as unplaced. It is context
+gone: the edit that replaces the item removes it, through the row's owning
+removal command, in every room of the plan whether or not the walk reaches
+it, silently in the room the edit addresses and announced in any other; one
+that a saved plan already held goes at the next edit of its room. Unpinning an
+item keeps its rows, since an unobserved item matches any content. A row with
+no active action is stale, never item-replaced, whatever content it recorded.
+Until it goes, the live room shows the item the row's place holds now as
+unplaced, never the row as placed: placing that item takes the row's place.
+Derived items (a Sea Star duplicate, a Shrine delivery, an Artificer
+replacement, a Nemesis result) are judged the same way by their payload, so a
+payload redrawn as another item loses its pickup here as well as through its
+source's own discards; the payload itself is the new item's observation and
+stays, its item lying live to be placed again. Removing a Well or Pool reroll
+removes the purchases and sales of its list with it.
+
+Three replaced items carry no row content to judge, so settlement repairs them
+from what the walk or the plan shows, in the edit that replaces them and in the
+same Undo step. Each discards the old item's observations and outcomes with its
+pickup and the items derived from it; the new item lies live. Each is silent in
+the room the edit addresses and announced in any other, naming the replaced
+items beside the removed rows:
+
+- **A Hermes delivery** whose source no longer produces it (its purchase, or
+  for a pickup in the Shrine's room its rush, is gone, or the Shrine with it)
+  or whose Shrine slot now stocks another reward, judged in every room as a
+  row on a replaced item is; or whose payload lies unplaced at a host while
+  the walk has the delivery due at another, judged only where the walk
+  reaches. A placed delivery the edit displaces is unplaced first and then
+  judged the same way.
+- **A rerolled reward's outcomes** once the press whose item they are is no
+  longer its owner's effective press (a later press, an earlier one again, or
+  none), or once that press's result changes in place: they reset to the
+  unresolved acquisition of the effective press's reward, or go while no press
+  is effective. The rerolled item records that press beside each press's
+  result, so the walk needs no content to judge it.
+- **An Echo replay** the walk reaches holding another reward than the walk's
+  last reward there. Its recorded reward is discarded and the replay is
+  unobserved again; a pickup placed by the same edit takes the new replay and
+  stays. A replay in a room the walk does not reach stays until an edit's
+  settlement reaches it, and one never observed keeps only its missing-offer
+  finding.
+
+A delivery or rerolled reward the plan already held replaced before the edit
+goes only with an edit of its own room, as a row on a replaced item does: the
+plan shows the mismatch on its own, so an unrelated edit elsewhere leaves it
+with its finding. An Echo replay goes at any edit whose walk reaches it,
+because only the walk names its reward: no earlier settlement can be known to
+have judged it, so the first one that reaches it does.
 
 ### Lifecycle structure and authoring timeline
 
@@ -633,14 +742,17 @@ same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
 None of those consumers may reconstruct phase membership or boundary order
 from authored action ranks. Structure construction, active-phase scoping, and
-window ordering share that owner; the action domain retains action
+bound ordering share that owner; the action domain retains action
 contributions, required participation, and dependency assembly.
 
 When encounter preparation assesses a suffix as dormant, the engine scopes
 that same structure and roster to the assessed active phase prefix for both
 execution and workspace projection. An invalid terminating selection does not
 fabricate a shorter structure; its later phase remains available for repair.
-The application consumes the engine's phase status and scoping operation
+The room's published Timeline keeps the dormant phase's entries, so its entry
+positions stay stable, while the spawned-loot, live-room, outcome and room-stop
+queries read the played phases, and the walk never stops at a dormant
+phase's entry. The application consumes the engine's phase status and scoping operation
 rather than deciding suffix activity from the selected encounter label.
 
 The roster remains authoritative for active action rows, dependencies,
@@ -667,6 +779,22 @@ cage-completion action remains a repair row but cannot erase that cycle. Ship
 phase grouping consumes the same structure's phase attachment; the application
 does not place wheel or action rows by rank arithmetic.
 
+A row's published execution contact is a projection of its bounds. One
+deliberate asymmetry: an encounter's spoils take the wheel's post-combat
+contact only when the phase is a Ship wheel phase (its spawn is that phase's
+encounter end), while a delivery or drop spawned by end effects takes the
+encounter-end contact of the phase whose end effects spawn it, even when those
+effects wait on a later wheel. A Ship wheel's row whose phase the room no
+longer plays keeps that wheel's pre-combat contact, with no phase.
+
+Bounds compare by the order of their points in the structure. Distinct points
+share a place only where the game makes them simultaneous: a phase's end and
+its end effects when its script does not wait for the room to be ready, a Ship
+phase's end effects and the next phase's Wheels open, and the doors opening
+with the exits ready. Waiting end effects stand after their encounter end and
+before the next phase. A Fields cage's points stand where its row opens, so
+cages are ordered by their rows, not by place.
+
 ### Reroll presses
 
 Door and Fields cage reroll presses are optional ranked actions in the source
@@ -690,7 +818,14 @@ offer's earlier screens settle with the offer.
 
 An engine-owned read-only query publishes, for each entered room, the loot
 the game spawns on its own, grouped by the moment it appears, each moment
-keyed by its kind and phase and listing its items in spawn order. The room
+keyed by its kind and phase and listing its items in spawn order. Each moment
+and unlock names its cause, the Timeline entry it follows: the boundary it
+happens at (an unlock at its phase's encounter end; an encounter's end at Boss
+defeated only where the Timeline shows no end; an earlier Ship phase's end
+effects at the Wheels open they share; the Preboss flush at Room entered); for
+a Ship phase's end effects after the wheel reward, that reward's collect row,
+which they wait on; or, where the Timeline shows no boundary for it, the end
+of the Timeline. The room
 reward spawns at the encounter's end; on entry for a role taken before combat
 (an Opening reward, Devotion's choice) or a room without combat; and at the
 start of an encounter that spawns it first (the H minibosses). Arachne's
@@ -698,12 +833,14 @@ cocoons stand from entry with the reward hidden, neither spawned nor locked:
 breaking the reward cocoon spawns it and ends her encounter
 (`EncounterEventsArachneCombat` waits for `ArachneRewardFound`), so it is an
 ordinary encounter-end spawn, and collecting it opens the doors. A Boss's forced
-drop and a Ship wheel's reward spawn at their phase's end. After the reward,
-an encounter's end spawns its due Hermes deliveries in purchase order, then
-matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
-phase a wheel follows they appear at that wheel's Wheels open, after the phase's
-reward and NPC are resolved, and after the final phase they follow the wheel
-reward as a separate moment. A Fields cage's
+drop and a Ship wheel's reward spawn at their phase's end. Heracles's bounty
+spawns at his own encounter's end (`HeraclesPostCombat`), before that
+encounter can end, in whichever phase he fights. After the reward, an
+encounter's end effects spawn its due Hermes deliveries in purchase order,
+then matured clock drops such as Supply Chain's; in a Ship phase a wheel
+follows they appear at that wheel's Wheels open, after the phase's reward and
+NPC are resolved, and after the final phase they follow the wheel reward as a
+separate moment. A Fields cage's
 end effects spawn their pickups beside its still-caged reward, both taken any
 time after that cage. Fields cage and
 optional rewards spawn on entry, each cage marked by the phase that frees it,
@@ -725,14 +862,17 @@ spawning at the encounter's end.
 Loot an action's settlement spawns (a boon's own drops, Echo's last reward and
 Gold Gold Gold duplicate, a Nemesis free item, Eris's gift, a challenge switch's claim,
 the Artificer's replacement under the converted pickup, Sea Star's copy under
-the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
+the pickup it copies, a rushed Shrine item under its rush in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,
 what it spawns as (its reward, which for a Nemesis result is the one her
 outcome spawns, or the concrete pickup where that differs: one role of a
-reward that spawns per role, a forfeited reward's Red Onion), source,
+reward that spawns per role, or the Red Onion of a reward
+[Forfeit](TRAIT_OFFERS.md#fear-and-reward-settlement) replaced as it
+spawned), source,
 participation and placement: its ranked action, or the command that places it,
-an unplaced item that needs an input once placed (a Pom Slice's Pom) marked as
-needing that choice. Items come from the active action domain and the reached due
+an unplaced item marked with the outcome its pickup settles once placed (a Pom
+Slice's Pom, a boon's offer, an Anvil of Fates result, a Path of Stars
+screen). Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
 Only loot the walk produced is listed, and spawning is kept apart from
 resolving. Everything a moment spawns spawns together once the walk reaches
@@ -749,7 +889,171 @@ assessed history does not reach lists nothing. A Supply Chain Pom Slice spawns
 once its boon is taken and its encounter ends.
 A Travel Deal refill is a purchase, not spawned loot.
 
+### Live at a point
+
+An engine-owned read-only query publishes, for each entered room the walk
+reaches, what is live at each gap of its action order, from the room's entry
+through the walk's frontier. A gap is the stretch of the Timeline between two
+ranked rows, and the gaps around a stale row share one stretch. The frontier
+is the gap the walk stands at, where the next action goes: the last gap before
+the room's published stop, or after the last row of a room the walk passes.
+Nothing past the frontier is live, since the walk has not reached it. The
+live row is this product at the frontier, and a Timeline gap's controls are
+the same product at that gap. The product says whether the walk stopped in
+the room before passing its frontier: at a required item left unplaced, which
+the live row answers, or at any other block, which no live item answers, so
+the application shows no live row there and only the gap above the stopped
+row.
+
+A required item left unplaced never holds the walk where it spawns: the walk
+passes the event or action that spawns it, the item lies live on the ground,
+and the walk stops at its deadline with its placement finding, never at its
+spawn. The deadline is the point its bounds name, which the walk passes by
+reaching a later point or that point itself: Doors open, a fight's start, the
+next wheel's choice, a phase's end effects, or the room's commit. Items due at
+the same deadline are independent and may be taken in either order. What a
+fight's end spawns is due before its end effects when the encounter's script
+waits for the room to be ready (`WaitForNextEncounterReady`), otherwise as the
+doors open. An optional item is due when the room is left, except a wheel's
+reroll, which its wheel's choice ends. A Ship phase's end
+effects wait until its wheel reward and required contacts are taken, so an
+unplaced one is due there, after the phase's other post-combat rows.
+
+The game refuses a Ship wheel's choice and keeps the doors shut while any
+object of the room's required set lies on the ground
+(`HasRoomRequiredObject`); a wheel's reroll is not refused. One engine rule
+states this for the walk and the live room alike: a required item on the
+ground is due before the next row that waits for it, the next wheel's choice
+or anything the doors opening enables, and otherwise before Doors open. The
+pickups a Ship phase's end effects spawn are therefore due at the next wheel's
+choice, after its Wheels open has rolled the offers; after the final phase,
+before Doors open. A
+pickup taken before combat (an Opening reward, Devotion's choice) and an
+action that starts a fight (a cage's completion, a wheel's choice) lead to
+that fight, so the fight waits on them; whether a fight follows is the room
+profile's fact, an encounter later among its operations. An unplaced cage or wheel choice is
+due after the executable rows opening with it that the walk reaches before it, such
+as the earlier cage's reward or a delivery its wheels opening spawned, unless
+a required action due by then is missing; playing forward therefore
+clears and collects a Fields room cage by cage.
+
+A countdown Hermes delivery and the fourth-biome Preboss flush are required
+objects the game registers as blocking the exit. Where a delivery or matured
+clock drop arrives is derived by the walk, never stored: its row's bounds span
+from the room's first end effects to Doors open (a drop, optional, to the
+room's exit), and the walk judges the row against its due spawn. A row ranked
+before the spawn takes nothing and carries the order finding; one past its
+required-object deadline leaves the waiting row's order finding naming it. No placement after Doors open is legal:
+Doors open follows every placed required action, and a delivery ranked after
+a doors-open row stands past its deadline. A rushed
+same-room delivery is optional loot spawned once the doors are already
+usable; it has no door deadline.
+
+Two kinds of item are live at a gap, and nothing else:
+
+- **Loose pickups**: the [spawned loot](#spawned-loot), each live from the gap
+  it spawned in (its moment's boundary, or the gap after the action whose
+  settlement spawned it) through the gap of the row that collects it. A
+  pickup not yet spawned or already collected is absent. Each keeps its reward
+  owner, source and participation, with its deadline when required, the gap it
+  spawned in and, while still caged, the unlock that frees it; a caged pickup
+  offers nothing to do until then.
+- **Active objects**: a World Shop, the Contract pedestal, a Hermes Shrine, a
+  Stygian Well, a Pool of Purging, the fountain, the keepsake rack, Eris, an
+  encounter's required contact, the Gorgon, a Fields cage's completion, a Ship
+  wheel, a challenge switch, locked doors and door or cage rerolls, each live
+  where it has a legal action.
+
+An item's legal actions at a gap are what the engine already authorizes
+there; nothing is evaluated again. They are the row standing at the gap, the
+[roster's](#roster) authorable insertion of an unplaced row (a required
+action's canonical restore marked) and authorable move of a later row to the
+gap, and an object's new purchase or a derived pickup's placement (a due
+delivery, a matured drop, Gold Gold Gold's duplicate) at an index its command
+accepts, judged by the one rule every positioned command shares. A command
+that still needs a choice, such as a Pom level, says so; the indices it
+accepts do not depend on the value chosen. A required item carries its
+deadline: the last gap of the whole order at which it may stand, from the same
+placements its offered actions come from. An unplaced derived pickup also
+carries the last index its placement command accepts.
+
+Each item keeps the classification its owner gives it today: a Boss's forced
+drop, a countdown delivery and Gold Gold Gold's duplicate are pickups with
+their spawned-loot source, while an NPC contact and a Fields cage's
+completion are actions on objects. An object's new purchases are read where
+the room's reached actions end, which is the same set at every gap, since an
+item bought earlier is a row; a room stopped in its Overview offers none.
+
+The live room is one product, and each item lists its **verbs** at the
+gap: the distinct interactions (pick up, goldify, transform, buy, rush,
+sell, reroll, choose, talk to, unlock, use, press), each with its
+participation, its deadline when required, and the commands that perform it
+there as one edit, or the picker it needs. A legal action is one verb; the
+row standing at the gap is its standing verb. A standing row acquiring one
+role the walk reached also offers the other ways of taking it that the
+capability captured at its contact supports, so a paid item is never
+goldified or transformed, and Time Piece needs a charge and the Fated state.
+That capability counts only the conversions before the contact, so taking an
+earlier row's offer can starve a later conversion, which then raises its
+finding. An unplaced loose pickup acquiring one role offers the same
+alternatives at each gap that can place it, each placing it and setting its
+disposition in one edit, judged at the state its row would meet there: at the
+frontier where the room's reached actions end, where its row appends, and at
+an earlier gap the state the next reached row meets before it settles. Verbs
+whose row a choice creates are offered where the engine already reads them: a door, cage
+or wheel reroll press at its surface's append point, and a Well or Pool
+reroll where the room's reached actions end, each only while a held card
+enables it and the reroll pool pays. Each stocked Pool slot's sale is a
+roster row. A picker comes **before** a verb
+whose commands it supplies (a reroll press's target, the offer a wheel's
+choice takes, each offer placing the choice with it picked) or
+**after** one that applies as is: the outcome the placed row settles, opened
+once the row stands (a Pom's level, Sea Star's copy of a plain pickup, a
+pickup's, purchase's or contact's trait offer, an Anvil of Fates result, a Path of Stars screen, a rerolled list, the
+rack's keepsake, the Artificer's replacement, the item Travel Deal restocks, a
+Fateful Twist's result, a Nemesis event's reward and traded boon, the Phial's
+target, a challenge switch's outcome, a locked door's fight, a press's
+reward). A press takes its target first and is placed with its reward
+unset; its row's picker then asks it, offering the rewards its target's store
+can redraw there, and until it is set the press is a required missing input
+where the walk stops, like an unset door reward. A moved row
+keeps the outcome it has, so its move opens nothing. Travel
+Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
+first initial one) that triggers it settles, so the restocked item is that
+row's outcome, stocked by the edit that first reaches it, and offered to buy. Each verb is one edit against the current plan; verbs
+offered at one gap are alternatives, never composed. A consumer that only
+places what a room requires asks for the placements alone: each row's,
+placement's or purchase's own verb, without a standing row's conversions or
+the verbs a picker creates.
+
+At the frontier the room publishes its **progression**: leaving, once the
+walk passes the room with nothing required live, or choosing the next Ship
+wheel when that choice is the only required thing live. Once the walk passes
+the room, the optional pickups still live at its last gap are **left
+behind**.
+
 ## Canonical Lifecycle Profiles
+
+A room runs the profile its declaration names for its role: an ordinary room,
+an Ephyra Hub board target, or a Hub side room on its local visit. Only a
+Preboss chooses by occurrence state, between its shop and its free reward.
+Whether the room takes the profile's producer points follows from its reward,
+one fact the materialized room publishes and command-time defaults derive the
+same way: a room with a reward binding runs its producer, its reward chosen or
+not. A room runs none only when its binding is none, when it is a route start
+without the run-start reward, or when its door forces a Clockwork Goal in place
+of its counted choice; such a room runs the same steps without them. A Goal
+forced beside a Preboss's shop leaves the shop's producer. The walk reaches a
+producer only once its reward is chosen.
+
+The walk's order is fixed: prepare, enter, the encounters as the room's event
+graph runs them, the points after combat, Doors open, leave. The reward point
+before combat is reached as the encounters begin. A profile declares only what
+it adds to that order: its producer points, an offer point before or after
+entry, the Ephyra pylon's required objects, whether Doors open generates doors,
+and an acquisition point settled as the room is left. A gate's point is not a stop of its own: the gate pickup
+is taken as it starts its fight. The listings below name the operations in
+that order.
 
 ### Standard Reward Room
 
@@ -842,9 +1146,9 @@ The same acquisition-entry seam hosts every current generated pickup. A normal
 Quick Buck, Buried Treasure, equipping Narcissus acquisition, or selected
 Nemesis random-event result activates its declaration-owned entries at its
 declared pickup window; source selection alone does not. A trait source's
-optional same-room entries are taken with the trait, right after its
-acquisition or, for Narcissus, in its `roomExit` window; a deferred, clocked
-entry is not ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Sea Star adds one
+optional same-room entries spawn with the trait, right after its acquisition
+or, for Narcissus, in its `roomExit` window, and the owner places their
+pickups; a deferred, clocked entry likewise ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Sea Star adds one
 later source-scoped entry after an eligible normal free pickup. Nemesis
 event-family selection configures the encounter separately from its required
 interaction. Concrete offer and response detail is authored at that interaction
@@ -890,12 +1194,17 @@ restoration and departures are topology between fragments
 prepareRoom
 materializeOfferPoint(shopInventory)
 enterRoom
+startEncounter(main)
+completeEncounter(main)
 generateOutgoingBatch
 settleAcquisitionPoint(roomExit)
 commitRoom
 exitRoom
 ```
 
+`StartRoom` starts the Shop's non-combat encounter (`Shop`, `TyphonShop` or
+`Empty`) as it does every room's: it counts no encounter depth and applies no
+end effects, and its markers stay hidden.
 Shop inventory is prepared from the committed predecessor's history and
 materializes before the shop's outgoing doors are generated; the outgoing batch
 is then generated from the same pre-purchase history, with the full generated
@@ -935,7 +1244,13 @@ completely ([Reward Model](REWARD_MODEL.md#generated-pickups)); free
 declaration-produced entries in the same occurrence are independent pickup
 actions.
 
-Travel Deal and Gold Gold Gold derive their trigger from the true action order.
+Travel Deal and Gold Gold Gold derive their trigger from the true action order:
+a refill follows the room's first purchase, and Gold Gold Gold's duplicate
+follows the room's first purchase of an item it can duplicate, so a duplicate
+placed earlier is out of order and no placement offers that position.
+The duplicate exists once that purchase settles, whether or not its pickup was
+ever placed: it lies live from the purchase until a row collects it, a
+required one is due before the room is left, and it goes with its purchase.
 The selected source slot is not a complete payload-authoring context: the
 generated payload is evaluated against the exact history prefix at the
 triggering action. A forced or ordinary Hermes delivery in `Q_PreBoss01` may
@@ -947,8 +1262,8 @@ retroactively if acquired after it.
 Purging Pool sales, Well purchases and their rerolls are ordinary ranked
 participants of their host occurrence's action order, inserted by their
 feature's commands rather than from the generic Optional actions pool. A Well
-or Pool has no interaction boundary: its initial stock is optional, a blank
-slot stays native, and use follows from the actions present. Each reroll
+or Pool has no interaction boundary: its stock is filled on first reach and
+use follows from the actions present. Each reroll
 settles in action order: a Well reroll restocks only the slots not bought
 earlier in the room (the room's first purchase under Travel Deal restocks in
 place and stays offered), a Pool reroll redraws the whole list from the traits
@@ -972,34 +1287,44 @@ ranked reports `purgingPoolUnavailable` and is never assessed, so its sales have
 Fresh File attempt has none of these features; the H Postboss Pool object it
 shows natively is locked and is not an authorable inventory.
 
-Postboss Purging Pool inventory is assessed once immediately after the required
-fountain action and its rarity effects settle, before cleanup sales. Its
-candidates and inventory findings consume that post-fountain state, not room
-entry; an unresolved Phial outcome withholds the pool frontier. This models
-the inventory available when the fountain unlocks the facilities, including
-native regeneration caused by a changed offered rarity. Later sales consume
-the current list and the current equipped traits; only a ranked Pool reroll
-regenerates the list.
+A Postboss Purging Pool's entry list is assessed on entry against the boons
+held then, at the Overview. The required fountain use, once its rarity
+effects settle, judges that list: when a listed boon is gone or its rarity
+changed, the Pool regenerates its list at opening, a separate generation
+judged against the boons held after the use, whose findings belong to that
+use; an unresolved Phial outcome withholds the judgment. Sales and rerolls
+hang on whichever list is on show, the regenerated one when the use made
+one. Later sales consume the current list and the current equipped traits;
+only a ranked Pool reroll regenerates the list again.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A purchased Shrine generation, including a purchased Travel Deal
-refill, gains one required `purchaseHermesShrineOffer` row in the room's
-post-outgoing purchase window (an Ephyra side room, having no outgoing
-generation, opens with it). The row authors that purchase's rush and its order
-among the Shrine's purchases; the walk still schedules every initial Shrine
-purchase together at the Shrine checkpoint, while each row's position settles
-the Travel Deal refill and the refill's own purchase. Shrine purchase rows never become timeline
-transactions: each stocked item's delay, bought or not, and each purchase's
-rush publish through the room Overview inventory, and the execution room guide
-carries the row only as an informational reminder.
+refill, gains one `purchaseHermesShrineOffer` row in the room's post-outgoing
+purchase window (an Ephyra side room, having no outgoing generation, opens with
+it), and a rushed one a `rushHermesShrineOffer` row in the same window after
+it. The game offers the rush as a second press of the bought item, any time
+later in the same visit: the room keeps its Shrine store, and the rush finds the
+pending order only while the run depth is the purchase's
+(`SurfaceShopLogic.lua:317-363, 521-540`). The walk schedules every initial
+Shrine purchase together at the Shrine checkpoint and prices each purchase at
+its row; a rush settles at its own row, at any gap after its purchase in the
+room: the rush closes the screen, so its item spawns there, and the first rush
+made with Travel Deal realizes the refill there. Its price is fixed with the
+offer and repriced only by the room's first purchase, always earlier, so the
+rush's position never changes it. Shrine purchase and rush rows
+never become timeline transactions: each stocked item's delay, bought or not,
+and each purchase's rush publish through the room Overview inventory, and the
+execution room guide carries the purchase and rush rows, each at its own
+position, only as informational reminders.
 
-A rushed Shrine purchase, including a Travel Deal replacement, ranks one
-optional same-room pickup at the post-outgoing action rank; the author may
-remove it, and an item left behind vanishes at room exit. A rushed pickup
-follows its purchase row, and the refill's purchase row follows the first rushed
-initial purchase row; both dependencies constrain authoring only and are not
-published. The [Reward Model](REWARD_MODEL.md#refills) owns which purchase
-triggers the refill.
+A rush, including one of a Travel Deal replacement, makes one optional
+same-room pickup live at the post-outgoing action rank; the author may place
+and remove it, and an item left behind vanishes at room exit. A rush follows
+its purchase row, a rushed pickup its rush, and the refill's purchase row the
+first initial rush; these dependencies constrain
+authoring only and are not published. The
+[Reward Model](REWARD_MODEL.md#refills) owns which purchase triggers the
+refill.
 
 A delayed purchase is scheduled at source cleanup without consuming a delay use
 and derives a later required pickup at the reached encounter-end host. At the
@@ -1013,7 +1338,13 @@ finding is reported. Each purchase's delivery is one engine obligation (source,
 generation key, reward type, rushed, and once due its host, encounter phase and
 cause: rush, countdown or flush); the frontier, placement assessment, due
 spawn, edit settlement, authored domain and execution assembly all read that
-obligation rather than recomputing the due contact. A Hub side-room source is
+obligation rather than recomputing the due contact. The game rolls a
+delivered item's offers when it spawns, in its host room, so a delivery whose
+arrival host changes is a new item: it arrives with no choices, and the earlier
+item's payload, with its choices and outcomes (a Mystery Boon's pick, a Quick
+Buck offer), is discarded in the same edit and announced beside the other
+replaced items. Due again at the same host, it is the same item and keeps
+them. A Hub side-room source is
 ordinary for scheduling, but cannot advance an older pending delivery; later
 qualifying main Hub visits can advance or host it. Fixed Boss occurrences are
 ordinary later delivery hosts. The Shrine source action and its later required
@@ -1024,9 +1355,9 @@ A challenge switch is an Overview fact of room entry: entry records its
 appearance (the native spacing counter is set at entry, used or not), prepares
 its encounter with the entry's vow ranks and assesses its spawn rules, whose
 findings stop the room at its Overview. Its one optional press is a doors-open
-action (`postOutgoing`). The press records, starts and, unless the fight is
-left, completes the encounter in the encounter ledgers and advances biome and
-route encounter depth, but fires no encounter-end effects. It draws from no
+action (`postOutgoing`). The press runs the switch's press fight: it is
+recorded, started and, unless left, completed in the encounter ledgers and
+advances biome and route encounter depth, but fires no encounter-end effects. It draws from no
 counted store; its claim pickups are optional rows ranked right after it and
 settle through the ordinary acquisition machinery. A press whose fight is
 left ends the room's actions: nothing is claimed and no action may follow it.
@@ -1035,7 +1366,7 @@ An Oceanus locked door is an observation of the room's doors opening: the
 room's `lockedExits` change nothing until a door is pressed. Each press is an
 optional doors-open action (`postOutgoing`) that follows every required action
 (the exit checkpoint), and a reroll of that door follows the press. The press
-starts and completes its fight in the encounter ledgers without a record and
+runs the door's press fight, started and completed without a record, which
 advances biome and route encounter depth, with no encounter-end effects and no
 reward; it never ends the room, since its fight cannot be left. Leaving
 through a door still locked blocks at the room's exit.
@@ -1064,8 +1395,9 @@ The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions -> Doors
 open`. The route enters it with the keepsake used for the Boss, so Boss
 Judgment observes the old keepsake. Every declared Postboss fountain
-contributes required `Use fountain`, and every rack-bearing Postboss has the
-permanent `Keepsake Rack` action, a no-op while the keepsake is unchanged. The
+contributes required `Use fountain`, and every rack-bearing Postboss offers
+an optional `Keepsake Rack` action; with no rack row the held keepsake stays,
+and a placed rack whose keepsake is unchanged is a no-op. The
 rack never holds the doors and is not a required room object: it may be
 ordered anywhere, before or after the fountain and the Well or Shrine
 purchases, and its window follows that position. It applies the selected
@@ -1120,7 +1452,7 @@ Between Ship phases the points run: the previous phase's **Encounter ended**
 open** (the next encounter's setup rolls its wheels, so their store and offers
 are fixed here), then in any authored order the pickups those end effects
 spawned and the wheel's rerolls, then the wheel's choice and the next
-encounter's start. The pickups' and rerolls' windows open at Wheels open and
+encounter's start. The pickups' and rerolls' bounds open at Wheels open and
 close at the choice, which waits on every required pickup since the previous
 phase's end; that internal point is not a Timeline event. A pickup taken there
 never feeds the wheel's offers (neither their candidate context, store ledger
@@ -1175,8 +1507,9 @@ player-selected decision.
 Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path,
 and its retained incoming offer is acquired only when authored success is true.
 `C_Boss01` is classified as Combat with the contract-specific template and the
-standard reward lifecycle: it runs fixed `BossZagreus01` and requires acquiring
-`InfernalContractBoon`, but does not emit Boss defeated, advance encounter
+standard reward lifecycle: it runs fixed `BossZagreus01`, acquires
+`InfernalContractBoon` automatically after combat with no room action, and
+requires collecting its gems, but does not emit Boss defeated, advance encounter
 depth, or complete the host biome. A selected Chaos room runs `Empty_Chaos`,
 acquires direct `TrialUpgrade` and adds its own room-history record; skipped
 and selected gates consume the same source offer, while only selected Chaos
@@ -1391,21 +1724,22 @@ state to their sequence.
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                                                                                                      |
 | Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                                                                                              |
-| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.                                                                               |
+| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; a flushed delivery left unplaced halts the walk at its deadline.                                              |
 | Encounter started                                       | Fig Leaf; the Ship pre-encounter Run State capture.                                                                                                                                                               |
 | Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions; the Gorgon condition is read at completion.                                                                 |
-| Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                                                                                                        |
+| Encounter ended                                         | End effects; a due Shrine delivery left unplaced halts the walk at its deadline.                                                                                                                                  |
 | Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                                                                                               |
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                                                                                               |
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates; a Postboss room's creation judges a keepsake drafted at its unchanged rack. |
 | Room exited                                             | Room exit and its Run State capture.                                                                                                                                                                              |
 | Room departed                                           | The Chaos rooms clock, Fight Fight Fight decay and room-clocked Well uses; a Hub departure first captures its Run State.                                                                                          |
-| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                                                                                                  |
+| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool entry list's staleness judgment.                                                                                                                                             |
 | Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                                                                                                 |
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                                                                                                     |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                                                                                                     |
 | Shrine deliveries scheduled (Room Action)               | Hermes Shrine initial delivery scheduling.                                                                                                                                                                        |
-| Shrine purchase reached (Room Action)                   | The Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                                                                                             |
+| Shrine purchase reached (Room Action)                   | The purchase's price and the refill purchase's delivery.                                                                                                                                                          |
+| Shrine rush reached (Room Action)                       | The rushed item's spawn, and the Travel Deal refill realization at the first rush made with the trait.                                                                                                            |
 
 After the last event the walk captures the Hub frontier's Run State,
 evaluates every boss-door store, then records the blank exit-decision

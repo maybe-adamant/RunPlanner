@@ -387,6 +387,20 @@ pub fn delete_raw_save_folder(root: &Path, folder: &str) -> Result<(), String> {
     }
 }
 
+/// The bytes of every raw save under `root`; a missing root holds none.
+pub fn raw_saves_size(root: &Path) -> Result<u64, String> {
+    let mut total = 0;
+    for folder in list_raw_save_folders(root)? {
+        for name in list_raw_saves(root, &folder)? {
+            // A file removed while counting no longer counts.
+            if let Ok(metadata) = fs::metadata(root.join(&folder).join(&name)) {
+                total += metadata.len();
+            }
+        }
+    }
+    Ok(total)
+}
+
 /// Renames a raw-save folder over `to`, replacing it; a missing `from` only clears `to`.
 pub fn move_raw_save_folder(root: &Path, from: &str, to: &str) -> Result<(), String> {
     let source = raw_save_folder(root, from)?;
@@ -686,6 +700,20 @@ mod tests {
         delete_raw_save_folder(&root, "p1-100-1002").unwrap();
         delete_raw_save_folder(&root, "p1-100-1002").unwrap();
         assert!(list_raw_save_folders(&root).unwrap().is_empty());
+    }
+
+    #[test]
+    fn sizes_the_raw_saves_of_every_folder() {
+        let folder = TestFolder::new();
+        let root = folder.0.join("raw");
+        assert_eq!(raw_saves_size(&root).unwrap(), 0);
+        write_raw_save(&root, "open-p1", "000-Profile1_Temp.sav", b"abc").unwrap();
+        write_raw_save(&root, "p1-100-1002", "000-Profile1.sav", b"defgh").unwrap();
+        // Files and folders that are not raw saves are not counted.
+        fs::write(root.join("stray.json"), "{}").unwrap();
+        fs::create_dir_all(root.join("a.b")).unwrap();
+        fs::write(root.join("a.b").join("000-x.sav"), "xxxx").unwrap();
+        assert_eq!(raw_saves_size(&root).unwrap(), 8);
     }
 
     #[test]

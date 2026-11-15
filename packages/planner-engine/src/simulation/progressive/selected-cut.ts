@@ -11,7 +11,10 @@ import {
 } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
 import { createAssessmentIssue } from '../assessment-issue';
-import type { EncounterCandidateArtifacts } from '../encounters/candidates';
+import {
+  playedEncounterPhaseKeys,
+  type EncounterCandidateArtifacts,
+} from '../encounters/candidates';
 import { createBiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import {
   assessmentRepairOwner,
@@ -23,7 +26,10 @@ import {
 import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import type { ReachedHistoryRoomAction } from '../history/model';
-import { roomOverviewOperationCount } from '../lifecycle';
+import { ROOM_TIMELINE_STAGE, ROOM_WALK_STAGES } from '../lifecycle';
+import { roomLifecycleEntryActive } from '../room-actions';
+import { scopeRoomEventGraph } from '../../authored-project/room-actions/event-graph';
+import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
   BiomeMaterializationContractError,
@@ -250,12 +256,7 @@ function positionRoom(
   const roomKey = key(room.origin);
   const owner = cutOwner(prefix, roomKey);
   if (owner.kind === 'start') return undefined;
-  const profile = catalog.roomLifecycleProfiles.byKey[owner.room.lifecycleProfileKey];
-  if (profile === undefined)
-    throw new BiomeMaterializationContractError(
-      `${owner.room.gameName} has unknown lifecycle profile ${owner.room.lifecycleProfileKey}`,
-    );
-  const overviewEnd = roomOverviewOperationCount(profile);
+  const overviewEnd = ROOM_TIMELINE_STAGE;
   const roomEvents = history.events.filter(
     (candidate): candidate is LifecycleEvent =>
       lifecycleEvent(candidate) && key(candidate.origin) === roomKey,
@@ -762,17 +763,36 @@ export function roomActionAtPosition(
   return spanning.size === 1 ? [...spanning][0] : undefined;
 }
 
+/** Findings a required item raises when the walk reaches its deadline unplaced. */
+const PLACEMENT_REQUIRED: ReadonlySet<string> = new Set([
+  'roomActionPlacementRequired',
+  'hermesShrineDeliveryPlacementRequired',
+  'echoGoldPickupPlacementRequired',
+]);
+
+/** Whether the block is a required item the walk passed unplaced until its deadline. */
+function unplacedRequired(room: CanonicalAuthoredRoom, located: LocatedFinding): boolean {
+  const finding = located.finding;
+  if (!PLACEMENT_REQUIRED.has(finding.code)) return false;
+  if (finding.origin.kind !== 'roomAction') return true;
+  const origin = finding.origin;
+  return room.roomActionRoster.rows.some(
+    (row) => row.key === origin.actionKey && row.rank === null && !row.stale,
+  );
+}
+
 /**
  * Where the walk stopped inside the room a block lies in, never claiming an
  * entry it did not pass. An Overview block stops past entry; exit work, after
  * the room committed or when a restored room departs again, past every entry.
- * A Timeline block stops at the first row of its blocking product the walk
- * reached by the contact, else at the blocking contact's own entry (a row only
- * when reached by then), at the row whose own settlement holds the contact, at
- * Doors open for a contact inside the doors opening,
- * at a boundary whose own event is the contact, or just past the last boundary
- * the walk passed before the contact. Only that last stop is before its entry;
- * every other Timeline stop reached its entry and blocks on it.
+ * A required item left unplaced stops at its deadline, before the first entry
+ * the walk did not reach. Any other Timeline block stops at the first row of
+ * its blocking product the walk reached by the contact, else at the blocking
+ * contact's own entry (a row only when reached by then), at the row whose own
+ * settlement holds the contact, at Doors open for a contact inside the doors
+ * opening, at a boundary whose own event is the contact, or just past the last
+ * boundary the walk passed before the contact. Only those two stops are before
+ * their entry; every other Timeline stop reached its entry and blocks on it.
  */
 function roomStop(
   catalog: Catalog,
@@ -781,15 +801,49 @@ function roomStop(
   history: BiomeHistoryPrefix,
   reachedActions: readonly ReachedHistoryRoomAction[],
   rowKeys: readonly string[] | undefined,
-): RoomStopCoverage | undefined {
+  encounters: EncounterCandidateArtifacts,
+): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } | undefined {
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
   const room = block.owner.room;
   const entries = room.roomLifecycleTimeline.entries;
+  // A dormant phase's entries never play, so the walk is never stopped before one.
+  const graph = room.roomLifecycleTimeline.graph;
+  const played = scopeRoomEventGraph(
+    graph,
+    playedEncounterPhaseKeys(encounters.statusAt, room.origin, graph.activeEncounterSlotKeys),
+  );
+  const dormant = (index: number): boolean =>
+    played !== graph && !roomLifecycleEntryActive(played, entries[index]!);
   const stop = (
     kind: RoomStopCoverage['kind'],
     entryIndex: number,
     at: RoomStopCoverage['at'],
-  ): RoomStopCoverage => Object.freeze({ room: room.origin, kind, entryIndex, at });
+    placement = false,
+  ): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } => {
+    const entry = entries[entryIndex];
+    const coverage: RoomStopCoverage = Object.freeze({
+      room: room.origin,
+      kind,
+      ...(entry === undefined
+        ? {}
+        : {
+            anchor: Object.freeze(
+              entry.kind === 'action'
+                ? { kind: 'row' as const, actionKey: entry.action.key }
+                : entry.kind === 'boundary'
+                  ? { kind: 'event' as const, eventKey: entry.boundary.key }
+                  : (() => {
+                      throw new BiomeMaterializationContractError(
+                        `${room.gameName} stops at an automatic effect`,
+                      );
+                    })(),
+            ),
+          }),
+      at,
+      ...(placement ? { placement: true as const } : {}),
+    });
+    return Object.freeze({ coverage, entryIndex });
+  };
   if (!block.timeline)
     return stop(
       'overview',
@@ -797,6 +851,8 @@ function roomStop(
         (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
       ) + 1,
       'before',
+      // A gate pickup left unplaced is due before the room's first fight begins.
+      unplacedRequired(room, located),
     );
   const position = blockPosition(located);
   const roomKey = key(room.origin);
@@ -833,12 +889,13 @@ function roomStop(
     passed.some((event) => event.kind === 'roomCommitted')
   )
     return stop('exit', entries.length, 'before');
-  const generation = profile.operations.findIndex(
-    (operation) => operation.kind === 'generateOutgoingBatch',
-  );
-  const exitWork = profile.operations.findIndex(
-    (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
-  );
+  // Doors open generates the room's doors in its own stage; exit work is the leave stage.
+  const generation = room.roomActionRoster.eventGraph.events.some(
+    (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+  )
+    ? ROOM_WALK_STAGES.doorsOpened
+    : -1;
+  const exitWork = ROOM_WALK_STAGES.leave;
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
   const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string, event: HistoryEvent) =>
     event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey;
@@ -850,43 +907,43 @@ function roomStop(
     switch (boundary.kind) {
       case 'roomEntered':
         return event.kind === 'roomEntered';
-      case 'encounterStart':
+      // An encounter's begin has no effect of its own.
+      case 'encounterBegun':
+        return false;
+      case 'encounterStarted':
         return phaseEvent('encounterStarted', boundary.phaseKey, event);
-      case 'encounterOutcome':
-        // A fight's outcome settles at its completion; a Nemesis event's as answering her ends it.
-        return room.roomLifecycleTimeline.structure.phases.some(
-          (phase) => phase.phaseKey === boundary.phaseKey && phase.endsOnInteraction === true,
-        )
-          ? event.kind === 'encounterInteractionReached' &&
-              event.interaction === 'encounter' &&
-              event.phaseKey === boundary.phaseKey
-          : phaseEvent('encounterCompleted', boundary.phaseKey, event);
       case 'bossDefeated':
         return phaseEvent('bossDefeated', boundary.phaseKey, event);
       case 'encounterEnd':
         return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey, event);
       case 'wheelsOpen':
         return event.kind === 'offerPointMaterialized' && event.offerPoint === boundary.wheelKey;
-      case 'cleanup':
+      case 'doorsOpened':
         return false;
     }
   };
   const boundaryPassed = (index: number): boolean => {
     const entry = entries[index];
-    if (entry?.kind !== 'boundary') return true;
+    if (entry?.kind !== 'boundary' || dormant(index)) return true;
     const boundary = entry.boundary;
     switch (boundary.kind) {
       case 'roomEntered':
         return true;
-      case 'encounterStart':
-      case 'encounterOutcome':
+      // It begins with the event before it, or as its cage's row is taken.
+      case 'encounterBegun':
+        return (
+          boundary.trigger.kind !== 'action' ||
+          rowReached(roomActionKey(boundary.trigger.action)) ||
+          passed.some((event) => phaseEvent('encounterStarted', boundary.phaseKey, event))
+        );
+      case 'encounterStarted':
       case 'bossDefeated':
       case 'wheelsOpen':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
         if (passed.some((event) => boundaryEvent(index, event))) return true;
-        // A phase without end effects (a Nemesis interaction, a story phase) ends at its
-        // completion, passed once the walk goes on from it; deferred effects must apply.
+        // A phase without end effects (a story phase) ends at its completion, passed once
+        // the walk goes on from it; deferred effects must apply.
         const completed = passed.find(
           (event): event is Extract<LifecycleEvent, { readonly kind: 'encounterCompleted' }> =>
             event.kind === 'encounterCompleted' && event.phaseKey === boundary.phaseKey,
@@ -896,7 +953,7 @@ function roomStop(
           passed.some((event) => event.sequence > completed.sequence)
         );
       }
-      case 'cleanup':
+      case 'doorsOpened':
         return generation >= 0
           ? generated
           : exitWork >= 0 && passed.some((event) => event.operationIndex >= exitWork);
@@ -913,6 +970,39 @@ function roomStop(
     if (entry?.kind === 'action') return rowReached(entry.action.key);
     return entries.every((candidate, earlier) => earlier >= index || boundaryPassed(earlier));
   };
+  // A required item left unplaced blocks at its deadline: the walk passed every entry it reached.
+  if (unplacedRequired(room, located)) {
+    const endEffectsApplied = (phaseKey: string) =>
+      passed.some(
+        (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === phaseKey,
+      );
+    const entryReached = (index: number): boolean => {
+      const entry = entries[index]!;
+      if (dormant(index)) return true;
+      switch (entry.kind) {
+        case 'action':
+          return rowReached(entry.action.key);
+        case 'automaticEffect':
+          return endEffectsApplied(entry.phaseKey);
+        case 'boundary': {
+          // A deferred Ship phase's visible end is its completion; its effects follow its rows.
+          const boundary = entry.boundary;
+          return (
+            boundaryPassed(index) ||
+            (boundary.kind === 'encounterEnd' &&
+              passed.some(
+                (event) =>
+                  event.kind === 'encounterCompleted' &&
+                  event.phaseKey === boundary.phaseKey &&
+                  event.endEffects === 'deferred',
+              ))
+          );
+        }
+      }
+    };
+    const unreached = entries.findIndex((_, index) => !entryReached(index));
+    return stop('timeline', unreached < 0 ? entries.length : unreached, 'before', true);
+  }
   const firstRow = entries.findIndex(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
   );
@@ -931,10 +1021,10 @@ function roomStop(
     (entry) => entry.kind === 'action' && entry.action.key === atRow,
   );
   if (atRowIndex >= 0) return stop('timeline', atRowIndex, 'entry');
-  const cleanup = entries.findIndex(
-    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  const doorsOpened = entries.findIndex(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
   );
-  if (cleanup < 0)
+  if (doorsOpened < 0)
     throw new BiomeMaterializationContractError(`${room.gameName} has no Doors open boundary`);
   // A door's generation or offer, or the store they draw from, blocks inside the doors
   // opening. A missing Timeline action blocks only after the doors opened (its window
@@ -944,7 +1034,7 @@ function roomStop(
     located.finding.origin.kind !== 'roomAction' &&
     !passed.some((event) => event.operationIndex > generation)
   )
-    return stop('timeline', cleanup, 'entry');
+    return stop('timeline', doorsOpened, 'entry');
   const unpassed = entries.findIndex(
     (entry, index) => entry.kind === 'boundary' && !boundaryPassed(index),
   );
@@ -1169,7 +1259,12 @@ export function publishSelectedCut(
   const rewards = selected.rewardsThrough(
     block.cut,
     located.finding.origin,
-    block.timeline || block.owner.kind === 'start' ? undefined : block.owner.room.origin,
+    block.timeline || block.owner.kind === 'start'
+      ? undefined
+      : {
+          room: block.owner.room.origin,
+          placement: block.owner.kind !== 'hub' && unplacedRequired(block.owner.room, located),
+        },
   );
   const roomGeneration = generationThrough(
     selected.roomGeneration,
@@ -1237,7 +1332,6 @@ export function publishSelectedCut(
       at: (occurrence: OccurrenceAddress) =>
         entered.has(key(occurrence)) ? zagreusContracts.at(occurrence) : undefined,
     }),
-    rewards.rerollSurfaceArtifacts,
     rewards.objectInteractionArtifacts,
   );
   const rowKeys =
@@ -1251,6 +1345,7 @@ export function publishSelectedCut(
     selected.history,
     selected.reachedActions,
     rowKeys,
+    selected.candidateArtifacts.encounters,
   );
   const evaluation = Object.freeze({
     history,
@@ -1277,7 +1372,9 @@ export function publishSelectedCut(
               blockingRowKeys: rowKeys,
             }),
           }),
-      ...(stopInRoom === undefined ? {} : { roomStop: stopInRoom }),
+      ...(stopInRoom === undefined
+        ? {}
+        : { roomStop: stopInRoom.coverage, roomStopEntryIndex: stopInRoom.entryIndex }),
     }),
     candidateArtifacts,
   });

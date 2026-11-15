@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../src/simulation/room-actions';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -28,15 +29,18 @@ import {
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
-  roomLifecycleWindowOrdinal,
-  type RoomLifecycleStructure,
-} from '../../../src/authored-project/room-actions/lifecycle-structure';
+  roomEventPlaces,
+  roomFightsEnd,
+  type RoomEventGraph,
+} from '../../../src/authored-project/room-actions/event-graph';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,
   MaterializedBiomePrefix,
 } from '../../../src/simulation/materialization';
+import { gateFreeGraphEvents } from '../../support/event-graph';
 
 const sideRoomId = nLocalOccurrenceId('combat11', 'sideDoor1');
 const nPostbossId = 'surface-n-preboss:postboss';
@@ -117,35 +121,28 @@ function reorder(
   return decodeProjectDocument(encoded, catalog);
 }
 
-describe('post-outgoing window without outgoing generation', () => {
-  const sideRoom: RoomLifecycleStructure = {
+describe('doors opening without outgoing generation', () => {
+  const sideRoom: RoomEventGraph = {
     profileKey: 'EphyraSideRoom',
     activeEncounterSlotKeys: ['Encounter'],
     phases: [{ phaseKey: 'Encounter' }],
-    points: [
-      { kind: 'roomEntered', key: 'roomEntered' },
-      { kind: 'encounterStart', key: 'encounterStart:Encounter', phaseKey: 'Encounter' },
-      { kind: 'encounterEnd', key: 'encounterEnd:Encounter', phaseKey: 'Encounter' },
-      { kind: 'cleanup', key: 'cleanup' },
-    ],
+    pressFights: [],
+    events: gateFreeGraphEvents(['Encounter'], false),
   };
-  const postboss: RoomLifecycleStructure = {
+  const postboss: RoomEventGraph = {
     profileKey: 'PostBossRoom',
     activeEncounterSlotKeys: [],
     phases: [],
-    points: [
-      { kind: 'roomEntered', key: 'roomEntered' },
-      { kind: 'cleanup', key: 'cleanup' },
-    ],
+    pressFights: [],
+    events: gateFreeGraphEvents([], false),
   };
 
   it.each([
     ['side room', sideRoom],
     ['Postboss', postboss],
   ])('follows the %s afterCombat work', (_, structure) => {
-    expect(roomLifecycleWindowOrdinal(structure, { kind: 'postOutgoing' })).toBeGreaterThan(
-      roomLifecycleWindowOrdinal(structure, { kind: 'standard', phase: 'afterCombat' }),
-    );
+    const place = roomEventPlaces(structure);
+    expect(place({ kind: 'doorsOpened' })).toBeGreaterThan(place(roomFightsEnd(structure)));
   });
 });
 
@@ -155,10 +152,11 @@ describe('Shrine purchases after the doors open', () => {
     expect(room.roomActionRoster.issues).toEqual([]);
     expect(timeline(room)).toEqual([
       '[roomEntered]',
-      '[encounterStart]',
+      '[encounterBegun]',
+      '[encounterStarted]',
       '[encounterEnd]',
       'interactIncomingReward',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
     ]);
   });
@@ -176,7 +174,6 @@ describe('Shrine purchases after the doors open', () => {
       roomActionKey({
         kind: 'purchaseHermesShrineOffer',
         generationKey: 'initial:secondLeft',
-        rushed: false,
       }),
     );
     const reward = roomActionKey({
@@ -192,7 +189,7 @@ describe('Shrine purchases after the doors open', () => {
     ).toEqual([
       expect.objectContaining({
         origin: purchase,
-        evidence: expect.objectContaining({ reason: 'requiredFirst', requiredAction: reward }),
+        evidence: expect.objectContaining({ requiredAction: reward }),
       }),
     ]);
   });
@@ -202,9 +199,10 @@ describe('Shrine purchases after the doors open', () => {
     expect(timeline(evaluatedRoom(project, 'N', nPostbossId))).toEqual([
       '[roomEntered]',
       'useFountain',
-      '[cleanup]',
+      '[doorsOpened]',
       'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
@@ -219,12 +217,12 @@ describe('Shrine purchases after the doors open', () => {
     expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: 'requiredFirst',
+          kind: 'beforeEnabler',
           reference: purchase,
           requiredAction: { kind: 'useFountain' },
         }),
         expect.objectContaining({
-          kind: 'window',
+          kind: 'pastDeadline',
           reference: { kind: 'useFountain' },
           precedingAction: purchase,
         }),
@@ -243,7 +241,7 @@ describe('Shrine purchases after the doors open', () => {
           createOccurrenceId(nPostbossId),
           roomActionKey(purchase!),
         ),
-        evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+        evidence: expect.objectContaining({ requiredAction: expect.any(String) }),
       }),
     ]);
   });
@@ -284,15 +282,16 @@ describe('Shrine purchases after the doors open', () => {
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
+    // The owner collects the Reprieve's reward and uses its fountain.
+    project = collectTestRequiredItems(project);
     const purchase: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:secondLeft',
-      rushed: false,
     };
     expect(timeline(evaluatedRoom(project, 'O', host.occurrenceId)).slice(-4)).toEqual([
       'interactIncomingReward',
       'useFountain',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
     ]);
     expect(simulateProject(catalog, project).findings).toEqual([]);
@@ -309,7 +308,6 @@ describe('Shrine purchases after the doors open', () => {
         code: 'roomActionOrderUnavailable',
         origin: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(purchase)),
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         }),
       }),
@@ -336,9 +334,10 @@ describe('Shrine purchases after the doors open', () => {
       at: 'entry',
     });
     if (!('materializedPrefix' in o)) throw new Error('O lost its materialized prefix');
-    const stopped = rooms(o.materializedPrefix).find(
+    const entries = rooms(o.materializedPrefix).find(
       (room) => room.occurrenceId === host.occurrenceId,
-    )?.roomLifecycleTimeline.entries[o.coverage.roomStop!.entryIndex];
+    )?.roomLifecycleTimeline.entries;
+    const stopped = entries?.[o.roomStopEntryIndex!];
     expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
       roomActionKey(purchase),
     );
@@ -346,25 +345,27 @@ describe('Shrine purchases after the doors open', () => {
 
   it('renders an O Ship rushed purchase after Doors open without moving exit usability', () => {
     const room = evaluatedRoom(loadSurfaceNOHermesShrineDeliveryCheckpoint(), 'O', oShrineId);
-    expect(timeline(room).slice(-5)).toEqual([
+    expect(timeline(room).slice(-6)).toEqual([
       'interactWheelReward',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
     const wheelRewardRank = room.roomActionRoster.rows.find(
       (row) => row.reference.kind === 'interactWheelReward',
     )?.rank;
-    expect(
-      room.roomActionRoster.checkpoints.find((entry) => entry.checkpointKey === 'exitUsable')
-        ?.afterRank,
-    ).toBe(wheelRewardRank);
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(wheelRewardRank);
     expect(
       room.roomActionRoster.rows
-        .filter((row) => row.reference.kind === 'purchaseHermesShrineOffer')
+        .filter(
+          (row) =>
+            row.reference.kind === 'purchaseHermesShrineOffer' ||
+            row.reference.kind === 'rushHermesShrineOffer',
+        )
         .map((row) => row.participation),
-    ).toEqual(['optional', 'optional']);
+    ).toEqual(['optional', 'optional', 'optional']);
   });
 });
 

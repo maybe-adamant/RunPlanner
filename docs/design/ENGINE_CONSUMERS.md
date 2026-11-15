@@ -97,6 +97,17 @@ A consumer asks the engine what is possible; it never decides it.
   chance that balance covers the price, and each room's gains (estimated enemy,
   urn and Medea gold among them, each named by the room action that paid it
   where one did), spending and balances (unavailable past coverage).
+- What a consumer may place in a room comes from the
+  [live room](ROOM_LIFECYCLE_MODEL.md#live-at-a-point): the pickups and
+  objects live at each gap through the walk's frontier, each with its verbs
+  and the commands that perform them there. Draft places each required
+  pickup at the earliest gap the live room offers it and every other
+  required row by the engine's next required placement, the same query
+  collecting a room's required items plays forward with. The run import
+  collects a room's required rows through that collection.
+- Which reward each door of a Clockwork exit decision derives, the forced Goal
+  or a reward counted toward it, is a query over authored structure; Draft's
+  Goal steering reads it.
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

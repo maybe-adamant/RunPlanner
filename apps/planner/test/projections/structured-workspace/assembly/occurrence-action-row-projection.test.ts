@@ -1,7 +1,10 @@
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
+  replaceTestPlacedItem,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import {
@@ -32,7 +35,6 @@ import {
   createRewardWheelOfferAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
-  decodeProjectDocument,
   echoLastRewardPickupEntryKey,
   goldenFBiome,
   goldenFStartId,
@@ -235,7 +237,7 @@ describe('timeline action labels', () => {
     });
     const entry = control.owner.address;
     if (entry.kind !== 'acquisitionEntry') throw new Error('Expected an acquisition entry');
-    const purchase = { address: entry, marker: control.marker };
+    const purchase = { address: entry, marker: control.marker, purchased: false };
     const roomLocal: WorkspaceRoomLocal = {
       kind: 'shop',
       materialized: true,
@@ -446,11 +448,14 @@ describe('structured workspace actions assembly', () => {
         phase,
         encounterKey: 'NemesisRandomEvent',
       });
-      const project = replaceNemesisRandomEventInteraction(
-        selected,
-        createNemesisRandomEventAddress(phase),
-        value,
-        reward,
+      // Nemesis is met before her pickup is live.
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          selected,
+          createNemesisRandomEventAddress(phase),
+          value,
+          reward,
+        ),
       );
       const reference = {
         kind: 'interactAcquisitionEntry' as const,
@@ -460,7 +465,7 @@ describe('structured workspace actions assembly', () => {
       const key = roomActionKey(reference);
       const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
         .roomActions;
-      const optional = actions?.optionalRows.find((row) => row.key === key);
+      const optional = actions?.rows.find((row) => row.key === key);
       expect(optional).toMatchObject({ label, participation: 'optional', rank: null });
       expect(optional?.rewardPayload?.control.offer).toBeNull();
       expect(optional?.rewardPayload?.inlineLevelResolutions).toEqual([]);
@@ -488,7 +493,7 @@ describe('structured workspace actions assembly', () => {
     },
   );
 
-  it('places a contest Pom as a required row rather than an optional pickup', () => {
+  it('collects a contest Pom as a required row rather than an optional pickup', () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -510,10 +515,9 @@ describe('structured workspace actions assembly', () => {
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
-    const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
-      .roomActions;
-    expect(actions?.optionalRows.some((row) => row.key === key)).toBe(false);
-    expect(actions?.rows.find((row) => row.key === key)).toMatchObject({
+    const placed = assemble(collectTestRequiredItems(project), 'Underworld', 'F', occurrenceId)
+      .assembly.node.room.roomActions;
+    expect(placed?.rows.find((row) => row.key === key)).toMatchObject({
       label: 'Collect Pom',
       participation: 'required',
     });
@@ -522,17 +526,33 @@ describe('structured workspace actions assembly', () => {
   it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
     const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const site = createAcquisitionSiteAddress(owner, 'roomExit');
-    const entries = ['pom1', 'pom2'].map((pickupKey) => ({
-      address: createAcquisitionEntryAddress(
+    const entries = ['pom1', 'pom2'].map((pickupKey) => {
+      const address = createAcquisitionEntryAddress(
         site,
         clockedTraitGeneratedPickupEntryKey('icarus-supply', pickupKey),
-      ),
-      kind: 'clockedTraitPickup' as const,
-      rewardTypes: ['StoreRewardRandomStack'],
-      producerLifecycleKey: 'GeneratedTraitPickup',
-      encounterPhaseKey: 'Encounter',
-      participation: 'optional' as const,
-    }));
+      );
+      return {
+        address,
+        kind: 'clockedTraitPickup' as const,
+        rewardTypes: ['StoreRewardRandomStack'],
+        producerLifecycleKey: 'GeneratedTraitPickup',
+        reference: {
+          kind: 'interactAcquisitionEntry' as const,
+          siteKey: 'roomExit',
+          entryKey: address.entryKey,
+        },
+        // The engine names the drop's phase and contact as a placed row's.
+        phaseKey: 'Encounter',
+        label: { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
+        placement: {
+          kind: 'PlaceClockedTraitPickup' as const,
+          entry: address,
+          producerLifecycleKey: 'GeneratedTraitPickup',
+          rewardType: 'StoreRewardRandomStack',
+        },
+        participation: 'optional' as const,
+      };
+    });
     const { assembly } = assemble(
       createGoldenFGHIProject(),
       'Underworld',
@@ -542,7 +562,7 @@ describe('structured workspace actions assembly', () => {
       (candidateSite) =>
         semanticAddressKey(candidateSite) === semanticAddressKey(site) ? entries : [],
     );
-    const rows = assembly.node.room.roomActions?.optionalRows.filter(
+    const rows = assembly.node.room.roomActions?.rows.filter(
       (row) =>
         row.reference.kind === 'interactAcquisitionEntry' &&
         row.reference.entryKey.startsWith('clockedTraitGenerated:'),
@@ -553,7 +573,8 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           participation: 'optional',
           rank: null,
-          window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+          phaseKey: 'Encounter',
+          timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
           placement: {
             command: expect.objectContaining({
               kind: 'PlaceClockedTraitPickup',
@@ -579,7 +600,6 @@ describe('structured workspace actions assembly', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'roomExit',
         entryKey: entry.entryKey,
-        encounterPhaseKey: 'Encounter',
       },
       { kind: 'none' },
       [],
@@ -682,11 +702,11 @@ describe('structured workspace actions assembly', () => {
         reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false },
       },
       participation: 'required',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      timing: { kind: 'afterCombat' },
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
     expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
-    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors open'));
+    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors opened'));
   });
 
   it("names each Dream boss's drop as Shiny Stars", () => {
@@ -760,7 +780,6 @@ describe('structured workspace actions assembly', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'Encounter',
       },
       { kind: 'none' },
       [],
@@ -780,7 +799,6 @@ describe('structured workspace actions assembly', () => {
           kind: 'interactAcquisitionEntry',
           siteKey: 'hermesShrineDelivery',
           entryKey,
-          encounterPhaseKey: 'Encounter',
         },
         { kind: 'none' },
         [],
@@ -847,7 +865,6 @@ describe('structured workspace actions assembly', () => {
     expect(pickupIndex).toBeGreaterThan(endIndex);
     expect(steadyIndex).toBe(pickupIndex + 1);
     expect(encounterEnd).toMatchObject({
-      checkpointKey: 'combat:Combat1',
       label: 'Encounter ended',
     });
     expect(assembled.assembly.node.room.roomActions?.steadyGrowth).toEqual([
@@ -893,6 +910,8 @@ describe('structured workspace actions assembly', () => {
         rarificationActions: [],
       },
     });
+    project = collectTestRequiredItems(project);
+    // A replay of another reward than the walk's last stands only unsettled, as a loaded plan holds it.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: replayEntry,
@@ -946,7 +965,7 @@ describe('structured workspace actions assembly', () => {
       entryKey,
     );
     const dueRoom = assemble(project, 'Surface', 'O', hostId).assembly.node.room;
-    const dueRow = dueRoom.roomActions?.repairRows.find(
+    const dueRow = dueRoom.roomActions?.rows.find(
       (row) =>
         row.reference.kind === 'interactAcquisitionEntry' &&
         row.reference.siteKey === 'hermesShrineDelivery' &&
@@ -957,12 +976,11 @@ describe('structured workspace actions assembly', () => {
       label: 'Collect Max Health',
       participation: 'required',
       rank: null,
-      reference: { encounterPhaseKey: 'Encounter' },
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      reference: { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
-    expect(dueRow?.placement?.command).toEqual({
+    expect(dueRow?.placement?.command).toMatchObject({
       kind: 'PlaceHermesShrineDelivery',
-      encounterPhaseKey: 'Encounter',
       entry,
     });
     expect(dueRow?.proposalKeys).toEqual([]);
@@ -984,9 +1002,12 @@ describe('structured workspace actions assembly', () => {
       sourceFamily: { kind: 'hermesShrineDelivery' },
       labelParts: { origin: 'Delivered from the Hermes Shrine' },
       participation: 'required',
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(placedRow?.rank).not.toBeNull();
+    // Due and placed, the delivery keeps the engine's one phase.
+    expect(placedRow?.phaseKey).toBeDefined();
+    expect(dueRow?.phaseKey).toBe(placedRow?.phaseKey);
     expect(placedRow?.placement).toBeUndefined();
     expect(placedRow?.rewardPayload).toBeDefined();
   });
@@ -1080,22 +1101,34 @@ describe('structured workspace actions assembly', () => {
       )?.rewardPayload?.showOffer,
     ).toBe(false);
     expect(
-      roomActions.optionalRows.map((row) =>
-        row.reference.kind === 'interactLocalReward' ? row.reference.slotKey : row.reference.kind,
+      roomActions.rows.flatMap((row) =>
+        row.rank !== null || row.participation !== 'optional'
+          ? []
+          : row.reference.kind === 'interactLocalReward'
+            ? row.reference.slotKey
+            : row.reference.kind,
       ),
     ).toEqual(['optional1', 'optional2']);
     expect(roomActions.repairRows).toEqual([]);
     expect(roomActions.proposals.length).toBeGreaterThan(0);
-    expect(
-      roomActions.timeline.entries.flatMap((entry) =>
-        entry.kind === 'action' && entry.presentation === 'fieldsCageAnchor'
-          ? [entry.actionKey]
-          : [],
-      ),
-    ).toEqual([
+    // Each cage's Unlock row is an ordinary row naming its locked reward.
+    const unlockKeys = [
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage02' }),
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
-    ]);
+    ];
+    expect(
+      roomActions.timeline.entries.flatMap((entry) =>
+        entry.kind === 'action' && unlockKeys.includes(entry.actionKey)
+          ? [[entry.actionKey, entry.presentation]]
+          : [],
+      ),
+    ).toEqual(unlockKeys.map((key) => [key, 'row']));
+    expect(unlockKeys.map((key) => roomActions.rows.find((row) => row.key === key)?.label)).toEqual(
+      [
+        expect.stringMatching(/^Unlock .+ · Cage 2$/),
+        expect.stringMatching(/^Unlock .+ · Cage 1$/),
+      ],
+    );
     expect(
       roomActions.timeline.entries.flatMap((entry) =>
         entry.kind === 'boundary' && entry.fieldsCage !== undefined
@@ -1109,31 +1142,11 @@ describe('structured workspace actions assembly', () => {
           : [],
       ),
     ).toEqual([
-      { kind: 'encounterStart', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      { kind: 'encounterStarted', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
       { kind: 'encounterEnd', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
-      { kind: 'encounterStart', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+      { kind: 'encounterStarted', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
       { kind: 'encounterEnd', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
     ]);
-    expect(roomActions.timeline.fieldsCageOrder).toEqual({
-      phaseKeys: ['Cage02', 'Cage01'],
-      choices: [
-        // The combat order names its cages; each keeps its reward for the banner.
-        {
-          phaseKey: 'Cage01',
-          label: 'Cage 1',
-          slot: 1,
-          fullLabel: expect.stringMatching(/^Cage 1 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-        {
-          phaseKey: 'Cage02',
-          label: 'Cage 2',
-          slot: 2,
-          fullLabel: expect.stringMatching(/^Cage 2 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-      ],
-    });
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     const fieldsEntry = roomActions.timeline.entries.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
@@ -1165,8 +1178,8 @@ describe('structured workspace actions assembly', () => {
         wheel.storeKey,
       ]),
     ).toEqual([
-      ['wheel1', 'Combat1', 'Combat 1 reward', true, 1, 1, 'RunProgress'],
-      ['wheel2', 'Combat2', 'Combat 2 reward', false, 1, 1, 'RunProgress'],
+      ['wheel1', 'Combat1', 'Phase 1 reward', true, 1, 1, 'RunProgress'],
+      ['wheel2', 'Combat2', 'Phase 2 reward', false, 1, 1, 'RunProgress'],
     ]);
     expect(ship.node.room.roomLocal.wheels[0]?.address).toEqual(
       createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
@@ -1183,7 +1196,7 @@ describe('structured workspace actions assembly', () => {
         }),
         expect.objectContaining({
           key: 'Combat1',
-          label: 'Combat 1',
+          label: 'Phase 1',
         }),
       ],
       repairRows: [],
@@ -1199,40 +1212,9 @@ describe('structured workspace actions assembly', () => {
           entry.actionKey === roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
       ),
     ).toEqual([expect.objectContaining({ kind: 'action', presentation: 'rewardWheelAnchor' })]);
-    expect(shipActions.checkpoints.map((checkpoint) => checkpoint.key)).not.toContain(
-      'outgoingGeneration',
-    );
     expect(
       ship.node.room.workbench.phases.flatMap((phase) => phase.actionRows.map((row) => row.key)),
     ).toEqual(shipActions.rows.filter((row) => !row.stale).map((row) => row.key));
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).toEqual(
-      expect.arrayContaining(
-        shipActions.checkpoints
-          .filter((checkpoint) => checkpoint.key !== 'exitUsable')
-          .map((checkpoint) => checkpoint.key),
-      ),
-    );
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).toHaveLength(
-      shipActions.checkpoints.filter((checkpoint) => checkpoint.key !== 'exitUsable').length,
-    );
-    expect(
-      ship.node.room.workbench.phases
-        .find((phase) => phase.key === 'Intro')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).not.toContain('outgoingGeneration');
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).not.toContain('outgoingGeneration');
     expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
     );
@@ -1284,67 +1266,6 @@ describe('structured workspace actions assembly', () => {
           launcher.owner.checkpoint.kind === 'roomEntered',
       ),
     ).toBe(false);
-  });
-
-  it('reads the Fields cage order and its blocked state from the engine product', () => {
-    const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const authored = createGoldenFGHIProject();
-    const missing = decodeProjectDocument(
-      {
-        ...authored,
-        route: {
-          ...authored.route,
-          biomes: authored.route.biomes.map((biome) =>
-            biome.biomeKey !== 'H' || biome.topology === null
-              ? biome
-              : {
-                  ...biome,
-                  topology: {
-                    ...biome.topology,
-                    occurrences: biome.topology.occurrences.map((occurrence) =>
-                      occurrence.occurrenceId !== occurrenceId
-                        ? occurrence
-                        : {
-                            ...occurrence,
-                            roomActions: {
-                              order: occurrence.roomActions.order.filter(
-                                (reference) =>
-                                  reference.kind !== 'completeFieldsCage' ||
-                                  reference.phaseKey !== 'Cage02',
-                              ),
-                            },
-                          },
-                    ),
-                  },
-                },
-          ),
-        },
-      },
-      catalog,
-    );
-    const roomActions = assemble(missing, 'Underworld', 'H', occurrenceId).assembly.node.room
-      .roomActions;
-    expect(roomActions?.timeline.fieldsCageOrder).toEqual({
-      phaseKeys: ['Cage01'],
-      choices: [
-        // The combat order names its cages; each keeps its reward for the banner.
-        {
-          phaseKey: 'Cage01',
-          label: 'Cage 1',
-          slot: 1,
-          fullLabel: expect.stringMatching(/^Cage 1 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-        {
-          phaseKey: 'Cage02',
-          label: 'Cage 2',
-          slot: 2,
-          fullLabel: expect.stringMatching(/^Cage 2 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-      ],
-      unavailableReason: 'Restore missing cage actions before changing their order.',
-    });
   });
 
   it('projects a Gold duplicate ordered after its Travel refill source', () => {
@@ -1620,13 +1541,13 @@ describe('shop-like purchase rows', () => {
   const shrineOwner = createOccurrenceAddress(nBiome, shrineId);
 
   function travelDealShrine(rushed: boolean): ProjectDocument {
-    let project = applyProjectCommand(withFourthBoardGodBeforeCombat05(loadSurfaceNO()), catalog, {
+    let project = replaceTestPlacedItem(withFourthBoardGodBeforeCombat05(loadSurfaceNO()), {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
     });
     const hermes = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat09'));
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: hermes,
       value: { rewardType: 'HermesUpgrade' },
@@ -1645,6 +1566,7 @@ describe('shop-like purchase rows', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineTravelDealRefill',
       occurrence: shrineOwner,
@@ -1655,12 +1577,19 @@ describe('shop-like purchase rows', () => {
         delay: 2,
         rushed,
       });
-    // Timeline order, not slot order, decides which rushed purchase triggers the refill.
+    // Timeline order, not slot order, decides which rush triggers the refill; a
+    // rush moves on its own, after its purchase.
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrineOwner, 'initial:secondLeft'),
       toIndex: 1,
     });
+    if (rushed)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: testHermesShrineRushAction(shrineOwner, 'initial:secondLeft'),
+        toIndex: 2,
+      });
     return authorLegalTraitOffers({
       ...project,
       route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
@@ -1671,7 +1600,9 @@ describe('shop-like purchase rows', () => {
   function purchaseRows(
     project: ProjectDocument,
     occurrenceId: string,
-    kind: 'purchaseHermesShrineOffer' | 'purchaseStygianWellOffer',
+    kinds: readonly (
+      'purchaseHermesShrineOffer' | 'rushHermesShrineOffer' | 'purchaseStygianWellOffer'
+    )[],
   ) {
     const node = projectStructuredWorkspaceFixture(project)
       .workspace.route.biomes.flatMap((biome) => biome.nodes)
@@ -1681,27 +1612,82 @@ describe('shop-like purchase rows', () => {
       );
     if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${occurrenceId} is missing`);
     return (node.room.roomActions?.rows ?? [])
-      .filter((row) => row.reference.kind === kind)
+      .filter((row) => (kinds as readonly string[]).includes(row.reference.kind))
       .sort((left, right) => (left.rank ?? Infinity) - (right.rank ?? Infinity));
   }
   const shrineRows = (project: ProjectDocument) =>
-    purchaseRows(project, shrineId, 'purchaseHermesShrineOffer');
+    purchaseRows(project, shrineId, ['purchaseHermesShrineOffer', 'rushHermesShrineOffer']);
 
-  it('reads Shrine rush on the row and carries the refill line on the first rushed purchase in timeline order', () => {
+  it('reads a Shrine rush as its own row and carries the refill line on the rush of the first rushed purchase', () => {
     const rows = shrineRows(travelDealShrine(true));
+    const rushOf = (generationKey: string) =>
+      rows.find(
+        (row) =>
+          row.reference.kind === 'rushHermesShrineOffer' &&
+          row.reference.generationKey === generationKey,
+      );
     expect(
       rows.map((row) => [
-        row.reference.kind === 'purchaseHermesShrineOffer' && row.reference.generationKey,
-        row.label.startsWith('Rush '),
+        row.reference.kind,
+        'generationKey' in row.reference && row.reference.generationKey,
+        row.label.split(' ')[0],
         row.travelDealLine?.kind,
       ]),
     ).toEqual([
-      ['initial:secondLeft', true, 'hermesShrine'],
-      ['initial:first', true, undefined],
+      ['purchaseHermesShrineOffer', 'initial:secondLeft', 'Buy', undefined],
+      ['rushHermesShrineOffer', 'initial:secondLeft', 'Rush', 'hermesShrine'],
+      ['purchaseHermesShrineOffer', 'initial:first', 'Buy', undefined],
+      ['rushHermesShrineOffer', 'initial:first', 'Rush', undefined],
     ]);
-    expect(rows[0]?.travelDealLine).toMatchObject({
+    expect(rushOf('initial:secondLeft')?.travelDealLine).toMatchObject({
       refill: { rewardType: 'ArmorBoost', sourceGenerationKey: 'initial:secondLeft' },
     });
+    // A rush is undone on its own row, keeping the purchase.
+    expect(rushOf('initial:first')).toMatchObject({
+      purchaseRemoval: {
+        command: {
+          kind: 'SetHermesShrineRush',
+          occurrence: shrineOwner,
+          generationKey: 'initial:first',
+          rushed: false,
+        },
+      },
+    });
+  });
+
+  it('lets a Shrine rush row move on its own to any gap after its purchase', () => {
+    const node = projectStructuredWorkspaceFixture(travelDealShrine(true))
+      .workspace.route.biomes.flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === shrineId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${shrineId} is missing`);
+    const rows = node.room.roomActions?.rows ?? [];
+    const rankOf = (kind: string, generationKey: string) =>
+      rows.find(
+        (row) =>
+          row.reference.kind === kind &&
+          'generationKey' in row.reference &&
+          row.reference.generationKey === generationKey,
+      )?.rank ?? -1;
+    const moves = (node.room.roomActions?.proposals ?? []).filter(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'rushHermesShrineOffer' &&
+        proposal.reference.generationKey === 'initial:secondLeft',
+    );
+    const purchaseIndex = rankOf('purchaseHermesShrineOffer', 'initial:secondLeft') - 1;
+    const rushIndex = rankOf('rushHermesShrineOffer', 'initial:secondLeft') - 1;
+    const authorable = moves.filter((proposal) => proposal.structurallyAuthorable);
+    // Later gaps, with rows between, are offered; none before its purchase is.
+    expect(authorable.some((proposal) => proposal.toIndex! > rushIndex)).toBe(true);
+    expect(authorable.every((proposal) => proposal.toIndex! > purchaseIndex)).toBe(true);
+    expect(
+      moves.some(
+        (proposal) => proposal.toIndex! <= purchaseIndex && !proposal.structurallyAuthorable,
+      ),
+    ).toBe(true);
   });
 
   it('omits the Shrine refill line without a rushed purchase and removes a stranded refill', () => {
@@ -1733,7 +1719,7 @@ describe('shop-like purchase rows', () => {
     const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const wellOwner = createOccurrenceAddress(goldenFBiome, wellId);
     const wellRows = (project: ProjectDocument) =>
-      purchaseRows(project, wellId, 'purchaseStygianWellOffer');
+      purchaseRows(project, wellId, ['purchaseStygianWellOffer']);
     const checkpoint = authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint());
     const hosted = wellRows(checkpoint).filter((row) => row.travelDealLine !== undefined);
     expect(hosted).toHaveLength(1);
@@ -1928,7 +1914,8 @@ describe('room Timeline block', () => {
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
     project = authorLegalTraitOffers(project);
-    return applyProjectCommand(project, catalog, {
+    // The swapped refill is bought again, now with no offer authored.
+    return replaceTestPlacedItem(project, {
       kind: 'ReplaceShopOffer',
       offer: refill,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -2404,7 +2391,7 @@ describe('purchase gold', () => {
   });
 });
 
-describe('Doors open room gold', () => {
+describe('Doors opened room gold', () => {
   function roomGoldWitness(
     project: ProjectDocument,
     room: ReturnType<typeof createOccurrenceAddress>,

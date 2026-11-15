@@ -16,6 +16,7 @@ import {
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { goldenFBiome, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { presentFinding } from '@planner/projections/evaluationProjection';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
@@ -59,8 +60,8 @@ function pedestalFeature(summary: ReturnType<typeof room>) {
   return summary.workbench.features.find((feature) => feature.kind === 'infernalContractPedestal');
 }
 
-function championEntry(summary: ReturnType<typeof room>) {
-  return summary.roomActions?.objectEntries?.find((entry) => entry.object === 'championItem');
+function livePedestal(summary: ReturnType<typeof room>) {
+  return summary.roomActions?.live?.items.find((item) => item.object === 'contractPedestal');
 }
 
 function collectRow(summary: ReturnType<typeof room>) {
@@ -86,8 +87,8 @@ describe('Contract pedestal editor', () => {
     const feature = pedestalFeature(room(missing, peerId));
     if (feature?.kind !== 'infernalContractPedestal') throw new Error('pedestal missing');
     expect(feature.rewardControl.offer).toBeNull();
-    // The missing item stops the room's Overview, so its Timeline entry waits.
-    expect(championEntry(room(missing, peerId))).toMatchObject({ locked: 'unreached' });
+    // The missing item stops the room's Overview, so the Pedestal is not live.
+    expect(livePedestal(room(missing, peerId))).toBeUndefined();
 
     const picker = missing.workspace.interactions.shopOffers.get(semanticAddressKey(peerPedestal));
     if (picker === undefined) throw new Error('pedestal item picker missing');
@@ -106,22 +107,16 @@ describe('Contract pedestal editor', () => {
     project = applyProjectCommand(project, catalog, choose.command);
 
     const chosen = projectStructuredWorkspaceFixture(project);
-    const entry = championEntry(room(chosen, peerId));
-    expect(entry?.options).toEqual([
+    const verb = livePedestal(room(chosen, peerId))?.verbs[0];
+    if (verb?.action.kind !== 'apply') throw new Error('pedestal pick up missing');
+    expect(verb.action.intent.commands).toEqual([
       {
-        key: 'collect',
-        label: 'Collect Double Pom',
-        reward: { offer: expect.objectContaining({ rewardType: expect.any(String) }) },
+        kind: 'SetInfernalContractPedestalCollected',
+        pedestal: peerPedestal,
+        collected: true,
       },
     ]);
-    const collect = chosen.workspace.interactions.roomObjectEntries.get(entry!.interactionKey);
-    if (collect === undefined) throw new Error('pedestal collect missing');
-    expect(collect.intentFor('collect').command).toEqual({
-      kind: 'SetInfernalContractPedestalCollected',
-      pedestal: peerPedestal,
-      collected: true,
-    });
-    project = applyProjectCommand(project, catalog, collect.intentFor('collect').command);
+    project = applyProjectCommand(project, catalog, verb.action.intent.commands[0]!);
 
     const collected = projectStructuredWorkspaceFixture(project);
     expect(
@@ -134,8 +129,7 @@ describe('Contract pedestal editor', () => {
     ).toEqual([]);
     const row = collectRow(room(collected, peerId));
     expect(row?.label).toBe('Collect Double Pom');
-    expect(row?.participationOwnedByOverview).toBe(false);
-    expect(championEntry(room(collected, peerId))).toMatchObject({ locked: 'collected' });
+    expect(livePedestal(room(collected, peerId))).toBeUndefined();
   });
 
   it('edits the Shop-form pedestal beside, not inside, the Shop inventory', () => {
@@ -158,7 +152,8 @@ describe('Contract pedestal editor', () => {
   });
 
   it('resolves a collected Mystery item on the Timeline', () => {
-    let project = applyProjectCommand(loadUnderworldZagreusContractCheckpoint(), catalog, {
+    // The restocked Pedestal's Mystery item is taken again.
+    let project = replaceTestPlacedItem(loadUnderworldZagreusContractCheckpoint(), {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: shopPedestal,
       value: { rewardType: 'BlindBoxLoot' },

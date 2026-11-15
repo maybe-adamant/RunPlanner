@@ -22,12 +22,9 @@ import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declara
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
-import {
-  activeRoomActionReferences,
-  createDefaultRoomActionState,
-  roomActionKey,
-} from '../room-actions/state';
+import { activeRoomActionReferences, roomActionKey } from '../room-actions/state';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
+import { carryRerolledRecords } from '../rerolls';
 import {
   normalDecisionProgressionForLayout,
   selectedExitKey,
@@ -155,7 +152,8 @@ function reconcileReplacementAcquisitionSites(
 
 /**
  * Carries an occurrence's room-local authorship onto a replacement declaration:
- * only the actions the replacement can host, then its required defaults.
+ * only the actions the replacement can host, then its required defaults, and
+ * the rerolled items whose first draw the replacement kept.
  */
 export function reconcileReplacementRoomLocalState(
   catalog: Catalog,
@@ -204,20 +202,14 @@ export function reconcileReplacementRoomLocalState(
   const retained = previous.roomActions.order.filter((reference) =>
     activeKeys.has(roomActionKey(reference)),
   );
-  const retainedKeys = new Set(retained.map(roomActionKey));
-  const replacementRoom = catalog.rooms.byKey[replacement.gameName];
-  if (replacementRoom === undefined) {
-    throw new Error(`replacement room ${replacement.gameName} is missing from the catalog`);
-  }
-  const requiredDefaults = createDefaultRoomActionState(replacementRoom).order.filter(
-    (reference) => !retainedKeys.has(roomActionKey(reference)),
-  );
-  return Object.freeze({
-    ...withSites,
-    roomActions: Object.freeze({
-      order: Object.freeze([...retained, ...requiredDefaults]),
+  return carryRerolledRecords(
+    biome,
+    previous,
+    Object.freeze({
+      ...withSites,
+      roomActions: Object.freeze({ order: Object.freeze(retained) }),
     }),
-  });
+  );
 }
 
 function occurrenceContext(

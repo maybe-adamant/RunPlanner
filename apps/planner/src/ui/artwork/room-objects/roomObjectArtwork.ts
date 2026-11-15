@@ -5,6 +5,7 @@ import iconKeepsakeRack from './assets/KeepsakeRack.webp';
 import iconLockedDoors from './assets/LockedDoors.webp';
 import iconMoonMonument from './assets/MoonMonument.webp';
 import iconPoolOfPurging from './assets/PoolOfPurging.webp';
+import iconRewardWheel from './assets/RewardWheel.webp';
 import iconStygianWell from './assets/StygianWell.webp';
 import iconUnseenSigil from './assets/UnseenSigil.webp';
 
@@ -19,4 +20,5 @@ export const roomObjectArtwork: Readonly<Record<string, string | null>> = {
   unseenSigil: iconUnseenSigil,
   lockedDoors: iconLockedDoors,
   doorLock: iconDoorLock,
+  rewardWheel: iconRewardWheel,
 };

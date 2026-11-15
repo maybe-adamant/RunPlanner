@@ -1,5 +1,5 @@
 import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { surfaceShrineTravelDealProject } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 import {
@@ -27,13 +27,14 @@ describe('occurrence room workbench', () => {
     result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
     const workbench = result.assembly.node.room.workbench;
     if (workbench.kind !== 'ship') throw new Error('Missing Ship');
-    const due = workbench.phases
-      .find((phase) => phase.key === 'Combat1')
-      ?.unplacedRows.find((row) => row.key === delivery.key);
+    const due = workbench.roomActions?.rows.find(
+      (row) => row.key === delivery.key && row.rank === null,
+    );
     if (due?.placement === undefined) throw new Error('Missing phase-local delivery placement');
     expect(workbench.repairRows.map((row) => row.key)).not.toContain(due.key);
+    // Due before the Intro's wheel choice, it is taken from the live row on the Intro tab.
     expect(result.markers.destinations().get(due.marker.focusKey)?.roomTab).toBe(
-      'shipCombat1Actions',
+      'shipIntroActions',
     );
     project = applyProjectCommand(project, catalog, due.placement.command);
     result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
@@ -50,7 +51,7 @@ describe('occurrence room workbench', () => {
 
   it('routes trait and reward children to the phase that renders their action', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
-    const project = authorLegalTraitOffers(
+    const project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
@@ -109,62 +110,19 @@ describe('occurrence room workbench', () => {
 
     expect(ship.roomLocal.phases).toEqual([
       { key: 'Intro', label: 'Intro' },
-      { key: 'Combat1', label: 'Combat 1', rewardWheelKey: 'wheel1' },
-      { key: 'Combat2', label: 'Combat 2', rewardWheelKey: 'wheel2' },
+      { key: 'Combat1', label: 'Phase 1', rewardWheelKey: 'wheel1' },
+      { key: 'Combat2', label: 'Phase 2', rewardWheelKey: 'wheel2' },
     ]);
     expect(ship.workbench.phases.map((phase) => [phase.key, phase.label])).toEqual([
       ['Intro', 'Intro'],
-      ['Combat1', 'Combat 1'],
-      ['Combat2', 'Combat 2'],
+      ['Combat1', 'Phase 1'],
+      ['Combat2', 'Phase 2'],
     ]);
+    // Each tab shows the wheel the next combat is chosen at; the last its doors.
     expect(ship.workbench.phases.map((phase) => phase.wheel?.key)).toEqual([
       'wheel1',
       'wheel2',
       undefined,
     ]);
-    expect(
-      ship.workbench.phases
-        .find((phase) => phase.key === 'Combat1')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).not.toContain('outgoingGeneration');
-    expect(
-      ship.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).not.toContain('outgoingGeneration');
-  });
-
-  it.each([
-    {
-      name: 'before-combat standard',
-      window: { kind: 'standard' as const, phase: 'beforeCombat' as const },
-    },
-    {
-      name: 'Fields',
-      window: { kind: 'fields' as const, phaseKey: 'Combat1' },
-    },
-  ])('keeps the engine timeline authoritative for a $name checkpoint window', ({ window }) => {
-    const assembled = assemble(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'O',
-      oOccurrenceIds.combat04,
-      undefined,
-      undefined,
-      (evaluatedRoom) => {
-        const roster = evaluatedRoom.roomActionRoster;
-        if (roster === undefined || roster.checkpoints[0] === undefined) {
-          throw new Error('Ship Room Action checkpoint is missing');
-        }
-        return {
-          ...evaluatedRoom,
-          roomActionRoster: {
-            ...roster,
-            checkpoints: [{ ...roster.checkpoints[0], window }, ...roster.checkpoints.slice(1)],
-          },
-        };
-      },
-    ).assembly.node.room;
-    expect(assembled.workbench.kind).toBe('ship');
   });
 });

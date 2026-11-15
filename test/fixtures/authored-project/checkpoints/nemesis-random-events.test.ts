@@ -11,6 +11,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '../item-content';
 
 import {
   loadNemesisFieldsCheckpoint,
@@ -58,11 +59,14 @@ describe('Nemesis random-event checkpoint workflows', () => {
       kind: 'interactEncounter',
       phaseKey: 'Encounter',
     });
-    expect(selected.roomActions.order).toContainEqual({
+    // The placed result carries the content the engine records for its item.
+    const result = withItemContent(project, createOccurrenceAddress(goldenFBiome, id), {
       kind: 'interactAcquisitionEntry',
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
+    expect(result).toMatchObject({ content: expect.any(Array) });
+    expect(selected.roomActions.order).toContainEqual(result);
     expect(selected.roomActions.order).not.toContainEqual(
       expect.objectContaining({ kind: 'interactIncomingReward' }),
     );
@@ -97,7 +101,7 @@ describe('Nemesis random-event checkpoint workflows', () => {
     const selected = occurrence(loadNemesisFieldsCheckpoint(), 'H', id);
     if (selected.state.kind !== 'fieldsCombat') throw new Error('H fixture is not a Fields room');
     expect(selected.state.optionalRewardCount).toBe(3);
-    expect(selected.layout).toEqual({ entryStartPointId: 755863 });
+    expect(selected.layout).toEqual({ flipped: true, entryStartPointId: 755863 });
     expect(selected.state.spatial).toEqual({
       cagePointIdBySlot: {
         cage1: 573087,

@@ -81,7 +81,7 @@ export function assembleOccurrenceRunState(
   const byTab: Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>> = {};
   for (const entry of roomActions?.timeline.entries ?? []) {
     if (entry.kind !== 'boundary' || entry.runState === undefined) continue;
-    if (roomLocal.kind === 'ship' && entry.boundary.kind === 'encounterStart') {
+    if (roomLocal.kind === 'ship' && entry.boundary.kind === 'encounterStarted') {
       const tab = roomTabForPhase(roomLocal, entry.boundary.phaseKey);
       byTab[tab] = entry.runState;
       if (byTab.overview === undefined) {

@@ -1,5 +1,4 @@
 import {
-  semanticAddressKey,
   type HubDecisionAddress,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -16,7 +15,6 @@ import {
 } from '@planner/projections/structured-workspace';
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
-import type { TimelineDoors } from './TimelineDoors';
 import type { RoomMapHighlight } from './room-map/roomMapHighlight';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -26,7 +24,10 @@ export interface DoorChip {
   readonly key: string;
   readonly label: string;
   readonly roomIcon?: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
   readonly rewards: readonly (ArtworkSource | undefined)[];
+  /** The door still waits on an input: its room, or a reward it shows. */
   readonly missing?: true;
   readonly picked?: boolean;
   readonly unavailable?: boolean;
@@ -42,6 +43,13 @@ export interface DoorChip {
   readonly hidden?: true;
 }
 
+/** A chip's room number, where its room has one. */
+export function roomNumberOf(room: { readonly roomNumber?: string | undefined }): {
+  readonly roomNumber?: string;
+} {
+  return room.roomNumber === undefined ? {} : { roomNumber: room.roomNumber };
+}
+
 /** The way back to the Hub through the main room's Door 1, by the Hub's room icon. */
 export function hubReturnChip(hub: HubDecisionAddress): DoorChip {
   return {
@@ -53,10 +61,11 @@ export function hubReturnChip(hub: HubDecisionAddress): DoorChip {
   };
 }
 
-/** The chip's point on its room's map: its door by number, its wheel offer, or the Chaos gate. */
+/** The chip's point on its room's map: its door by number, its wheel offer, the Chaos gate or the Contract door. */
 export function doorChipMapLink(chip: DoorChip): RoomMapHighlight | undefined {
   if (chip.wheelOffer === true) return { kind: 'wheelOffer', offerKey: chip.key };
   if (chip.additionalExit === 'chaos') return { kind: 'chaosGate' };
+  if (chip.additionalExit === 'zagreusContract') return { kind: 'contractExit' };
   if (chip.additionalExit !== undefined || chip.doorIndex === undefined) return undefined;
   return { kind: 'door', doorIndex: chip.doorIndex };
 }
@@ -74,6 +83,15 @@ export function doorRewardIcons(
   });
 }
 
+/** A door whose room is set but one of its shown rewards still waits to be chosen. */
+function doorRewardUnset(target: WorkspacePhysicalTarget): boolean {
+  const surface = target.door.offerRewardSurface;
+  return (
+    surface.visibility === 'visible' &&
+    surface.rewards.some((reward) => reward.control !== undefined && reward.offer === null)
+  );
+}
+
 /** The batch's doors as compact chips of their first draws, in door order; `locked` doors as the doors open. */
 export function batchDoorChips(
   node: BatchNode,
@@ -85,7 +103,9 @@ export function batchDoorChips(
       label: `Door ${target.index} · ${target.door.room.label}`,
       doorIndex: target.index,
       roomIcon: target.door.room.roomIcon,
+      ...roomNumberOf(target.door.room),
       rewards: doorRewardIcons(target, 'first'),
+      ...(doorRewardUnset(target) ? { missing: true as const } : {}),
       picked: target.selected,
       unavailable: target.physicalState === 'unavailable',
       locked: locked.includes(target.exitKey),
@@ -108,6 +128,7 @@ export function batchDoorChips(
                 control === node.chaos ? ('chaos' as const) : ('zagreusContract' as const),
               label: control.exitTypeLabel,
               roomIcon: control.door.room.roomIcon,
+              ...roomNumberOf(control.door.room),
               rewards: [],
               picked: control.selected,
             } satisfies DoorChip,
@@ -131,24 +152,6 @@ export function doorChipsAt(
           rewards: door.rewards.flatMap((offer) => (offer === null ? [] : [offerIcon(offer)])),
         };
   });
-}
-
-/**
- * The reward a door press acts on, as the doors show it before the press: an
- * unlock names its door's exit, a reroll its reward's owner.
- */
-export function batchDoorPressIcon(node: BatchNode): (key: string) => ArtworkSource | undefined {
-  const icons = new Map<string, ArtworkSource | undefined>();
-  for (const target of node.targets) {
-    if (target.door.offerRewardSurface.visibility === 'hidden') continue;
-    for (const reward of target.door.offerRewardSurface.rewards) {
-      const offer = reward.rerolledOffer ?? reward.offer;
-      const icon = offer === null ? undefined : offerIcon(offer);
-      if (!icons.has(target.exitKey)) icons.set(target.exitKey, icon);
-      icons.set(semanticAddressKey(reward.marker.address), icon);
-    }
-  }
-  return (key) => icons.get(key);
 }
 
 /** How far the doors are filled in, while some still need a room. */
@@ -204,24 +207,4 @@ export function wheelOfferChips(
         wheelOffer: true as const,
       };
     });
-}
-
-/** The banner title's disclosure of the doors' editor; absent where it cannot be hidden. */
-export function doorsOpenToggle(doors: TimelineDoors): BannerToggle | undefined {
-  const toggle = doors.onExpandedChange;
-  if (doors.detail === undefined || toggle === undefined) return undefined;
-  return {
-    controls: doors.detailId,
-    expanded: doors.expanded,
-    label: doors.noun === 'door' ? 'Door details' : 'Offer details',
-    onToggle: () => toggle(!doors.expanded),
-  };
-}
-
-/** A banner whose whole title shows or hides the editor under it. */
-export interface BannerToggle {
-  readonly controls: string;
-  readonly expanded: boolean;
-  readonly label: string;
-  readonly onToggle: () => void;
 }

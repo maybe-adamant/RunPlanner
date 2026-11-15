@@ -34,9 +34,11 @@ type ChallengeSet = keyof typeof moneyStoreBySet;
 // BlockAthenaEncounterKeepsake true, and inherit Generated's CountsForRoomEncounterDepth,
 // which StartEncounter applies to any encounter (RoomLogic.lua:1900-1904).
 // Their end runs no encounter-end clocks (RoomLogic.lua:2937 skips any
-// encounter but the room's), so no Shrine delivery advances.
+// encounter but the room's), so no Shrine delivery advances. The press records and
+// starts the fight HandleSecretSpawns generated at room entry (EncounterLogic.lua:2073-2113).
 const shared = {
   kind: 'combat',
+  script: { press: { records: true, generatedAt: 'entry' } },
   countsEncounterDepth: true,
   advancesHermesShrineDeliveryUses: false,
   blocksGorgon: true,

@@ -24,8 +24,6 @@ export interface RoomLayoutAuthoring {
   }[];
   /** Both flips with their commands while the flip is a roll; empty otherwise. */
   readonly flips: readonly { readonly flipped: boolean; readonly command: ReplaceRoomLayout }[];
-  /** Returns the whole layout to the game; present while anything is authored. */
-  readonly clear?: ReplaceRoomLayout;
 }
 
 function settlementFor(
@@ -74,7 +72,7 @@ export function roomLayoutAuthoringForProjectEvaluationAssembly(
         );
   return Object.freeze({
     settlement,
-    ...(authored === undefined ? {} : { authored, clear: replace({}) }),
+    ...(authored === undefined ? {} : { authored }),
     entries: Object.freeze(entries),
     flips: Object.freeze(flips),
   });

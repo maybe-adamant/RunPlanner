@@ -1,5 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
-import type { ProjectDocument, RoomActionReference, RoomOccurrence } from '../../model';
+import type { ProjectDocument } from '../../model';
 import {
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
   infernalContractPedestalProfile,
@@ -28,12 +28,10 @@ import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliverySourceAddress,
-  isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
   removeHermesShrineDeliveryFromOtherHosts,
-  retainedHermesShrineDeliveryReward,
 } from '../../hermes-shrine-delivery';
 import { createBiomeAddress } from '../../addresses';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
@@ -44,35 +42,8 @@ import {
   scheduleRequiredRoomActions,
 } from '../../room-actions/defaults';
 import { roomActionKey } from '../../room-actions/state';
-import type { RoomActionDomain } from '../../room-actions/domain';
-import {
-  roomActionInsertionRefusal,
-  roomActionOrderContextForOccurrence,
-} from '../../room-actions/order-assessment';
-import { roomLifecycleWindowOrdinal } from '../../room-actions/lifecycle-structure';
-import { resolveRoutePosition } from '../../route-context';
-
-/**
- * The index a newly placed pickup takes: the command's chosen one when it is
- * structurally legal for the host's order, else today's default placement.
- */
-function placementIndex(
-  command: AcquisitionSiteCommand & { readonly index?: number },
-  domain: RoomActionDomain,
-  host: RoomOccurrence,
-  reference: RoomActionReference,
-  defaultIndex: number,
-): number {
-  if (command.index === undefined || command.index === defaultIndex) return defaultIndex;
-  const refusal = roomActionInsertionRefusal(
-    host.roomActions.order,
-    reference,
-    command.index,
-    roomActionOrderContextForOccurrence(domain, host),
-  );
-  if (refusal !== undefined) failCommand(command, refusal);
-  return command.index;
-}
+import { withChosenIndex } from '../chosen-index';
+import { roomActionOpeningPoint, roomEventPlaces } from '../../room-actions/event-graph';
 
 function refuseIndexWhenPlaced(command: AcquisitionSiteCommand & { readonly index?: number }) {
   if (command.index !== undefined)
@@ -144,8 +115,6 @@ export function applyAcquisitionSiteCommand(
       failCommand(command, 'is not a room-local clocked pickup site');
     if (parseClockedTraitGeneratedPickupEntryKey(command.entry.entryKey) === undefined)
       failCommand(command, 'does not name a clocked trait pickup');
-    if (command.encounterPhaseKey.trim().length === 0)
-      failCommand(command, 'has no maturity encounter phase');
     const lifecycle = catalog.rewards.producerLifecycles.byKey[command.producerLifecycleKey];
     if (lifecycle?.rewardTypes.byKey[command.rewardType] === undefined)
       failCommand(command, 'has no declared producer lifecycle reward binding');
@@ -155,7 +124,6 @@ export function applyAcquisitionSiteCommand(
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'roomExit',
       entryKey: command.entry.entryKey,
-      encounterPhaseKey: command.encounterPhaseKey,
     });
     const actionKey = roomActionKey(reference);
     const existingIndex = host.roomActions.order.findIndex(
@@ -216,45 +184,38 @@ export function applyAcquisitionSiteCommand(
       site.owner.occurrenceId,
     )?.domain;
     const target = domain?.contributions.find(
-      (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === actionKey,
+      (entry) => roomActionKey(entry.reference) === actionKey,
     );
-    if (domain === undefined || target?.kind !== 'action')
+    if (domain === undefined || target === undefined)
       failCommand(command, 'has no active room-action placement');
-    const targetOrdinal = roomLifecycleWindowOrdinal(domain.lifecycleStructure, target.window);
+    const place = roomEventPlaces(domain.eventGraph);
+    const targetOpening = place(roomActionOpeningPoint(target.bounds));
     const actionsByKey = new Map(
-      domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
-      ),
+      domain.contributions.map((entry) => [roomActionKey(entry.reference), entry] as const),
     );
     const insertionIndex = host.roomActions.order.findIndex((candidate) => {
       const contribution = actionsByKey.get(roomActionKey(candidate));
       return (
         contribution !== undefined &&
-        roomLifecycleWindowOrdinal(domain.lifecycleStructure, contribution.window) > targetOrdinal
+        place(roomActionOpeningPoint(contribution.bounds)) > targetOpening
       );
     });
     const nextOrder = [...host.roomActions.order];
-    nextOrder.splice(
-      placementIndex(
-        command,
-        domain,
-        host,
-        reference,
-        insertionIndex < 0 ? nextOrder.length : insertionIndex,
+    nextOrder.splice(insertionIndex < 0 ? nextOrder.length : insertionIndex, 0, reference);
+    return withChosenIndex(
+      updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+          }),
+        ),
       ),
-      0,
-      reference,
-    );
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...nextHostWithoutActions,
-          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-        }),
-      ),
+      catalog,
+      command,
     );
   }
   if (command.kind === 'PlaceHermesShrineDelivery') {
@@ -281,41 +242,23 @@ export function applyAcquisitionSiteCommand(
     );
     if (sourceOffer === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
-    const finalPrebossHost = isDeliveryFlushHost(
-      catalog.rooms.byKey[host.gameName],
-      resolveRoutePosition(catalog, document.route, site.biomeKey),
-    );
-    if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
-      failCommand(command, 'has an empty due encounter phase');
     if (isSameRoomDelivery(hermesShrineDeliverySourceAddress(parsed), site.owner))
       failCommand(command, 'same-room Shrine deliveries use the post-outgoing window');
-    if (command.encounterPhaseKey === undefined && !finalPrebossHost)
-      failCommand(command, 'has no due encounter phase');
     const deliveryReference = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'hermesShrineDelivery',
       entryKey: command.entry.entryKey,
-      ...(command.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: command.encounterPhaseKey }),
     });
-    const actionIndex = host.roomActions.order.findIndex(
+    const actionAlreadyOrdered = host.roomActions.order.some(
       (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),
     );
-    const actionAlreadyOrdered = actionIndex >= 0;
     const existingEntries = host.acquisitionSites?.hermesShrineDelivery?.pickupEntries ?? {};
-    const existingAction = actionAlreadyOrdered ? host.roomActions.order[actionIndex] : undefined;
-    const phaseAlreadyPersisted =
-      existingAction?.kind === 'interactAcquisitionEntry' &&
-      existingAction.encounterPhaseKey === command.encounterPhaseKey;
     if (actionAlreadyOrdered) refuseIndexWhenPlaced(command);
-    if (phaseAlreadyPersisted && existingEntries[command.entry.entryKey] !== undefined)
+    if (actionAlreadyOrdered && existingEntries[command.entry.entryKey] !== undefined)
       return removeHermesShrineDeliveryFromOtherHosts(document, command.entry.entryKey, site.owner);
-    const retainedReward = retainedHermesShrineDeliveryReward(
-      document,
-      command.entry.entryKey,
-      site.owner,
-    );
+    // A payload kept at this host is the same delivery; one kept at another host belonged to a
+    // delivery due elsewhere, so this one arrives new, with none of its choices.
+    const retainedReward = existingEntries[command.entry.entryKey];
     const relocatedReward =
       retainedReward !== undefined &&
       (retainedReward === null || retainedReward.offer.rewardType === sourceOffer.rewardType)
@@ -342,19 +285,7 @@ export function applyAcquisitionSiteCommand(
       const updated = updateOccurrenceTopology(
         document,
         located,
-        replaceOccurrence(
-          topology,
-          Object.freeze({
-            ...nextHostWithoutActions,
-            roomActions: Object.freeze({
-              order: Object.freeze(
-                host.roomActions.order.map((reference, index) =>
-                  index === actionIndex ? deliveryReference : reference,
-                ),
-              ),
-            }),
-          }),
-        ),
+        replaceOccurrence(topology, nextHostWithoutActions),
       );
       return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
     }
@@ -391,34 +322,34 @@ export function applyAcquisitionSiteCommand(
     if (canonicalIndex < 0)
       failCommand(command, 'delivery has no canonical room-action insertion point');
     const nextOrder = [...host.roomActions.order];
-    nextOrder.splice(
-      placementIndex(command, provisionalDomain, host, deliveryReference, canonicalIndex),
-      0,
-      deliveryReference,
-    );
-    const updated = updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...nextHostWithoutActions,
-          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-        }),
+    nextOrder.splice(canonicalIndex, 0, deliveryReference);
+    const updated = withChosenIndex(
+      updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+          }),
+        ),
       ),
+      catalog,
+      command,
     );
     return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
   }
   if (command.kind === 'PlaceEchoGoldPickup') {
-    if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
+    const site = command.entry.site;
+    if (site.owner.kind !== 'occurrence' || site.pointKey !== 'roomExit')
       failCommand(command, 'is not an authorable Shop acquisition site');
-    const topology = requireTopology(located.plan, command);
-    const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
-    const profileKey =
-      occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
-    if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-    if (command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
+    if (command.entry.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
       failCommand(command, 'has an unknown derived Shop entry');
+    const topology = requireTopology(located.plan, command);
+    const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    if (occurrence.state.kind !== 'shop' || occurrence.state.shop?.profileKey === undefined)
+      failCommand(command, 'has no materialized Shop');
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const derivedValue = derivedShopEntryValue(
       catalog,
@@ -430,13 +361,11 @@ export function applyAcquisitionSiteCommand(
     const reference = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'roomExit',
-      entryKey: command.entryKey,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
     });
-    const placed = occurrence.roomActions.order.some(
-      (action) => roomActionKey(action) === roomActionKey(reference),
-    );
-    if (placed) refuseIndexWhenPlaced(command);
     const order = occurrence.roomActions.order;
+    const placed = order.some((action) => roomActionKey(action) === roomActionKey(reference));
+    if (placed) refuseIndexWhenPlaced(command);
     const appended = Object.freeze({
       ...occurrence,
       roomActions: Object.freeze({
@@ -447,38 +376,17 @@ export function applyAcquisitionSiteCommand(
         roomExit: Object.freeze({
           pickupEntries: Object.freeze({
             ...pickupEntries,
-            [command.entryKey]: pickupEntries[command.entryKey] ?? derivedValue,
+            [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]:
+              pickupEntries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY] ?? derivedValue,
           }),
         }),
       }),
     });
-    const appendedDocument = updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(topology, appended),
-    );
-    if (placed || command.index === undefined || command.index === order.length)
-      return appendedDocument;
-    const domain = roomActionDomainForOccurrence(
-      appendedDocument,
+    // The duplicate appends where the room's actions end unless an index is chosen.
+    return withChosenIndex(
+      updateOccurrenceTopology(document, located, replaceOccurrence(topology, appended)),
       catalog,
-      createBiomeAddress(command.site.routeKey, command.site.biomeKey),
-      occurrence.occurrenceId,
-    )?.domain;
-    if (domain === undefined) failCommand(command, 'has no room-action domain');
-    const index = placementIndex(command, domain, occurrence, reference, order.length);
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...appended,
-          roomActions: Object.freeze({
-            order: Object.freeze(order.toSpliced(index, 0, reference)),
-          }),
-        }),
-      ),
+      command,
     );
   }
   if (command.kind === 'ReplaceAcquisitionEntryOffer') {

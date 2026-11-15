@@ -135,6 +135,11 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterDefinitions,
     encounterSets,
     exitTypes,
+    {
+      templates: input.roomTemplateLifecycles,
+      derived: input.derivedRoomLifecycle,
+      profiles: roomLifecycleProfiles,
+    },
   );
   const requiredRewardDrops = normalizeRequiredRewardDrops(input.requiredRewardDrops);
   validateRoomRequiredRewardDrops(rooms, requiredRewardDrops);
@@ -151,7 +156,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
     rooms,
-    profiles: roomLifecycleProfiles,
+    encounterEnvelopes,
+    encounterSets,
+    encounterDefinitions,
+    runStartReward,
     traits: traitCatalog.traits,
     rewards,
   });
@@ -162,7 +170,18 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     rewards.stores,
     exitTypes,
   );
-  validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies, routes, rewards.shops);
+  validateRoomLayoutClosure(
+    rooms,
+    biomeLayouts,
+    exitCompatibilityPolicies,
+    routes,
+    rewards.shops,
+    new Set(
+      input.rooms
+        .filter((room) => room.lifecycleProfileKey !== undefined)
+        .map((room) => room.gameName),
+    ),
+  );
   validateEncounterRouteReferences(encounterDefinitions, encounterSets, routes);
   validateRoomRouteOverlayReferences(rooms, routes);
   validateRewardAcquisitionRoleTraitGivers(rewards, traitCatalog.givers);

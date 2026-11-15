@@ -15,6 +15,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
+  replaceTestPlacedItem,
   prepareLegalPomTraitOffers,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
@@ -122,9 +124,8 @@ export function groupedOutcomeProject(
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: `${giver}Upgrade` },
     } as const;
-    project = applyProjectCommand(
+    project = replaceTestPlacedItem(
       project,
-      catalog,
       index === 0
         ? {
             kind: 'ReplaceStartingReward',
@@ -132,6 +133,7 @@ export function groupedOutcomeProject(
             value,
           }
         : { kind: 'ReplaceIncomingReward', reward, value },
+      createOccurrenceAddress(goldenFBiome, sites[index]!),
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -153,25 +155,27 @@ export function groupedOutcomeProject(
     });
   }
   const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` } },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(reward, 'source'),
-    value: {
-      kind: 'traits',
-      giverKey,
-      selectedOptionKey: 'option2',
-      options: [
-        { traitKey: options[0], rarity: 'Common' },
-        { traitKey: options[1], rarity: effect === 'All Together' ? 'Legendary' : 'Duo' },
-        { traitKey: options[2], rarity: 'Common' },
-      ],
-    },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey,
+        selectedOptionKey: 'option2',
+        options: [
+          { traitKey: options[0], rarity: 'Common' },
+          { traitKey: options[1], rarity: effect === 'All Together' ? 'Legendary' : 'Duo' },
+          { traitKey: options[2], rarity: 'Common' },
+        ],
+      },
+    }),
+  );
 }
 
 /** An Echo Boon Boon Boon choice whose first row the reached run cannot grant. */

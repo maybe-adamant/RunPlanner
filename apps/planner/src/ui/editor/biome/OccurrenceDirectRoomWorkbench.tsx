@@ -6,7 +6,7 @@ import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
   WorkspaceDoorContract,
-  WorkspaceEncounterBannerSupplement,
+  WorkspaceEncounterEvents,
   WorkspaceInteractionCatalog,
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
@@ -54,14 +54,14 @@ export function ShipCombatPhaseCountWorkbench({
     <section aria-label="Room overview" className="ship-combat-editor">
       {nested ? null : (
         <div className="local-reward-heading">
-          <h4>Combat phases</h4>
+          <h4>Phases</h4>
         </div>
       )}
       <CandidatePicker
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={interaction}
-        label={nested ? 'Phases' : 'Combat phases'}
-        placeholder="Choose combat phases"
+        label="Phases"
+        placeholder="Choose phases"
         onReplace={(encounterCount) =>
           dispatch(
             authoredProjectCommandDispatched({
@@ -187,19 +187,21 @@ export function DirectRoomWorkbench({
   ) => TimelineBoundaryContent | undefined;
 }) {
   const workbench = room.workbench;
-  const renderEncounterControls = (controls: WorkspaceEncounterBannerSupplement): ReactNode =>
-    controls.kind === 'encounterStart' ? (
-      <EncounterStartControls interactions={interactions} phase={controls.phase} />
-    ) : (
-      <>
+  const renderEncounterControls = (controls: WorkspaceEncounterEvents): ReactNode => (
+    <>
+      {controls.start === true ? (
+        <EncounterStartControls interactions={interactions} phase={controls.phase} />
+      ) : null}
+      {controls.choices.length === 0 ? null : (
         <EncounterOutcomeControls
           choices={new Set(controls.choices)}
           interactions={interactions}
           phase={controls.phase}
         />
-        {controls.choices.includes('anomalyCleared') ? <AnomalyClearedControl room={room} /> : null}
-      </>
-    );
+      )}
+      {controls.choices.includes('anomalyCleared') ? <AnomalyClearedControl room={room} /> : null}
+    </>
+  );
   // Every phase's identity and customization are fixed on entry: the room Overview.
   const renderOverviewEncounterPhases = (): ReactNode =>
     room.encounterPhases.length === 0

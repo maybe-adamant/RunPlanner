@@ -3,44 +3,53 @@ import {
   createBiomeAddress,
   createRoomActionAddress,
   type OccurrenceAddress,
-  type AcquisitionEntryAddress,
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions/state';
+import {
+  roomActionContentMatches,
+  roomActionReferenceContent,
+} from '../../authored-project/room-actions/item-content';
 import type { RoomActionReference } from '../../authored-project/model';
 import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
-  roomLifecycleWindowOrdinal,
-  scopeRoomLifecycleStructure,
-  type RoomLifecycleStructure,
-} from '../../authored-project/room-actions/lifecycle-structure';
+  roomFightsEnd,
+  scopeRoomEventGraph,
+  type RoomEventGraph,
+  type RoomEventPoint,
+} from '../../authored-project/room-actions/event-graph';
 import {
   assessRoomActionInsertion,
   assessRoomActionMove,
   assessRoomActionOrder,
   roomActionOrderContext,
+  waitsOnUnplacedGate,
 } from '../../authored-project/room-actions/order-assessment';
 import type {
-  RoomActionCheckpoint,
   RoomActionContribution,
   RoomActionProposal,
   RoomActionRoster,
-  RoomActionRosterContribution,
   RoomActionRow,
 } from './model';
 import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
-import { withRequiredScopes } from './required-scope';
+import { withRequiredScopes, type RoomActionRowFacts } from './required-scope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
 }
 
+/** A stale row has no item: it names no bound the room plays. */
+const STALE_BOUNDS = frozen({
+  spawn: frozen({ kind: 'roomEntered' as const }),
+  deadline: frozen({ kind: 'doorsOpened' as const }),
+});
+
 export function assembleRoomActionRoster(options: {
   readonly owner: OccurrenceAddress;
   readonly order: readonly RoomActionReference[];
-  readonly contributions: readonly RoomActionRosterContribution[];
+  readonly contributions: readonly RoomActionContribution[];
   /** What created each authored pickup without an active contribution, by action key. */
   readonly retainedSourceFamilies?: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly canonicalRequiredInsertions?: readonly {
     readonly actionKey: string;
     readonly toIndex: number;
@@ -48,12 +57,10 @@ export function assembleRoomActionRoster(options: {
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
 }): RoomActionRoster {
-  const actions = options.contributions.filter(
-    (entry): entry is RoomActionContribution => entry.kind === 'action',
-  );
+  const actions = options.contributions;
   const context = roomActionOrderContext({
     contributions: options.contributions,
-    lifecycleStructure: options.lifecycleStructure,
+    eventGraph: options.eventGraph,
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
@@ -65,8 +72,12 @@ export function assembleRoomActionRoster(options: {
       .filter((issue) => issue.kind !== 'unrankedRequired')
       .map((issue) => roomActionKey(issue.reference)),
   );
-  const rows: RoomActionRow[] = options.order.map((reference, index) => {
+  const rows: RoomActionRowFacts[] = options.order.map((reference, index) => {
     const entry = active.get(roomActionKey(reference));
+    // The row was placed for content its item no longer holds: a replaced item.
+    const itemReplaced =
+      entry !== undefined &&
+      !roomActionContentMatches(reference, roomActionReferenceContent(entry.reference) ?? null);
     const sourceFamily =
       entry === undefined
         ? options.retainedSourceFamilies?.get(roomActionKey(reference))
@@ -82,12 +93,13 @@ export function assembleRoomActionRoster(options: {
           roomActionKey(reference),
         ),
       participation: entry?.participation ?? 'optional',
-      window: entry?.window ?? frozen({ kind: 'standard', phase: 'afterCombat' }),
+      bounds: entry?.bounds ?? STALE_BOUNDS,
       dependencies: entry?.dependencies ?? frozen([]),
       ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
-      executable: entry !== undefined && !issueKeys.has(roomActionKey(reference)),
+      ...(itemReplaced ? { itemReplaced: true as const, itemReference: entry.reference } : {}),
+      executable: entry !== undefined && !itemReplaced && !issueKeys.has(roomActionKey(reference)),
     });
   });
   for (const action of actions) {
@@ -103,7 +115,7 @@ export function assembleRoomActionRoster(options: {
         key: roomActionKey(action.reference),
         owner: action.owner,
         participation: action.participation,
-        window: action.window,
+        bounds: action.bounds,
         dependencies: action.dependencies,
         ...(action.sourceFamily === undefined ? {} : { sourceFamily: action.sourceFamily }),
         rank: null,
@@ -132,12 +144,19 @@ export function assembleRoomActionRoster(options: {
       );
       continue;
     }
-    if (row.rank !== null && row.participation === 'optional') {
+    // Any placed row may leave; a required one is then live again with its finding. A delivery
+    // from another room returns to its due obligation.
+    if (row.rank !== null) {
       if (participationOwnedByFeature(row.reference)) continue;
       const fromIndex = row.rank - 1;
       proposals.push(
         frozen({
-          kind: 'remove',
+          kind:
+            row.participation === 'required' &&
+            row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'hermesShrineDelivery'
+              ? 'unplace'
+              : 'remove',
           reference: row.reference,
           fromIndex,
           order: frozen(options.order.filter((_, index) => index !== fromIndex)),
@@ -145,6 +164,45 @@ export function assembleRoomActionRoster(options: {
           blockers: frozen([]),
         }),
       );
+    }
+    // A row on a replaced item leaves its item unplaced: placing the item
+    // there takes the row's place, so each index is judged without the row.
+    if (
+      row.itemReplaced === true &&
+      row.itemReference !== undefined &&
+      row.rank !== null &&
+      !participationOwnedByFeature(row.reference)
+    ) {
+      const fromIndex = row.rank - 1;
+      const rest = options.order.filter((_, index) => index !== fromIndex);
+      const canonicalIndex =
+        row.participation === 'required'
+          ? options.canonicalRequiredInsertions?.find(
+              (candidate) => candidate.actionKey === row.key,
+            )?.toIndex
+          : undefined;
+      for (let toIndex = 0; toIndex <= options.order.length; toIndex += 1) {
+        const assessment = assessRoomActionInsertion(
+          rest,
+          row.itemReference,
+          toIndex > fromIndex ? toIndex - 1 : toIndex,
+          context,
+        );
+        if (assessment.followsTerminal) continue;
+        // A canonical restore still waits behind an earlier gate nothing has opened.
+        const canonical = toIndex === canonicalIndex && !waitsOnUnplacedGate(assessment.blockers);
+        proposals.push(
+          frozen({
+            kind: 'insert',
+            reference: row.itemReference,
+            toIndex,
+            order: assessment.order,
+            structurallyAuthorable: canonical || assessment.structurallyAuthorable,
+            ...(canonical ? { canonical: true as const } : {}),
+            blockers: canonical ? frozen([]) : assessment.blockers,
+          }),
+        );
+      }
     }
     if (!authoredKeys.has(row.key) && !participationOwnedByFeature(row.reference)) {
       // A required row may be inserted wherever its window and dependencies
@@ -163,7 +221,7 @@ export function assembleRoomActionRoster(options: {
           context,
         );
         if (assessment.followsTerminal) continue;
-        if (toIndex === canonicalIndex) {
+        if (toIndex === canonicalIndex && !waitsOnUnplacedGate(assessment.blockers)) {
           proposals.push(
             frozen({
               kind: 'insert',
@@ -193,6 +251,8 @@ export function assembleRoomActionRoster(options: {
   for (let fromIndex = 0; fromIndex < options.order.length; fromIndex += 1) {
     const reference = options.order[fromIndex]!;
     if (!active.has(roomActionKey(reference))) continue;
+    // A row on a replaced item is not moved; its item is placed instead.
+    if (rows[fromIndex]?.itemReplaced === true) continue;
     for (let toIndex = 0; toIndex < options.order.length; toIndex += 1) {
       if (fromIndex === toIndex) continue;
       const assessment = assessRoomActionMove(options.order, fromIndex, toIndex, context);
@@ -211,42 +271,6 @@ export function assembleRoomActionRoster(options: {
       );
     }
   }
-  const lastRequiredRank = rows.reduce(
-    (rank, row) =>
-      row.rank !== null && row.participation === 'required' && row.window.kind !== 'postOutgoing'
-        ? Math.max(rank, row.rank)
-        : rank,
-    0,
-  );
-  const checkpoints: RoomActionCheckpoint[] = options.contributions
-    .filter((entry) => entry.kind === 'checkpoint')
-    .map((entry) =>
-      frozen({
-        checkpointKey: entry.checkpointKey,
-        label: entry.label,
-        window: entry.window,
-        afterRank:
-          entry.checkpointKey === 'outgoingGeneration'
-            ? lastRequiredRank
-            : entry.checkpointKey === 'exitUsable'
-              ? rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null && row.participation === 'required'
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                )
-              : rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null &&
-                    roomLifecycleWindowOrdinal(options.lifecycleStructure, row.window) <=
-                      roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window)
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                ),
-      }),
-    );
   const activeByKey = new Map(
     rows.flatMap((row) => (row.stale || row.rank === null ? [] : [[row.key, row] as const])),
   );
@@ -264,24 +288,79 @@ export function assembleRoomActionRoster(options: {
       }),
     );
     for (const dependency of row.dependencies) {
-      if (dependency.kind !== 'afterAction' || dependency.authoringOnly === true) continue;
+      if (dependency.authoringOnly === true) continue;
       const after = activeByKey.get(roomActionKey(dependency.action));
       if (after === undefined) continue;
       timelineDependencies.push(frozen({ owner: row.owner, afterOwner: after.owner }));
     }
   }
   return frozen({
-    lifecycleStructure: options.lifecycleStructure,
-    rows: withRequiredScopes(rows, options.lifecycleStructure),
-    checkpoints: frozen(checkpoints),
+    eventGraph: options.eventGraph,
+    rows: withRequiredScopes(rows, options.eventGraph),
     issues,
     proposals: frozen(proposals),
     timelineFacts: frozen({
       nodes: frozen(timelineNodes),
       dependencies: frozen(timelineDependencies),
     }),
-    valid: issues.length === 0,
+    valid: issues.length === 0 && !rows.some((row) => row.itemReplaced === true),
   });
+}
+
+type DoorsRow = Pick<
+  RoomActionRow,
+  'key' | 'participation' | 'rank' | 'stale' | 'bounds' | 'dependencies'
+>;
+
+/**
+ * When the doors can open: after the last placed required row they wait on,
+ * every required row but those that follow them. A required row they wait on
+ * still unplaced holds them, once the row that spawns it is taken (an optional
+ * pickup the Artificer transforms); the walk also waits for every encounter to end.
+ */
+export function doorsReadyAfterRank<Row extends DoorsRow>(
+  rows: readonly Row[],
+): { readonly afterRank: number; readonly unplaced: readonly Row[] } {
+  const waitedOn = rows.filter(
+    (row) =>
+      !row.stale &&
+      row.participation === 'required' &&
+      row.bounds.enabler?.kind !== 'doorsOpened' &&
+      row.bounds.enabler?.kind !== 'exitsReady',
+  );
+  const unplaced = waitedOn.filter((row) => row.rank === null);
+  const rankOf = new Map(rows.map((row) => [row.key, row.stale ? null : row.rank]));
+  const sourceRanks = unplaced.flatMap((row) =>
+    row.dependencies.flatMap((dependency) =>
+      dependency.authoringOnly === true ? [] : [rankOf.get(roomActionKey(dependency.action)) ?? 0],
+    ),
+  );
+  return {
+    afterRank: Math.max(0, ...waitedOn.map((row) => row.rank ?? 0), ...sourceRanks),
+    unplaced,
+  };
+}
+
+/**
+ * The actions the walk performs, in rank order: every ranked row that is
+ * neither stale nor on a replaced item. The walk and execution publication read a room's purchases and rushes
+ * from this one input.
+ */
+export function performedRoomActions(roster: RoomActionRoster): readonly RoomActionReference[] {
+  return roster.rows.flatMap((row) =>
+    row.stale || row.itemReplaced === true || row.rank === null ? [] : [row.reference],
+  );
+}
+
+/**
+ * The row as the live product reads it: a row on a replaced item is not
+ * placed or standing; it is its current item, unplaced, placed by the
+ * roster's insertions that take the row's place.
+ */
+export function asUnplacedWhenReplaced(row: RoomActionRow): RoomActionRow {
+  return row.itemReplaced === true && row.itemReference !== undefined
+    ? frozen({ ...row, reference: row.itemReference, rank: null })
+    : row;
 }
 
 /** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */
@@ -289,24 +368,63 @@ export function scopeRoomActionRoster(
   roster: RoomActionRoster,
   activePhaseKeys: readonly string[],
 ): RoomActionRoster {
-  const lifecycleStructure = scopeRoomLifecycleStructure(
-    roster.lifecycleStructure,
-    activePhaseKeys,
-  );
-  if (lifecycleStructure === roster.lifecycleStructure) return roster;
+  const eventGraph = scopeRoomEventGraph(roster.eventGraph, activePhaseKeys);
+  if (eventGraph === roster.eventGraph) return roster;
   const active = new Set(activePhaseKeys);
+  // What follows a fight the room does not play follows its last played fight.
+  const fightsEnd = roomFightsEnd(eventGraph);
+  const played = (point: RoomEventPoint) =>
+    (point.kind === 'encounterEnd' || point.kind === 'endEffects') && !active.has(point.phaseKey)
+      ? fightsEnd
+      : point;
   return frozen({
     ...roster,
-    lifecycleStructure,
+    eventGraph,
     rows: withRequiredScopes(
       roster.rows.map((row) =>
         'phaseKey' in row.reference && !active.has(row.reference.phaseKey)
           ? frozen({ ...row, stale: true, executable: false })
-          : row,
+          : played(row.bounds.spawn) === row.bounds.spawn
+            ? row
+            : frozen({
+                ...row,
+                bounds: frozen({ ...row.bounds, spawn: played(row.bounds.spawn) }),
+              }),
       ),
-      lifecycleStructure,
+      eventGraph,
     ),
   });
+}
+
+/** The walk's placement of a row's generated pickup at this room. */
+function reachedPlacement(
+  owner: OccurrenceAddress,
+  row: Pick<RoomActionRow, 'reference'>,
+  placements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[],
+) {
+  const reference = row.reference;
+  return reference.kind !== 'interactAcquisitionEntry'
+    ? undefined
+    : placements.find(
+        (placement) =>
+          placement.address.site.owner.kind === 'occurrence' &&
+          placement.address.site.owner.occurrenceId === owner.occurrenceId &&
+          placement.address.site.biomeKey === owner.biomeKey &&
+          placement.address.entryKey === reference.entryKey &&
+          placement.address.site.pointKey === reference.siteKey,
+      );
+}
+
+/**
+ * A row's contact: for a placed delivery or clocked drop, where the walk had
+ * it fall due; otherwise its own.
+ */
+export function rowDueContact(
+  owner: OccurrenceAddress,
+  row: RoomActionRow,
+  placements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[],
+): RoomActionRow['contact'] {
+  return reachedPlacement(owner, row, placements)?.dueContact?.contact ?? row.contact;
 }
 
 /** Authoring repair assessment does not change the evaluated roster's execution facts. */
@@ -315,41 +433,18 @@ export function assessRoomActionPlacements(
   owner: OccurrenceAddress,
   roster: RoomActionRoster,
   reachedPlacements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[] = [],
-  acquisitionEntries: readonly {
-    readonly address: AcquisitionEntryAddress;
-    readonly kind: import('../rewards/acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability['kind'];
-    readonly participation?: 'required' | 'optional';
-    readonly retainedSourceMismatch?: boolean;
-  }[] = [],
 ): RoomActionRoster {
-  const requiredGold = acquisitionEntries.some(
-    (entry) =>
-      entry.address.site.owner.kind === 'occurrence' &&
-      entry.address.site.owner.occurrenceId === owner.occurrenceId &&
-      entry.address.site.biomeKey === owner.biomeKey &&
-      entry.address.site.pointKey === 'roomExit' &&
-      entry.address.entryKey === 'echoDoubleShopReward' &&
-      entry.kind === 'echoDoubleShopReward' &&
-      entry.participation === 'required' &&
-      entry.retainedSourceMismatch !== true,
-  );
   const rows = roster.rows.map((row) => {
     const structural = assessGeneratedPickupPlacement(route, owner, row.reference);
-    const reference = row.reference;
-    const reached =
-      reference.kind !== 'interactAcquisitionEntry'
-        ? undefined
-        : reachedPlacements.find(
-            (placement) =>
-              placement.address.site.owner.kind === 'occurrence' &&
-              placement.address.site.owner.occurrenceId === owner.occurrenceId &&
-              placement.address.site.biomeKey === owner.biomeKey &&
-              placement.address.entryKey === reference.entryKey &&
-              placement.address.site.pointKey === reference.siteKey,
-          )?.assessment;
+    const placement = reachedPlacement(owner, row, reachedPlacements);
+    const reached = placement?.assessment;
     const placementAssessment =
       structural?.kind === 'invalid' ? structural : (reached ?? structural);
-    return placementAssessment === undefined ? row : frozen({ ...row, placementAssessment });
+    // A placed delivery or clocked drop meets its room where the walk had it fall due.
+    const due = placement?.dueContact;
+    const timed =
+      due === undefined ? row : frozen({ ...row, contact: due.contact, label: due.label });
+    return placementAssessment === undefined ? timed : frozen({ ...timed, placementAssessment });
   });
   const invalidKeys = new Set(
     rows
@@ -366,17 +461,7 @@ export function assessRoomActionPlacements(
     ...roster,
     rows: frozen(rows),
     proposals: frozen([
-      ...roster.proposals.filter(
-        (proposal) =>
-          !invalidKeys.has(roomActionKey(proposal.reference)) &&
-          !(
-            requiredGold &&
-            proposal.kind === 'remove' &&
-            proposal.reference.kind === 'interactAcquisitionEntry' &&
-            proposal.reference.siteKey === 'roomExit' &&
-            proposal.reference.entryKey === 'echoDoubleShopReward'
-          ),
-      ),
+      ...roster.proposals.filter((proposal) => !invalidKeys.has(roomActionKey(proposal.reference))),
       ...rows
         .filter((row) => invalidKeys.has(row.key) && row.rank !== null)
         .map((row): RoomActionProposal =>
@@ -401,13 +486,13 @@ export function assessRoomActionPlacements(
   });
 }
 
-/** Shop, Shrine and Well purchases and the Postboss rack change only through their feature's command. */
+/** Shop, Shrine and Well purchases, Shrine rushes and the Pedestal change only through their feature's command. */
 function participationOwnedByFeature(reference: RoomActionReference): boolean {
   return (
     reference.kind === 'interactShopOffer' ||
     reference.kind === 'interactInfernalContractPedestal' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
-    reference.kind === 'purchaseStygianWellOffer' ||
-    reference.kind === 'interactKeepsakeRack'
+    reference.kind === 'rushHermesShrineOffer' ||
+    reference.kind === 'purchaseStygianWellOffer'
   );
 }
