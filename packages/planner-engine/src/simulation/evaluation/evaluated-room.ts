@@ -39,7 +39,11 @@ export function activeRoomActionRoster(
     ? roster
     : scopeRoomActionRoster(
         roster,
-        playedEncounterPhaseKeys(encounters, occurrence, roster.eventGraph.activeEncounterSlotKeys),
+        playedEncounterPhaseKeys(
+          encounters.statusAt,
+          occurrence,
+          roster.eventGraph.activeEncounterSlotKeys,
+        ),
       );
 }
 

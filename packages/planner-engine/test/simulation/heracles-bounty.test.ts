@@ -24,6 +24,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldLedgerForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   nextRequiredPlacement,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -275,33 +276,52 @@ describe('Heracles’s bounty', () => {
     ]);
   });
 
+  /** P_Combat02 with its Intro selected and its reward row removed, so the live room must offer it. */
+  const pId = pOccurrenceId('P_Combat02', 2, 1);
+  const pRoom = createOccurrenceAddress(pBiome, pId);
+  const pPhase = (phaseKey: string) =>
+    createEncounterPhaseAddress(pBiome, { kind: 'occurrence', occurrenceId: pId }, phaseKey);
+  const pRewardAction = createRoomActionAddress(
+    createBiomeAddress(pRoom.routeKey, pRoom.biomeKey),
+    pId,
+    roomActionKey(rewardRow),
+  );
+  const withPIntro = (project: ProjectDocument, encounterKey: string): ProjectDocument =>
+    applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase: pPhase('Intro'),
+        encounterKey,
+      }),
+      catalog,
+      { kind: 'RemoveRoomAction', action: pRewardAction },
+    );
+  /** Takes each required item the live room offers until it offers none. */
+  const collectP = (project: ProjectDocument) => {
+    let assembly = simulateProjectAssembly(catalog, project);
+    const placed: string[] = [];
+    for (;;) {
+      const next = nextRequiredPlacement(catalog, assembly, pRoom, new Set(placed));
+      if (!next.reached) throw new Error('P room is not reached');
+      if (next.placement === undefined) return { assembly, placed: placed.sort() };
+      placed.push(roomActionKey(next.placement.reference));
+      project = applyProjectCommand(project, catalog, next.placement.command);
+      assembly = simulateProjectAssembly(catalog, project);
+    }
+  };
+  const lootMoments = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
+    spawnedLootForProjectEvaluationAssembly(catalog, assembly, pRoom)!.moments.map((moment) => [
+      moment.key,
+      moment.items.map((item) => item.source.kind),
+    ]);
+
   it('spawns a P room’s reward at his fight’s end when he ends the room’s encounters', () => {
     // HeraclesCombatP blocks the room's later encounters, so his fight is its last and
     // spawns its reward (`BlockMultipleEncounters`, `SpawnRoomReward`).
-    const pId = pOccurrenceId('P_Combat02', 2, 1);
-    const pRoom = createOccurrenceAddress(pBiome, pId);
-    const intro = createEncounterPhaseAddress(
-      pBiome,
-      { kind: 'occurrence', occurrenceId: pId },
-      'Intro',
-    );
-    const rewardAction = createRoomActionAddress(
-      createBiomeAddress(pRoom.routeKey, pRoom.biomeKey),
-      pId,
-      roomActionKey(rewardRow),
-    );
-    let project = applyProjectCommand(
-      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-        kind: 'SelectEncounter',
-        phase: intro,
-        encounterKey: 'HeraclesCombatP',
-      }),
-      catalog,
-      { kind: 'RemoveRoomAction', action: rewardAction },
-    );
-    let assembly = simulateProjectAssembly(catalog, project);
+    const project = withPIntro(loadSurfaceNOPQProject(), 'HeraclesCombatP');
+    const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
-      ['roomActionPlacementRequired', rewardAction],
+      ['roomActionPlacementRequired', pRewardAction],
     ]);
     // The dormant Combat phase never plays: the walk waits at Doors open, not before it.
     const biome = assembly.evaluation.route.biomes.find((entry) => entry.biomeKey === 'P');
@@ -309,26 +329,35 @@ describe('Heracles’s bounty', () => {
       anchor: { kind: 'event', eventKey: 'doorsOpened' },
       placement: true,
     });
-    const moments = spawnedLootForProjectEvaluationAssembly(catalog, assembly, pRoom)!.moments;
-    expect(moments.map((moment) => [moment.key, moment.items.map((item) => item.source)])).toEqual([
-      [
-        'encounterEnd:Intro',
-        [{ kind: 'roomReward' }, expect.objectContaining({ kind: 'generated' })],
-      ],
-    ]);
-    // Taking each required item the live room offers clears the room.
-    const placed: string[] = [];
-    for (;;) {
-      const next = nextRequiredPlacement(catalog, assembly, pRoom, new Set(placed));
-      if (!next.reached) throw new Error('P room is not reached');
-      if (next.placement === undefined) break;
-      placed.push(roomActionKey(next.placement.reference));
-      project = applyProjectCommand(project, catalog, next.placement.command);
-      assembly = simulateProjectAssembly(catalog, project);
-    }
+    expect(lootMoments(assembly)).toEqual([['encounterEnd:Intro', ['roomReward', 'generated']]]);
+    const collected = collectP(project);
     const introBounty = { ...bountyRow, siteKey: heraclesBountySiteKey('Intro') };
-    expect(placed.sort()).toEqual([roomActionKey(introBounty), roomActionKey(rewardRow)].sort());
-    expect(assembly.evaluation.findings).toEqual([]);
+    expect(collected.placed).toEqual([roomActionKey(introBounty), roomActionKey(rewardRow)].sort());
+    expect(collected.assembly.evaluation.findings).toEqual([]);
+  });
+
+  it('keeps a P room’s Combat when his Intro selection is invalid, so its repair reaches that reward', () => {
+    // Heracles fights once a run, so after his N fight his P selection is unavailable.
+    const nHeracles = collectTestRequiredItems(withHeracles(loadSurfaceNOPQProject()));
+    const invalid = simulateProjectAssembly(catalog, withPIntro(nHeracles, 'HeraclesCombatP'));
+    expect(invalid.evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
+      ['encounterUnavailable', pPhase('Intro')],
+    ]);
+    // An invalid selection terminates nothing: Combat stays a played phase of the room.
+    expect(
+      encounterPhaseSequenceStatusForProjectEvaluationAssembly(invalid, pPhase('Combat')),
+    ).toMatchObject({ kind: 'active' });
+    // The walk stops at the room's Overview, so nothing spawns there yet.
+    expect(lootMoments(invalid)).toEqual([]);
+    expect(nextRequiredPlacement(catalog, invalid, pRoom, new Set())).toEqual({ reached: true });
+    // Repairing the Intro plays both phases: the reward spawns at Combat's end.
+    const repaired = withPIntro(nHeracles, 'GeneratedP_PreCombat');
+    expect(lootMoments(simulateProjectAssembly(catalog, repaired))).toEqual([
+      ['encounterEnd:Combat', ['roomReward']],
+    ]);
+    const collected = collectP(repaired);
+    expect(collected.placed).toEqual([roomActionKey(rewardRow)]);
+    expect(collected.assembly.evaluation.findings).toEqual([]);
   });
 
   it('pays its base unmultiplied, re-multiplied only by a money multiplier taken while it lies', () => {

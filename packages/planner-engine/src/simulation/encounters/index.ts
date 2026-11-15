@@ -50,6 +50,7 @@ export {
   type EncounterCandidateArtifacts,
   type EncounterCandidateEvaluation,
   type EncounterRoomCandidateCapability,
+  playedEncounterPhaseKeys,
 } from './candidates';
 export {
   encounterPhaseAuthoringDomainForRoom,

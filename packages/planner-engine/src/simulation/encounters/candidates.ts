@@ -74,7 +74,7 @@ export interface EncounterCandidateArtifacts {
  * left dormant behind a terminating encounter (a valid Heracles in a P Intro).
  */
 export function playedEncounterPhaseKeys(
-  encounters: Pick<EncounterCandidateArtifacts, 'statusAt'>,
+  statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   room: OccurrenceAddress,
   activeSlotKeys: readonly string[],
 ): readonly string[] {
@@ -82,8 +82,7 @@ export function playedEncounterPhaseKeys(
   const owner = { kind: 'occurrence' as const, occurrenceId: room.occurrenceId };
   return activeSlotKeys.filter(
     (phaseKey) =>
-      encounters.statusAt(createEncounterPhaseAddress(biome, owner, phaseKey))?.kind !==
-      'dormantSuffix',
+      statusAt(createEncounterPhaseAddress(biome, owner, phaseKey))?.kind !== 'dormantSuffix',
   );
 }
 

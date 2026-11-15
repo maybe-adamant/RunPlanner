@@ -1,11 +1,10 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
-  semanticAddressKey,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
-import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
+import { activeRoomActionRoster, authoredRoom } from './evaluated-room';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
@@ -50,14 +49,10 @@ export function encounterOutcomesForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   occurrence: OccurrenceAddress,
 ): readonly EncounterOutcome[] | undefined {
-  const biome = candidateBiome(assembly.evaluation, occurrence.routeKey, occurrence.biomeKey);
-  if (biome === undefined) return undefined;
-  const key = semanticAddressKey(occurrence);
-  const room = candidateBiomeRooms(biome).find(
-    (candidate) => semanticAddressKey(candidate.origin) === key,
-  );
+  const room = authoredRoom(assembly, occurrence);
   if (room === undefined || !room.entered) return undefined;
-  const graph = room.roomActionRoster.eventGraph;
+  // A dormant phase never fights, so it hosts no outcome.
+  const graph = activeRoomActionRoster(assembly, occurrence, room).eventGraph;
   const authored = room.encounters;
   return Object.freeze(
     graph.phases.flatMap((point): EncounterOutcome[] => {

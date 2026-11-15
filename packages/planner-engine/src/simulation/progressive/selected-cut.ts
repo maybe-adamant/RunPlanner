@@ -810,7 +810,7 @@ function roomStop(
   const graph = room.roomLifecycleTimeline.graph;
   const played = scopeRoomEventGraph(
     graph,
-    playedEncounterPhaseKeys(encounters, room.origin, graph.activeEncounterSlotKeys),
+    playedEncounterPhaseKeys(encounters.statusAt, room.origin, graph.activeEncounterSlotKeys),
   );
   const dormant = (index: number): boolean =>
     played !== graph && !roomLifecycleEntryActive(played, entries[index]!);
