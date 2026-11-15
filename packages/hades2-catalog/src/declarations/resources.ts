@@ -33,32 +33,40 @@ const baseRules = Object.freeze({
 });
 const nLookbacks = { Pickaxe: 12, Exorcism: 16, Shovel: 12, Fishing: 14 } as const;
 
+interface ResourcePointOptions {
+  readonly ignoresBiomeLimit?: boolean;
+  /**
+   * Families whose point in this room has no spacing terms of its own: the room overrides their
+   * requirements without SumPrevRooms. Later rooms' own rules still count a point placed here.
+   */
+  readonly unspacedFamilies?: readonly ResourceFamily[];
+}
+
+const noLookback = Object.freeze({ Pickaxe: 0, Exorcism: 0, Shovel: 0, Fishing: 0 });
+
 function support(
   profile: ResourceProfile,
   families: readonly ResourceFamily[],
-  options: { readonly ignoresBiomeLimit?: boolean } = {},
+  options: ResourcePointOptions = {},
   excludedRouteKeys: readonly string[] = ['Dream'],
 ): ResourcePointSupport {
   const rules = Object.freeze(
     Object.fromEntries(
       resourceFamilies.map((family) => {
         const base = baseRules[family];
-        const sameFamilyLookback =
-          profile === 'chaos'
-            ? 0
-            : profile === 'h'
-              ? 2
-              : profile === 'n'
-                ? nLookbacks[family]
-                : base.sameFamilyLookback;
-        const crossFamilyLookback =
-          profile === 'chaos'
-            ? { Pickaxe: 0, Exorcism: 0, Shovel: 0, Fishing: 0 }
+        const unspaced = profile === 'chaos' || options.unspacedFamilies?.includes(family) === true;
+        const sameFamilyLookback = unspaced
+          ? 0
+          : profile === 'h'
+            ? 2
             : profile === 'n'
-              ? Object.fromEntries(
-                  resourceFamilies.map((other) => [other, other === family ? 0 : 3]),
-                )
-              : base.crossFamilyLookback;
+              ? nLookbacks[family]
+              : base.sameFamilyLookback;
+        const crossFamilyLookback = unspaced
+          ? noLookback
+          : profile === 'n'
+            ? Object.fromEntries(resourceFamilies.map((other) => [other, other === family ? 0 : 3]))
+            : base.crossFamilyLookback;
         return [
           family,
           Object.freeze({
@@ -81,24 +89,24 @@ function support(
 
 export const normalResourcePointSupport = (
   families: readonly ResourceFamily[],
-  options?: { readonly ignoresBiomeLimit?: boolean },
+  options?: ResourcePointOptions,
 ) => support('normal', families, options);
 // Tool resource points need a completed run and the tools incantation.
 const underworldExcludedRouteKeys = ['Dream', 'FreshFile'] as const;
 /** Normal spacing on an F, G or I room, which a fresh profile's first attempt also visits. */
 export const underworldResourcePointSupport = (
   families: readonly ResourceFamily[],
-  options?: { readonly ignoresBiomeLimit?: boolean },
+  options?: ResourcePointOptions,
 ) => support('normal', families, options, underworldExcludedRouteKeys);
 export const hResourcePointSupport = (
   families: readonly ResourceFamily[],
-  options?: { readonly ignoresBiomeLimit?: boolean },
+  options?: ResourcePointOptions,
 ) => support('h', families, options, underworldExcludedRouteKeys);
 export const nResourcePointSupport = (
   families: readonly ResourceFamily[],
-  options?: { readonly ignoresBiomeLimit?: boolean },
+  options?: ResourcePointOptions,
 ) => support('n', families, options);
 export const chaosResourcePointSupport = (
   families: readonly ResourceFamily[],
-  options?: { readonly ignoresBiomeLimit?: boolean },
+  options?: ResourcePointOptions,
 ) => support('chaos', families, options);

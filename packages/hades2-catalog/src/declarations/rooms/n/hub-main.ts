@@ -1035,8 +1035,10 @@ export const nHubMainRooms = [
   {
     gameName: 'N_Story01',
     noReroll: true,
+    // RoomDataN.lua:3639,3666: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
+      unspacedFamilies: ['Pickaxe', 'Shovel'],
     }),
     label: 'Medea',
     roomSetKey: 'N',

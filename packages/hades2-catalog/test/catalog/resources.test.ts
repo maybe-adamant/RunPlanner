@@ -108,6 +108,17 @@ const roomsIgnoringBiomeLimit = [
   ...chaosRooms,
 ] as const;
 
+// The rooms whose own Shovel and Pickaxe requirements have no SumPrevRooms terms (BaseChaos aside).
+const roomsWithUnspacedPickaxeAndShovel = [
+  'F_Story01',
+  'G_Story01',
+  'H_Bridge01',
+  'I_Story01',
+  'N_Story01',
+  'O_Story01',
+  'P_Story01',
+] as const;
+
 const input = cloneCatalogInput;
 
 describe('selected resource-success catalog facts', () => {
@@ -153,6 +164,48 @@ describe('selected resource-success catalog facts', () => {
     expect(catalog.rooms.byKey.O_Combat01?.resourcePointSupport.excludedRouteKeys).toEqual([
       'Dream',
     ]);
+  });
+
+  it('drops Pickaxe and Shovel spacing only where a room overrides them without SumPrevRooms', () => {
+    const unspacedFamilies = ['Pickaxe', 'Shovel'] as const;
+    // Each room's ordinary sibling of the same spacing profile.
+    const siblings: Record<(typeof roomsWithUnspacedPickaxeAndShovel)[number], string> = {
+      F_Story01: 'F_Combat01',
+      G_Story01: 'G_Combat01',
+      H_Bridge01: 'H_Combat01',
+      I_Story01: 'I_Combat01',
+      N_Story01: 'N_Combat01',
+      O_Story01: 'O_Combat01',
+      P_Story01: 'P_Combat01',
+    };
+    const unspaced = (gameName: string, family: (typeof families)[number]) => {
+      const rule = catalog.rooms.byKey[gameName]?.resourcePointSupport.rules[family];
+      return (
+        rule?.sameFamilyLookback === 0 &&
+        families.every((other) => rule.crossFamilyLookback[other] === 0)
+      );
+    };
+    const chaos = new Set<string>(chaosRooms);
+    expect(
+      catalog.rooms.values
+        .filter((room) => !chaos.has(room.gameName))
+        .flatMap((room) =>
+          families
+            .filter((family) => unspaced(room.gameName, family))
+            .map((family) => `${room.gameName}:${family}`),
+        )
+        .sort(),
+    ).toEqual(
+      roomsWithUnspacedPickaxeAndShovel
+        .flatMap((gameName) => unspacedFamilies.map((family) => `${gameName}:${family}`))
+        .sort(),
+    );
+    for (const [gameName, sibling] of Object.entries(siblings)) {
+      const rules = catalog.rooms.byKey[gameName]?.resourcePointSupport.rules;
+      const siblingRules = catalog.rooms.byKey[sibling]?.resourcePointSupport.rules;
+      expect(rules?.Exorcism).toEqual(siblingRules?.Exorcism);
+      expect(rules?.Fishing).toEqual(siblingRules?.Fishing);
+    }
   });
 
   it('matches every source-enumerated room support and capacity exception', () => {

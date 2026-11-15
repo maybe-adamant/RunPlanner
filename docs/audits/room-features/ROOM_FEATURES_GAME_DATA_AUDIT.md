@@ -115,6 +115,18 @@ force a point or ignore the biome limit. These are point-generation facts, not
 element cooldowns. A spawned point that fails its element roll still consumes
 spacing and biome-count capacity in the game.
 
+A room's own requirement list replaces the base one. F, G, I, N, O and P
+`Story01` and `H_Bridge01` replace Shovel and Pickaxe with lists that keep only
+the completed-run, tools-incantation, prior-biome-resource and
+collection/accumulation terms and no `SumPrevRooms` term (`RoomDataF.lua:3198,3224`,
+`RoomDataG.lua:2598,2629`, `RoomDataH.lua:890,922`, `RoomDataI.lua:3054,3086`,
+`RoomDataN.lua:3639,3666`, `RoomDataO.lua:2767,2794`, `RoomDataP.lua:2268,2295`):
+those two points ignore every same- and cross-family window as the target,
+while the rooms' Exorcism and Fishing keep the base lists and later rooms'
+own windows still count a point placed there. `BaseChaos` likewise drops all
+windows for its three families (`RoomDataChaos.lua:50,71,97`). No runtime code
+rewrites these lists (`RunLogic.lua:680,691` only falls back to the defaults).
+
 | Tool-point family | Default ordinary room families | Chaos declaration |
 | ----------------- | ------------------------------ | ----------------- |
 | Pickaxe / Mine    | F, G, H, I, N, O, P, Q         | Yes               |
