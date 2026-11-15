@@ -633,6 +633,12 @@ export interface EncounterDefinition {
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
   /**
+   * The room reward this encounter spawns can never be duplicated, nor can an
+   * Artificer replacement of it. Only a room's fixed binding names such an
+   * encounter, so the rule is a fact of the room declaration.
+   */
+  readonly incomingRewardCannotDuplicate?: true;
+  /**
    * A kill-contest bet on the encounter's end: the bet is the held gold up to
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.
    */

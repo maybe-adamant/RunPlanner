@@ -1590,6 +1590,59 @@ describe('Sea Star on an Artificer replacement', () => {
     expect(seaStarResult(blocked)).toBeUndefined();
   });
 
+  it("refuses a reward its room encounter spawned uncopyable and that reward's replacement", () => {
+    // An Anomaly's success reward spawns with CanDuplicate = false
+    // (EncounterLogic.lua:2166-2181); its replacement keeps it (GiftLogic.lua:24-36).
+    const branch = withSeaStarAndTimePiece(initialBranch());
+    const occurrenceId = createOccurrenceId('encounter-uncopyable');
+    const origin = createIncomingRewardAddress(biome, occurrenceId);
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const replacementSite = artificerAcquisitionSite(siteOwner, origin);
+    const source = (blocks: boolean, kind: 'normal' | 'artificer') =>
+      Object.freeze({
+        origin,
+        offer: Object.freeze({ rewardType: 'GiftDrop' }),
+        producerLifecycleKey: 'RoomReward',
+        instanceProvenance: 'free' as const,
+        presentsMaterializedScreen: true,
+        dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind }) }),
+        artificerReplacementByAcquisitionRole: Object.freeze({
+          self: replacement('MaxHealthDrop'),
+        }),
+        artificerReplacementSiteByAcquisitionRole: Object.freeze({ self: replacementSite }),
+        traitContext: {},
+        ...(blocks ? { blocksSeaStarDuplication: true as const } : {}),
+      });
+    const resolution = { role: 'self', lifecyclePoint: 'roomRewardPickup' as const };
+    expect(
+      assessSeaStarDuplication(catalog, branch, source(true, 'normal'), resolution),
+    ).toMatchObject({ supported: false, evidence: { blocksSeaStarDuplication: true } });
+    expect(
+      assessSeaStarDuplication(catalog, branch, source(false, 'normal'), resolution).supported,
+    ).toBe(true);
+    const replacementSeaStar = (blocks: boolean) =>
+      settleOwnedAcquisitionSite(
+        catalog,
+        branch,
+        {
+          siteOwner,
+          pointKey: 'roomRewardPickup',
+          entryKey: 'self',
+          historySequence: 1,
+          source: source(blocks, 'artificer'),
+        },
+        (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
+      ).branch?.events.flatMap((event) =>
+        event.kind === 'concreteAcquisition' &&
+        event.origin.kind === 'acquisitionEntry' &&
+        parseArtificerReplacementEntryKey(event.origin.entryKey) !== undefined
+          ? [event.seaStarResult ?? null]
+          : [],
+      );
+    expect(replacementSeaStar(true)).toEqual([null]);
+    expect(replacementSeaStar(false)).toEqual([{ kind: 'noProc' }]);
+  });
+
   it('copies a Pom replacement as a fresh required Pom', () => {
     const pom = createUnresolvedAcquisitionRewardState(
       catalog,

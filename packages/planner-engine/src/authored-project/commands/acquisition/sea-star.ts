@@ -1,9 +1,10 @@
 import type { Catalog } from '../../../catalog-schema';
 import type { ProjectDocument } from '../../model';
-import { createBiomeAddress, createOccurrenceAddress } from '../../addresses';
+import { createBiomeAddress, createOccurrenceAddress, semanticAddressKey } from '../../addresses';
 import { acquisitionSiteStorageKey } from '../../acquisition/artificer';
 import {
   createSeaStarDuplicateRewardState,
+  encounterUnduplicableOwnerKeys,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
 } from '../../acquisition/sea-star';
@@ -55,6 +56,14 @@ export function applySeaStarResultCommand(
     );
     if (catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName]?.canDuplicate !== true)
       failCommand(command, 'source declaration cannot duplicate');
+    if (
+      encounterUnduplicableOwnerKeys(
+        catalog,
+        createBiomeAddress(command.acquisition.routeKey, command.acquisition.biomeKey),
+        occurrence,
+      ).has(semanticAddressKey(command.acquisition.owner))
+    )
+      failCommand(command, 'its room encounter spawned a reward that cannot duplicate');
   }
   if (reward.dispositionByAcquisitionRole[command.acquisition.acquisitionRole] === undefined)
     failCommand(command, 'does not own the addressed acquisition role');

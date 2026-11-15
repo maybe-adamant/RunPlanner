@@ -6,6 +6,7 @@ import {
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -15,6 +16,8 @@ import {
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateSiteKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
@@ -25,6 +28,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   loadUnderworldFPoolCheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
@@ -205,6 +209,77 @@ describe('project document loader', () => {
     expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
     // A plan saved at the current revision loads as is.
     expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  describe("a Sea Star copy of an Anomaly's reward, which never duplicates", () => {
+    const g = createBiomeAddress('Underworld', 'G');
+    const anomalyId = createOccurrenceId('golden-g-b3-e2');
+    const normal = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, createOccurrenceId('golden-g-b4-e1')),
+      'self',
+    );
+    // A copy of an ordinary room reward stays.
+    const current = applyProjectCommand(loadUnderworldGAnomalyRosterCheckpoint(), catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: normal,
+      procced: true,
+    });
+    const anomalyCopy = seaStarDuplicateSiteKey(
+      createAcquisitionRoleAddress(createIncomingRewardAddress(g, anomalyId), 'self'),
+    );
+    const anomalyOccurrence = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === anomalyId)!;
+    // Saved before the rule: the copy and its pickup row.
+    const withCopy = JSON.parse(encodeProjectDocument(current)) as ProjectDocument;
+    const saved = anomalyOccurrence(withCopy) as unknown as {
+      state: { reward: unknown };
+      acquisitionSites?: Record<string, unknown>;
+      roomActions: { order: unknown[] };
+    };
+    saved.acquisitionSites = {
+      ...saved.acquisitionSites,
+      [anomalyCopy]: { pickupEntries: { [SEA_STAR_DUPLICATE_ENTRY_KEY]: saved.state.reward } },
+    };
+    saved.roomActions.order.push({
+      kind: 'interactAcquisitionEntry',
+      siteKey: anomalyCopy,
+      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+      content: ['native', 'MetaCardPointsCommonBigDrop'],
+    });
+
+    it('is dropped with its row on load at every revision, leaving the other copy', () => {
+      expect(anomalyOccurrence(current).acquisitionSites).toBeUndefined();
+      for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
+        const loaded = loadProjectDocument(
+          JSON.stringify({ ...withCopy, schemaRevision: revision }),
+          catalog,
+        ).project;
+        expect(loaded).toEqual(current);
+      }
+      expect(
+        Object.keys(
+          current.route.biomes
+            .find((biome) => biome.biomeKey === 'G')!
+            .topology!.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === 'golden-g-b4-e1',
+            )!.acquisitionSites ?? {},
+        ),
+      ).toEqual([seaStarDuplicateSiteKey(normal)]);
+    });
+
+    it('leaves a plan without it unchanged', () => {
+      expect(
+        loadProjectDocument(
+          JSON.stringify({
+            ...JSON.parse(encodeProjectDocument(current)),
+            schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+          }),
+          catalog,
+        ).project,
+      ).toEqual(current);
+    });
   });
 
   describe('the Zagreus contract Champion row, granted with no pickup', () => {

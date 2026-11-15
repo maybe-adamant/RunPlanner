@@ -9,6 +9,7 @@ import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
 import {
   dropAutomaticRewardRows,
   dropRouteExcludedObjects,
+  dropUnduplicableSeaStarDuplicates,
   fillReachedBlanksProject,
 } from './project-102-to-103.js';
 
@@ -179,13 +180,17 @@ const ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION = 3;
 /**
  * State no plan can hold any more, removed on every load: a Well or Pool its
  * route never spawns (from a plan before 103.3) and, at any revision, a pickup
- * row for a reward role granted with no pickup.
+ * row for a reward role granted with no pickup and a Sea Star copy of a reward
+ * that cannot duplicate.
  */
 function dropImpossibleState(document: unknown, catalog: Catalog, revision: number): unknown {
-  return dropAutomaticRewardRows(
-    revision < ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION
-      ? dropRouteExcludedObjects(document, catalog)
-      : document,
+  return dropUnduplicableSeaStarDuplicates(
+    dropAutomaticRewardRows(
+      revision < ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION
+        ? dropRouteExcludedObjects(document, catalog)
+        : document,
+      catalog,
+    ),
     catalog,
   );
 }

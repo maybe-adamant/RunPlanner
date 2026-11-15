@@ -66,6 +66,12 @@ function normalizeEncounterSlotBindings(
         definitions.byKey[rivalsEncounterDefinitionKey] === undefined
       )
         fail(`${bindingPath}.rivalsEncounterDefinitionKey`, 'unknown encounter definition');
+      for (const [field, key] of [
+        ['shadowEncounterDefinitionKey', shadowEncounterDefinitionKey],
+        ['rivalsEncounterDefinitionKey', rivalsEncounterDefinitionKey],
+      ] as const)
+        if (key !== undefined && definitions.byKey[key]?.incomingRewardCannotDuplicate === true)
+          fail(`${bindingPath}.${field}`, 'cannot name a reward that cannot duplicate');
       return Object.freeze({
         slotKey,
         kind: 'fixed',

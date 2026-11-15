@@ -37,6 +37,8 @@ export function canonicalArtificerSource(
       readonly owner: TraitOfferOwnerAddress;
       readonly reward: AuthoredRewardState;
       readonly producerLifecycleKey?: string;
+      /** The source can never duplicate, which an Artificer replacement of it inherits. */
+      readonly blocksSeaStarDuplication?: true;
     }
   | undefined {
   const candidates: {
@@ -85,5 +87,19 @@ export function canonicalArtificerSource(
         ...(producerLifecycleKey === undefined ? {} : { producerLifecycleKey }),
       });
     }
-  return candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  const found = candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  if (found === undefined) return undefined;
+  const owner = found.owner;
+  const replaced =
+    owner.kind === 'acquisitionEntry'
+      ? parseArtificerReplacementEntryKey(owner.entryKey)
+      : undefined;
+  const blocks =
+    owner.kind === 'incomingReward'
+      ? room.incomingReward?.blocksSeaStarDuplication === true
+      : owner.kind === 'acquisitionEntry' &&
+        (owner.site.pointKey.startsWith('seaStarDuplicate:') ||
+          (replaced !== undefined &&
+            canonicalArtificerSource(room, replaced.sourceKey)?.blocksSeaStarDuplication === true));
+  return blocks ? Object.freeze({ ...found, blocksSeaStarDuplication: true as const }) : found;
 }

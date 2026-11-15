@@ -102,6 +102,8 @@ export interface CanonicalResolvedIncomingReward extends CanonicalRerollableRewa
    * acquisition point during the entered lifecycle.
    */
   readonly acquisitionEnabled?: boolean;
+  /** The room's encounter spawns this reward as one that can never duplicate. */
+  readonly blocksSeaStarDuplication?: true;
 }
 
 export interface CanonicalShopOffer {

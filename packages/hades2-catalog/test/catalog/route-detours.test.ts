@@ -252,6 +252,57 @@ describe('route detour catalog declarations', () => {
     expect(catalog.rewards.rewardTypes.byKey).not.toHaveProperty('GemPointsBigDrop');
   });
 
+  it("declares that the Anomaly encounter's room reward can never duplicate", () => {
+    const catalog = createCatalog(declarations);
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.incomingRewardCannotDuplicate === true)
+        .map((definition) => definition.key),
+    ).toEqual(['GeneratedAnomalyB']);
+    for (const gameName of anomalyRoomGameNames)
+      expect(catalog.rooms.byKey[gameName]?.encounterSlotBindings).toEqual([
+        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
+      ]);
+
+    // Only a room's own fixed binding may name such an encounter.
+    const inSet = input();
+    const setIndex = inSet.encounterSets.findIndex((set) => set.key === 'GEncountersDefault');
+    const set = inSet.encounterSets[setIndex] as unknown as {
+      encounterDefinitionKeys: string[];
+      authoringProfiles?: { key: string; encounterDefinitionKeys: string[] }[];
+    };
+    set.encounterDefinitionKeys = [...set.encounterDefinitionKeys, 'GeneratedAnomalyB'];
+    set.authoringProfiles = [
+      ...(set.authoringProfiles ?? []),
+      { key: 'GeneratedAnomalyB', encounterDefinitionKeys: ['GeneratedAnomalyB'] },
+    ];
+    expect(() => createCatalog(inSet)).toThrow(
+      new CatalogContractError(
+        `encounterSets[${setIndex}].encounterDefinitionKeys[${set.encounterDefinitionKeys.length - 1}]`,
+        'GeneratedAnomalyB spawns a reward that cannot duplicate and must be bound fixed',
+      ),
+    );
+    const asRivals = input();
+    const index = roomIndex(asRivals, 'G_Combat01');
+    const room = asRivals.rooms[index] as unknown as {
+      encounterSlotBindings: Record<string, unknown>[];
+    };
+    room.encounterSlotBindings = [
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'GeneratedAnomalyB',
+        rivalsEncounterDefinitionKey: 'GeneratedAnomalyB',
+      },
+    ];
+    expect(() => createCatalog(asRivals)).toThrow(
+      new CatalogContractError(
+        `rooms[${index}].encounterSlotBindings[0].rivalsEncounterDefinitionKey`,
+        'cannot name a reward that cannot duplicate',
+      ),
+    );
+  });
+
   it('normalizes the complete closed Oceanus Anomaly replacement matrix', () => {
     const catalog = createCatalog(declarations);
     const g = catalog.biomeLayouts.byKey.G;

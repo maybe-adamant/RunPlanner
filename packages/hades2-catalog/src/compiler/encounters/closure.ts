@@ -172,6 +172,12 @@ export function validateEncounterSetClosure(
           `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
           `unknown encounter definition ${definitionKey}`,
         );
+      // A room reward that cannot duplicate stays a fact of its room's fixed binding.
+      if (definitions.byKey[definitionKey]?.incomingRewardCannotDuplicate === true)
+        fail(
+          `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
+          `${definitionKey} spawns a reward that cannot duplicate and must be bound fixed`,
+        );
     });
     set.authoringProfiles.forEach((profile, profileIndex) => {
       if (profile.resolution.kind !== 'rewardContext') return;
