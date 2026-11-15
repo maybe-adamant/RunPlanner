@@ -19,9 +19,9 @@ import { recordPrologueLength, recordRoomBiomeKeys } from './vocabulary';
 
 /**
  * Deterministic occurrence identities for the record's rooms. An entered room
- * is `<biome>-r<index>` of its first visit; a Hub biome's restored room keeps
- * that identity on every later visit. An offered room never entered is
- * `<biome>-r<source index>-d<door id>`.
+ * is `<biome>-r<index>` of its first visit; a Hub biome's board and main rooms
+ * keep that identity on every later visit, while each side room entry is its
+ * own. An offered room never entered is `<biome>-r<source index>-d<door id>`.
  */
 export class RecordOccurrences {
   readonly biomeOfRoom: readonly string[];
@@ -49,7 +49,12 @@ export class RecordOccurrences {
     const firstVisit = new Map<string, OccurrenceId>();
     this.occurrenceOfRoom = record.rooms.map((room, index) => {
       const biomeKey = this.biomeOfRoom[index]!;
-      const restores = catalog.biomeLayouts.byKey[biomeKey]?.progression.kind === 'hub';
+      const progression = catalog.biomeLayouts.byKey[biomeKey]?.progression;
+      // Only the board and its main rooms are re-entered; two main rooms can share a side room's name.
+      const restores =
+        progression?.kind === 'hub' &&
+        (room.name === progression.restoreRoomGameName ||
+          progression.slots.some((slot) => slot.roomGameName === room.name));
       const key = `${biomeKey}|${room.name}`;
       const id =
         (restores ? firstVisit.get(key) : undefined) ?? createOccurrenceId(`${biomeKey}-r${index}`);

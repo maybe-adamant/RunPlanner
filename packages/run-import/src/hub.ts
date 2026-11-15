@@ -151,15 +151,13 @@ function openHubSlot(context: RunImportContext, openSet: Origin<'hubOpenSet'>): 
       door.door,
     );
     const room = context.catalog.rooms.byKey[slot.roomGameName];
+    const visit = mainRoomVisit(context, openSet.biomeKey, hub.restoreRoomGameName, roomIndex);
     const localOccurrenceIdsBySlot = Object.fromEntries(
       (room?.localChildren ?? []).flatMap((child) =>
         child.kind === 'fixedRoomSlots'
           ? child.slots.map((local) => {
-              const side = biomeRooms(context, openSet.biomeKey).find(
-                (index) =>
-                  roomIndex !== undefined &&
-                  index > roomIndex &&
-                  context.record.rooms[index]!.name === local.roomGameName,
+              const side = visit.find(
+                (index) => context.record.rooms[index]!.name === local.roomGameName,
               );
               return [
                 local.slotKey,
@@ -171,18 +169,40 @@ function openHubSlot(context: RunImportContext, openSet: Origin<'hubOpenSet'>): 
           : [],
       ),
     );
+    const address = createHubSlotAddress(biome, openSet.hubKey, slot.slotKey);
     if (
-      context.apply({
-        kind: 'OpenHubSlot',
-        slot: createHubSlotAddress(biome, openSet.hubKey, slot.slotKey),
-        occurrenceId,
-        localOccurrenceIdsBySlot,
-      })
+      context.apply({ kind: 'OpenHubSlot', slot: address, occurrenceId, localOccurrenceIdsBySlot })
     )
       opened = true;
-    else context.refuse();
+    else {
+      context.refuse();
+      context.note({
+        area: 'hub',
+        reason: 'refused',
+        address,
+        record: { roomIndex: boardIndex, visit: 0, door: door.door },
+      });
+    }
   }
   return opened;
+}
+
+/**
+ * The record rooms of a main room's visit after its entry, until the board
+ * restores: the only rooms its side doors can have led to.
+ */
+function mainRoomVisit(
+  context: RunImportContext,
+  biomeKey: string,
+  restoreRoomGameName: string,
+  roomIndex: number | undefined,
+): readonly number[] {
+  if (roomIndex === undefined) return [];
+  const later = biomeRooms(context, biomeKey).filter((index) => index > roomIndex);
+  const exit = later.findIndex(
+    (index) => context.record.rooms[index]!.name === restoreRoomGameName,
+  );
+  return exit < 0 ? later : later.slice(0, exit);
 }
 
 /**

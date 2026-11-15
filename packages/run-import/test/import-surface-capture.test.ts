@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createHubSlotAddress,
   createRewardWheelOfferAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -414,5 +415,76 @@ describe('run import of a death in an Ephyra side room', () => {
       'N_Combat02',
       'N_Hub',
     ]);
+  });
+});
+
+describe('run import of Ephyra side rooms', () => {
+  type Room = RunRecord['rooms'][number];
+  const record = fixture('surface');
+  /** Ephyra's first board visits, without entry saves, whose stores these side rooms would shift. */
+  const ephyra = (rooms: readonly Room[]): RunRecord =>
+    ({
+      ...record,
+      route: { biomes: ['N'], dream: false },
+      outcome: { kind: 'abandoned', endingRoom: rooms.at(-1)!.name },
+      rooms: rooms.map((room) => {
+        const { entry: _entry, ...rest } = room;
+        void _entry;
+        return rest;
+      }),
+    }) as RunRecord;
+  /** A main room's visit that enters a side room through `door` and returns. */
+  const withSideRoom = (main: Room, door: number, side: string): Room[] => {
+    const doors = [...main.doors, { door, room: side, reward: { type: 'RoomMoneyDrop' } }];
+    const sideRoom = record.rooms[4]!;
+    return [
+      { ...main, doors, exit: side },
+      { ...sideRoom, name: side, exit: main.name },
+      { ...record.rooms[5]!, name: main.name, doors, exit: 'N_Hub' },
+    ];
+  };
+
+  it('gives a side room two main rooms share its own room under each', () => {
+    // N_Combat06 (sideDoor2) and N_Combat10 (sideDoor1) both host N_Sub05.
+    const rooms = record.rooms;
+    const imported = projectFromRunRecord(
+      catalog,
+      ephyra([
+        ...rooms.slice(0, 9),
+        ...withSideRoom(rooms[9]!, 560794, 'N_Sub05'),
+        rooms[10]!,
+        ...withSideRoom(rooms[11]!, 558352, 'N_Sub05'),
+        rooms[12]!,
+      ]),
+    );
+    const topology = imported.project.route.biomes[0]!.topology!;
+    const hub = topology.decisions.find((decision) => decision.kind === 'hub');
+    expect(hub?.kind === 'hub' && hub.openTargets).toHaveLength(10);
+    const sideRooms = (source: string) =>
+      topology.decisions.find(
+        (decision) => decision.kind === 'localVisit' && decision.sourceOccurrenceId === source,
+      );
+    expect(sideRooms('N-r9')).toMatchObject({ visitOrder: ['N-r10'] });
+    expect(sideRooms('N-r13')).toMatchObject({ visitOrder: ['N-r14'] });
+    expect(imported.report.entries.filter((entry) => entry.area === 'hub')).toEqual([]);
+  });
+
+  it('reports a board door the engine refuses to open', () => {
+    // Both Ephyra minibosses on one board: only one of them may open.
+    const board = record.rooms[2]!;
+    const doors = [
+      ...board.doors.filter((door) => door.room !== 'N_Combat04'),
+      { door: 617043, room: 'N_MiniBoss01', reward: { type: 'RoomMoneyDrop' } },
+    ];
+    const imported = projectFromRunRecord(
+      catalog,
+      ephyra([...record.rooms.slice(0, 2), { ...board, doors }, ...record.rooms.slice(3, 7)]),
+    );
+    expect(imported.report.entries.filter((entry) => entry.area === 'hub')).toContainEqual({
+      area: 'hub',
+      reason: 'refused',
+      address: createHubSlotAddress(createBiomeAddress('Surface', 'N'), 'hub', 'miniBoss01'),
+      record: { roomIndex: 2, visit: 0, door: 617043 },
+    });
   });
 });
