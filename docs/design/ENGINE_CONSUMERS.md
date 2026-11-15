@@ -100,9 +100,10 @@ A consumer asks the engine what is possible; it never decides it.
 - What a consumer may place in a room comes from the
   [live room](ROOM_LIFECYCLE_MODEL.md#live-at-a-point): the pickups and
   objects live at each gap through the walk's frontier, each with its verbs
-  and the commands that perform them there. Draft places a room's required
-  rows one at a time by the engine's next required placement, the same
-  query collecting a room's required items plays forward with. The run import
+  and the commands that perform them there. Draft places each required
+  pickup at the earliest gap the live room offers it and every other
+  required row by the engine's next required placement, the same query
+  collecting a room's required items plays forward with. The run import
   collects a room's required rows through that collection.
 - Which reward each door of a Clockwork exit decision derives, the forced Goal
   or a reward counted toward it, is a query over authored structure; Draft's

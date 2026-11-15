@@ -125,6 +125,70 @@ function originRoom(origin: SemanticAddress): OccurrenceAddress | undefined {
   );
 }
 
+/** Loot lying live at a gap of the room. */
+type LivePickup = Extract<LiveRoom['gaps'][number]['items'][number], { readonly kind: 'pickup' }>;
+
+/** A required pickup to collect, at the gap its placement takes, by the command placing it there. */
+interface PickupPlacement {
+  readonly key: string;
+  readonly gap: number;
+  readonly command: ProjectCommand;
+}
+
+/** The command a pickup's verb places it with at its gap; none while it stands or for a move. */
+function pickupPlacementCommand(item: LivePickup): ProjectCommand | undefined {
+  for (const verb of item.verbs) {
+    if (verb.standing === true || verb.reference === undefined) continue;
+    const command = verb.commands?.[0];
+    if (command !== undefined && command.kind !== 'MoveRoomAction') return command;
+  }
+  return undefined;
+}
+
+/**
+ * The required pickup the room offers earliest from `floor`, where the live room first lets it
+ * be placed (its spawn, or its cage's unlock), stepped past the pickups standing there that
+ * spawned no later, so loot is collected in spawn order before the next interaction. `tried`
+ * holds the row keys already tried.
+ */
+function earliestRequiredPickup(
+  live: LiveRoom,
+  tried: ReadonlySet<string>,
+  floor: number,
+): PickupPlacement | undefined {
+  const offeredAt = (gap: number, key: string) => {
+    const item = live.gaps[gap]?.items.find(
+      (candidate): candidate is LivePickup =>
+        candidate.kind === 'pickup' && roomActionKey(candidate.reference) === key,
+    );
+    return item === undefined ? undefined : pickupPlacementCommand(item);
+  };
+  for (const gap of live.gaps) {
+    if (gap.index < floor) continue;
+    for (const item of gap.items) {
+      if (item.kind !== 'pickup' || item.participation !== 'required') continue;
+      const key = roomActionKey(item.reference);
+      let command = tried.has(key) ? undefined : pickupPlacementCommand(item);
+      if (command === undefined) continue;
+      let at = gap.index;
+      for (;;) {
+        const standing = live.gaps[at]?.items.some(
+          (other) =>
+            other.kind === 'pickup' &&
+            other.spawn.gap <= item.spawn.gap &&
+            other.verbs.some((verb) => verb.standing === true),
+        );
+        const later = standing ? offeredAt(at + 1, key) : undefined;
+        if (later === undefined) break;
+        at += 1;
+        command = later;
+      }
+      return { key, gap: at, command };
+    }
+  }
+  return undefined;
+}
+
 /** A Shop door beside a door to a new god with queued traits. */
 const SHOP_OUTRANKED_FACTOR = 0.001;
 
@@ -1755,9 +1819,11 @@ export class DraftWalk {
   // --- Other owners --------------------------------------------------------
 
   /**
-   * Places what the origin's room still requires where the walk stands, one at a time by the
-   * engine's next required placement, until nothing required is placeable there, an edit is
-   * refused or a placement comes back; optional pickups and purchases stay the walk's choices.
+   * Places what the origin's room still requires in the order the room presents it: each required
+   * pickup at the earliest point the live room offers it, in spawn order, and every other
+   * required action by the engine's next required placement where the walk stands. Stops when
+   * nothing required is placeable, an edit is refused, a placement comes back or the walk stops
+   * at a row placed here; optional pickups and purchases stay the walk's choices.
    */
   private placeRequiredActions(origin: SemanticAddress): boolean {
     if (origin.kind === 'incomingReward') {
@@ -1769,8 +1835,29 @@ export class DraftWalk {
     const room = originRoom(origin);
     if (room === undefined) return false;
     const placed = new Set<string>();
+    const tried = new Set<string>();
+    // Past the last pickup placed here, so the next one follows it.
+    let floor = 0;
     let changed = false;
     for (;;) {
+      const live = liveRoomForProjectEvaluationAssembly(
+        this.catalog,
+        this.assembly,
+        room,
+        'placements',
+      );
+      // The walk stops at or before a row placed here: that row's own contact comes first.
+      if (live === undefined || live.frontier < floor) return changed;
+      const pickup = earliestRequiredPickup(live, tried, floor);
+      if (pickup !== undefined) {
+        tried.add(pickup.key);
+        // Not placeable this early: the frontier placement below takes it instead.
+        if (!this.applyEarlyPickup(pickup.command)) continue;
+        placed.add(pickup.key);
+        floor = pickup.gap + 1;
+        changed = true;
+        continue;
+      }
       const next = nextRequiredPlacement(this.catalog, this.assembly, room, placed);
       const placement = next.reached ? next.placement : undefined;
       if (placement === undefined) return changed;
@@ -1781,5 +1868,22 @@ export class DraftWalk {
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }
+  }
+
+  /**
+   * Places a required pickup ahead of the walk's frontier; one whose earlier acquisition makes
+   * a later row invalid is taken back, as is a refused one.
+   */
+  private applyEarlyPickup(command: ProjectCommand): boolean {
+    const before = this.assembly;
+    const outcome = this.authoring.apply(command);
+    if (outcome.kind !== 'applied') return false;
+    if (this.assembly.evaluation.issue?.kind === 'invalid') {
+      this.authoring.restore(before);
+      return false;
+    }
+    this.appliedCommands.push(command);
+    if (outcome.fault !== undefined) this.faults.push(outcome.fault);
+    return true;
   }
 }
