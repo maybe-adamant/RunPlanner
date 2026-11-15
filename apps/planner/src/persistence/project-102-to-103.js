@@ -3,6 +3,7 @@ import {
   moveLockedDoorFightOntoDoor,
   moveRerollResultsOntoItems,
   moveWellPoolRollsOntoObjects,
+  recoverLegacyTimedOutcomes,
   settleProjectFills,
   settleProjectUpgrade,
   splitShrineRush,
@@ -70,18 +71,40 @@ export function liftProjectDocument(value, catalog) {
   });
 }
 
+/** The outcomes a pre-99 save held put back; a recovery that throws or faults recovers none. */
+function recoveredProject(project, catalog, outcomes, recover) {
+  if (outcomes.length === 0) return project;
+  try {
+    const recovery = recover({ catalog, project, outcomes });
+    return recovery.fault === undefined ? recovery.project : project;
+  } catch {
+    return project;
+  }
+}
+
 /**
- * Catalog-aware transform: the lifted plan, saved under the earlier settlement
- * rules, is settled once as the current rules would have left it. A plan that
- * does not decode, or whose settlement throws or faults, keeps the bare lift.
- * It settles only while 103 is the current schema; later it keeps the bare lift.
+ * The transform with its timed-outcome recovery supplied: the lifted plan,
+ * saved under the earlier settlement rules, first recovers the timed outcomes
+ * a save from before schema 99 held, then is settled once as the current rules
+ * would have left it. A plan that does not decode, or whose settlement throws
+ * or faults, keeps the bare lift. It settles only while 103 is the current
+ * schema; later it keeps the bare lift.
  */
-export function migrateProjectDocument(value, { catalog }) {
+export function migrateProjectDocumentRecoveredBy(
+  value,
+  { catalog, legacyTimedOutcomes = [] },
+  recover,
+) {
   const lifted = liftProjectDocument(value, catalog);
   try {
     const settled = settleProjectUpgrade({
       catalog,
-      project: parseProjectDocument(JSON.stringify(lifted), catalog),
+      project: recoveredProject(
+        parseProjectDocument(JSON.stringify(lifted), catalog),
+        catalog,
+        legacyTimedOutcomes,
+        recover,
+      ),
       evaluate: (document) => simulateProjectAssembly(catalog, document),
     });
     if (settled.fault !== undefined) return lifted;
@@ -89,6 +112,10 @@ export function migrateProjectDocument(value, { catalog }) {
   } catch {
     return lifted;
   }
+}
+
+export function migrateProjectDocument(value, context) {
+  return migrateProjectDocumentRecoveredBy(value, context, recoverLegacyTimedOutcomes);
 }
 
 /**

@@ -1,6 +1,3 @@
-import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
-import { recoverLegacyTimedOutcomes as recoverOutcomes } from '@run-planner/engine/project-migration';
-
 export const SOURCE_SCHEMA_VERSION = 98;
 export const OUTPUT_SCHEMA_VERSION = 99;
 export const CATALOG_VERSION = '0.55.0-anvil-of-fates';
@@ -27,7 +24,7 @@ function dropPhaseOutcomes(value) {
   }
 }
 
-// Steady Growth and Embryo outcomes move to their source; the loader recovers them past the chain.
+// Steady Growth and Embryo outcomes move to their source; the 102 -> 103 step recovers them.
 export function migrateProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
@@ -50,7 +47,7 @@ function plainRecord(value) {
 
 /**
  * The phase-keyed outcomes a schema 98 document holds, each with the room and
- * phase it landed at, for `recoverLegacyTimedOutcomes` once the plan is current.
+ * phase it landed at, which the 102 -> 103 step recovers before it settles.
  */
 export function readLegacyTimedOutcomes(value) {
   const outcomes = [];
@@ -85,24 +82,4 @@ export function readLegacyTimedOutcomes(value) {
     }
   }
   return Object.freeze(outcomes);
-}
-
-/**
- * A current-schema document with the outcomes its schema 98 save held put back
- * where the engine accepts them. A plan that does not decode, or whose recovery
- * throws or faults, keeps them dropped.
- */
-export function recoverLegacyTimedOutcomes(document, outcomes, catalog) {
-  if (outcomes.length === 0) return document;
-  try {
-    const recovery = recoverOutcomes({
-      catalog,
-      project: parseProjectDocument(JSON.stringify(document), catalog),
-      outcomes,
-    });
-    if (recovery.fault !== undefined || recovery.recovered.length === 0) return document;
-    return JSON.parse(encodeProjectDocument(recovery.project));
-  } catch {
-    return document;
-  }
 }

@@ -221,15 +221,17 @@ from 1. A room's encounter state no longer has `steadyGrowthTargetByPhase` or
 `transcendentEmbryoBlessingByPhase`.
 
 The migration drops the phase-keyed outcomes from the document; the loader and
-the offline tool (when it migrates to the current schema) read them at schema 98
-and, once the plan is current, put each back on the source cycle the walk lands
-at that room's encounter end, as the edit authoring it would, repeating while a
-recovered cycle lets the next one land, then settle the plan as the 103 upgrade
-does. An outcome no cycle lands at, one where cycles of two sources land, and
-one the engine refuses or reports unavailable there stay dropped; that cycle
-reports its missing target or blessing until it is chosen again. A plan that
-does not decode, or whose recovery throws or faults, keeps them all dropped.
-A plan saved at 99 or later is never read for them.
+the offline tool read them at schema 98 and hand them to the 102 → 103 step,
+which, before its upgrade settlement, puts each back on the source cycle the
+walk lands at that room's encounter end, as the edit authoring it would,
+repeating while a recovered cycle lets the next one land. An outcome stays
+dropped when no cycle lands there, when cycles of two sources land there as it
+is recovered (a source's cycle that lands there only later is not checked), or
+when the engine refuses it or reports it unavailable there; that cycle reports
+its missing target or blessing until it is chosen again. A recovery that throws
+or faults recovers none, and the plan settles without them; a plan migrated by
+the offline tool to an older schema than the current one keeps them dropped. A
+plan saved at 99 or later is never read for them.
 
 Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
 `retriesPerBiome` and `resourceRoomChance`. A revision adds only optional saved

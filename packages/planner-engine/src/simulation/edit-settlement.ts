@@ -1115,8 +1115,7 @@ interface ProjectUpgradeSettlementOptions {
  * batch settles its doors. Rows that policy keeps invalid stay with their
  * findings, and rows the walk does not reach stay untouched; an Artificer
  * replacement whose source does not convert with the Artificer goes with its
- * pickup. Run only by the schema 102 -> 103 migration and the pre-99 timed
- * outcome recovery. Total like an edit's settlement.
+ * pickup. Run only by the schema 102 -> 103 migration. Total like an edit's settlement.
  */
 export function settleProjectUpgrade(
   options: ProjectUpgradeSettlementOptions,

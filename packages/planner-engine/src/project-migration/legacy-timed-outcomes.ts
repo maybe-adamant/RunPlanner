@@ -9,7 +9,7 @@ import type { ProjectCommand } from '../authored-project/commands/types';
 import type { ProjectDocument } from '../authored-project/model';
 import type { AuthoredTranscendentEmbryoOutcome } from '../authored-project/traits/state';
 import { createAuthoringSession } from '../simulation/authoring/session';
-import { settleProjectUpgrade, type SettlementFault } from '../simulation/edit-settlement';
+import type { SettlementFault } from '../simulation/edit-settlement';
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../simulation/evaluation/project';
 
@@ -113,11 +113,12 @@ function recoveryCommand(legacy: LegacyTimedOutcome, address: TimedOutcomeAddres
 
 /**
  * Put each outcome a plan saved before schema 99 held back on the source cycle
- * that lands where it was saved, as the edit authoring it would, and settle the
- * result once as the schema 103 upgrade does. Recovering a cycle can let the
- * walk land the next, so it repeats until nothing more lands. An outcome is
- * dropped when no cycle lands there, when cycles of two sources land there, or
- * when the edit is refused or leaves the cycle with its own finding.
+ * that lands where it was saved, as the edit authoring it would. Recovering a
+ * cycle can let the walk land the next, so it repeats until nothing more lands.
+ * An outcome is dropped when no cycle lands there, when cycles of two sources
+ * land there as it is recovered, or when the edit is refused or leaves the
+ * cycle with its own finding. The schema 102 -> 103 migration runs it on the
+ * lifted plan before its upgrade settlement.
  */
 export function recoverLegacyTimedOutcomes(options: {
   readonly catalog: Catalog;
@@ -172,15 +173,8 @@ export function recoverLegacyTimedOutcomes(options: {
   }
   for (const legacy of pending) dropped.push({ legacy, reason: 'unlanded' });
 
-  let project = session.current().project;
-  if (recovered.length > 0) {
-    // Rows the recovered walk newly reaches were saved under the earlier settlement rules too.
-    const settled = settleProjectUpgrade({ catalog, project, evaluate });
-    if (settled.fault !== undefined) return unrecovered(settled.fault);
-    project = settled.assembly.project;
-  }
   return Object.freeze({
-    project,
+    project: session.current().project,
     recovered: Object.freeze(recovered),
     dropped: Object.freeze(dropped),
   });

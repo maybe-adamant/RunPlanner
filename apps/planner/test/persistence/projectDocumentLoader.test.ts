@@ -29,7 +29,13 @@ import {
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
 import { migrateProjectDocumentJudgedBy as migrate100To101JudgedBy } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
-import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
+import {
+  liftProjectDocument as migrate102To103,
+  migrateProjectDocument as settle102To103,
+  migrateProjectDocumentRecoveredBy as settle102To103RecoveredBy,
+} from '@planner/persistence/project-102-to-103.js';
+import { readLegacyTimedOutcomes } from '@planner/persistence/project-98-to-99.js';
+import { PROJECT_TRANSITION_STEPS } from '@planner/persistence/project-transitions.js';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -1636,5 +1642,40 @@ describe('timed outcomes saved before schema 99', () => {
     const at99 = JSON.parse(savedAt(99, [])) as Record<string, unknown>;
     delete at99.schemaRevision;
     expect(loadProjectDocument(JSON.stringify(at99), catalog).project).toEqual(unrecovered);
+  });
+
+  it('rejects a schema 99 plan holding a stray phase-keyed target, as strict decoding did', () => {
+    const growth = outcomes.filter(({ field }) => field === 'steadyGrowthTargetByPhase');
+    const at99 = JSON.parse(savedAt(99, growth)) as Record<string, unknown>;
+    delete at99.schemaRevision;
+    expect(() => loadProjectDocument(JSON.stringify(at99), catalog)).toThrow(
+      /steadyGrowthTargetByPhase: is not a project document field/,
+    );
+  });
+
+  it('settles the plan without its saved outcomes when their recovery throws or faults', () => {
+    const at98 = JSON.parse(savedAt(98, outcomes)) as unknown;
+    const legacyTimedOutcomes = readLegacyTimedOutcomes(at98);
+    expect(legacyTimedOutcomes).toHaveLength(outcomes.length);
+    const at102 = PROJECT_TRANSITION_STEPS.filter(
+      (step) => step.SOURCE_SCHEMA_VERSION >= 98 && step.OUTPUT_SCHEMA_VERSION <= 102,
+    ).reduce((document, step) => step.migrateProjectDocument(document, { catalog }), at98);
+    const withoutOutcomes = settle102To103(at102, { catalog });
+    const failures = [
+      () => {
+        throw new Error('recovery failed');
+      },
+      () => ({
+        project: stripped,
+        recovered: [],
+        dropped: [],
+        fault: { key: 'test', owner: createOccurrenceAddress(nBiome, nOccurrenceId('combat03')) },
+      }),
+    ] as const;
+    for (const recover of failures) {
+      const migrated = settle102To103RecoveredBy(at102, { catalog, legacyTimedOutcomes }, recover);
+      expect(migrated).toEqual(withoutOutcomes);
+    }
+    expect(landed(parseProjectDocument(JSON.stringify(withoutOutcomes), catalog))).toHaveLength(1);
   });
 });

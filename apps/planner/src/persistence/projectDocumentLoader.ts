@@ -16,7 +16,6 @@ import {
   CATALOG_VERSION as LEGACY_TIMED_OUTCOMES_CATALOG_VERSION,
   SOURCE_SCHEMA_VERSION as LEGACY_TIMED_OUTCOMES_SCHEMA_VERSION,
   readLegacyTimedOutcomes,
-  recoverLegacyTimedOutcomes,
 } from './project-98-to-99.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
@@ -37,6 +36,8 @@ export interface ProjectDocumentIdentity {
 export interface ProjectMigrationContext {
   /** The plan's name before the project carried one. */
   readonly name?: string;
+  /** The timed outcomes a save before 99 held by the phase they landed at. */
+  readonly legacyTimedOutcomes?: ReturnType<typeof readLegacyTimedOutcomes>;
 }
 
 export interface ProjectDocumentTransition {
@@ -118,7 +119,7 @@ export function loadProjectDocument(
   const transitions = productionTransitions(catalog);
   const context = options.legacyName === undefined ? {} : { name: options.legacyName };
   // A plan saved before 99 kept its timed outcomes by the phase they landed at:
-  // they are read in their schema 98 shape and recovered once the plan is current.
+  // they are read in their schema 98 shape and recovered by the 102 -> 103 step.
   const legacyIdentity = Object.freeze({
     catalogVersion: LEGACY_TIMED_OUTCOMES_CATALOG_VERSION,
     schemaVersion: LEGACY_TIMED_OUTCOMES_SCHEMA_VERSION,
@@ -137,6 +138,8 @@ export function loadProjectDocument(
     envelope.schemaVersion <= LEGACY_TIMED_OUTCOMES_SCHEMA_VERSION
       ? readLegacyTimedOutcomes(atLegacy.document)
       : [];
+  const legacyContext =
+    legacyTimedOutcomes.length === 0 ? context : { ...context, legacyTimedOutcomes };
   const migrated = applyProjectDocumentTransitions({
     document: atLegacy.document,
     source:
@@ -146,16 +149,10 @@ export function loadProjectDocument(
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     }),
     transitions,
-    context,
+    context: legacyContext,
   });
   // A migrated plan lands at the major's first revision.
-  const migratedJson = JSON.stringify(
-    recoverLegacyTimedOutcomes(
-      dropImpossibleState(migrated.document, catalog, 0),
-      legacyTimedOutcomes,
-      catalog,
-    ),
-  );
+  const migratedJson = JSON.stringify(dropImpossibleState(migrated.document, catalog, 0));
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
