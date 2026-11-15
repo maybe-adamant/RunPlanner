@@ -95,8 +95,11 @@ The screen lists the latest recorded runs, a fixed number kept. Each row keeps
 its run record beside its plan and the import's report of guesses, which is
 stored with the run, never in the plan. Add to library copies the plan the way
 the Catalog does, and Rebuild imports the record again with the current
-importer. Release builds never keep raw saves; a dev build keeps each run's
-saves and rebuilds the record from them first.
+importer. With the desktop setting to keep full recordings on, which is off by
+default, each run started afterwards also keeps every save it was recorded
+from, and Rebuild builds the record from those saves first; a run keeps the
+choice it started with. Clearing them removes only the kept runs' saves, never
+the runs or an open run's saves.
 
 ## Plan operations
 

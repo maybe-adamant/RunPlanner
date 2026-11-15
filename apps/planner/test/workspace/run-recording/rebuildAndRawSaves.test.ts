@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import type { RecordingSettings } from '@planner/persistence/recordHost';
 import { createMemoryRecordHost } from '@planner-test/support/memoryRecordHost';
 import { sampleSaveBytes } from '@planner-test/support/syntheticSave';
 import {
@@ -21,8 +22,8 @@ const OPENING = ['002', '004', '006', '009', '011'];
 const SAVE = 'Profile1_Temp.sav';
 
 /**
- * A recording controller over a memory host, keeping raw saves as a development composition
- * does when `rawSaves` is set. The trimmed captures end at N_Hub, so runs are kept there.
+ * A recording controller over a memory host that keeps full recordings when `rawSaves` is set.
+ * The trimmed captures end at N_Hub, so runs are kept there.
  */
 function setup(options: {
   readonly rawSaves: boolean;
@@ -36,16 +37,20 @@ function setup(options: {
     return action;
   }) as PlannerStore['dispatch'];
   const host = options.host ?? createMemoryRecordHost();
+  let settings: RecordingSettings = {
+    enabled: true,
+    folder: null,
+    keepRawSaves: options.rawSaves,
+  };
   const controller = createRecordingController({
     host,
-    preference: { read: () => ({ enabled: true, folder: null }), write: () => undefined },
+    preference: { read: () => settings, write: (value) => void (settings = value) },
     store: { dispatch },
     importer: options.importer ?? createInProcessRunImporter(catalog),
     prebossRooms: new Map([['N', new Set(['N_Hub'])]]),
     arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
     savedValuePaths: new Map(),
     primaryWeapons: new Set(),
-    ...(options.rawSaves ? { rawSaves: host.rawSaves } : {}),
     delay: () => Promise.resolve(),
   });
   const deliver = async (bytes: Uint8Array) => {
@@ -58,6 +63,7 @@ function setup(options: {
     state: () => state,
     deliver,
     stored: () => decodeRecentRunEntry(host.recentRuns.files.get(RUN_ID)!),
+    settings: () => settings,
     rawFiles: (folder: string) => [...(host.rawSaves.folderFiles.get(folder)?.keys() ?? [])],
     /** Plays run 1002's opening, then starts run 1003, which closes it. */
     async playRun() {
@@ -192,12 +198,16 @@ describe('raw save capture', () => {
     expect([...host.rawSaves.folderFiles.keys()].sort()).toEqual(['open-p1', RUN_ID]);
   });
 
-  it('is kept by a development composition only', async () => {
-    for (const devBuild of [true, false]) {
+  it('is kept by a composition only while the setting is on', async () => {
+    for (const keepRawSaves of [true, false]) {
       const host = createMemoryRecordHost();
       const application = createApplication({
-        devBuild,
+        devBuild: true,
         recordHost: host,
+        recordingPreference: {
+          read: () => ({ enabled: false, folder: null, keepRawSaves }),
+          write: () => undefined,
+        },
         runImporter: createInProcessRunImporter(catalog),
       });
       await application.startupReady;
@@ -212,8 +222,69 @@ describe('raw save capture', () => {
       expect(application.store.getState().recordingSession.status).toMatchObject({
         kind: 'runOpen',
       });
-      expect([...host.rawSaves.folderFiles.keys()]).toEqual(devBuild ? ['open-p1'] : []);
+      expect([...host.rawSaves.folderFiles.keys()]).toEqual(keepRawSaves ? ['open-p1'] : []);
       application.dispose();
     }
+  });
+
+  it('starts keeping from the next run and lets the open run finish when turned off', async () => {
+    const context = setup({ rawSaves: false });
+    await context.controller.start();
+    await context.deliver(sampleSaveBytes('surface-002'));
+    context.controller.setKeepRawSaves(true);
+    expect(context.settings()).toEqual({ enabled: true, folder: null, keepRawSaves: true });
+    for (const id of OPENING.slice(1)) await context.deliver(sampleSaveBytes(`surface-${id}`));
+    // Run 1002 began before the setting, so none of its saves are kept.
+    expect(context.host.rawSaves.folderFiles.size).toBe(0);
+
+    await context.deliver(sampleSaveBytes('surface-002', { runCount: 1003 }));
+    expect(context.host.recentRuns.files.has(RUN_ID)).toBe(true);
+    expect(context.host.rawSaves.folderFiles.has(RUN_ID)).toBe(false);
+    expect(context.rawFiles('open-p1')).toEqual([`000-${SAVE}`]);
+
+    context.controller.setKeepRawSaves(false);
+    expect(context.controller.keepsRawSaves()).toBe(false);
+    await context.deliver(sampleSaveBytes('surface-004', { runCount: 1003 }));
+    // Run 1003 keeps the choice it started with.
+    expect(context.rawFiles('open-p1')).toEqual([`000-${SAVE}`, `001-${SAVE}`]);
+    await context.deliver(sampleSaveBytes('surface-002', { runCount: 1004 }));
+    expect(context.host.rawSaves.folderFiles.has('open-p1')).toBe(false);
+  });
+
+  it('goes on keeping an open run’s saves after a restart', async () => {
+    const host = createMemoryRecordHost();
+    const first = setup({ rawSaves: true, host });
+    await first.controller.start();
+    await first.deliver(sampleSaveBytes('surface-002'));
+    first.controller.dispose();
+
+    const second = setup({ rawSaves: false, host });
+    await second.controller.start();
+    await second.deliver(sampleSaveBytes('surface-004'));
+    expect(second.rawFiles('open-p1')).toEqual([`000-${SAVE}`, `001-${SAVE}`]);
+  });
+
+  it('clears the stored runs’ raw saves only, never the runs or an open run’s saves', async () => {
+    const context = setup({ rawSaves: true });
+    await context.playRun();
+    await context.host.rawSaves.write('open-p2', `000-${SAVE}`, Uint8Array.of(1));
+    const documents = [...context.host.recentRuns.files.keys()].sort();
+    expect([...context.host.rawSaves.folderFiles.keys()].sort()).toEqual([
+      'open-p1',
+      'open-p2',
+      RUN_ID,
+    ]);
+    const before = await context.controller.rawSavesSize();
+
+    await context.controller.clearRawSaves();
+
+    expect([...context.host.rawSaves.folderFiles.keys()].sort()).toEqual(['open-p1', 'open-p2']);
+    expect([...context.host.recentRuns.files.keys()].sort()).toEqual(documents);
+    expect(documents).toContain(RUN_ID);
+    expect(await context.controller.rawSavesSize()).toBeLessThan(before);
+    // The cleared run rebuilds from its record.
+    await context.controller.rebuildRun(RUN_ID);
+    await context.controller.revealRawSaves();
+    expect(context.host.rawSaves.reveals()).toBe(1);
   });
 });

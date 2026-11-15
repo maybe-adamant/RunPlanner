@@ -384,7 +384,7 @@ models decisions and their legality, not damage or timing values.
 - **Gold estimate:** after a patch that touches enemy drops or money stores,
   or when new recorded runs are available, compare the engine's enemy-gold
   policy with recorded runs: `node scripts/gold-calibration.mjs <folder>...`
-  reads dev-build Record mode raw save folders and prints, per payout group,
+  reads the raw save folders Record mode keeps with full recordings on and prints, per payout group,
   the generated combat rooms counted, the mean store and gold paid, the paid
   fraction and overshoot with their residual spread, and the other gold the
   rooms paid. Retune the policy constants from it.

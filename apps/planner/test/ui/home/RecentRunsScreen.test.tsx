@@ -335,7 +335,7 @@ describe('Recent runs screen', () => {
   it('reports a recording change that fails', async () => {
     const { user } = await renderRecentRuns({
       recordingPreference: {
-        read: () => ({ enabled: false, folder: null }),
+        read: () => ({ enabled: false, folder: null, keepRawSaves: false }),
         write: () => {
           throw new Error('Settings could not be saved.');
         },
