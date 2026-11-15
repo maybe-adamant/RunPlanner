@@ -76,6 +76,11 @@ export interface SavedTrait {
   readonly remainingUses?: number;
   /** `RarityUpgradeData.Uses`: Rarify charges left, not the keepsake's own `Uses`. */
   readonly rarityUpgradeUses?: number;
+  /**
+   * A Time Piece whose `ShowInHUD` the game cleared: it expired, its charges
+   * zeroed without a spend (KeepsakeLogic.lua:212, 1239).
+   */
+  readonly expired?: true;
   /** `SourceName`: the Arcana card that granted the trait. */
   readonly sourceName?: string;
   /** The numbers at the paths kept for this trait's name, by dotted path. */
@@ -549,6 +554,12 @@ function hero(
         ...optional('boonConversionUses', number(entry.BoonConversionUses)),
         ...optional('remainingUses', number(entry.RemainingUses)),
         ...optional('rarityUpgradeUses', number(atPath(entry, 'RarityUpgradeData.Uses'))),
+        ...optional(
+          'expired',
+          entry.BoonConversionUses !== undefined && entry.ShowInHUD !== true
+            ? (true as const)
+            : undefined,
+        ),
         ...optional('sourceName', text(entry.SourceName)),
         ...optional('savedValues', savedValues(entry, savedValuePaths.get(name))),
         ...optional('upgradedTrait', text(entry.UpgradedTraitName)),
