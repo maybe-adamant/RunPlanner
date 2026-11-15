@@ -5,6 +5,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   traitGiverForAcquisitionRole,
   authoredShopOffer,
+  createBiomeAddress,
+  createShopOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -14,7 +16,11 @@ import {
   encodeExecutionPlan,
 } from '@run-planner/engine/execution-plan';
 import { draftBasketTraitKeys, draftProject, type DraftSpec } from '../../src';
-import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  goldLedgerForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
+
 import type { DraftReport } from '../../src/report';
 import { draftFillerKind, draftGrantsGodBoon } from '../../src/steering';
 import { draftProvider } from '../../src/schedule';
@@ -60,8 +66,16 @@ export interface DraftCorpusRun {
     readonly withEssence: number;
   };
   readonly purchases: Readonly<Record<string, number>>;
+  /** Mean gold the run's paid Shop purchases cost, and each one's chance its balance covers it. */
+  readonly gold: ShopGold;
   readonly attempts: number;
   readonly ms: number;
+}
+
+export interface ShopGold {
+  readonly spent: number;
+  /** Per paid purchase in route order; null where the balance before it is unavailable. */
+  readonly odds: readonly { readonly filler: boolean; readonly p: number | null }[];
 }
 
 /** Taken rooms whose reward grants a god boon (Mystery and Devotion included), per planned biome. */
@@ -327,6 +341,34 @@ function purchases(project: ProjectDocument): Record<string, number> {
   return counts;
 }
 
+/** The plan's paid Shop purchases as the engine's gold ledger prices them. */
+function shopGold(project: ProjectDocument): ShopGold {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const ledger = goldLedgerForProjectEvaluationAssembly(catalog, assembly);
+  let spent = 0;
+  const odds: { filler: boolean; p: number | null }[] = [];
+  for (const biome of project.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? [])
+      for (const action of occurrence.roomActions?.order ?? []) {
+        if (action.kind !== 'interactShopOffer') continue;
+        const priced = ledger.purchaseAt(
+          createShopOfferAddress(
+            createBiomeAddress(project.route.routeKey, biome.biomeKey),
+            occurrence.occurrenceId,
+            action.offerKey,
+          ),
+        );
+        if (priced.availability !== 'available' || priced.purchase.venue === 'free') continue;
+        spent += priced.purchase.price.mean;
+        const offer = authoredShopOffer(occurrence, action.offerKey)?.reward?.offer;
+        odds.push({
+          filler: offer !== undefined && draftFillerKind(offer.rewardType) !== undefined,
+          p: priced.purchase.affordableProbability ?? null,
+        });
+      }
+  return { spent, odds };
+}
+
 /** Elements a trait's element thresholds read; a highest-count threshold reads any. */
 function gatedElements(traitKey: string): readonly string[] {
   const trait = catalog.traits.byKey[traitKey];
@@ -443,6 +485,7 @@ export function measureDraft(
       godTraitsByBiome: {},
       elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
+      gold: { spent: 0, odds: [] },
       attempts: 0,
     };
   expectExecutionRoundTrip(result.project);
@@ -456,6 +499,7 @@ export function measureDraft(
     ),
     ...essenceUse(entry.spec, result.project),
     purchases: purchases(result.project),
+    gold: shopGold(result.project),
     boughtBasketTraits: boughtBasketTraits(entry.spec, result.project),
     landingDepths: landingDepths(entry.spec, result.project),
     godRooms: godRoomPacing(result.project),

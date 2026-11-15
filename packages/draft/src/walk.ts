@@ -65,6 +65,9 @@ import {
   routeResourceAuthoring,
   nextRequiredPlacement,
   liveRoomForProjectEvaluationAssembly,
+  goldLedgerForProjectEvaluationAssembly,
+  GoldLedgerContractError,
+  type GoldPurchaseAvailability,
   type LiveRoom,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
@@ -88,12 +91,14 @@ import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedu
 import { draftBasketTraitKeys, draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
   draftBoostElements,
+  draftFillerKind,
   DraftSteering,
   draftSideDoorWeight,
   draftSiblingHoldsGodBoon,
   NPC_EXCLUDED_REWARD_FACTOR,
   NPC_WINDOW_WEIGHT,
   type DraftProgress,
+  type DraftPurchaseKind,
 } from './steering';
 import { DraftTraitOffers } from './trait-offers';
 import type { DraftWorldProduct } from './world';
@@ -189,6 +194,16 @@ function earliestRequiredPickup(
   return undefined;
 }
 
+/** Steps a pending purchase may wait for the gold walk to reach it. */
+const PENDING_PURCHASE_STEPS = 12;
+
+/** Where a walk stood: its assembly and the commands and faults it had kept. */
+interface DraftWalkMark {
+  readonly assembly: ProjectEvaluationAssembly;
+  readonly commands: number;
+  readonly faults: number;
+}
+
 /** A Shop door beside a door to a new god with queued traits. */
 const SHOP_OUTRANKED_FACTOR = 0.001;
 
@@ -254,6 +269,25 @@ export class DraftWalk {
   private readonly dropRoomsDone = new Set<string>();
   /** Shops and Contract pedestals whose filled stock the walk has steered, and Travel Deal items. */
   private readonly steeredShops = new Set<string>();
+  /** Each steered Shop's items already judged as wanted items and as filler. */
+  private readonly judgedShopItems = new Map<
+    string,
+    { readonly wanted: Set<string>; readonly filler: Set<string> }
+  >();
+  /** The steered pick of each Shop slot and Travel Deal item, by its address key. */
+  private readonly steeredItems = new Map<string, ResolvedRewardOffer>();
+  /** Steered Shops whose judging waits on a pending purchase. */
+  private readonly waitingShops = new Set<string>();
+  /** A purchase applied before the gold walk reaches it, with where the walk stood before it. */
+  private pendingPurchase:
+    | {
+        readonly offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>;
+        readonly kind: DraftPurchaseKind;
+        readonly bar: number;
+        readonly mark: DraftWalkMark;
+        readonly step: number;
+      }
+    | undefined;
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
@@ -384,6 +418,11 @@ export class DraftWalk {
       this.pickUpTraitDrops(biomeIndex);
       this.steerShops(biomeIndex);
       if (this.issueBiomeIndex() > biomeIndex) {
+        // The biome closes only on judged purchases.
+        if (this.pendingPurchase !== undefined) {
+          this.settlePendingPurchase(true);
+          continue;
+        }
         const rack = this.equipRack(biomeIndex);
         if (rack === 'equipped') {
           this.stepCount += 1;
@@ -606,87 +645,237 @@ export class DraftWalk {
   }
 
   /**
-   * Buys what the basket wants now: a boon of a god that can take its next basket
-   * trait, at the purchase pace; a due Hermes or Hammer; on Dream, an element a
-   * waiting trait needs. A purchase that invalidates the route is undone.
+   * Whether the basket wants an item now: a boon of a god that can take its next basket
+   * trait, a due Hermes or Hammer, or on Dream an element a waiting trait needs.
    */
-  private buyWanted(
-    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' | 'infernalContractPedestal' }>,
-    value: ResolvedRewardOffer,
-  ): void {
+  private wantedNow(value: ResolvedRewardOffer): boolean {
     const progress = this.steering.progress();
     const supply = draftProvider(this.catalog, value);
     const god = this.steering.offerGod(value);
-    const elements = draftBoostElements(this.catalog, value.rewardType);
-    const wanted =
-      supply === 'hermes' || supply === 'hammer'
-        ? this.steering.supplyNeed(supply, progress) === 'now'
-        : god !== undefined
-          ? this.steering.purchasesPerBiome() > 0 &&
-            this.steering.godTakes(god, progress) &&
-            this.rng() < this.purchaseChance()
-          : elements.some((element) => this.steering.wantedElements(progress).includes(element));
-    if (!wanted) return;
-    const participation = (taken: boolean): ProjectCommand =>
-      offer.kind === 'infernalContractPedestal'
-        ? { kind: 'SetInfernalContractPedestalCollected', pedestal: offer, collected: taken }
-        : { kind: 'ReplaceShopPurchaseParticipation', offer, purchased: taken };
-    if (!this.apply(participation(true))) return;
-    if (this.assembly.evaluation.issue?.kind === 'invalid') this.apply(participation(false));
+    return supply === 'hermes' || supply === 'hammer'
+      ? this.steering.supplyNeed(supply, progress) === 'now'
+      : god !== undefined
+        ? this.steering.godTakes(god, progress)
+        : draftBoostElements(this.catalog, value.rewardType).some((element) =>
+            this.steering.wantedElements(progress).includes(element),
+          );
+  }
+
+  /** Collects a Contract pedestal's free item when wanted; one that invalidates the route is put back. */
+  private collectPedestal(
+    pedestal: Extract<SemanticAddress, { readonly kind: 'infernalContractPedestal' }>,
+    value: ResolvedRewardOffer,
+  ): void {
+    if (!this.wantedNow(value)) return;
+    const collect = (collected: boolean): ProjectCommand => ({
+      kind: 'SetInfernalContractPedestalCollected',
+      pedestal,
+      collected,
+    });
+    if (!this.apply(collect(true))) return;
+    if (this.assembly.evaluation.issue?.kind === 'invalid') this.apply(collect(false));
   }
 
   /**
-   * Once every slot of this Shop holds an item, so its boons are bought first, spends the biome's
-   * spare purchases on ranked filler, each a weighted pick. A mid-biome Shop keeps one spare
-   * purchase for the Preboss Shop; a purchase that invalidates the route is undone.
+   * Judges a steered Shop's items in slot order, its Travel Deal item last: each wanted item
+   * against the wanted bar, then, once every slot holds an item, ranked filler as weighted picks
+   * against the filler bar; filling an empty slot judges the Shop again. A pending purchase
+   * stops the judging until a later step settles it. True once done.
    */
-  private buyFiller(origin: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>): void {
-    if (this.steering.fillerPriority().length === 0) return;
-    const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
+  private buyShop(biomeKey: string, occurrenceId: OccurrenceId): boolean {
+    if (this.pendingPurchase !== undefined) return false;
+    const occurrence = this.occurrence(biomeKey, occurrenceId);
     const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
     const profile = this.catalog.rewards.shops.byKey[shop?.profileKey ?? ''];
-    if (occurrence === undefined || shop === undefined || profile === undefined) return;
+    if (occurrence === undefined || shop === undefined || profile === undefined) return true;
+    const key = `${biomeKey}/${occurrenceId}`;
+    let judged = this.judgedShopItems.get(key);
+    if (judged === undefined) {
+      judged = { wanted: new Set(), filler: new Set() };
+      this.judgedShopItems.set(key, judged);
+    }
     const slotKeys = profile.slots.values.map((slot) => slot.key);
-    if (slotKeys.some((key) => shop.offers[key]?.reward == null)) return;
-    const bought = new Set(
-      (occurrence.roomActions?.order ?? []).flatMap((action) =>
-        action.kind === 'interactShopOffer' ? [action.offerKey] : [],
-      ),
-    );
-    const weight = (key: string) => {
-      const offer = authoredShopOffer(occurrence, key)?.reward?.offer;
-      return offer === undefined || bought.has(key) ? 0 : this.steering.shopFillerWeight(offer);
-    };
-    const reserve = this.roomOf(occurrence.gameName)?.kind === 'Preboss' ? 0 : 1;
-    let spare =
-      this.steering.purchasesPerBiome() - this.steering.biomePurchases(origin.biomeKey) - reserve;
     const keys = [
       ...slotKeys,
       ...(shop.travelDealRefill === undefined ? [] : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
     ];
-    // A kind that reaches its amount stops being bought, so the weights are read per pick.
-    for (;;) {
-      const offerKey = spare > 0 ? this.weighted(keys, weight)[0] : undefined;
-      if (offerKey === undefined) return;
-      bought.add(offerKey);
-      const offer = { ...origin, offerKey };
-      if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
-        continue;
-      if (this.assembly.evaluation.issue?.kind === 'invalid') {
-        this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+    const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
+    // The steered pick names what a Mystery boon was chosen for; the stock may not.
+    const itemOf = (offerKey: string) => {
+      const current = this.occurrence(biomeKey, occurrenceId);
+      const stocked =
+        current === undefined ? undefined : authoredShopOffer(current, offerKey)?.reward?.offer;
+      return stocked === undefined
+        ? undefined
+        : (this.steeredItems.get(
+            semanticAddressKey(createShopOfferAddress(biome, occurrenceId, offerKey)),
+          ) ?? stocked);
+    };
+    // An empty slot is judged once the walk fills it, and filler waits for every slot.
+    let empty = false;
+    for (const offerKey of keys) {
+      if (judged.wanted.has(offerKey)) continue;
+      const value = itemOf(offerKey);
+      if (value === undefined) {
+        empty ||= offerKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY;
         continue;
       }
-      spare -= 1;
+      judged.wanted.add(offerKey);
+      if (
+        this.wantedNow(value) &&
+        this.purchase(createShopOfferAddress(biome, occurrenceId, offerKey), 'wanted') === 'pending'
+      )
+        return false;
+    }
+    if (
+      empty ||
+      this.steering.fillerPriority().length === 0 ||
+      this.steering.purchaseBar('filler') === undefined
+    )
+      return true;
+    const bought = new Set(
+      (this.occurrence(biomeKey, occurrenceId)?.roomActions?.order ?? []).flatMap((action) =>
+        action.kind === 'interactShopOffer' ? [action.offerKey] : [],
+      ),
+    );
+    const weight = (offerKey: string) => {
+      const value = itemOf(offerKey);
+      return value === undefined || bought.has(offerKey) || judged.filler.has(offerKey)
+        ? 0
+        : this.steering.shopFillerWeight(value);
+    };
+    // A kind that reaches its amount stops being bought, so the weights are read per pick.
+    for (;;) {
+      const offerKey = this.weighted(keys, weight)[0];
+      if (offerKey === undefined) return true;
+      judged.filler.add(offerKey);
+      if (
+        this.purchase(createShopOfferAddress(biome, occurrenceId, offerKey), 'filler') === 'pending'
+      )
+        return false;
     }
   }
 
-  /** Ahead of the purchase pace a boon is bought less often, behind it more often; never always or never. */
-  private purchaseChance(): number {
-    const behind = this.steering.purchasesBehind();
-    // Catch up steeply when behind, and buy readily once the boon bag runs low.
-    const chance =
-      behind > 0 ? Math.min(0.7 + 0.15 * behind, 0.95) : Math.max(0.5 + 0.2 * behind, 0.15);
-    return this.steering.boonBagLow() ? Math.max(chance, 0.85) : chance;
+  /**
+   * Buys a Shop item when the chance the gold held before it, after every earlier purchase,
+   * covers its price reaches the spending style's bar. A purchase the gold walk does not reach
+   * until its own choice is made, such as a Mystery boon's god boon screen, is pending until a
+   * later step reaches it.
+   */
+  private purchase(
+    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+    kind: DraftPurchaseKind,
+  ): 'bought' | 'declined' | 'pending' {
+    const bar = this.steering.purchaseBar(kind);
+    if (bar === undefined) return 'declined';
+    const mark: DraftWalkMark = {
+      assembly: this.assembly,
+      commands: this.appliedCommands.length,
+      faults: this.faults.length,
+    };
+    if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
+      return 'declined';
+    const odds = this.assembly.evaluation.issue?.kind === 'invalid' ? 0 : this.affordable(offer);
+    if (odds === undefined) {
+      this.pendingPurchase = { offer, kind, bar, mark, step: this.stepCount };
+      return 'pending';
+    }
+    return this.settlePurchase(offer, kind, bar, odds, mark) ? 'bought' : 'declined';
+  }
+
+  /**
+   * Keeps a purchase whose odds reach its bar. A wanted item below its bar takes back the run's
+   * earlier filler purchases, latest first, until it clears it; failing that, the walk returns
+   * to where it stood before the purchase.
+   */
+  private settlePurchase(
+    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+    kind: DraftPurchaseKind,
+    bar: number,
+    odds: number,
+    mark: DraftWalkMark,
+  ): boolean {
+    if (odds >= bar) return true;
+    if (kind === 'wanted')
+      for (const filler of this.fillerPurchases(offer)) {
+        // A take-back that would add a finding keeps its filler.
+        const command: ProjectCommand = {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: filler,
+          purchased: false,
+        };
+        const applied = this.authoring.apply(command, 'noNewFinding');
+        if (applied.kind !== 'applied') continue;
+        this.appliedCommands.push(command);
+        if (applied.fault !== undefined) this.faults.push(applied.fault);
+        if ((this.affordable(offer) ?? 0) >= bar) return true;
+      }
+    this.authoring.restore(mark.assembly);
+    this.appliedCommands.length = mark.commands;
+    this.faults.length = mark.faults;
+    return false;
+  }
+
+  /**
+   * Judges the pending purchase once the gold walk reaches it, which the choices and required
+   * placements the next steps author bring about; one still out of reach after a few steps, or
+   * `now`, is taken back. True while it still waits.
+   */
+  private settlePendingPurchase(now = false): boolean {
+    const pending = this.pendingPurchase;
+    if (pending === undefined) return false;
+    const { offer } = pending;
+    const odds = this.affordable(offer);
+    if (odds === undefined && !now && this.stepCount - pending.step < PENDING_PURCHASE_STEPS)
+      return true;
+    this.pendingPurchase = undefined;
+    this.settlePurchase(offer, pending.kind, pending.bar, odds ?? 0, pending.mark);
+    return false;
+  }
+
+  /**
+   * The engine's chance the gold held before a purchase covers its price: 0 when the plan
+   * leaves it unpriced, undefined when the gold walk does not reach it yet.
+   */
+  private affordable(offer: SemanticAddress): number | undefined {
+    let priced: GoldPurchaseAvailability;
+    try {
+      priced = goldLedgerForProjectEvaluationAssembly(this.catalog, this.assembly).purchaseAt(
+        offer,
+      );
+    } catch (error) {
+      if (error instanceof GoldLedgerContractError) return 0;
+      throw error;
+    }
+    if (priced.availability === 'unavailable')
+      return priced.reason === 'coverageNotReached' ? undefined : 0;
+    return priced.purchase.venue === 'free' ? 1 : (priced.purchase.affordableProbability ?? 0);
+  }
+
+  /** The run's filler purchases before a purchase, latest first: Shops in entry order, each in purchase order. */
+  private fillerPurchases(
+    except: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+  ): Extract<SemanticAddress, { readonly kind: 'shopOffer' }>[] {
+    const purchases: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>[] = [];
+    const seen = new Set<string>();
+    for (const biomeKey of this.project.route.itineraryBiomeKeys) {
+      const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
+      for (const room of this.enteredRooms(biomeKey)) {
+        if (seen.has(`${biomeKey}/${room.occurrenceId}`)) continue;
+        seen.add(`${biomeKey}/${room.occurrenceId}`);
+        const occurrence = this.occurrence(biomeKey, room.occurrenceId);
+        if (occurrence === undefined) continue;
+        for (const action of occurrence.roomActions?.order ?? []) {
+          if (action.kind !== 'interactShopOffer') continue;
+          const address = createShopOfferAddress(biome, room.occurrenceId, action.offerKey);
+          if (semanticAddressKey(address) === semanticAddressKey(except)) continue;
+          const bought = authoredShopOffer(occurrence, action.offerKey)?.reward?.offer;
+          if (bought !== undefined && draftFillerKind(bought.rewardType) !== undefined)
+            purchases.push(address);
+        }
+      }
+    }
+    return purchases.reverse();
   }
 
   /** A basket Hermes or Hammer reward some decision could take; none while the basket reserves every Hermes room. */
@@ -1310,7 +1499,7 @@ export class DraftWalk {
    */
   private steerShops(biomeIndex: number): void {
     const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
-    if (biomeKey === undefined) return;
+    if (biomeKey === undefined || this.settlePendingPurchase()) return;
     const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
     for (const room of this.enteredRooms(biomeKey)) {
       const occurrence = this.occurrence(biomeKey, room.occurrenceId);
@@ -1331,14 +1520,14 @@ export class DraftWalk {
       if (!this.steeredShops.has(key)) {
         this.steeredShops.add(key);
         // Each pick is judged beside its stocked peers, so it never invalidates them.
-        for (const slot of profile.slots.values) {
-          const origin = createShopOfferAddress(biome, room.occurrenceId, slot.key);
-          const value = this.steerShopOffer(origin, apply);
-          if (value !== undefined) this.buyWanted(origin, value.offer);
-        }
-        this.buyFiller(
-          createShopOfferAddress(biome, room.occurrenceId, profile.slots.values[0]!.key),
-        );
+        for (const slot of profile.slots.values)
+          this.steerShopOffer(createShopOfferAddress(biome, room.occurrenceId, slot.key), apply);
+        this.judgeShop(biomeKey, room.occurrenceId);
+      } else if (this.waitingShops.has(key)) {
+        // Judging resumes only while the walk still stands in the Shop.
+        if (this.enteredRooms(biomeKey).at(-1)?.occurrenceId === room.occurrenceId)
+          this.judgeShop(biomeKey, room.occurrenceId);
+        else this.waitingShops.delete(key);
       }
       const refillKey = `${key}/${TRAVEL_DEAL_REFILL_ENTRY_KEY}`;
       const stocked = this.occurrence(biomeKey, room.occurrenceId);
@@ -1350,11 +1539,16 @@ export class DraftWalk {
         continue;
       this.steeredShops.add(refillKey);
       const origin = createShopOfferAddress(biome, room.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY);
-      const value = this.steerShopOffer(origin, apply);
-      if (value === undefined) continue;
-      this.buyWanted(origin, value.offer);
-      this.buyFiller(origin);
+      if (this.steerShopOffer(origin, apply) !== undefined)
+        this.judgeShop(biomeKey, room.occurrenceId);
     }
+  }
+
+  /** Judges a Shop's items, keeping it waiting while a purchase is out of the gold walk's reach. */
+  private judgeShop(biomeKey: string, occurrenceId: OccurrenceId): void {
+    const key = `${biomeKey}/${occurrenceId}`;
+    if (this.buyShop(biomeKey, occurrenceId)) this.waitingShops.delete(key);
+    else this.waitingShops.add(key);
   }
 
   /**
@@ -1397,8 +1591,13 @@ export class DraftWalk {
     for (const value of this.inPoolOrder(ordered, values, (v) => v.offer)) {
       const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer: origin, value };
       // The stock already holds the pick: nothing to replace.
-      if (applyProjectCommand(this.project, this.catalog, command) === this.project) return value;
-      if (apply(command)) return value;
+      if (
+        applyProjectCommand(this.project, this.catalog, command) === this.project ||
+        apply(command)
+      ) {
+        this.steeredItems.set(semanticAddressKey(origin), value.offer);
+        return value;
+      }
     }
     return undefined;
   }
@@ -1438,7 +1637,7 @@ export class DraftWalk {
         applyProjectCommand(this.project, this.catalog, command) === this.project ||
         apply(command)
       ) {
-        this.buyWanted(origin, value.offer);
+        this.collectPedestal(origin, value.offer);
         return true;
       }
     }
@@ -1485,10 +1684,8 @@ export class DraftWalk {
       );
     }
     if (origin.kind === 'shopOffer') {
-      const value = this.steerShopOffer(origin, apply);
-      if (value === undefined) return false;
-      this.buyWanted(origin, value.offer);
-      this.buyFiller(origin);
+      if (this.steerShopOffer(origin, apply) === undefined) return false;
+      this.judgeShop(origin.biomeKey, origin.occurrenceId);
       return true;
     }
     if (origin.kind === 'infernalContractPedestal') return this.steerPedestal(origin, apply);

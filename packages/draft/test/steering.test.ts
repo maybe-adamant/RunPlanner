@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createDefaultRouteLoadout,
+  type DraftSpending,
   createProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -382,7 +383,7 @@ describe('need-gated Shops', () => {
   });
   const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
   void _startingReward;
-  const steering = () => {
+  const steering = (spending?: DraftSpending) => {
     const paced = draftSteeringFor(base, {
       loadout,
       world: {
@@ -392,6 +393,7 @@ describe('need-gated Shops', () => {
       },
       basketByGiver: draftBasket(['ZeusWeaponBoon']),
       rackKeepsakeKeys: [],
+      ...(spending === undefined ? {} : { spending }),
     });
     // The trait's target lies deep in the biome, so nothing is overdue at its start.
     paced.paceBiome(() => 0.99);
@@ -421,6 +423,17 @@ describe('need-gated Shops', () => {
     };
     expect(left(0)).toBeGreaterThanOrEqual(band);
     expect(left(1)).toBeLessThan(2);
+  });
+
+  it('never prefers a Shop door when the draft spends nothing', () => {
+    const none = steering('none');
+    vi.spyOn(none, 'boonBagLow').mockReturnValue(true);
+    vi.spyOn(
+      none as unknown as { boonEntriesLeft: () => number },
+      'boonEntriesLeft',
+    ).mockReturnValue(0);
+    expect(none.roomWeight('F_PreBoss01', 'F')).toBe(1);
+    expect(none.roomWeight('F_Shop01', 'F')).toBeLessThan(1);
   });
 });
 

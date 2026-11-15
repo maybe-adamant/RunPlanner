@@ -7,6 +7,7 @@ import {
   type RoomOccurrence,
   type DraftFillerKind,
   type DraftRoomForcing,
+  type DraftSpending,
   DRAFT_OPTIONS,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -97,14 +98,16 @@ export function draftPaceWeight(depth: number, target: number): number {
 }
 /** A fountain door only breaks a tie with an otherwise equal door. */
 const FOUNTAIN_TIE_BREAK = 1.01;
-/** A preferred midshop's least weight: above any boon door (at most 90), below a story room. */
-const PREFERRED_MIDSHOP_FLOOR = 100;
+/** A preferred midshop's weight: above any boon door (at most 90), below a story room. */
+const PREFERRED_MIDSHOP_WEIGHT = 100;
+/** A preferred Shop's extra weight while the boon bag runs low. */
+const LOW_BAG_SHOP_BONUS = 60;
 /** A story room the draft wants met: above every other door. */
 const STORY_WEIGHT = 200;
 /** Remaining eligible boon bag entries at or below which the bag counts as low. */
 const LOW_BOON_BAG = 1;
 
-/** A door or Hub visit that hosts a selected NPC in its open window: below a story room (200), above a midshop (at most 180). */
+/** A door or Hub visit that hosts a selected NPC in its open window: below a story room (200), above a midshop (at most 160). */
 export const NPC_WINDOW_WEIGHT = 190;
 /** A hosting Hub visit before its NPC's window opens, kept for a later visit. */
 const NPC_EARLY_VISIT_WEIGHT = 0.2;
@@ -112,6 +115,22 @@ const NPC_EARLY_VISIT_WEIGHT = 0.2;
 const NPC_HOST_PLACEMENT_WEIGHT = 3;
 /** A reward the NPC's room excludes, while no other open door can host it. */
 export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
+
+/** A purchase the draft wants now, or filler it buys with gold to spare. */
+export type DraftPurchaseKind = 'wanted' | 'filler';
+
+/**
+ * The least chance the gold held before a purchase covers its price for the draft to buy it,
+ * by spending style. A purchase the player cannot afford desyncs the run, so even filler needs
+ * near certainty; a wanted item may take a little more risk.
+ */
+export const DRAFT_SPENDING_BARS: Readonly<
+  Record<Exclude<DraftSpending, 'none'>, Readonly<Record<DraftPurchaseKind, number>>>
+> = Object.freeze({
+  careful: Object.freeze({ wanted: 0.92, filler: 0.97 }),
+  normal: Object.freeze({ wanted: 0.88, filler: 0.95 }),
+  greedy: Object.freeze({ wanted: 0.8, filler: 0.9 }),
+});
 
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
@@ -871,33 +890,21 @@ export class DraftSteering {
     return due;
   }
 
-  /** Shop god boon purchases paced per planned biome; 0 buys none. */
-  purchasesPerBiome(): number {
-    return this.spec.purchasesPerBiome ?? DRAFT_OPTIONS.purchasesPerBiome.default;
+  /** How readily the draft buys Shop items. */
+  spending(): DraftSpending {
+    return this.spec.spending ?? DRAFT_OPTIONS.spending.default;
   }
 
-  /**
-   * How far the run's Shop purchases trail the soft pace of purchases per planned biome,
-   * measured at mid-biome; negative when ahead. Elemental boosts and filler aside.
-   */
-  purchasesBehind(): number {
-    const pace = this.purchasesPerBiome();
-    const made = this.purchasedOffers().filter(
-      (offer) => offer === undefined || draftFillerKind(offer.rewardType) === undefined,
-    ).length;
-    return pace * this.state.biomeIndex() + pace / 2 - made;
+  /** The chance a purchase's gold must reach for the draft to buy it; undefined buys nothing. */
+  purchaseBar(kind: DraftPurchaseKind): number | undefined {
+    const spending = this.spending();
+    return spending === 'none' ? undefined : DRAFT_SPENDING_BARS[spending][kind];
   }
 
-  /** Shop purchases made in one biome, filler included; elemental boosts aside. */
-  biomePurchases(biomeKey: string): number {
-    return this.purchasedOffers(biomeKey).length;
-  }
-
-  /** Bought Shop items, in one biome or the whole run; elemental boosts aside. */
-  private purchasedOffers(biomeKey?: string): (ResolvedRewardOffer | undefined)[] {
+  /** Bought Shop items over the run; elemental boosts aside. */
+  private purchasedOffers(): (ResolvedRewardOffer | undefined)[] {
     const offers: (ResolvedRewardOffer | undefined)[] = [];
     for (const biome of this.state.assembly().project.route.biomes) {
-      if (biomeKey !== undefined && biome.biomeKey !== biomeKey) continue;
       for (const occurrence of biome.topology?.occurrences ?? [])
         for (const action of occurrence.roomActions?.order ?? []) {
           // The Contract pedestal's free item spends a pick like a bought item.
@@ -949,15 +956,9 @@ export class DraftSteering {
     });
   }
 
-  /** The preferred Shop band: above any boon door, below a story room, higher behind the pace or on a low bag. */
+  /** The preferred Shop band: above any boon door, below a story room, higher on a low bag. */
   private preferredShopWeight(): number {
-    return Math.min(
-      Math.max(
-        10 + 40 * Math.max(this.purchasesBehind(), 0) + (this.boonBagLow() ? 60 : 0),
-        PREFERRED_MIDSHOP_FLOOR,
-      ),
-      180,
-    );
+    return PREFERRED_MIDSHOP_WEIGHT + (this.boonBagLow() ? LOW_BAG_SHOP_BONUS : 0);
   }
 
   /**
@@ -1023,15 +1024,17 @@ export class DraftSteering {
     if (room?.kind === 'Shop') {
       // A mid-biome Shop the player prefers, or one beside doors that can no longer show a
       // boon, is taken over any boon door, below a story room (200).
-      if (this.spec.preferMidshops === true || this.boonEntriesLeft() === 0)
-        return this.preferredShopWeight();
-      // Behind the purchase pace a Shop door is more welcome, ahead of it less.
-      return this.purchasesBehind() > 0 ? 1.5 : 0.4;
+      if (this.spec.preferMidshops === true) return this.preferredShopWeight();
+      // A Shop is welcome while the draft spends gold, and of no use when it never buys.
+      if (this.spending() === 'none') return 0.4;
+      if (this.boonEntriesLeft() === 0) return this.preferredShopWeight();
+      return 1.5;
     }
     // A Preboss Shop is preferred when the boon bag runs low or a takeable trait is overdue.
     if (
       room?.kind === 'Preboss' &&
       room.incomingReward.kind === 'shop' &&
+      this.spending() !== 'none' &&
       (this.boonBagLow() || this.overdueTakeable())
     )
       return this.preferredShopWeight();

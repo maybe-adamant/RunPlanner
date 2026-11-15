@@ -721,10 +721,17 @@ describe('Draft panel', () => {
     });
     expect(draft().resourceRoomChance).toBe(25);
     expect(screen.getByText('default 10%')).toBeTruthy();
-    fireEvent.change(screen.getByRole('slider', { name: 'Shop buys per biome' }), {
-      target: { value: '0' },
-    });
-    expect(draft().purchasesPerBiome).toBe(0);
+    const spending = screen.getByRole('radiogroup', { name: 'Spending' });
+    expect(
+      within(spending)
+        .getAllByRole('radio')
+        .map((radio) => radio.parentElement?.textContent),
+    ).toEqual(['None', 'Careful', 'Normal', 'Greedy']);
+    expect(
+      (within(spending).getByRole('radio', { name: 'Normal' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    fireEvent.click(within(spending).getByRole('radio', { name: 'None' }));
+    expect(draft().spending).toBe('none');
     fireEvent.change(screen.getByRole('slider', { name: 'Retries' }), { target: { value: '6' } });
     expect(draft().retriesPerBiome).toBe(6);
     expect(screen.getByText('default 3')).toBeTruthy();
@@ -736,7 +743,7 @@ describe('Draft panel', () => {
     expect(reset.disabled).toBe(false);
     fireEvent.click(reset);
     expect(history().past).toHaveLength(before + 1);
-    for (const key of ['roomForcing', 'resourceRoomChance', 'purchasesPerBiome'])
+    for (const key of ['roomForcing', 'resourceRoomChance', 'spending'])
       expect(draft()).not.toHaveProperty(key);
     expect(reset.disabled).toBe(true);
     act(() => {
@@ -745,7 +752,7 @@ describe('Draft panel', () => {
     expect(draft()).toMatchObject({
       roomForcing: 'game',
       resourceRoomChance: 25,
-      purchasesPerBiome: 0,
+      spending: 'none',
     });
   });
 

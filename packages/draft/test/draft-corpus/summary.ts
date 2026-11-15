@@ -14,6 +14,8 @@ interface SpecSummary {
   readonly elementDeferredRuns: number;
   readonly essencesPerRun: number;
   readonly purchasesPerRun: Readonly<Record<string, number>>;
+  /** Mean gold the paid Shop purchases cost per drafted run. */
+  readonly goldSpentPerRun?: number;
   readonly attemptsMedian: number;
   /** Across seeds, each basket trait's landing depth spread (stdev, rooms), averaged over traits. */
   readonly depthSpread?: number;
@@ -121,6 +123,9 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
       drafted.reduce((sum, run) => sum + run.essences, 0) / Math.max(drafted.length, 1),
     ),
     purchasesPerRun,
+    goldSpentPerRun: round(
+      drafted.reduce((sum, run) => sum + (run.gold?.spent ?? 0), 0) / Math.max(drafted.length, 1),
+    ),
     attemptsMedian: median(drafted.map((run) => run.attempts)),
     depthSpread: diversity.spread,
     depthDistinct: diversity.distinct,
@@ -154,6 +159,7 @@ function table(
     'elemDef',
     'ess/run',
     'buys/run',
+    'gold/run',
     'attMed',
     'depSd',
     'depN',
@@ -183,6 +189,7 @@ function table(
       cell(now.elementDeferredRuns, was?.elementDeferredRuns),
       cell(now.essencesPerRun, was?.essencesPerRun),
       buys || '-',
+      cell(now.goldSpentPerRun, was?.goldSpentPerRun),
       cell(now.attemptsMedian, was?.attemptsMedian),
       cell(now.depthSpread, was?.depthSpread),
       cell(now.depthDistinct, was?.depthDistinct),

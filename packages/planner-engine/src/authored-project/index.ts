@@ -467,6 +467,7 @@ export {
   type AuthoredRoutePlan,
   type AuthoredDraftSpec,
   type DraftRoomForcing,
+  type DraftSpending,
   type DraftFillerKind,
   type DraftFillerRank,
   type ResourcePlacement,

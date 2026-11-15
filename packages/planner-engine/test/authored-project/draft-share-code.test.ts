@@ -54,7 +54,7 @@ const underworld: DraftShareInputs = {
     preferMidshops: true,
     pursueTartarusGoal: true,
     roomForcing: 'game',
-    purchasesPerBiome: 0,
+    spending: 'none',
     retriesPerBiome: 10,
     resourceRoomChance: 50,
   },
@@ -284,6 +284,18 @@ describe('draft share codes', () => {
     it('carries a room forcing as its index, so choices only append', () => {
       expect(DRAFT_OPTIONS.roomForcing.choices).toEqual(['deadline', 'softened', 'game']);
       expect(decoded(code(0, [entry(4, '10')])).draft.roomForcing).toBe('game');
+    });
+
+    it('carries a spending style as its index, ignoring the retired purchase pace tag', () => {
+      expect(DRAFT_OPTIONS.spending.choices).toEqual(['none', 'careful', 'normal', 'greedy']);
+      expect(decoded(code(0, [entry(9, '11')])).draft.spending).toBe('greedy');
+      // Tag 5 carried a fixed purchases-per-biome pace; such a code drafts at the default spending.
+      const plain = decoded(code(0)).draft;
+      expect(decoded(code(0, [entry(5, '0')])).draft).toEqual(plain);
+      expect(decoded(code(0, [entry(5, '11'), entry(9, '1')])).draft).toEqual({
+        ...plain,
+        spending: 'careful',
+      });
     });
 
     it('carries a filler ranking as counted indexes and amounts, healing bad entries', () => {

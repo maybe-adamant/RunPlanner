@@ -64,7 +64,9 @@ from its default:
 - `pursueTartarusGoal`: steer toward Tartarus Clockwork Goal doors, expecting
   fewer god boons there;
 - `roomForcing`: `deadline`, `softened` or `game` (see steering);
-- `purchasesPerBiome`, `retriesPerBiome` and `resourceRoomChance`;
+- `spending`: `none`, `careful`, `normal` (the default) or `greedy` (see
+  steering);
+- `retriesPerBiome` and `resourceRoomChance`;
 - `fillerPriority`: an ordered list of filler kinds (`maxHealth`, `maxMagick`,
   `gold`, `pom`), each with an optional per-run `amount`.
 
@@ -164,14 +166,21 @@ room as the route declares it, route overlays included.
   boon (a boon reward, Mystery boon or Devotion trial), such rewards on this
   door are strongly damped, since every shown door draws from the bag whether
   taken or not.
-- **Shop purchases.** The draft buys a boon or Mystery boon of a god that can
-  take its next queued trait, and Hermes or a Hammer when due, at a soft pace
-  of the spec's purchases per biome. The pace steepens when behind or when the
-  boon entries left in the bags this biome's doors draw from (its base-store
-  policy, else the stores its rooms declare) are nearly spent; it never forces
-  or blocks a purchase, and gold is not modelled. At zero the draft never buys
-  a god boon, while Hermes, Hammer and Dream boosts keep their own rules.
-  Filler purchases do not count toward the pace.
+- **Shop purchases.** A planned purchase the player cannot afford desyncs the
+  run, so the draft buys only what the engine's gold ledger says the gold held
+  covers: the chance the balance before the purchase, after every earlier
+  planned purchase, covers its price must reach the spending style's bar.
+  Wanted items, a boon or Mystery boon of a god that can take its next queued
+  trait, Hermes or a Hammer when due and a Dream boost of a wanted element,
+  have a lower bar than filler, and each style lowers both bars from Careful to
+  Greedy; `none` buys nothing. A wanted item below its bar first takes back the
+  run's earlier filler purchases, latest first, until it clears the bar, and is
+  left only when no filler is left to take back; a take-back that would add a
+  finding is skipped. The draft builds forward, so each purchase is judged
+  against the purchases before it. A purchase the ledger cannot reach until a
+  choice it or an earlier purchase opens is made, such as a Mystery boon's god
+  boon screen, is judged once the next steps make it, and taken back if they
+  do not soon. A Contract pedestal's free item is collected whenever wanted.
 - **Filler.** Non-boon rewards group into four filler kinds, Max Health, Max
   Magick, Gold and Pom, each covering every size variant (Pom includes the Pom
   Slice); every pickup counts one, at a door or in a Shop. Rank weights apply
@@ -181,22 +190,22 @@ room as the route declares it, route overlays included.
   below the top-ranked filler. Amounts are preferences, never draft targets.
 - **Shop stock.** Settlement stocks a Shop the walk enters; the draft then
   replaces each slot, in slot order, with its steered pick among the items the
-  inventory admits beside the stocked peers, buying wanted items as it goes,
-  and steers a Travel Deal item the same way once a purchase restocks it.
+  inventory admits beside the stocked peers, then buys, and steers a Travel
+  Deal item the same way once a purchase restocks it.
   Shops the plan entered before the draft are left as they are.
-- **Spare Shop purchases.** Once every slot of a Shop is steered, so its
-  boons are bought first, the draft spends the biome's spare purchases (its
-  purchases per biome less those made there) on ranked Max Health, Max Magick
-  and Pom still short of their amount, each a weighted pick; Shops sell no
-  Gold. A mid-biome Shop keeps one spare purchase for the Preboss Shop, which
-  may use them all. The reserve counts purchases, not gold.
+- **Shop filler.** Once every slot of a Shop is steered, so its wanted items
+  are bought first, the draft buys ranked Max Health, Max Magick and Pom still
+  short of their amount, each a weighted pick bought when its gold clears the
+  filler bar; Shops sell no Gold.
 - **Shop doors.** Without the midshop preference, a Preboss Shop door still
-  takes the preferred-Shop weight when the boon bag runs low or a trait some
-  god can take is past its target, and a mid-biome Shop door does once the
-  door bags hold no boon. On a route whose save-file god history starts closed
-  (Fresh File), a Shop stocks only gods already picked up, so a door offering
-  a not-yet-met god with queued traits outranks a Shop door, midshop
-  preference included.
+  takes the preferred-Shop weight when the boon bag runs low (the boon entries
+  left in the bags this biome's doors draw from: its base-store policy, else
+  the stores its rooms declare) or a trait some god can take is past its
+  target, and a mid-biome Shop door does once the door bags hold no boon;
+  neither applies when the draft spends nothing. On a route whose save-file
+  god history starts closed (Fresh File), a Shop stocks only gods already
+  picked up, so a door offering a not-yet-met god with queued traits outranks
+  a Shop door, midshop preference included.
 - **Room forcing.** A new door rolls each legal room inside its declared depth
   window and places a hit first. The spec's room forcing picks the chance: the
   game's ramp toward the deadline, that ramp softened one step (the default),
@@ -224,8 +233,9 @@ room as the route declares it, route overlays included.
 
 A fixed corpus (`npm run test:draft-corpus`) measures these rules, including
 the spread of basket traits' in-biome landing depths, the god boon rooms'
-count, gaps and early share per biome, and the Shops entered per run; its
-committed baseline records rates and medians, not plans.
+count, gaps and early share per biome, the Shops entered per run and the gold
+the Shop purchases spend; its committed baseline records rates and medians,
+not plans.
 
 ## Share Codes
 
