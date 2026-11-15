@@ -1431,6 +1431,8 @@ export interface RoomMapPoints {
   readonly contractPedestalPoint?: RoomMapPoint;
   /** RoomData `ZagContractDestinationId`: where a Midshop's Contract door spawns. */
   readonly contractExitPoint?: RoomMapPoint;
+  /** The room's one obstacle inheriting `HealthFountain`, where the map places one. */
+  readonly healthFountainPoint?: RoomMapPoint;
 }
 
 /** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */
