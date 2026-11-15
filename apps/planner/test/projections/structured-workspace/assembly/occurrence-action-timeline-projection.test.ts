@@ -6,11 +6,14 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createTranscendentEmbryoOutcomeAddress,
   roomActionKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { goldLedgerForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadProjectDocument } from '@planner/persistence/projectDocumentLoader';
 import {
   loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFigLeafCheckpoint,
@@ -35,6 +38,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 import type {
+  WorkspaceNotReachedEntry,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
@@ -571,6 +575,81 @@ describe('a room whose walk stops in it', () => {
     const timeline = galleryTimeline('chaos-time-piece', 'fixture-chaos-room');
     expect(shape(timeline.entries)).toEqual(['roomEntered', 'action', 'doorsOpened']);
     expect(timeline.notReached).toEqual([]);
+  });
+
+  it('keeps the automatic effects of the encounter end it stops at, to choose their targets', () => {
+    const effects = (
+      entries: readonly (WorkspaceRoomLifecycleTimelineEntry | WorkspaceNotReachedEntry)[],
+    ) =>
+      entries.flatMap((entry) =>
+        entry.kind === 'automaticEffect' ? [[entry.effect, entry.phaseKey]] : [],
+      );
+    const raw = surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier'].raw as {
+      readonly route: Record<string, unknown>;
+    };
+    const growth = loadProjectDocument(
+      JSON.stringify({
+        ...raw,
+        route: { ...raw.route, itineraryBiomeKeys: catalog.routes.byKey.Surface!.biomeKeys },
+      }),
+      catalog,
+    ).project;
+    const growthTimeline = roomOf(
+      growth,
+      createOccurrenceId('59213773-32f1-4ccc-87a4-4eaf95e43b54'),
+    ).roomActions!.timeline;
+    expect(shape(growthTimeline.entries).at(-1)).toBe('encounterEnd');
+    expect(effects(growthTimeline.entries)).toEqual([['steadyGrowth', 'Combat']]);
+    expect(effects(growthTimeline.notReached ?? [])).toEqual([]);
+
+    const embryoCase = galleryCases.find((candidate) => candidate.id === 'transcendent-embryo')!;
+    const embryoProject = buildGalleryProject(embryoCase);
+    const embryoRoom = createOccurrenceId('surface-n-combat03');
+    const [outcome] = roomOf(embryoProject, embryoRoom).roomActions!.transcendentEmbryo!;
+    const embryoTimeline = roomOf(
+      applyProjectCommand(embryoProject, catalog, {
+        kind: 'ReplaceTranscendentEmbryoTransformation',
+        outcome: outcome!.address,
+        value: null,
+      }),
+      embryoRoom,
+    ).roomActions!.timeline;
+    expect(shape(embryoTimeline.entries).at(-1)).toBe('encounterEnd');
+    expect(effects(embryoTimeline.entries)).toEqual([['transcendentEmbryo', 'Encounter']]);
+    expect(effects(embryoTimeline.notReached ?? [])).toEqual([]);
+
+    // In a two-phase room a stop at the Intro's end keeps only the Intro's own effect.
+    type Engine = Parameters<typeof splitAtRoomStop>[1][number];
+    const boundary = (kind: string, phaseKey?: string) =>
+      ({
+        kind: 'boundary',
+        boundary: { kind, key: phaseKey === undefined ? kind : `${kind}:${phaseKey}`, phaseKey },
+        rank: 1,
+        placement: 'before',
+      }) as unknown as Engine;
+    const selection = createRouteStartKeepsakeSelectionAddress('Surface');
+    const effect = (cycle: number, phaseKey: string) =>
+      ({
+        kind: 'automaticEffect',
+        effect: 'transcendentEmbryo',
+        phaseKey,
+        address: createTranscendentEmbryoOutcomeAddress(selection, cycle),
+      }) as unknown as Engine;
+    const twoPhase = [
+      boundary('roomEntered'),
+      boundary('encounterEnd', 'Intro'),
+      effect(1, 'Intro'),
+      boundary('encounterStarted', 'Combat'),
+      boundary('encounterEnd', 'Combat'),
+      effect(2, 'Combat'),
+    ];
+    const split = splitAtRoomStop(
+      twoPhase as unknown as Parameters<typeof splitAtRoomStop>[0],
+      twoPhase,
+      { roomStop: { kind: 'timeline', entryIndex: 1, at: 'entry' } },
+    );
+    expect(effects(split?.reached ?? [])).toEqual([['transcendentEmbryo', 'Intro']]);
+    expect(effects(split?.notReached ?? [])).toEqual([['transcendentEmbryo', 'Combat']]);
   });
 
   it('shows every entry when it stops only in its exit work', () => {
