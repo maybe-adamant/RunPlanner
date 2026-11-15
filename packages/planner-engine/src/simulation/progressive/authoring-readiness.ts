@@ -1,7 +1,10 @@
-import type {
-  ExitDecisionSourceAddress,
-  OccurrenceAddress,
-  SemanticAddress,
+import {
+  semanticAddressKey,
+  type ExitDecisionSourceAddress,
+  type OccurrenceAddress,
+  type SemanticAddress,
+  type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
 } from '../../authored-project/addresses';
 import type { BiomeTopology, OccurrenceId } from '../../authored-project/model';
 import {
@@ -42,6 +45,10 @@ export function authoringReadinessAt(
   assertExactProjectEvaluationAssembly(assembly);
   const horizon = assembly.evaluation.authoringHorizon;
   if (horizon.kind === 'open') return 'editable';
+  if (owner.kind === 'steadyGrowthOutcome' || owner.kind === 'transcendentEmbryoOutcome') {
+    const landing = automaticOutcomeLanding(assembly, owner);
+    return landing === undefined ? 'locked' : authoringReadinessAt(assembly, landing);
+  }
 
   if (owner.kind === 'project' || owner.kind === 'route') return 'editable';
   if (owner.kind === 'keepsakeSelection' && owner.owner === 'routeStart') return 'editable';
@@ -83,6 +90,28 @@ export function authoringReadinessAt(
     horizon.blockedAfter,
     evaluation?.requiredInputLocation,
   );
+}
+
+/**
+ * A timed outcome is addressed by its source but chosen where its cycle lands,
+ * at that encounter end, in whichever biome the walk reached it. A cycle the
+ * walk has not landed lies past the horizon.
+ */
+function automaticOutcomeLanding(
+  assembly: ProjectEvaluationAssembly,
+  owner: SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress,
+): OccurrenceAddress | undefined {
+  const key = semanticAddressKey(owner);
+  for (const biome of assembly.evaluation.route.biomes) {
+    if (!('rewards' in biome)) continue;
+    const outcomes =
+      owner.kind === 'steadyGrowthOutcome'
+        ? biome.rewards.steadyGrowthOutcomes
+        : biome.rewards.transcendentEmbryoOutcomes;
+    const landed = outcomes.find((outcome) => semanticAddressKey(outcome.address) === key);
+    if (landed !== undefined) return landed.owner;
+  }
+  return undefined;
 }
 
 /** Whether the owner is a Hub visit, fountain use or reroll the plan reaches only after its end. */
