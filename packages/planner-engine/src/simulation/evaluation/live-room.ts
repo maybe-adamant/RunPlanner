@@ -61,7 +61,7 @@ import {
   type RoomActionRow,
 } from '../room-actions';
 import { timedPickupReference, type UnsettledPickupSource } from '../rewards/acquisition/artifacts';
-import { authoredRoom, roomWalk } from './evaluated-room';
+import { activeRoomActionRoster, authoredRoom, roomWalk } from './evaluated-room';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
@@ -928,7 +928,7 @@ function objectChoiceVerbs(
     readonly owner: SemanticAddress;
     readonly surface: RerollSurface;
   }[] = [{ object: 'doorRerolls', owner: occurrence, surface: { kind: 'doors', occurrence } }];
-  for (const phase of room.roomActionRoster.eventGraph.phases) {
+  for (const phase of activeRoomActionRoster(assembly, occurrence, room).eventGraph.phases) {
     if (phase.rewardWheelKey === undefined) continue;
     const wheel = createRewardWheelAddress(biome, occurrence.occurrenceId, phase.rewardWheelKey);
     surfaces.push({ object: 'rewardWheel', owner: wheel, surface: { kind: 'rewardWheel', wheel } });
@@ -1159,7 +1159,7 @@ export function liveRoomForProjectEvaluationAssembly(
   if (loot === undefined) return undefined;
   const interactions = detail === 'interactions';
   const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
-  const roster = room.roomActionRoster;
+  const roster = activeRoomActionRoster(assembly, occurrence, room);
   const entries = room.roomLifecycleTimeline.entries;
   const liveRows = roster.rows.filter((row) => !row.stale).map(asUnplacedWhenReplaced);
   const orderLength = roster.rows.filter((row) => row.rank !== null).length;

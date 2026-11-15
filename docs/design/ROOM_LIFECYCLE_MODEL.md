@@ -748,7 +748,10 @@ When encounter preparation assesses a suffix as dormant, the engine scopes
 that same structure and roster to the assessed active phase prefix for both
 execution and workspace projection. An invalid terminating selection does not
 fabricate a shorter structure; its later phase remains available for repair.
-The application consumes the engine's phase status and scoping operation
+The room's published Timeline keeps the dormant phase's entries, so its entry
+positions stay stable, while the spawned-loot, live-room, outcome and room-stop
+queries read the played phases, and the walk never stops at a dormant
+phase's entry. The application consumes the engine's phase status and scoping operation
 rather than deciding suffix activity from the selected encounter label.
 
 The roster remains authoritative for active action rows, dependencies,

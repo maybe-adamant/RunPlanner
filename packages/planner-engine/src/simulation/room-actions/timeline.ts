@@ -535,6 +535,23 @@ export function assembleRoomLifecycleTimeline(
   });
 }
 
+/** Whether a scoped phase prefix keeps a Timeline entry: one of a dormant phase never plays. */
+export function roomLifecycleEntryActive(
+  scopedGraph: RoomEventGraph,
+  entry: RoomLifecycleTimeline['entries'][number],
+): boolean {
+  switch (entry.kind) {
+    case 'boundary':
+      return roomEventActive(scopedGraph, entry.boundary);
+    case 'action':
+      return (
+        entry.phaseKey === undefined || scopedGraph.activeEncounterSlotKeys.includes(entry.phaseKey)
+      );
+    case 'automaticEffect':
+      return scopedGraph.activeEncounterSlotKeys.includes(entry.phaseKey);
+  }
+}
+
 /** Apply an engine-assessed active phase prefix without reconstructing the graph in a consumer. */
 export function scopeRoomLifecycleTimeline(
   timeline: RoomLifecycleTimeline,
@@ -542,20 +559,14 @@ export function scopeRoomLifecycleTimeline(
 ): RoomLifecycleTimeline {
   const graph = scopeRoomEventGraph(timeline.graph, activePhaseKeys);
   if (graph === timeline.graph) return timeline;
-  const active = new Set(graph.activeEncounterSlotKeys);
-  const boundaryActive = (boundary: RoomLifecycleBoundary): boolean =>
-    roomEventActive(graph, boundary);
-  const entries = timeline.entries.filter(
-    (entry) =>
-      (entry.kind === 'boundary' && boundaryActive(entry.boundary)) ||
-      (entry.kind === 'action' && (entry.phaseKey === undefined || active.has(entry.phaseKey))) ||
-      (entry.kind === 'automaticEffect' && active.has(entry.phaseKey)),
-  );
+  const entries = timeline.entries.filter((entry) => roomLifecycleEntryActive(graph, entry));
   return Object.freeze({
     owner: timeline.owner,
     graph,
     entries: Object.freeze(entries),
-    boundaries: Object.freeze(timeline.boundaries.filter(boundaryActive)),
+    boundaries: Object.freeze(
+      timeline.boundaries.filter((boundary) => roomEventActive(graph, boundary)),
+    ),
     doorsAfterRank: timeline.doorsAfterRank,
     repairRows: timeline.repairRows,
   });

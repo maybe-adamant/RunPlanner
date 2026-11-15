@@ -432,7 +432,12 @@ completion does not run the encounter-use/end-effect checkpoint. The later
 another position through `CanEncounterSkipIfNotFirst = false`.
 `HeraclesCombatP` is counting and declares `BlockMultipleEncounters`, so a
 valid Heracles first selection is the complete active sequence and the second
-position is neither constructed nor recorded.
+position is neither constructed nor recorded. The room's reward then spawns at
+his fight's end: `GeneratedP_PreCombat` alone overrides the reward to `Empty`
+(`EncounterData_Generated.lua:1209`), the setup marks the last constructed
+member `LastEncounter` (`RoomLogic.lua:4438-4447`), and his
+`EncounterEventsHeraclesCombat` ends with `SpawnRoomReward`
+(`EncounterSets.lua:569-580`).
 
 A successful Fig Leaf roll at the P pre-combat position marks every already
 constructed room encounter as spawn-skipped. The cascade runs only when the

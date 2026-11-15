@@ -32,6 +32,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
+  playedEncounterPhaseKeys,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
 import type {
@@ -930,14 +931,11 @@ function roomActionsForOccurrence(
       ),
       transcendentEmbryoOutcomes,
     ),
-    lifecycleTimeline.graph.activeEncounterSlotKeys.flatMap((phaseKey) => {
-      const address = createEncounterPhaseAddress(
-        input.biome,
-        { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },
-        phaseKey,
-      );
-      return input.encounterPhaseStatus(address)?.kind === 'dormantSuffix' ? [] : [phaseKey];
-    }),
+    playedEncounterPhaseKeys(
+      input.encounterPhaseStatus,
+      createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+      lifecycleTimeline.graph.activeEncounterSlotKeys,
+    ),
   );
   const steadyGrowthOutcomeByAddress = new Map(
     steadyGrowthOutcomes.map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),

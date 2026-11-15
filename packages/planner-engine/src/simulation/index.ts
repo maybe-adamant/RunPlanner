@@ -141,6 +141,7 @@ export {
   type GeneratedEncounterCandidateCapability,
   type InfiniteRosterCandidateCapability,
   type ResolvedEncounterPhase,
+  playedEncounterPhaseKeys,
 } from './encounters';
 export {
   observedEncounterCustomizationForProjectEvaluationAssembly,

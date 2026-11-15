@@ -13,6 +13,7 @@ export {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline,
+  roomLifecycleEntryActive,
   scopeRoomLifecycleTimeline,
 } from './timeline';
 export type {
