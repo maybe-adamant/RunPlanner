@@ -11,6 +11,8 @@ export interface MemoryRecordHost extends RecordHost {
   /** Raw-save folders by name, each its files by name. */
   readonly rawSaves: RawSavesHost & {
     readonly folderFiles: Map<string, Map<string, Uint8Array>>;
+    /** How often the folders were shown. */
+    readonly reveals: () => number;
   };
   /** Files a re-read returns, by name; a read of any other name fails. */
   readonly folder: Map<string, Uint8Array>;
@@ -29,6 +31,7 @@ export function createMemoryRecordHost(
   const files = new Map<string, string>();
   const folder = new Map<string, Uint8Array>();
   const raw = new Map<string, Map<string, Uint8Array>>();
+  let reveals = 0;
   let watch: { folder: string; onSave: (delivery: SaveFileDelivery) => void } | null = null;
   const host: MemoryRecordHost = {
     folder,
@@ -91,6 +94,15 @@ export function createMemoryRecordHost(
         return Promise.resolve();
       },
       delete: (name) => Promise.resolve(void raw.delete(name)),
+      size: () =>
+        Promise.resolve(
+          [...raw.values()].reduce(
+            (total, files) => [...files.values()].reduce((sum, bytes) => sum + bytes.length, total),
+            0,
+          ),
+        ),
+      reveals: () => reveals,
+      reveal: () => Promise.resolve(void (reveals += 1)),
     },
   };
   return host;

@@ -5,7 +5,6 @@ import {
 } from '@run-planner/run-import/run-record';
 
 import type {
-  RawSavesHost,
   RecordHost,
   RecordingPreference,
   SaveFileDelivery,
@@ -79,6 +78,15 @@ export interface RecordingController {
    * as it was and rejects with the reason.
    */
   rebuildRun(id: string): Promise<void>;
+  /** Whether each run started from now on keeps every save it was recorded from. */
+  keepsRawSaves(): boolean;
+  /** A run being recorded keeps the choice it started with. */
+  setKeepRawSaves(keep: boolean): void;
+  /** The bytes of every kept raw save. */
+  rawSavesSize(): Promise<number>;
+  revealRawSaves(): Promise<void>;
+  /** Deletes the stored runs' raw saves; the runs themselves and open runs' saves stay. */
+  clearRawSaves(): Promise<void>;
   /** Settles once every delivered save has been handled. */
   idle(): Promise<void>;
   dispose(): void;
@@ -109,8 +117,6 @@ export function createRecordingController(options: {
   readonly savedValuePaths: RunRecordSavedValuePaths;
   /** The catalog's weapon names, which pick the hero's primary weapon out of `Hero.Weapons`. */
   readonly primaryWeapons: ReadonlySet<string>;
-  /** Keeps every accepted save of a recorded run beside it; development builds only. */
-  readonly rawSaves?: RawSavesHost;
   readonly delay?: (ms: number) => Promise<void>;
 }): RecordingController {
   const {
@@ -125,8 +131,9 @@ export function createRecordingController(options: {
   } = options;
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const capture =
-    options.rawSaves === undefined ? undefined : createRawSaveCapture(options.rawSaves);
+  const capture = createRawSaveCapture(host.rawSaves);
+  /** Profiles whose open run keeps its raw saves. */
+  const capturing = new Set<number>();
   const recentRuns = createRecentRunsStore(host.recentRuns, RECENT_RUNS_LIMIT, capture);
   const openRuns = createOpenRunStore(host.recentRuns);
   let recorder: RecorderState = EMPTY_RECORDER;
@@ -168,6 +175,11 @@ export function createRecordingController(options: {
       report(`Raw saves could not be kept: ${message(error)}`);
     }
   };
+  /** The closed run's raw saves, when it kept them, go with it: kept as `id`, or dropped. */
+  const settleRaw = async (profile: number, id: string | null) => {
+    if (!capturing.delete(profile)) return;
+    await raw(() => (id === null ? capture.discard(profile) : capture.keep(profile, id)));
+  };
   const reloadRuns = async () => {
     const listing = await recentRuns.list();
     store.dispatch(
@@ -205,14 +217,14 @@ export function createRecordingController(options: {
     let stored = retried;
     for (const run of runs) {
       if (!reachesFirstPreboss(prebossRooms, run)) {
-        if (capture !== undefined) await raw(() => capture.discard(run.profile));
+        await settleRaw(run.profile, null);
         continue;
       }
       stored = true;
       const gates = unmetProfileGates(run, arcanaCards);
       if (gates.length > 0) {
         await write(refusedRunEntry(run, gates));
-        if (capture !== undefined) await raw(() => capture.discard(run.profile));
+        await settleRaw(run.profile, null);
         continue;
       }
       let kept = false;
@@ -225,10 +237,7 @@ export function createRecordingController(options: {
       } catch (error) {
         report(`Run ${run.runCount} could not be kept: ${message(error)}`);
       }
-      if (capture !== undefined)
-        await raw(() =>
-          kept ? capture.keep(run.profile, recentRunId(run)) : capture.discard(run.profile),
-        );
+      await settleRaw(run.profile, kept ? recentRunId(run) : null);
     }
     if (stored) await reloadRuns().catch((error: unknown) => report(message(error)));
   };
@@ -300,7 +309,7 @@ export function createRecordingController(options: {
 
   /** The stored run rebuilt from its raw saves: decoded, folded and imported as when recorded. */
   const rebuildFromSaves = async (entry: RecentRunEntry): Promise<RecentRunEntry | undefined> => {
-    const saves = capture === undefined ? [] : await capture.read(entry.id);
+    const saves = await capture.read(entry.id);
     if (saves.length === 0) return undefined;
     let state: RecorderState = EMPTY_RECORDER;
     const closed: ClosedRun[] = [];
@@ -369,12 +378,18 @@ export function createRecordingController(options: {
       }
       if (observation === undefined || watch !== generation) return;
       const step = advanceRecorder(recorder, observation);
-      const placement = capture === undefined ? undefined : rawPlacement(observation, step);
+      const placement = rawPlacement(observation, step);
       const { profile } = observation;
       const kept = { fileName: delivery.fileName, bytes };
-      if (placement === 'before') await raw(() => capture!.append(profile, kept, false));
+      if (placement === 'before' && capturing.has(profile))
+        await raw(() => capture.append(profile, kept, false));
       await advance(step);
-      if (placement === 'start') await raw(() => capture!.append(profile, kept, true));
+      if (placement === 'start') {
+        if (preference.read().keepRawSaves) {
+          capturing.add(profile);
+          await raw(() => capture.append(profile, kept, true));
+        } else await raw(() => capture.discard(profile));
+      }
       // A stop or restart while this save was imported owns the status and the watch.
       if (watch !== generation) return;
       publishWatching();
@@ -405,14 +420,17 @@ export function createRecordingController(options: {
       recorder = restoreOpenRuns(recorder, restored.runs, restored.attempts);
       // A memory raised from an open run is written at the next save.
       for (const [profile, attempt] of restored.attempts) savedAttempts.set(profile, attempt);
-      // Raw saves left by a run that is neither stored nor still open go.
-      if (capture !== undefined)
-        await raw(async () =>
-          capture.prune(
-            new Set([...(await host.recentRuns.list()), ...unsaved.map((entry) => entry.id)]),
-            new Set(recorder.runs.keys()),
-          ),
+      // Raw saves left by a run that is neither stored nor still open go; an open run that
+      // was keeping its saves goes on keeping them.
+      capturing.clear();
+      await raw(async () => {
+        await capture.prune(
+          new Set([...(await host.recentRuns.list()), ...unsaved.map((entry) => entry.id)]),
+          new Set(recorder.runs.keys()),
         );
+        for (const profile of recorder.runs.keys())
+          if (await capture.holds(profile)) capturing.add(profile);
+      });
     });
     if (watch !== generation) return;
     try {
@@ -437,7 +455,7 @@ export function createRecordingController(options: {
     },
     async setEnabled(enabled: boolean) {
       const saved = preference.read();
-      preference.write({ enabled, folder: saved.folder });
+      preference.write({ ...saved, enabled });
       if (enabled) await startWatching(saved.folder);
       else {
         await stopWatching();
@@ -446,7 +464,7 @@ export function createRecordingController(options: {
     },
     async setFolder(chosen: string | null) {
       const saved = preference.read();
-      preference.write({ enabled: saved.enabled, folder: chosen });
+      preference.write({ ...saved, folder: chosen });
       if (saved.enabled) await startWatching(chosen);
     },
     async saveFolder() {
@@ -460,7 +478,7 @@ export function createRecordingController(options: {
       const saved = preference.read();
       const picked = await host.chooseFolder(saved.folder ?? (await host.discoverFolder()));
       if (picked === null) return;
-      preference.write({ enabled: saved.enabled, folder: picked });
+      preference.write({ ...saved, folder: picked });
       if (saved.enabled) await startWatching(picked);
     },
     readRun: (id: string) => recentRuns.read(id),
@@ -488,6 +506,14 @@ export function createRecordingController(options: {
         await recentRuns.replace(rebuilt);
         await reloadRuns();
       }),
+    keepsRawSaves: () => preference.read().keepRawSaves,
+    setKeepRawSaves(keep: boolean) {
+      preference.write({ ...preference.read(), keepRawSaves: keep });
+    },
+    rawSavesSize: () => host.rawSaves.size(),
+    revealRawSaves: () => host.rawSaves.reveal(),
+    // After every queued save, so a run being kept has its saves moved first.
+    clearRawSaves: () => exclusive(() => capture.clear()),
     idle: () => queue,
     dispose() {
       disposed = true;

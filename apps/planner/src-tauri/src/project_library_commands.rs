@@ -187,7 +187,7 @@ pub(crate) fn project_library_previous_active(
 }
 
 #[cfg(target_os = "windows")]
-fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
+pub(crate) fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
     std::process::Command::new("explorer")
         .arg(folder)
         .spawn()
@@ -196,7 +196,7 @@ fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
+pub(crate) fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
     run_planner_game_host::system_opener::open(folder.as_os_str())
         .map_err(|error| format!("Could not open the folder: {error}"))
 }

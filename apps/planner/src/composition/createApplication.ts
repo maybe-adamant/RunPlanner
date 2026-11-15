@@ -20,7 +20,7 @@ import { createProjectOperations } from '../workspace/projectOperations';
 import { createProjectLibraryOperations } from '../workspace/projectLibrary';
 import { createCatalogFeedController } from '../workspace/catalogFeed';
 import type { CatalogFeedHost } from '../persistence/catalogFeedHost';
-import type { RecordHost, RecordingPreference } from '../persistence/recordHost';
+import type { RecordHost, RecordingPreference, RecordingSettings } from '../persistence/recordHost';
 import { createRecordingController } from '../workspace/run-recording/recordingController';
 import { createInProcessRunImporter, type RunImporter } from '../workspace/run-recording/runImport';
 import { prebossRoomsByBiome } from '../workspace/run-recording/runRecorder';
@@ -265,8 +265,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           arcanaCards: catalog.arcanaCards.values.map((card) => card.key),
           savedValuePaths: runRecordSavedValuePaths(catalog),
           primaryWeapons: new Set(catalog.weapons.values.map((weapon) => weapon.key)),
-          // Raw saves are kept for importer work in development builds only.
-          ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),
         });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);
@@ -314,10 +312,10 @@ export function createApplication(options: CreateApplicationOptions = {}) {
 }
 
 function memoryRecordingPreference(): RecordingPreference {
-  let value = { enabled: false, folder: null as string | null };
+  let value: RecordingSettings = { enabled: false, folder: null, keepRawSaves: false };
   return {
     read: () => value,
-    write: (next) => void (value = { enabled: next.enabled, folder: next.folder }),
+    write: (next) => void (value = { ...next }),
   };
 }
 

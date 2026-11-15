@@ -1,12 +1,17 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { RecordingController } from '@planner/workspace/run-recording/recordingController';
 import type { AppScale } from '../shell/useAppScale';
 import { LoadoutPresetsSettings } from './LoadoutPresetsSettings';
+import { RecordingSettings } from './RecordingSettings';
 
 export function SettingsScreen({
   catalog,
+  recording,
   scale,
 }: {
   readonly catalog: Catalog;
+  /** Run recording; absent where there is no host to watch saves, as in the browser. */
+  readonly recording: RecordingController | undefined;
   readonly scale: AppScale;
 }) {
   return (
@@ -56,6 +61,7 @@ export function SettingsScreen({
             </div>
           </div>
         </section>
+        {recording === undefined ? null : <RecordingSettings controller={recording} />}
         <LoadoutPresetsSettings catalog={catalog} />
       </div>
     </section>
