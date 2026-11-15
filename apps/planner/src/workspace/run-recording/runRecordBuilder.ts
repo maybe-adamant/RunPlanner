@@ -524,7 +524,15 @@ function buildRoom(
   const timePieceUses = (traitsList: readonly SavedTrait[] | undefined) =>
     traitsList?.find((trait) => trait.name === 'GoldifyKeepsake')?.boonConversionUses;
   const timePieceBefore = timePieceUses(traitsBefore?.traits);
-  const timePieceAfter = timePieceUses(traitsAfter?.traits);
+  // Spending an unslotted Time Piece's last charge removes its trait (GiftLogic.lua:131);
+  // a slotted one swapped away may drop without a spend.
+  const timePieceAfter =
+    timePieceUses(traitsAfter?.traits) ??
+    (traitsAfter !== undefined &&
+    startKeepsake !== 'GoldifyKeepsake' &&
+    !traitsAfter.traits.some((trait) => trait.name === 'GoldifyKeepsake')
+      ? 0
+      : undefined);
   const conversions: RunRecordConversions | undefined = nonEmpty({
     ...optional('artificer', gain(before.metaConversionUses, after.metaConversionUses)),
     ...optional(
