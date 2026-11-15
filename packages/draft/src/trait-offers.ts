@@ -72,6 +72,17 @@ export class DraftTraitOffers {
   /** Each trait outside the basket by the basket traits its holding would keep from being offered. */
   private readonly excludes = new Map<string, string[]>();
 
+  /** A copy of the offers this walk authored, to return to. */
+  memory(): ReadonlyMap<string, AuthoredTraitOfferTraits> {
+    return new Map(this.authoredOffers);
+  }
+
+  /** Returns to a copy `memory` made. */
+  restoreMemory(memory: ReadonlyMap<string, AuthoredTraitOfferTraits>): void {
+    this.authoredOffers.clear();
+    memory.forEach((offer, key) => this.authoredOffers.set(key, offer));
+  }
+
   constructor(private readonly context: DraftTraitOfferContext) {
     this.denial = draftDenialActive(context.catalog, context.spec.loadout);
     const basket = context.steering.basket;

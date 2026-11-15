@@ -1,5 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
 import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createBiomeAddress,
+  createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type OccurrenceAddress,
@@ -44,6 +48,10 @@ export type GoldRoomAvailability =
 export interface GoldLedger {
   /** Gold the run starts with, before its first room. */
   runStart(): GoldRunStart;
+  /**
+   * A purchase by the owner of its row; a Shop offer's own address also finds a purchase whose
+   * row its pickup's acquisition entry owns, such as a Mystery boon's.
+   */
   purchaseAt(owner: SemanticAddress): GoldPurchaseAvailability;
   roomAt(room: OccurrenceAddress): GoldRoomAvailability;
 }
@@ -145,7 +153,25 @@ export function goldLedgerForProjectEvaluationAssembly(
       },
       purchaseAt(owner: SemanticAddress): GoldPurchaseAvailability {
         if (!('biomeKey' in owner) || !('routeKey' in owner) || !sameRoute(owner)) return UNREACHED;
-        const outcome = ledger().purchases.get(semanticAddressKey(owner));
+        const purchases = ledger().purchases;
+        const outcome =
+          purchases.get(semanticAddressKey(owner)) ??
+          (owner.kind === 'shopOffer'
+            ? purchases.get(
+                semanticAddressKey(
+                  createAcquisitionEntryAddress(
+                    createAcquisitionSiteAddress(
+                      createOccurrenceAddress(
+                        createBiomeAddress(owner.routeKey, owner.biomeKey),
+                        owner.occurrenceId,
+                      ),
+                      'roomExit',
+                    ),
+                    owner.offerKey,
+                  ),
+                ),
+              )
+            : undefined);
         switch (outcome?.kind) {
           case undefined:
             return UNREACHED;

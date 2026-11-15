@@ -90,8 +90,14 @@ export const DRAFT_OPTIONS = deepFreeze({
     default: 'softened',
     tag: 4,
   },
-  // Shop god boon purchases per planned biome; 0 never buys a god boon.
-  purchasesPerBiome: { kind: 'integer', min: 0, max: 4, default: 2, tag: 5 },
+  // How readily Shop items are bought against the gold the plan expects to hold; none buys
+  // nothing. Tag 5 named the retired purchases per biome.
+  spending: {
+    kind: 'choice',
+    choices: ['none', 'careful', 'normal', 'greedy'],
+    default: 'normal',
+    tag: 9,
+  },
   // Further attempts per biome after its first success.
   retriesPerBiome: { kind: 'integer', min: 0, max: 10, default: 3, tag: 6 },
   // Percent chance a room rolls a resource point.

@@ -650,7 +650,7 @@ describe('draft trait drops', () => {
       rackKeepsakeKeys: [null, null, null],
       resourceRoomChance: 0,
     };
-    const walk = startDraftWalk(base, spec, 4);
+    const walk = startDraftWalk(base, spec, 3);
     expect(walk.runBiome(0, 600), walk.failure).toBe(true);
     const occurrences = walk.project.route.biomes[0]!.topology!.occurrences;
     const pickedUp = occurrences.flatMap((occurrence) => {
@@ -669,7 +669,7 @@ describe('draft trait drops', () => {
     // Each boon is the room's reward; its drops follow it in spawn order.
     expect(pickedUp).toEqual([
       [
-        'F_Combat02',
+        'F_Combat07',
         'interactIncomingReward',
         'smallGold',
         'tinyGold1',
@@ -678,7 +678,7 @@ describe('draft trait drops', () => {
         'minorHeal2',
         'bones',
       ],
-      ['F_Combat21', 'interactIncomingReward', 'quickBuckGold'],
+      ['F_Combat14', 'interactIncomingReward', 'quickBuckGold'],
     ]);
     const biome = createBiomeAddress('Underworld', 'F');
     const leftBehind = occurrences.flatMap(
@@ -694,5 +694,93 @@ describe('draft trait drops', () => {
         (pickup) => pickup.source.kind === 'generated' && pickup.source.family.kind === 'trait',
       ),
     ).toEqual([]);
+  });
+});
+
+describe('a walk returned to an earlier point', () => {
+  /** The walk's own return, as a pending purchase that falls short makes it. */
+  type Returnable = { mark(): unknown; returnTo(mark: unknown): void };
+  type Memory = {
+    readonly essenceRooms: ReadonlyMap<number, number>;
+    readonly steeredShops: ReadonlySet<string>;
+    readonly authoredRewards: ReadonlySet<string>;
+    readonly hooked: ReadonlySet<string>;
+  };
+  const memory = (walk: DraftWalk) => {
+    const state = walk as unknown as Memory;
+    return {
+      steps: walk.steps,
+      essenceRooms: [...state.essenceRooms],
+      steeredShops: [...state.steeredShops].sort(),
+      authoredRewards: [...state.authoredRewards].sort(),
+      hooked: [...state.hooked].sort(),
+    };
+  };
+
+  it('forgets the steps it took back, so later rooms still roll essence and author rewards', () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: draftBasket(['ZeusWeaponBoon']),
+      rackKeepsakeKeys: [null, null, null],
+      resourceRoomChance: 100,
+    };
+    const walk = startDraftWalk(base, spec, 1);
+    const rooms = () => walk.project.route.biomes[0]?.topology?.occurrences.length ?? 0;
+    while (rooms() < 2) walk.runBiome(0, walk.steps + 1);
+    const returnable = walk as unknown as Returnable;
+    const mark = returnable.mark();
+    const marked = { project: walk.project, memory: memory(walk) };
+    while (rooms() < 5) walk.runBiome(0, walk.steps + 1);
+    expect(memory(walk)).not.toEqual(marked.memory);
+    returnable.returnTo(mark);
+    expect(walk.project).toBe(marked.project);
+    expect(memory(walk)).toEqual(marked.memory);
+    const before = new Set(
+      walk.project.route.biomes[0]!.topology!.occurrences.map((room) => room.occurrenceId),
+    );
+    // The biome completes, its rewards authored past the return.
+    expect(walk.runBiome(0, walk.steps + 600), walk.failure).toBe(true);
+    // Rooms entered after the return still roll their resource points.
+    const placed = Object.values(walk.project.route.resourcePlacements).flatMap((placement) =>
+      placement === null ? [] : [placement.occurrenceId],
+    );
+    expect(placed.some((occurrenceId) => !before.has(occurrenceId))).toBe(true);
+  });
+});
+
+describe('filler take-back', () => {
+  it("never takes back filler from a Shop the plan held before the draft, only the draft's own", () => {
+    const project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const { startingReward: _start, ...checkpointLoadout } = project.route.loadout;
+    void _start;
+    const spec: DraftSpec = {
+      loadout: checkpointLoadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const assembly = simulateProjectAssembly(catalog, project);
+    const shop = 'golden-f-preboss-shop';
+    const except = createShopOfferAddress(
+      createBiomeAddress('Underworld', 'F'),
+      shop as never,
+      'Boon',
+    );
+    const takeBack = (walk: DraftWalk) =>
+      (
+        walk as unknown as {
+          fillerPurchases(except: SemanticAddress): readonly SemanticAddress[];
+        }
+      ).fillerPurchases(except);
+    // The checkpoint's Shop bought Max Health before any draft walked it.
+    expect(takeBack(startDraftWalk(project, spec, 1, { from: assembly }))).toEqual([]);
+    expect(
+      takeBack(
+        startDraftWalk(project, spec, 1, { from: assembly, draftedBefore: new Set([`F/${shop}`]) }),
+      ),
+    ).toEqual([
+      createShopOfferAddress(createBiomeAddress('Underworld', 'F'), shop as never, 'MajorNonBoon'),
+    ]);
   });
 });

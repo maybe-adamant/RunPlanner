@@ -117,9 +117,8 @@ describe('draft spec', () => {
     expect(
       withDraftOption(withDraftOption(draft, 'roomForcing', 'game'), 'roomForcing', 'softened'),
     ).toEqual(draft);
-    expect(withDraftOption(draft, 'purchasesPerBiome', 2)).toEqual(draft);
-    expect(withDraftOption(draft, 'purchasesPerBiome', 0).purchasesPerBiome).toBe(0);
-    expect(withDraftOption(draft, 'purchasesPerBiome', 9).purchasesPerBiome).toBe(4);
+    expect(withDraftOption(draft, 'spending', 'normal')).toEqual(draft);
+    expect(withDraftOption(draft, 'spending', 'none').spending).toBe('none');
     expect(withDraftOption(draft, 'retriesPerBiome', 3)).toEqual(draft);
     expect(withDraftOption(draft, 'retriesPerBiome', -1).retriesPerBiome).toBe(0);
     expect(withDraftOption(draft, 'retriesPerBiome', 99).retriesPerBiome).toBe(10);
@@ -129,7 +128,7 @@ describe('draft spec', () => {
     expect(withDraftOption(draft, 'resourceRoomChance', 0).resourceRoomChance).toBe(0);
     const options = {
       roomForcing: 'deadline',
-      purchasesPerBiome: 0,
+      spending: 'greedy',
       retriesPerBiome: 7,
       resourceRoomChance: 35,
     } as const;
@@ -139,7 +138,7 @@ describe('draft spec', () => {
       decoded({
         ...draft,
         roomForcing: 'softened',
-        purchasesPerBiome: 2,
+        spending: 'normal',
         retriesPerBiome: 3,
         resourceRoomChance: 10,
       }),
@@ -158,7 +157,7 @@ describe('draft spec', () => {
     expect(
       withDraftAdvancedDefaults({
         ...draft,
-        purchasesPerBiome: 0,
+        spending: 'careful',
         resourceRoomChance: 50,
         pursueTartarusGoal: true,
         fillerPriority: [{ kind: 'pom' }],
@@ -393,7 +392,9 @@ describe('draft spec', () => {
       [{ perGodCap: 'five' }, {}],
       [{ roomForcing: 'sometimes' }, {}],
       [{ roomForcing: 3 }, {}],
-      [{ purchasesPerBiome: 5 }, { purchasesPerBiome: 4 }],
+      [{ spending: 'lavish' }, {}],
+      // The retired fixed purchase pace is an unknown key, so the default spending applies.
+      [{ purchasesPerBiome: 0 }, {}],
       [{ retriesPerBiome: 11 }, { retriesPerBiome: 10 }],
       [{ retriesPerBiome: 3.4 }, {}],
       [{ resourceRoomChance: 55 }, { resourceRoomChance: 50 }],
@@ -410,6 +411,8 @@ describe('draft spec', () => {
   it('gives every Advanced option its own share-code tag', () => {
     const tags = Object.values(DRAFT_OPTIONS).map((declaration) => declaration.tag);
     expect(new Set(tags).size).toBe(tags.length);
+    // Tag 5 named the retired purchases per biome; old codes still carry it.
+    expect(tags).not.toContain(5);
   });
 
   it('decodes a route without a draft spec to the empty spec', () => {

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createDefaultRouteLoadout,
+  type DraftSpending,
   createProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -18,6 +19,8 @@ import {
   draftSiblingHoldsGodBoon,
   draftPaceWeight,
   draftWindowForceChance,
+  DRAFT_AFFORDABLE_FLOOR,
+  DRAFT_SPENDING_STYLES,
 } from '../src/steering';
 import { draftSteeringFor } from './support/draft-walk';
 import { createDraftRng } from '../src/rng';
@@ -374,6 +377,92 @@ describe('hosted Duos', () => {
   });
 });
 
+describe('spending styles', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'c',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const steering = (spending: DraftSpending) =>
+    draftSteeringFor(base, {
+      loadout,
+      world: { godKeys: ['Zeus'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [],
+      fillerPriority: [{ kind: 'pom' }],
+      spending,
+    });
+  const styles = ['careful', 'normal', 'greedy'] as const;
+
+  it('grows in appetite and spends down its cushion from Careful to Greedy', () => {
+    expect(styles.map((style) => DRAFT_SPENDING_STYLES[style].filler)).toEqual([
+      'none',
+      'ranked',
+      'any',
+    ]);
+    const cushions = styles.map((style) => DRAFT_SPENDING_STYLES[style].cushion);
+    expect(cushions).toEqual([...cushions].sort((a, b) => b - a));
+    expect(new Set(cushions).size).toBe(cushions.length);
+    expect(DRAFT_SPENDING_STYLES.greedy.shopDoorLean).toBeGreaterThan(
+      DRAFT_SPENDING_STYLES.normal.shopDoorLean,
+    );
+  });
+
+  it('never buys filler under Careful, and buys unranked Shop filler only under Greedy', () => {
+    expect(steering('careful').purchaseClears('filler', { odds: 1, spare: 500 })).toBe(false);
+    const weights = (rewardType: string) =>
+      styles.map((style) => steering(style).shopFillerWeight(offer(rewardType)));
+    expect(weights('StackUpgrade').map((weight) => weight > 0)).toEqual([false, true, true]);
+    expect(weights('MaxHealthDrop').map((weight) => weight > 0)).toEqual([false, false, true]);
+  });
+
+  it('asks filler for the full cushion and a wanted item for half', () => {
+    for (const style of styles) {
+      const cushion = DRAFT_SPENDING_STYLES[style].cushion;
+      const clears = (kind: 'wanted' | 'filler', spare: number) =>
+        steering(style).purchaseClears(kind, { odds: 0.99, spare });
+      if (style !== 'careful') {
+        expect(clears('filler', cushion)).toBe(true);
+        expect(clears('filler', cushion - 1)).toBe(false);
+      }
+      expect(clears('wanted', cushion / 2)).toBe(true);
+      expect(clears('wanted', cushion / 2 - 1)).toBe(false);
+    }
+  });
+
+  it('buys under a greedier style whatever a more careful one buys', () => {
+    for (const kind of ['wanted', 'filler'] as const)
+      for (let spare = -10; spare <= 60; spare += 1)
+        for (const odds of [0.79, 0.8, 0.95]) {
+          const bought = styles.map((style) =>
+            steering(style).purchaseClears(kind, { odds, spare }),
+          );
+          // Careful, Normal, Greedy: once one buys, every later style buys too.
+          expect(bought).toEqual([...bought].sort((a, b) => Number(a) - Number(b)));
+        }
+  });
+
+  it('holds one affordable floor under every style, and none buys nothing', () => {
+    for (const style of styles)
+      for (const kind of ['wanted', 'filler'] as const) {
+        if (style === 'careful' && kind === 'filler') continue;
+        expect(
+          steering(style).purchaseClears(kind, { odds: DRAFT_AFFORDABLE_FLOOR, spare: 500 }),
+        ).toBe(true);
+        expect(
+          steering(style).purchaseClears(kind, {
+            odds: DRAFT_AFFORDABLE_FLOOR - 0.01,
+            spare: 500,
+          }),
+        ).toBe(false);
+      }
+    expect(steering('none').purchaseClears('wanted', { odds: 1, spare: 500 })).toBe(false);
+    expect(steering('none').shopFillerWeight(offer('StackUpgrade'))).toBe(0);
+  });
+});
+
 describe('need-gated Shops', () => {
   const base = createProjectDocument(catalog, {
     projectId: 'n',
@@ -382,7 +471,7 @@ describe('need-gated Shops', () => {
   });
   const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
   void _startingReward;
-  const steering = () => {
+  const steering = (spending?: DraftSpending) => {
     const paced = draftSteeringFor(base, {
       loadout,
       world: {
@@ -392,6 +481,7 @@ describe('need-gated Shops', () => {
       },
       basketByGiver: draftBasket(['ZeusWeaponBoon']),
       rackKeepsakeKeys: [],
+      ...(spending === undefined ? {} : { spending }),
     });
     // The trait's target lies deep in the biome, so nothing is overdue at its start.
     paced.paceBiome(() => 0.99);
@@ -421,6 +511,17 @@ describe('need-gated Shops', () => {
     };
     expect(left(0)).toBeGreaterThanOrEqual(band);
     expect(left(1)).toBeLessThan(2);
+  });
+
+  it('never prefers a Shop door when the draft spends nothing', () => {
+    const none = steering('none');
+    vi.spyOn(none, 'boonBagLow').mockReturnValue(true);
+    vi.spyOn(
+      none as unknown as { boonEntriesLeft: () => number },
+      'boonEntriesLeft',
+    ).mockReturnValue(0);
+    expect(none.roomWeight('F_PreBoss01', 'F')).toBe(1);
+    expect(none.roomWeight('F_Shop01', 'F')).toBeLessThan(1);
   });
 });
 

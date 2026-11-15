@@ -411,7 +411,7 @@ with the host named in a hover hint. Refused traits stay listed but cannot be
 added.
 
 Advanced holds god-boon targets per biome and the per-god cap, room forcing,
-resource rooms, Shop buys per biome, the filler ranking with an optional
+resource rooms, the spending style, the filler ranking with an optional
 per-run amount for each ranked kind, Prefer midshops, Pursue the Tartarus
 goal, and retries, with Reset to defaults.
 

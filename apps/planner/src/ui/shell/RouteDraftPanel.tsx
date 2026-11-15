@@ -10,6 +10,7 @@ import {
   type AuthoredDraftSpec,
   type DraftFillerKind,
   type DraftRoomForcing,
+  type DraftSpending,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -978,15 +979,32 @@ export function RouteDraftPanel({
                   replaceDraft(withDraftOption(draft, 'resourceRoomChance', value))
                 }
               />
-              <DraftSlider
-                defaultValue={DRAFT_OPTIONS.purchasesPerBiome.default}
-                label="Shop buys per biome"
-                range={DRAFT_OPTIONS.purchasesPerBiome}
-                value={draft.purchasesPerBiome ?? DRAFT_OPTIONS.purchasesPerBiome.default}
-                onChange={(value) =>
-                  replaceDraft(withDraftOption(draft, 'purchasesPerBiome', value))
-                }
-              />
+              <div className="draft-row">
+                <span className="draft-row-label" id="draft-spending-label">
+                  Spending
+                </span>
+                <div
+                  aria-labelledby="draft-spending-label"
+                  className="route-prefix-options draft-row-wide"
+                  role="radiogroup"
+                >
+                  {SPENDING_OPTIONS.map((option) => (
+                    <label key={option.spending}>
+                      <input
+                        checked={
+                          (draft.spending ?? DRAFT_OPTIONS.spending.default) === option.spending
+                        }
+                        name={`${project.route.routeKey}-draft-spending`}
+                        onChange={() =>
+                          replaceDraft(withDraftOption(draft, 'spending', option.spending))
+                        }
+                        type="radio"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="draft-row">
                 <span className="draft-row-label" id="draft-filler-label">
                   Filler
@@ -1203,6 +1221,16 @@ const ROOM_FORCING_OPTIONS: readonly {
   { forcing: 'deadline', label: 'At deadline', equation: '1 at the deadline' },
   { forcing: 'softened', label: 'Softened', equation: '1 / (Max − depth + 1)' },
   { forcing: 'game', label: 'Game odds', equation: '1 / (Max − depth)' },
+];
+
+const SPENDING_OPTIONS: readonly {
+  readonly spending: DraftSpending;
+  readonly label: string;
+}[] = [
+  { spending: 'none', label: 'None' },
+  { spending: 'careful', label: 'Careful' },
+  { spending: 'normal', label: 'Normal' },
+  { spending: 'greedy', label: 'Greedy' },
 ];
 
 /**

@@ -735,9 +735,10 @@ The gold query prices each reached purchase from the price facts its
 settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)
 from the gain facts each contact published: each room reached through its exit
 reports its gains, spending and balances, and each purchase the balance before
-it and the chance that balance covers its price. It is guidance, never a
-finding, and never refuses an edit; past coverage a value is unavailable, not
-zero.
+it and the chance that balance covers its price. A purchase is found by the
+owner of its row, and a Shop purchase also by the Shop offer it buys. It is
+guidance, never a finding, and never refuses an edit; past coverage a value is
+unavailable, not zero.
 
 ### Reroll settlement
 
