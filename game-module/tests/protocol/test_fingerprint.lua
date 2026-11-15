@@ -54,7 +54,7 @@ end
 local CORPUS = {
     ["automatic-boss.execution.json"] = "9b36f405",
     ["dream-mixed-prefix.execution.json"] = "2bb504ba",
-    ["dream-o-skipped-ship.execution.json"] = "37f07aaa",
+    ["dream-o-skipped-ship.execution.json"] = "e4a09f2d",
     ["dream-shrine-pending.execution.json"] = "b1e3dcc1",
     ["dream-start-n-opening.execution.json"] = "c8d7e781",
     ["f-opening.execution.json"] = "96309e0d",

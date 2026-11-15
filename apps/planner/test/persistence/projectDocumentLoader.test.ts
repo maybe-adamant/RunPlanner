@@ -23,7 +23,10 @@ import { liftProjectDocument as migrate102To103 } from '@planner/persistence/pro
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { loadUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFPoolCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
@@ -202,6 +205,60 @@ describe('project document loader', () => {
     expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
     // A plan saved at the current revision loads as is.
     expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  describe('the Zagreus contract Champion row, granted with no pickup', () => {
+    const current = loadUnderworldZagreusContractCheckpoint();
+    const championRow = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+      content: ['native', 'InfernalContractBoon'],
+    } as const;
+    const contractRoomOrder = (document: ProjectDocument) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.gameName === 'C_Boss01')!.roomActions.order;
+    // Ranked before the gems, as the old roster proposed it.
+    const withChampion = JSON.parse(encodeProjectDocument(current)) as ProjectDocument;
+    (contractRoomOrder(withChampion) as unknown[]).unshift(championRow);
+    const saved = (document: ProjectDocument, envelope: Record<string, number>) =>
+      JSON.stringify({ ...JSON.parse(encodeProjectDocument(document)), ...envelope });
+
+    it('is dropped on load at every revision, leaving every other row', () => {
+      expect(contractRoomOrder(withChampion)).toEqual([
+        championRow,
+        { kind: 'collectRequiredReward' },
+      ]);
+      for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
+        const loaded = loadProjectDocument(
+          JSON.stringify({ ...withChampion, schemaRevision: revision }),
+          catalog,
+        ).project;
+        expect(loaded).toEqual(current);
+        expect(simulateProject(catalog, loaded).findings).toEqual(
+          simulateProject(catalog, current).findings,
+        );
+      }
+    });
+
+    it('is dropped from a plan upgraded from schema 102', () => {
+      const loaded = loadProjectDocument(
+        JSON.stringify({ ...withChampion, schemaVersion: 102, schemaRevision: 1 }),
+        catalog,
+      );
+      expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([103]);
+      expect(contractRoomOrder(loaded.project)).toEqual([{ kind: 'collectRequiredReward' }]);
+    });
+
+    it('leaves a plan without it unchanged', () => {
+      expect(
+        loadProjectDocument(
+          saved(current, { schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION }),
+          catalog,
+        ).project,
+      ).toEqual(current);
+    });
   });
 
   describe('a plan saved before schema 103', () => {

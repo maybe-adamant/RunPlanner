@@ -4590,11 +4590,9 @@
   "O/dream-o-contract C_Boss01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > #2 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 | doorsOpened",
-      "loot": [
-        "encounterEnd:Encounter: collectRequiredReward required #1, interactIncomingReward:roomRewardPickup:self required #2"
-      ]
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat self) > producerPointReached(roomRewardPickup) > #1 > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: collectRequiredReward required #1"]
     }
   ],
   "O/dream-o-return-ship O_Combat01": [
@@ -5308,11 +5306,9 @@
   "G/zagreus-contract-showcase C_Boss01": [
     {
       "entries": ["checkpoint/underworld-zagreus-contract"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > #2 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 | doorsOpened",
-      "loot": [
-        "encounterEnd:Encounter: collectRequiredReward required #1, interactIncomingReward:roomRewardPickup:self required #2"
-      ]
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat self) > producerPointReached(roomRewardPickup) > #1 > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: collectRequiredReward required #1"]
     }
   ],
   "G/zagreus-contract-return G_MiniBoss03": [
@@ -5492,11 +5488,9 @@
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
       "entries": ["checkpoint/underworld-f-trait-order-checks"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > #2 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 | doorsOpened",
-      "loot": [
-        "encounterEnd:Encounter: collectRequiredReward required #1, interactIncomingReward:roomRewardPickup:self required #2"
-      ]
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat self) > producerPointReached(roomRewardPickup) > #1 > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: collectRequiredReward required #1"]
     }
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
@@ -6235,7 +6229,7 @@
   "G/contract-availability-first-entered C_Boss01": [
     {
       "entries": ["underworld/createGContractAvailabilityProject(true)"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop collectRequiredReward due doorsOpened",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat self) > producerPointReached(roomRewardPickup) > stop collectRequiredReward due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     }

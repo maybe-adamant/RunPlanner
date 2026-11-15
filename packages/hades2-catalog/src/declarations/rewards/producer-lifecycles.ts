@@ -92,6 +92,12 @@ export const producerLifecycles = [
           },
         ],
       },
+      // EncounterData_Boss.lua BossZagreus01 AwardContractTrait: AddTraitToHero
+      // once every enemy is dead, before the room's gems spawn; nothing to pick up.
+      {
+        rewardType: 'InfernalContractBoon',
+        acquisitionLifecycle: [{ role: 'self', lifecyclePoint: 'afterCombat', automatic: true }],
+      },
     ],
   },
   // A Shrine purchase is paid, but its rush/matured object is a free room

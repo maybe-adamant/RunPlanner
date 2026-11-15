@@ -636,7 +636,8 @@ goes at the next edit of its room.
 Loading a plan saved before schema 103.3 silently removes a Stygian Well or
 Pool of Purging its route never spawns in that room, kept from before the
 route excluded it (a Fresh File Postboss's), with its purchase, sale and
-reroll rows.
+reroll rows. Loading any plan removes a pickup row for an automatic reward
+role (the Zagreus contract's Champion of Elysium), which no room action takes.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it
@@ -1506,8 +1507,9 @@ player-selected decision.
 Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path,
 and its retained incoming offer is acquired only when authored success is true.
 `C_Boss01` is classified as Combat with the contract-specific template and the
-standard reward lifecycle: it runs fixed `BossZagreus01` and requires acquiring
-`InfernalContractBoon`, but does not emit Boss defeated, advance encounter
+standard reward lifecycle: it runs fixed `BossZagreus01`, acquires
+`InfernalContractBoon` automatically after combat with no room action, and
+requires collecting its gems, but does not emit Boss defeated, advance encounter
 depth, or complete the host biome. A selected Chaos room runs `Empty_Chaos`,
 acquires direct `TrialUpgrade` and adds its own room-history record; skipped
 and selected gates consume the same source offer, while only selected Chaos

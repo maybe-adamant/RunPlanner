@@ -818,7 +818,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
   /**
    * A room reward point: its pickups are taken with the rows ranked before
    * them. An unplaced pickup lies on the ground, and the point passes
-   * uncollected.
+   * uncollected. An automatic role has no pickup and is granted at its point.
    */
   const rewardPoint = (
     point: ProducerLifecyclePointKey,
@@ -828,7 +828,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     if (initial.blockedAt !== undefined) return initial;
     const pickups = (context.producerRewardLifecycle?.acquisitionLifecycle ?? []).flatMap(
       (binding) => {
-        if (binding.lifecyclePoint !== point) return [];
+        if (binding.lifecyclePoint !== point || binding.automatic === true) return [];
         const row = liveRow({
           kind: 'interactIncomingReward',
           producerPoint: binding.lifecyclePoint,

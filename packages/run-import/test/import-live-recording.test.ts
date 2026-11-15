@@ -39,6 +39,10 @@ describe('run import of the live Underworld recording', () => {
       { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'G-r18' },
     ]);
     expect(occurrence(imported.project, 'G-r18').gameName).toBe('C_Boss01');
+    // The Contract trait is granted after the fight; the gems are the room's one pickup.
+    expect(occurrence(imported.project, 'G-r18').roomActions.order).toEqual([
+      { kind: 'collectRequiredReward' },
+    ]);
     // The Shop's two ordinary doors are still offered beside the contract.
     expect(occurrence(imported.project, 'G-r17-d561374').gameName).toBe('G_MiniBoss03');
   });
@@ -82,7 +86,7 @@ describe('run import of the live Underworld recording', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 10 },
+      assumption: { conversion: 3, encounter: 2, reward: 1, roomActionOrder: 9 },
       // H_Combat07's one switch press shows no claim, and no entry save judges what it started.
       // The record predates the locked-door fight count.
       notInRecord: { challengeSwitch: 1, lockedDoors: 1, traitOffer: 1 },
@@ -105,7 +109,6 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r10 occurrence@F-r10',
       'assumption roomActionOrder r11 occurrence@F-r11',
       'assumption roomActionOrder r13 occurrence@F-r11:postboss',
-      'assumption roomActionOrder r18 occurrence@G-r18',
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r27 occurrence@H-r27',

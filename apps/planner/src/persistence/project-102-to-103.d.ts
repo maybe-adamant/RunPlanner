@@ -16,3 +16,4 @@ export function fillReachedBlanksProject(
 ): ProjectDocument;
 
 export function dropRouteExcludedObjects(document: unknown, catalog: Catalog): unknown;
+export function dropAutomaticRewardRows(document: unknown, catalog: Catalog): unknown;

@@ -1222,36 +1222,7 @@
           "derived": ["entry"]
         }
       },
-      "timeline": {
-        "transactions": [
-          {
-            "kind": "acquisition",
-            "owner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"self\"]",
-            "sourceOwner": "[\"incomingReward\",\"Dream\",\"O\",\"dream-o-contract\"]",
-            "reward": {
-              "rewardType": "InfernalContractBoon",
-              "producerLifecycleKey": "RoomReward"
-            },
-            "producerLifecycleKey": "RoomReward",
-            "roles": [
-              {
-                "role": "self",
-                "disposition": "normal",
-                "lifecyclePoint": "roomRewardPickup",
-                "kind": "loot",
-                "gameName": "InfernalContractBoon",
-                "settlement": {
-                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"roomRewardPickup\"]",
-                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-contract\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
-                }
-              }
-            ],
-            "window": { "kind": "standard", "phase": "afterCombat" }
-          }
-        ],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
         {
           "key": "[\"collectRequiredReward\"]",
@@ -1263,14 +1234,6 @@
               "amount": 50
             }
           }
-        },
-        {
-          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
-          "description": {
-            "kind": "interactIncomingReward",
-            "reward": { "rewardType": "InfernalContractBoon", "producerLifecycleKey": "RoomReward" }
-          },
-          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"self\"]"
         }
       ],
       "doors": {
@@ -1647,5 +1610,5 @@
       }
     }
   ],
-  "planFingerprint": "a8ba23be"
+  "planFingerprint": "42e52e7d"
 }
