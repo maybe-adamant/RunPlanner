@@ -1155,8 +1155,8 @@ choice or Doors open. It is an
 ordinary pickup: last-reward eligible, so Echo's replay recreates it, and
 duplicable by Sea Star through the authored duplicate; neither Time Piece nor
 the Artificer converts it. Selecting or replacing his encounter derives the
-site and takes the required row in the same command; a room saved before the
-site existed has neither until its next edit.
+site and takes the required row in the same command; a plan saved before the
+site existed gains the site when it opens, its row left for the owner to place.
 
 Paid Shop entries are a different lifecycle: purchase is their sole atomic
 interaction and cannot open Time Piece, Artificer, Sea Star, or another

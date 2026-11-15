@@ -11,6 +11,7 @@ import {
   createProjectDocument,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
+  heraclesBountySiteKey,
   encodeProjectDocument,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
@@ -39,12 +40,19 @@ import {
   legacyRareEpicHexTrees,
   legacySchema99Body,
   legacySchema100Body,
+  legacySchema101Body,
   withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
+  loadSurfaceNOPQProject,
   loadSurfaceNProject,
   nBiome,
+  nOccurrenceId,
   nVisitSlotKeys,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
   withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -60,6 +68,7 @@ import {
 } from '@planner/persistence/projectDocumentLoader';
 import schema90ShrinePurchases from './fixtures/shrine-purchases.schema-90.runplanner.json';
 import schema91AnvilResults from './fixtures/anvil-results.schema-91.runplanner.json';
+import schema98HeraclesP from './fixtures/heracles-p.schema-98.runplanner.json';
 
 /** Checkpoints keep the revision they were written under; a loaded project encodes the current one. */
 /** The checkpoint as the current revision saves it: a zero revision is omitted. */
@@ -205,6 +214,87 @@ describe('project document loader', () => {
     expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
     // A plan saved at the current revision loads as is.
     expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  describe('a plan saved before Heracles’s bounty was a pickup (101.2)', () => {
+    const heraclesPhases = [
+      [nBiome, nOccurrenceId('combat05'), 'Encounter', 'HeraclesCombatN'],
+      [oBiome, oOccurrenceIds.combat01, 'Intro', 'HeraclesCombatO'],
+      [pBiome, pOccurrenceId('P_Combat02', 2, 1), 'Intro', 'HeraclesCombatP'],
+    ] as const;
+    const current = heraclesPhases.reduce(
+      (document, [biome, occurrenceId, phaseKey, encounterKey]) =>
+        applyProjectCommand(document, catalog, {
+          kind: 'SelectEncounter',
+          phase: createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey),
+          encounterKey,
+        }),
+      loadSurfaceNOPQProject(),
+    );
+    const bountySite = (
+      document: ProjectDocument,
+      [biome, occurrenceId, phaseKey]: (typeof heraclesPhases)[number],
+    ) =>
+      document.route.biomes
+        .find((plan) => plan.biomeKey === biome.biomeKey)!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!
+        .acquisitionSites?.[heraclesBountySiteKey(phaseKey)];
+    /** The plan as an earlier save holds it: no bounty site or collect row. */
+    const withoutBounties = (document: unknown) =>
+      JSON.parse(JSON.stringify(document), (key, value: unknown) =>
+        key.startsWith('heraclesBounty:')
+          ? undefined
+          : Array.isArray(value)
+            ? value.filter(
+                (entry: unknown) =>
+                  !String((entry as { siteKey?: unknown } | null)?.siteKey).startsWith(
+                    'heraclesBounty:',
+                  ),
+              )
+            : value,
+      ) as Record<string, unknown>;
+
+    it('gains the bounty site of each phase Heracles fights in N, O and P, never its row', () => {
+      for (const site of heraclesPhases.map((phase) => bountySite(current, phase)))
+        expect(site).toBeDefined();
+      const saved = JSON.parse(encodeProjectDocument(current)) as unknown;
+      const at100 = withoutBounties(legacySchema100Body(saved));
+      const at101 = withoutBounties(legacySchema101Body(saved));
+      expect(JSON.stringify([at100, at101])).not.toContain('heraclesBounty');
+      for (const legacy of [
+        { ...at100, schemaVersion: 100 },
+        { ...at101, schemaVersion: 101, schemaRevision: 1 },
+      ]) {
+        const loaded = loadProjectDocument(JSON.stringify(legacy), catalog).project;
+        for (const phase of heraclesPhases)
+          expect(bountySite(loaded, phase)).toEqual(bountySite(current, phase));
+        // Collecting the bounty stays the owner's placement.
+        expect(encodeProjectDocument(loaded)).not.toContain('"siteKey":"heraclesBounty');
+      }
+      // From 101.2 on a plan stored the site, so its absence is malformed.
+      expect(() =>
+        loadProjectDocument(
+          JSON.stringify({ ...at101, schemaVersion: 101, schemaRevision: 2 }),
+          catalog,
+        ),
+      ).toThrow(/heraclesBounty:Encounter\.pickupEntries: does not match selected descriptor/);
+    });
+
+    it('opens a schema-98 plan with Heracles in P and evaluates it', () => {
+      const raw = JSON.stringify(schema98HeraclesP);
+      expect(raw).not.toContain('heraclesBounty');
+      const loaded = loadProjectDocument(raw, catalog);
+      expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
+        99, 100, 101, 102, 103,
+      ]);
+      const room = loaded.project.route.biomes[2]!.topology!.occurrences[16]!;
+      expect(room.encounters.encounterKeyByPhase).toEqual({
+        Intro: 'HeraclesCombatP',
+        Combat: 'GeneratedP',
+      });
+      expect(Object.keys(room.acquisitionSites ?? {})).toEqual([heraclesBountySiteKey('Intro')]);
+      expect(() => simulateProject(catalog, loaded.project)).not.toThrow();
+    });
   });
 
   describe('the Zagreus contract Champion row, granted with no pickup', () => {
@@ -943,7 +1033,9 @@ describe('project document loader', () => {
       parseProjectDocument(
         JSON.stringify(
           migrate102To103(
-            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog)),
+            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog), {
+              catalog,
+            }),
           ),
         ),
         catalog,

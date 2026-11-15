@@ -134,6 +134,7 @@ function migrated(project: ProjectDocument): ProjectDocument {
           ),
           { catalog },
         ),
+        { catalog },
       ),
     ) as never,
     catalog,
@@ -276,6 +277,7 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
               migrate100To101(migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))), {
                 catalog,
               }),
+              { catalog },
             ),
           ) as never,
           catalog,

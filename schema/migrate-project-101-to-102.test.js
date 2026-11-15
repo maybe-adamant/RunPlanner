@@ -103,13 +103,61 @@ describe('schema 101 to 102 migration', () => {
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.state?.kind === 'fieldsCombat');
     fields.state.spatial.entryStartPointId = null;
-    const migrated = step.migrateProjectDocument(legacy);
+    const migrated = step.migrateProjectDocument(legacy, { catalog: engine.catalog });
     const moved = migrated.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.occurrenceId === fields.occurrenceId);
     assert.equal('layout' in moved, false);
     assert.equal('entryStartPointId' in moved.state.spatial, false);
     decode(migrated);
+  });
+
+  it('gives a plan before 101.2 the bounty site of each phase Heracles fights', () => {
+    const withHeracles = (revision) => {
+      const legacy = at101(checkpoint('surface-nop'), revision);
+      const rooms = new Map(
+        legacy.route.biomes
+          .flatMap((biome) => biome.topology?.occurrences ?? [])
+          .map((occurrence) => [occurrence.occurrenceId, occurrence]),
+      );
+      rooms.get('surface-o-combat04').encounters.encounterKeyByPhase.Intro = 'HeraclesCombatO';
+      rooms.get('surface-p-2-1-p_combat02').encounters.encounterKeyByPhase.Intro =
+        'HeraclesCombatP';
+      // A Fig Leaf skip fights nothing, so Heracles drops no bounty.
+      const skipped = rooms.get('surface-p-3-1-p_combat04').encounters;
+      skipped.encounterKeyByPhase.Intro = 'HeraclesCombatP';
+      skipped.figLeafSkipByPhase.Intro = true;
+      return legacy;
+    };
+    const sites = (document) =>
+      Object.fromEntries(
+        document.route.biomes
+          .flatMap((biome) => biome.topology?.occurrences ?? [])
+          .flatMap((occurrence) =>
+            Object.keys(occurrence.acquisitionSites ?? {})
+              .filter((key) => key.startsWith('heraclesBounty:'))
+              .map((key) => [occurrence.occurrenceId, key]),
+          ),
+      );
+    for (const revision of [0, 1]) {
+      const migrated = step.migrateProjectDocument(withHeracles(revision), {
+        catalog: engine.catalog,
+      });
+      assert.deepEqual(sites(migrated), {
+        'surface-o-combat04': 'heraclesBounty:Intro',
+        'surface-p-2-1-p_combat02': 'heraclesBounty:Intro',
+      });
+      decode(migrated);
+      assert.throws(
+        () => step.migrateProjectDocument(withHeracles(revision)),
+        /needs the catalog for a plan before 101\.2/,
+      );
+    }
+    // A 101.2 plan already stores every bounty site it owns.
+    assert.deepEqual(
+      sites(step.migrateProjectDocument(withHeracles(2), { catalog: engine.catalog })),
+      {},
+    );
   });
 
   it('rejects another schema, a later revision or another catalog', () => {
