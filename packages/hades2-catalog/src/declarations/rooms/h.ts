@@ -914,7 +914,10 @@ export const hRooms = [
     gameName: 'H_Bridge01',
     noReroll: true,
     ...chaosHost(3),
-    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    // RoomDataH.lua:890,922: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      unspacedFamilies: ['Pickaxe', 'Shovel'],
+    }),
     label: 'Echo',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,

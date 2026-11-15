@@ -269,7 +269,7 @@ describe('selected resource success legality', () => {
       enteredAt('F', 'f2', 'F_Combat03'),
       enteredAt('F', 'f3', 'F_Combat04'),
       enteredAt('F', 'f4', 'F_Combat05'),
-      enteredAt('F', 'target', 'F_Story01'),
+      enteredAt('F', 'target', 'F_Reprieve01'),
     ];
     const policy = directResourcePolicy(entered, {
       ...none(),
@@ -526,6 +526,60 @@ describe('selected resource success legality', () => {
         Fishing: at('N', 'n0'),
       }).legal,
     ).toBe(false);
+  });
+
+  it("drops a Story room's own Pickaxe and Shovel spacing while later rooms still count it", () => {
+    const entered = [
+      enteredAt('F', 'f0', 'F_Combat01'),
+      enteredAt('F', 'story', 'F_Story01'),
+      enteredAt('F', 'f1', 'F_Combat02'),
+      enteredAt('F', 'f2', 'F_Combat03'),
+    ];
+    const exorcismAtF0 = { ...none(), Exorcism: at('F', 'f0') };
+    for (const family of ['Pickaxe', 'Shovel'] as const)
+      expect(
+        assessResourcePlacement(
+          catalog,
+          'Underworld',
+          family,
+          at('F', 'story'),
+          entered,
+          exorcismAtF0,
+        ),
+      ).toEqual({ legal: true, refusals: [] });
+    // The Story room's Exorcism keeps the base spacing.
+    expect(
+      assessResourcePlacement(catalog, 'Underworld', 'Exorcism', at('F', 'story'), entered, {
+        ...none(),
+        Pickaxe: at('F', 'f0'),
+      }).refusals,
+    ).toContainEqual(expect.objectContaining({ reason: 'resourceLookback', scope: 'crossFamily' }));
+
+    const exorcismAtStory = { ...none(), Exorcism: at('F', 'story') };
+    expect(
+      assessResourcePlacement(
+        catalog,
+        'Underworld',
+        'Pickaxe',
+        at('F', 'f1'),
+        entered,
+        exorcismAtStory,
+      ).refusals,
+    ).toContainEqual(
+      expect.objectContaining({ reason: 'resourceLookback', scope: 'crossFamily', rooms: 1 }),
+    );
+
+    expect(
+      assessResourcePlacement(catalog, 'Underworld', 'Pickaxe', at('F', 'f2'), entered, {
+        ...none(),
+        Pickaxe: at('F', 'story'),
+      }),
+    ).toMatchObject({
+      legal: false,
+      refusals: expect.arrayContaining([
+        expect.objectContaining({ reason: 'resourceLookback', scope: 'sameFamily', rooms: 4 }),
+      ]),
+    });
   });
 
   it('uses a Chaos target zero lookback while a later ordinary target sees Chaos', () => {

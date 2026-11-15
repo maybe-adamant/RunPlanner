@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '8712f48bcba1571f'],
-  ['G', '51be3b1ff30fda85'],
-  ['H', 'a2a38c4929e0e2fa'],
-  ['I', 'd06383aa88f4737d'],
-  ['N', '080339204ae9b5f1'],
-  ['O', 'dc7683e1bc5f6265'],
-  ['P', 'cdb11a37f3ec0fe4'],
+  ['F', '58ec94407fadedfb'],
+  ['G', '197094cd6ef63981'],
+  ['H', 'd2cac649e57f5b8a'],
+  ['I', 'fe08353fc9433fd9'],
+  ['N', '8fd3640dfb4fb22b'],
+  ['O', '94429e19cb1ad969'],
+  ['P', '6617f6aff8594628'],
   ['Q', 'e98db69b40252418'],
 ] as const;
 

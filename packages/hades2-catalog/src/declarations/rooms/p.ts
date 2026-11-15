@@ -743,7 +743,10 @@ export const pRooms = [
   {
     gameName: 'P_Story01',
     noReroll: true,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    // RoomDataP.lua:2268,2295: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      unspacedFamilies: ['Pickaxe', 'Shovel'],
+    }),
     label: 'Dionysus',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,

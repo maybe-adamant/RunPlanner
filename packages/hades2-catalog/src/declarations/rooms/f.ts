@@ -1244,10 +1244,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Story01',
     noReroll: true,
     secretPointAnchorCount: 3,
+    // RoomDataF.lua:3198,3224: its own Shovel and Pickaxe requirements carry no SumPrevRooms spacing.
     resourcePointSupport: underworldResourcePointSupport(
       ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
       {
         ignoresBiomeLimit: true,
+        unspacedFamilies: ['Pickaxe', 'Shovel'],
       },
     ),
     label: 'Arachne',
