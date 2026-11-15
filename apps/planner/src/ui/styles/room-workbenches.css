@@ -3697,6 +3697,16 @@ span.hub-board-status-line {
   outline-color: #cfc8b6;
 }
 
+/* The live row has no gold or trash: its groups run to the row's end. */
+.timeline-row.timeline-live-row > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+.timeline-row.timeline-live-row
+  > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
+  display: none;
+}
+
 /* The live row is the spine's last slot: a hollow dashed dot. */
 .room-action-list > .timeline-row.timeline-live-row::before {
   top: calc(50% - 4.5px);
