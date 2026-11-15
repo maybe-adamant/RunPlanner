@@ -12,17 +12,22 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
+  heraclesBountySiteKey,
   encodeProjectDocument,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateSiteKey,
+  type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
+import { migrateProjectDocumentJudgedBy as migrate100To101JudgedBy } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
 import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -46,12 +51,19 @@ import {
   legacyRareEpicHexTrees,
   legacySchema99Body,
   legacySchema100Body,
+  legacySchema101Body,
   withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
+  loadSurfaceNOPQProject,
   loadSurfaceNProject,
   nBiome,
+  nOccurrenceId,
   nVisitSlotKeys,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
   withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -331,6 +343,110 @@ describe('project document loader', () => {
             catalog,
           ).project,
         ).toEqual(document);
+    });
+  });
+
+  describe('a plan saved before Heracles’s bounty was a pickup (101.2)', () => {
+    const heraclesPhases = [
+      [nBiome, nOccurrenceId('combat05'), 'Encounter', 'HeraclesCombatN'],
+      [oBiome, oOccurrenceIds.combat01, 'Intro', 'HeraclesCombatO'],
+      [pBiome, pOccurrenceId('P_Combat02', 2, 1), 'Intro', 'HeraclesCombatP'],
+    ] as const;
+    // A two-offer wheel makes the schema 100 -> 101 migration judge the plan's evaluation.
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const wheelOffer = (offerKey: string) =>
+      createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', offerKey);
+    const current = heraclesPhases.reduce(
+      (document, [biome, occurrenceId, phaseKey, encounterKey]) =>
+        applyProjectCommand(document, catalog, {
+          kind: 'SelectEncounter',
+          phase: createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey),
+          encounterKey,
+        }),
+      (
+        [
+          { kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: 2 },
+          {
+            kind: 'ReplaceRewardWheelOffer',
+            offer: wheelOffer('offer1'),
+            value: { rewardType: 'MaxHealthDrop' },
+          },
+          {
+            kind: 'ReplaceRewardWheelOffer',
+            offer: wheelOffer('offer2'),
+            value: { rewardType: 'RoomMoneyDrop' },
+          },
+        ] satisfies ProjectCommand[]
+      ).reduce(
+        (document, command) => applyProjectCommand(document, catalog, command),
+        loadSurfaceNOPQProject(),
+      ),
+    );
+    const bountySite = (
+      document: ProjectDocument,
+      [biome, occurrenceId, phaseKey]: (typeof heraclesPhases)[number],
+    ) =>
+      document.route.biomes
+        .find((plan) => plan.biomeKey === biome.biomeKey)!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!
+        .acquisitionSites?.[heraclesBountySiteKey(phaseKey)];
+    /** The plan as an earlier save holds it: no bounty site or collect row. */
+    const withoutBounties = (document: unknown) =>
+      JSON.parse(JSON.stringify(document), (key, value: unknown) =>
+        key.startsWith('heraclesBounty:')
+          ? undefined
+          : Array.isArray(value)
+            ? value.filter(
+                (entry: unknown) =>
+                  !String((entry as { siteKey?: unknown } | null)?.siteKey).startsWith(
+                    'heraclesBounty:',
+                  ),
+              )
+            : value,
+      ) as Record<string, unknown>;
+
+    it('gains the bounty site of each phase Heracles fights in N, O and P, never its row', () => {
+      for (const site of heraclesPhases.map((phase) => bountySite(current, phase)))
+        expect(site).toBeDefined();
+      const saved = JSON.parse(encodeProjectDocument(current)) as unknown;
+      const at100 = withoutBounties(legacySchema100Body(saved));
+      const at101 = withoutBounties(legacySchema101Body(saved));
+      expect(JSON.stringify([at100, at101])).not.toContain('heraclesBounty');
+      for (const legacy of [
+        { ...at100, schemaVersion: 100 },
+        { ...at101, schemaVersion: 101, schemaRevision: 1 },
+      ]) {
+        const loaded = loadProjectDocument(JSON.stringify(legacy), catalog).project;
+        for (const phase of heraclesPhases)
+          expect(bountySite(loaded, phase)).toEqual(bountySite(current, phase));
+        // Collecting the bounty stays the owner's placement.
+        expect(encodeProjectDocument(loaded)).not.toContain('"siteKey":"heraclesBounty');
+      }
+      // From 101.2 on a plan stored the site, so its absence is malformed.
+      expect(() =>
+        loadProjectDocument(
+          JSON.stringify({ ...at101, schemaVersion: 101, schemaRevision: 2 }),
+          catalog,
+        ),
+      ).toThrow(/heraclesBounty:Encounter\.pickupEntries: does not match selected descriptor/);
+    });
+
+    it('reaches the schema 100 -> 101 wheel judge decoded, its bounty sites added', () => {
+      const legacy = {
+        ...withoutBounties(legacySchema100Body(JSON.parse(encodeProjectDocument(current)))),
+        schemaVersion: 100,
+      };
+      const judged: ProjectDocument[] = [];
+      migrate100To101JudgedBy(legacy, catalog, (project) => {
+        judged.push(project);
+        return undefined;
+      });
+      expect(judged).toHaveLength(1);
+      for (const phase of heraclesPhases)
+        expect(bountySite(judged[0]!, phase)).toEqual(bountySite(current, phase));
+      expect(() =>
+        simulateProject(catalog, loadProjectDocument(JSON.stringify(legacy), catalog).project),
+      ).not.toThrow();
     });
   });
 
@@ -1070,7 +1186,9 @@ describe('project document loader', () => {
       parseProjectDocument(
         JSON.stringify(
           migrate102To103(
-            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog)),
+            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog), {
+              catalog,
+            }),
           ),
         ),
         catalog,

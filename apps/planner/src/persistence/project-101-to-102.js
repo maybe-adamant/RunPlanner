@@ -1,8 +1,12 @@
+import { addHeraclesBountySites } from '@run-planner/engine/project-migration';
+
 export const SOURCE_SCHEMA_VERSION = 101;
 export const OUTPUT_SCHEMA_VERSION = 102;
 export const CATALOG_VERSION = '0.55.0-anvil-of-fates';
 /** Schema 101 closed at revision 2; a later one comes from an unknown build. */
 const FINAL_SOURCE_SCHEMA_REVISION = 2;
+/** From this revision a phase Heracles fights owns his bounty's site. */
+const HERACLES_BOUNTY_REVISION = 2;
 
 function record(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -33,10 +37,11 @@ function moveFieldsEntry(occurrence) {
 }
 
 /**
- * The transform: a Fields room's entry point moves to the room's layout, and
- * nothing else changes, so it needs no catalog.
+ * The transform: a Fields room's entry point moves to the room's layout, and a
+ * plan saved before revision 2 gains the bounty site of each phase Heracles
+ * fights, which reads the catalog.
  */
-export function migrateProjectDocument(value) {
+export function migrateProjectDocument(value, { catalog } = {}) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
     throw new Error(
@@ -59,5 +64,9 @@ export function migrateProjectDocument(value) {
       `route.biomes[${index}].topology.occurrences`,
     ))
       moveFieldsEntry(occurrence);
-  return { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+  const lifted = { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+  if (revision >= HERACLES_BOUNTY_REVISION) return lifted;
+  if (catalog === undefined)
+    throw new Error('schema 101 -> 102 migration needs the catalog for a plan before 101.2');
+  return addHeraclesBountySites(lifted, catalog);
 }

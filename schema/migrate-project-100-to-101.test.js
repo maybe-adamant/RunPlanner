@@ -81,7 +81,9 @@ describe('schema 100 to 101 migration', () => {
     engine.parseProjectDocument(
       JSON.stringify(
         document.schemaVersion === 101
-          ? lastStep.liftProjectDocument(nextStep.migrateProjectDocument(document))
+          ? lastStep.liftProjectDocument(
+              nextStep.migrateProjectDocument(document, { catalog: engine.catalog }),
+            )
           : document,
       ),
       engine.catalog,

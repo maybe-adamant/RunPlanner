@@ -684,7 +684,7 @@ export function selectedPickupProducers(
  * pickup when the encounter ends (`HeraclesPostCombat`); a Fig Leaf skip
  * fights nothing, so it drops none.
  */
-function heraclesBountyPickupProducers(
+export function heraclesBountyPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,

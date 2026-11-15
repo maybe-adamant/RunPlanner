@@ -116,8 +116,9 @@ entry) and each object's `anchorId`; a Fields block no longer carries the
 entry, and a slot without a point is omitted.
 
 The migration moves each Fields room's `spatial.entryStartPointId` to
-`layout.entryStartPointId`, omitting an unset one; nothing else changes. It
-needs no catalog and accepts schema 101 through its final revision 2. An entry
+`layout.entryStartPointId`, omitting an unset one, and gives a plan saved
+before revision 2 the bounty site its Heracles phases own (below), which reads
+the catalog. It accepts schema 101 through its final revision 2. An entry
 saved before the derivation existed may now be reported unavailable where the
 previous room's door rules it out.
 
@@ -125,7 +126,9 @@ Revision 101.2 adds Heracles's bounty as a pickup: a phase whose encounter
 credits a kill bounty owns a `heraclesBounty:<phase>` acquisition site with its
 `bounty` money drop, collected by a required `interactAcquisitionEntry`
 action. The plan wire gains that acquisition (`HeraclesBountyPickup`) and its
-guide row. A room saved earlier has neither until its next edit derives them.
+guide row. Strict decoding requires the site, so the schema 101 → 102
+migration adds it, with its unresolved money drop, to a plan saved earlier;
+the collect row stays the owner's to place, as after selecting the fight.
 The start state gains an unpaid Personal Loan's `storedGold` trait field, the
 keepsake block's required `fatedStatus` and a required top-level
 `talentPoints`, which replaces `hex.talentPoints` so Moon Beam's points
@@ -133,8 +136,9 @@ publish without a Spell.
 A Boss room's `overview.requiredReward` (its forced drop's consumable,
 resource and amount) replaces `overview.effectNeutralRequiredReward`, and its
 `collectRequiredReward` guide row carries the same `drop`.
-A revision adds only saved entries an earlier save may lack, so it has no
-transition; plans sent under 101.1 read as outdated.
+Apart from the bounty site, the revision adds only saved entries an earlier
+save may lack, so it has no transition of its own; plans sent under 101.1 read
+as outdated.
 
 Revision 101.1 adds the route's optional `planEnd` (the room the plan ends
 after) and a challenge-switch host's optional `challengeSwitch` leaf (variant,
