@@ -500,6 +500,35 @@ describe('gold ledger walk', () => {
     expect(room.room.purchases.length).toBeGreaterThan(0);
   });
 
+  it('finds a purchase its pickup owns by the Shop offer it buys', () => {
+    const shopId = 'golden-f-preboss-shop' as never;
+    const offer = createShopOfferAddress(f, shopId, 'Boon');
+    let project = applyProjectCommand(loadUnderworldWorldShopTravelDealCheckpoint(), catalog, {
+      kind: 'ReplaceShopOfferOption',
+      offer,
+      value: {
+        optionKey: 'BlindBoxLoot',
+        offer: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer,
+      purchased: true,
+    });
+    const gold = ledger(project);
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(f, shopId), 'roomExit'),
+      'Boon',
+    );
+    const owned = gold.purchaseAt(entry);
+    expect(owned).toMatchObject({ availability: 'available', purchase: { owner: entry } });
+    expect(gold.purchaseAt(offer)).toEqual(owned);
+  });
+
   it('opens the fourth biome’s Preboss doors after its flushed deliveries and earlier purchases', () => {
     const q = createBiomeAddress('Surface', 'Q');
     const prebossId = 'surface-q-preboss' as never;
