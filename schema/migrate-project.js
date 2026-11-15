@@ -10,7 +10,12 @@ import { runnerImport } from 'vite';
 
 // The transitions and the catalog they open against, as the application loader runs them.
 const {
-  module: { PROJECT_TRANSITION_STEPS, catalog },
+  module: {
+    PROJECT_TRANSITION_STEPS,
+    catalog,
+    readLegacyTimedOutcomes,
+    recoverLegacyTimedOutcomes,
+  },
 } = await runnerImport(fileURLToPath(new URL('./current-schema.js', import.meta.url)), {
   configFile: false,
   logLevel: 'silent',
@@ -73,12 +78,17 @@ export function migrateProjectDocumentTo(
     throw new Error(`schema ${target} is newer than the current schema ${CURRENT_SCHEMA_VERSION}`);
   if (source > target) throw new Error(`schema ${source} is already newer than ${target}`);
   let migrated = document;
+  // Timed outcomes saved by phase before schema 99 are read at 98 and recovered on a current plan.
+  let legacyTimedOutcomes = [];
   for (const transition of TRANSITIONS) {
     if (transition.source < source) continue;
     if (transition.target > target) break;
+    if (transition.target === 99) legacyTimedOutcomes = readLegacyTimedOutcomes(migrated);
     migrated = transition.migrate(migrated, { ...context, catalog });
   }
-  return migrated;
+  return target === CURRENT_SCHEMA_VERSION
+    ? recoverLegacyTimedOutcomes(migrated, legacyTimedOutcomes, catalog)
+    : migrated;
 }
 
 function parseArguments(argv) {

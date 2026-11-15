@@ -2,4 +2,8 @@
 // schema 100 on reach the engine and catalog, which are TypeScript sources.
 
 export { PROJECT_TRANSITION_STEPS } from '../apps/planner/src/persistence/project-transitions.js';
+export {
+  readLegacyTimedOutcomes,
+  recoverLegacyTimedOutcomes,
+} from '../apps/planner/src/persistence/project-98-to-99.js';
 export { catalog } from '@run-planner/hades2-catalog';

@@ -13,3 +13,9 @@ export { dropAutomaticRewardRows } from './automatic-reward-rows';
 export { dropUnduplicableSeaStarDuplicates } from './unduplicable-sea-star-duplicates';
 export { addHeraclesBountySites } from './heracles-bounty-sites';
 export { settleProjectFills, settleProjectUpgrade } from '../simulation/edit-settlement';
+export {
+  recoverLegacyTimedOutcomes,
+  type LegacyTimedOutcome,
+  type LegacyTimedOutcomeDropReason,
+  type LegacyTimedOutcomeRecovery,
+} from './legacy-timed-outcomes';

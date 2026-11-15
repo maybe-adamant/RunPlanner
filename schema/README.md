@@ -220,8 +220,16 @@ source and cycle: a trait offer that gives Steady Growth owns
 from 1. A room's encounter state no longer has `steadyGrowthTargetByPhase` or
 `transcendentEmbryoBlessingByPhase`.
 
-The migration drops the phase-keyed outcomes; each reached interval then reports
-its missing target or blessing until it is chosen again.
+The migration drops the phase-keyed outcomes from the document; the loader and
+the offline tool (when it migrates to the current schema) read them at schema 98
+and, once the plan is current, put each back on the source cycle the walk lands
+at that room's encounter end, as the edit authoring it would, repeating while a
+recovered cycle lets the next one land, then settle the plan as the 103 upgrade
+does. An outcome no cycle lands at, one where cycles of two sources land, and
+one the engine refuses or reports unavailable there stay dropped; that cycle
+reports its missing target or blessing until it is chosen again. A plan that
+does not decode, or whose recovery throws or faults, keeps them all dropped.
+A plan saved at 99 or later is never read for them.
 
 Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
 `retriesPerBiome` and `resourceRoomChance`. A revision adds only optional saved

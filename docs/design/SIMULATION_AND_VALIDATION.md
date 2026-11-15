@@ -154,7 +154,9 @@ sequenceDiagram
 ```
 
 The upgrade settlement settles a plan saved before schema 103 the same way,
-once, silently, inside its 102 → 103 migration and with no command. With no
+once, silently, inside its 102 → 103 migration and with no command; a plan
+saved before 99 settles again once its recovered timed outcomes let the walk
+reach further. With no
 walk before an edit, it removes only rows the plan itself shows lost their
 context or source, as the
 [policy's upgrade paragraph](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
