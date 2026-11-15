@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createTranscendentEmbryoOutcomeAddress,
   roomActionKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -616,6 +617,39 @@ describe('a room whose walk stops in it', () => {
     expect(shape(embryoTimeline.entries).at(-1)).toBe('encounterEnd');
     expect(effects(embryoTimeline.entries)).toEqual([['transcendentEmbryo', 'Encounter']]);
     expect(effects(embryoTimeline.notReached ?? [])).toEqual([]);
+
+    // In a two-phase room a stop at the Intro's end keeps only the Intro's own effect.
+    type Engine = Parameters<typeof splitAtRoomStop>[1][number];
+    const boundary = (kind: string, phaseKey?: string) =>
+      ({
+        kind: 'boundary',
+        boundary: { kind, key: phaseKey === undefined ? kind : `${kind}:${phaseKey}`, phaseKey },
+        rank: 1,
+        placement: 'before',
+      }) as unknown as Engine;
+    const selection = createRouteStartKeepsakeSelectionAddress('Surface');
+    const effect = (cycle: number, phaseKey: string) =>
+      ({
+        kind: 'automaticEffect',
+        effect: 'transcendentEmbryo',
+        phaseKey,
+        address: createTranscendentEmbryoOutcomeAddress(selection, cycle),
+      }) as unknown as Engine;
+    const twoPhase = [
+      boundary('roomEntered'),
+      boundary('encounterEnd', 'Intro'),
+      effect(1, 'Intro'),
+      boundary('encounterStarted', 'Combat'),
+      boundary('encounterEnd', 'Combat'),
+      effect(2, 'Combat'),
+    ];
+    const split = splitAtRoomStop(
+      twoPhase as unknown as Parameters<typeof splitAtRoomStop>[0],
+      twoPhase,
+      { roomStop: { kind: 'timeline', entryIndex: 1, at: 'entry' } },
+    );
+    expect(effects(split?.reached ?? [])).toEqual([['transcendentEmbryo', 'Intro']]);
+    expect(effects(split?.notReached ?? [])).toEqual([['transcendentEmbryo', 'Combat']]);
   });
 
   it('shows every entry when it stops only in its exit work', () => {

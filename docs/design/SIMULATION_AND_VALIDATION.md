@@ -264,7 +264,10 @@ and shows read-only with the unreached hint, which follows coverage, not
 readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
-queried command owners. Jointly generated products, such as a Hub board or
+queried command owners. A timed outcome (Steady Growth, Transcendent Embryo)
+is addressed by its source but located where its cycle lands, for the horizon
+and its own edits alike; a cycle the walk has not landed lies past the horizon.
+Jointly generated products, such as a Hub board or
 side-room sibling generation set, remain atomic. A Hub's missing next visit or
 fountain use is its outgoing decision: the Hub's board, stays and fountain and
 every visit settled before it with its side rooms stay editable, while later visits, the interiors of
