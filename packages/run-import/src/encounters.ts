@@ -221,10 +221,10 @@ function importGorgonAthena(
           giver.key)
     )
       return;
-    const applied = context.transaction(
-      () =>
-        context.apply({ kind: 'ReplaceGorgonDeathDefianceCondition', phase, value: true }) &&
-        context.apply({
+    const applied = context.transaction(() => {
+      if (
+        !context.apply({ kind: 'ReplaceGorgonDeathDefianceCondition', phase, value: true }) ||
+        !context.apply({
           kind: 'ReplaceGorgonAthenaOffer',
           trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
           value: {
@@ -235,8 +235,18 @@ function importGorgonAthena(
             ],
             selectedOptionKey: (['option1', 'option2', 'option3'] as const)[selected]!,
           },
-        }),
-    );
+        })
+      )
+        return false;
+      // A room action order authored before the offer lacks its Gorgon action: collect it in place.
+      context.collectRequired(
+        createOccurrenceAddress(
+          createBiomeAddress(phase.routeKey, phase.biomeKey),
+          phase.owner.occurrenceId,
+        ),
+      );
+      return true;
+    });
     context.used.add(tried);
     if (applied) context.used.add(key);
     return;
