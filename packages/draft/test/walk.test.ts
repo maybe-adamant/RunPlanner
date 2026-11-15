@@ -424,6 +424,101 @@ describe('draft Ephyra doors with a small pool', () => {
   );
 });
 
+describe('draft Ephyra Hub visit order', () => {
+  const surface = createProjectDocument(catalog, {
+    projectId: 'ephyra-order',
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
+  });
+  const hubRoom = catalog.rooms.byKey.N_Hub!;
+  const layout = catalog.biomeLayouts.byKey.N!.progression;
+  if (layout.kind !== 'hub') throw new Error('N has no Hub');
+  // Melinoë enters the Hub at its HeroStartPoint, the entry the PreHub's door also sets.
+  const entry = hubRoom.mapPoints!.heroStarts.find((point) => point.id === 50065)!;
+  const door = (slotKey: string) => {
+    const slot = layout.slots.find((candidate) => candidate.slotKey === slotKey)!;
+    return hubRoom.mapPoints!.exitDoors.find((point) => point.id === slot.physicalDoorId)!;
+  };
+  const fountain = hubRoom.mapPoints!.healthFountainPoint!;
+  const squared = (from: { x: number; y: number }, to: { x: number; y: number }) =>
+    (from.x - to.x) ** 2 + (from.y - to.y) ** 2;
+
+  /** The Hub's stops in order, each a visit's slot key or `fountain`, and where each stands. */
+  function hubStops(seed: number, fieldNpcs: readonly string[]) {
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Hera', 'Apollo', 'Demeter'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: { N: fieldNpcs },
+      },
+      basketByGiver: {},
+      rackKeepsakeKeys: [],
+    };
+    const walk = startDraftWalk(surface, spec, seed);
+    expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+    const topology = walk.project.route.biomes[0]!.topology!;
+    const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
+    const stops = hub.actions.flatMap((action) =>
+      action.kind === 'roomVisit'
+        ? [action.hubSlotKey]
+        : action.kind === 'useFountain'
+          ? ['fountain']
+          : [],
+    );
+    const encounterOf = (slotKey: string) => {
+      const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
+      const occurrence = topology.occurrences.find((o) => o.occurrenceId === target?.occurrenceId);
+      return occurrence === undefined ? undefined : JSON.stringify(occurrence.encounters);
+    };
+    return { walk, stops, encounterOf };
+  }
+  const at = (stop: string) => (stop === 'fountain' ? fountain : door(stop));
+  /** Whether each stop from `start` is the nearest of those left, from the previous stop. */
+  const nearestNext = (stops: readonly string[], start: number) =>
+    stops.slice(start).every((stop, offset) => {
+      const index = start + offset;
+      const from = index === 0 ? entry : at(stops[index - 1]!);
+      return stops
+        .slice(index)
+        .every((other) => squared(from, at(stop)) <= squared(from, at(other)));
+    });
+
+  it.each([1, 2, 3])(
+    'walks the drawn visits and the fountain nearest first, from the entry and each door (seed %i)',
+    (seed) => {
+      const { stops } = hubStops(seed, []);
+      expect(stops.filter((stop) => stop !== 'fountain')).toHaveLength(layout.requiredVisits);
+      expect(stops).toContain('fountain');
+      expect(nearestNext(stops, 0)).toBe(true);
+    },
+  );
+
+  it("takes a visit whose NPC's window is open first, then walks the rest nearest first", () => {
+    const { stops, encounterOf } = hubStops(2, ['Artemis']);
+    const met = stops.findIndex((stop) => encounterOf(stop)?.includes('ArtemisCombatN'));
+    expect(met).toBe(1);
+    // Artemis's visit came while a stop no NPC uses (the fountain, a miniboss or story room) was nearer.
+    const from = door(stops[0]!);
+    expect(
+      stops
+        .slice(met + 1)
+        .some(
+          (stop) =>
+            !stop.startsWith('combat') && squared(from, at(stop)) < squared(from, at(stops[met]!)),
+        ),
+    ).toBe(true);
+    expect(nearestNext(stops, met + 1)).toBe(true);
+  });
+
+  it('draws the same Hub order from the same seed', () => {
+    const first = hubStops(5, ['Artemis']);
+    const second = hubStops(5, ['Artemis']);
+    expect(second.stops).toEqual(first.stops);
+    expect(second.walk.project).toEqual(first.walk.project);
+  });
+});
+
 describe('a Travel Deal refill', () => {
   it("fills a missing refill from the refilled slot's options", () => {
     const project = loadUnderworldWorldShopTravelDealCheckpoint();

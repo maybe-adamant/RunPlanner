@@ -107,6 +107,42 @@ function withOrder(
   };
 }
 
+/** The project with the room's stored Fields cage points replaced. */
+function withCagePoints(
+  project: ProjectDocument,
+  room: OccurrenceAddress,
+  cagePointIdBySlot: Readonly<Record<string, number>>,
+): ProjectDocument {
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.biomeKey !== room.biomeKey || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) =>
+                  occurrence.occurrenceId === room.occurrenceId &&
+                  occurrence.state.kind === 'fieldsCombat'
+                    ? {
+                        ...occurrence,
+                        state: {
+                          ...occurrence.state,
+                          spatial: { ...occurrence.state.spatial, cagePointIdBySlot },
+                        },
+                      }
+                    : occurrence,
+                ),
+              },
+            },
+      ),
+    },
+  };
+}
+
 /** The keys of the required rows the walk reached in the room, read from the live product. */
 function requiredRows(assembly: ProjectEvaluationAssembly, room: OccurrenceAddress) {
   const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, room, 'placements');
@@ -328,39 +364,53 @@ describe('Draft places what a room requires from the live product', () => {
     );
   });
 
-  it("collects each Fields cage's reward before the next cage is cleared", () => {
-    const project = loadUnderworldGeneratedCompositionCheckpoint();
-    const room = createOccurrenceAddress(
-      createBiomeAddress('Underworld', 'H'),
-      createOccurrenceId('golden-h-combat05'),
-    );
-    const order = roomOrder(project, room);
-    const required = requiredRows(simulateProjectAssembly(catalog, project), room);
-    const stripped = simulateProjectAssembly(
-      catalog,
-      withOrder(
+  // H_Combat05 entered at HeroStart 755863 (9368, 10536). Its stored points: cage1 573087
+  // (14758, 7466), cage2 621494 (14329, 10395), cage3 621539 (9453, 7763).
+  it.each([
+    {
+      points: undefined,
+      // cage3 is nearest the entry, then cage1 is nearer cage3 than cage2 is.
+      cages: [3, 1, 2],
+    },
+    {
+      points: { cage1: 573087, cage2: 621539, cage3: 621494 },
+      cages: [2, 1, 3],
+    },
+  ])(
+    'unlocks the Fields cage nearest where the walk stands and collects its reward before the next (points $points)',
+    ({ points, cages }) => {
+      const checkpoint = loadUnderworldGeneratedCompositionCheckpoint();
+      const room = createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'H'),
+        createOccurrenceId('golden-h-combat05'),
+      );
+      const project = points === undefined ? checkpoint : withCagePoints(checkpoint, room, points);
+      const order = roomOrder(project, room);
+      const required = requiredRows(simulateProjectAssembly(catalog, project), room);
+      const stripped = simulateProjectAssembly(
+        catalog,
+        withOrder(
+          project,
+          room,
+          order.filter((reference) => !required.has(roomActionKey(reference))),
+        ),
+      );
+      expect(isRoomPlacement(stripped, room)).toBe(true);
+      const { walk } = restore(
         project,
+        project.route.itineraryBiomeKeys.indexOf('H'),
         room,
-        order.filter((reference) => !required.has(roomActionKey(reference))),
-      ),
-    );
-    expect(isRoomPlacement(stripped, room)).toBe(true);
-    const { walk } = restore(
-      project,
-      project.route.itineraryBiomeKeys.indexOf('H'),
-      room,
-      stripped,
-    );
-    expect(isRoomPlacement(walk.assembly, room)).toBe(false);
-    expect(roomActionKeys(walk.project, room)).toEqual([
-      '["completeFieldsCage","Cage01"]',
-      '["interactLocalReward","cages","cage1"]',
-      '["completeFieldsCage","Cage02"]',
-      '["interactLocalReward","cages","cage2"]',
-      '["completeFieldsCage","Cage03"]',
-      '["interactLocalReward","cages","cage3"]',
-    ]);
-  });
+        stripped,
+      );
+      expect(isRoomPlacement(walk.assembly, room)).toBe(false);
+      expect(roomActionKeys(walk.project, room)).toEqual(
+        cages.flatMap((cage) => [
+          `["completeFieldsCage","Cage0${cage}"]`,
+          `["interactLocalReward","cages","cage${cage}"]`,
+        ]),
+      );
+    },
+  );
 
   it('collects a Gold Gold Gold duplicate right after the purchase that spawns it, not after the later ones', () => {
     const hBiome = createBiomeAddress('Underworld', 'H');

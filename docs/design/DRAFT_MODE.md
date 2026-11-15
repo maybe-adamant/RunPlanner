@@ -45,7 +45,21 @@ collected before the next cage is unlocked, a Hermes delivery where it
 arrives, and a Gold Gold Gold duplicate right after the purchase that spawns
 it. A pickup whose earlier acquisition would leave a later row invalid waits
 where the walk stands instead. Other required actions are placed by the
-engine's next required placement.
+engine's next required placement, except that when the live room offers
+several Fields cage unlocks there, the walk unlocks the cage whose stored point
+is nearest where it stands: the room's entry, then the last cage it unlocked.
+A flip mirrors the whole room, so it changes no distance.
+
+Ephyra's Hub opens its doors as before. At its first visit the walk draws the
+visits it will take, the required count, with the steering weights, then walks
+the Hub's map: from where Melinoë enters the Hub, or the door of the room she
+last returned from, it takes the nearest of the drawn visits and the fountain
+(at the fountain's own spot) still to come. Only a selected field NPC unmet so
+far changes this: a drawn visit that can host it goes first while its window
+is open, and waits for the other stops while it is not. A side room returns
+through its main room, so it moves nothing. Board rewards are drawn when the
+doors open, so the order changes when rewards are taken, not which exist; the
+walk still steers each visit's choices once the order is set.
 
 ## The Draft Spec
 

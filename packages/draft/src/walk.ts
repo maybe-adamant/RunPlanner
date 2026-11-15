@@ -72,6 +72,8 @@ import {
   GoldLedgerContractError,
   type GoldPurchaseAvailability,
   type LiveRoom,
+  type RequiredPlacement,
+  roomLayoutAuthoringForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -105,6 +107,15 @@ import {
   type DraftPurchaseGold,
   type DraftPurchaseKind,
 } from './steering';
+import {
+  draftFieldsCagePoint,
+  draftFieldsCageSlotKey,
+  draftHeroStart,
+  draftHubMap,
+  nearestFirst,
+  type DraftHubMap,
+  type DraftPoint,
+} from './spatial';
 import { DraftTraitOffers } from './trait-offers';
 import type { DraftWorldProduct } from './world';
 
@@ -234,6 +245,7 @@ interface DraftWalkMemory {
   readonly stoppedGods: ReadonlySet<string>;
   readonly unacquiredDevotionSources: ReadonlyMap<string, number>;
   readonly unvisitedHubDoors: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly hubVisitRanks: ReadonlyMap<string, readonly string[]>;
   readonly authoredOffers: ReadonlyMap<string, AuthoredTraitOfferTraits>;
 }
 
@@ -354,6 +366,11 @@ export class DraftWalk {
   private readonly unacquiredDevotionSources = new Map<string, number>();
   /** Hub doors showing a god outside the pool, by biome; the walk never visits them. */
   private readonly unvisitedHubDoors = new Map<string, Set<string>>();
+  /**
+   * Each Hub's open doors in the weighted order its first visit drew them, by biome and Hub
+   * key; the Hub visits the first ones it still needs.
+   */
+  private readonly hubVisitRanks = new Map<string, readonly string[]>();
 
   constructor(
     readonly catalog: Catalog,
@@ -947,6 +964,7 @@ export class DraftWalk {
         unvisitedHubDoors: new Map(
           [...this.unvisitedHubDoors].map(([key, doors]) => [key, new Set(doors)]),
         ),
+        hubVisitRanks: new Map(this.hubVisitRanks),
         authoredOffers: this.traitOffers.memory(),
       },
     };
@@ -987,6 +1005,7 @@ export class DraftWalk {
     memory.unvisitedHubDoors.forEach((doors, key) =>
       this.unvisitedHubDoors.set(key, new Set(doors)),
     );
+    refillMap(this.hubVisitRanks, memory.hubVisitRanks);
     this.traitOffers.restoreMemory(memory.authoredOffers);
   }
 
@@ -1441,51 +1460,40 @@ export class DraftWalk {
     return false;
   }
 
-  /** Appends the next Hub action: an unvisited open door, or the one fountain use. */
+  /**
+   * Appends the next Hub action, walking the Hub's map: the first time, it draws the Hub's visits
+   * with the steering weights. A drawn visit hosting a selected field NPC whose window is open
+   * goes first; then the nearest of the other drawn visits and the fountain, from where the
+   * walk stands (the Hub's entry, the door of the room last visited or the fountain); a host
+   * whose window has not opened waits for the rest. The fountain, unused after the last visit,
+   * comes last.
+   */
   private extendHubVisits(
     visit: Extract<SemanticAddress, { readonly kind: 'hubVisit' | 'hubFountain' }>,
   ): boolean {
     const decision = this.hubDecision(visit.biomeKey, visit.hubKey);
-    if (decision === undefined) return false;
-    const unvisited = this.unvisitedHubDoors.get(visit.biomeKey);
+    const layout = this.catalog.biomeLayouts.byKey[visit.biomeKey];
+    if (decision === undefined || layout?.progression.kind !== 'hub') return false;
     const hub = createHubDecisionAddress(
       createBiomeAddress(visit.routeKey, visit.biomeKey),
       visit.hubKey,
     );
-    const visited = new Set(
-      decision.actions.flatMap((action) =>
-        action.kind === 'roomVisit' ? [action.hubSlotKey] : [],
-      ),
-    );
-    const next: HubAction[] = decision.openTargets
-      .filter((target) => !visited.has(target.hubSlotKey))
-      .map((target) => ({ kind: 'roomVisit', hubSlotKey: target.hubSlotKey }));
-    if (!decision.actions.some((action) => action.kind === 'useFountain'))
-      next.push({ kind: 'useFountain' });
-    const weight = (action: HubAction) => {
-      if (action.kind === 'useFountain') return 0.5;
-      const target = decision.openTargets.find((t) => t.hubSlotKey === action.hubSlotKey);
-      const occurrence =
-        target === undefined ? undefined : this.occurrence(visit.biomeKey, target.occurrenceId);
-      if (occurrence === undefined) return 1;
-      if (unvisited?.has(occurrence.occurrenceId) === true) return 0;
-      const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
-      return (
-        this.steering.npcVisitWeight(
-          occurrence.gameName,
-          reward?.offer.rewardType,
-          visit.biomeKey,
-        ) ?? this.steering.roomWeight(occurrence.gameName, visit.biomeKey)
-      );
-    };
+    const fountain: HubAction = { kind: 'useFountain' };
     const orders: HubAction[][] =
       visit.kind === 'hubFountain'
-        ? this.shuffle([...decision.actions.keys(), decision.actions.length]).map((index) => [
-            ...decision.actions.slice(0, index),
-            { kind: 'useFountain' },
-            ...decision.actions.slice(index),
-          ])
-        : this.weighted(next, weight).map((action) => [...decision.actions, action]);
+        ? [...decision.actions.keys(), decision.actions.length]
+            .reverse()
+            .map((index) => [
+              ...decision.actions.slice(0, index),
+              fountain,
+              ...decision.actions.slice(index),
+            ])
+        : this.nextHubActions(
+            visit,
+            decision,
+            layout.progression.requiredVisits,
+            draftHubMap(this.catalog, layout.progression),
+          ).map((action) => [...decision.actions, action]);
     for (const actions of orders) {
       const evaluation = this.evaluate({ kind: 'hubActionOrder', hub, actions });
       // Later repairable findings may follow; only an impossible order is refused here.
@@ -1502,6 +1510,105 @@ export class DraftWalk {
       return true;
     }
     return false;
+  }
+
+  /** The Hub's next action candidates, preferred first, as `extendHubVisits` orders them. */
+  private nextHubActions(
+    visit: Extract<SemanticAddress, { readonly kind: 'hubVisit' }>,
+    decision: HubDecision,
+    requiredVisits: number,
+    map: DraftHubMap,
+  ): HubAction[] {
+    const visited = new Set(
+      decision.actions.flatMap((action) =>
+        action.kind === 'roomVisit' ? [action.hubSlotKey] : [],
+      ),
+    );
+    const unvisited = decision.openTargets
+      .map((target) => target.hubSlotKey)
+      .filter((slotKey) => !visited.has(slotKey));
+    const key = `${visit.biomeKey}/${visit.hubKey}`;
+    let ranked = this.hubVisitRanks.get(key);
+    if (ranked === undefined) {
+      ranked = Object.freeze(
+        this.weighted(unvisited, (slotKey) =>
+          this.hubVisitWeight(visit.biomeKey, decision, slotKey),
+        ),
+      );
+      this.hubVisitRanks.set(key, ranked);
+    }
+    const open = ranked.filter((slotKey) => unvisited.includes(slotKey));
+    const drawn = open.slice(0, Math.max(0, requiredVisits - visited.size));
+    const hosting = (slotKey: string) => {
+      const room = this.hubVisitRoom(visit.biomeKey, decision, slotKey);
+      return room === undefined
+        ? undefined
+        : this.steering.npcHosting(room.gameName, room.rewardType, visit.biomeKey);
+    };
+    const last = decision.actions.findLast(
+      (action) => action.kind === 'roomVisit' || action.kind === 'useFountain',
+    );
+    const from =
+      last === undefined
+        ? map.entry
+        : last.kind === 'roomVisit'
+          ? map.doorBySlot.get(last.hubSlotKey)
+          : map.fountain;
+    const at = (action: HubAction): DraftPoint | undefined =>
+      action.kind === 'roomVisit'
+        ? map.doorBySlot.get(action.hubSlotKey)
+        : action.kind === 'useFountain'
+          ? map.fountain
+          : undefined;
+    const visitOf = (slotKey: string): HubAction => ({ kind: 'roomVisit', hubSlotKey: slotKey });
+    const fountainUsed = decision.actions.some((action) => action.kind === 'useFountain');
+    const free: HubAction[] = drawn
+      .filter((slotKey) => hosting(slotKey) === undefined)
+      .map(visitOf);
+    if (!fountainUsed) free.push({ kind: 'useFountain' });
+    return [
+      ...nearestFirst(
+        from,
+        drawn.filter((slotKey) => hosting(slotKey) === 'open').map(visitOf),
+        at,
+      ),
+      ...nearestFirst(from, free, at),
+      ...nearestFirst(
+        from,
+        drawn.filter((slotKey) => hosting(slotKey) === 'later').map(visitOf),
+        at,
+      ),
+      // Past the drawn visits, the rest in their drawn rank.
+      ...open.slice(drawn.length).map(visitOf),
+    ];
+  }
+
+  /**
+   * A Hub visit's steering weight: its NPC window's where it hosts a selected field NPC, its
+   * room's otherwise; none for a door left unvisited for another god.
+   */
+  private hubVisitWeight(biomeKey: string, decision: HubDecision, slotKey: string): number {
+    const room = this.hubVisitRoom(biomeKey, decision, slotKey);
+    if (room === undefined) return 1;
+    if (this.unvisitedHubDoors.get(biomeKey)?.has(room.occurrenceId) === true) return 0;
+    return (
+      this.steering.npcVisitWeight(room.gameName, room.rewardType, biomeKey) ??
+      this.steering.roomWeight(room.gameName, biomeKey)
+    );
+  }
+
+  /** The room behind an open Hub door and the reward type it shows. */
+  private hubVisitRoom(biomeKey: string, decision: HubDecision, slotKey: string) {
+    const target = decision.openTargets.find((t) => t.hubSlotKey === slotKey);
+    const occurrence =
+      target === undefined ? undefined : this.occurrence(biomeKey, target.occurrenceId);
+    if (occurrence === undefined) return undefined;
+    const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+    return {
+      occurrenceId: occurrence.occurrenceId,
+      gameName: occurrence.gameName,
+      rewardType: reward?.offer.rewardType,
+    };
   }
 
   private sideRoomGeneration(
@@ -2254,8 +2361,12 @@ export class DraftWalk {
         continue;
       }
       const next = nextRequiredPlacement(this.catalog, this.assembly, room, placed);
-      const placement = next.reached ? next.placement : undefined;
-      if (placement === undefined) return changed;
+      const offered = next.reached ? next.placement : undefined;
+      if (offered === undefined) return changed;
+      const placement =
+        offered.reference.kind === 'completeFieldsCage'
+          ? this.nearestCageUnlock(room, live, offered, placed)
+          : offered;
       const key = roomActionKey(placement.reference);
       // A placement offered again did not hold; a refused one is the walk's dead end here.
       if (placed.has(key)) return changed;
@@ -2263,6 +2374,72 @@ export class DraftWalk {
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }
+  }
+
+  /**
+   * The cage unlock to place next: of those the live room offers at the frontier beside the
+   * engine's `offered` one, the cage whose stored point is nearest where the walk stands, the
+   * last unlocked cage's point or else the room's entry. Flipping mirrors the whole room, so it
+   * leaves the distances alone.
+   */
+  private nearestCageUnlock(
+    room: OccurrenceAddress,
+    live: LiveRoom,
+    offered: RequiredPlacement,
+    placed: ReadonlySet<string>,
+  ): RequiredPlacement {
+    const occurrence = this.occurrence(room.biomeKey, room.occurrenceId);
+    if (occurrence?.state.kind !== 'fieldsCombat') return offered;
+    const declaration = this.roomOf(occurrence.gameName);
+    const pointIdBySlot = occurrence.state.spatial.cagePointIdBySlot;
+    const cagePoint = (phaseKey: string) => {
+      const slotKey = draftFieldsCageSlotKey(this.catalog, declaration, phaseKey);
+      return slotKey === undefined
+        ? undefined
+        : draftFieldsCagePoint(declaration, pointIdBySlot[slotKey]);
+    };
+    const index = (command: ProjectCommand) =>
+      'index' in command && typeof command.index === 'number' ? command.index : live.frontier;
+    const unlocks: RequiredPlacement[] = [offered];
+    let last: string | undefined;
+    for (const gap of live.gaps)
+      for (const item of gap.items) {
+        if (item.kind !== 'object' || item.object !== 'fieldsCage') continue;
+        for (const verb of item.verbs) {
+          const reference = verb.reference;
+          if (reference?.kind !== 'completeFieldsCage' || verb.participation !== 'required')
+            continue;
+          if (verb.standing === true) {
+            if (gap.index < live.frontier) last = reference.phaseKey;
+            continue;
+          }
+          const command = verb.commands?.[0];
+          if (
+            gap.index !== live.frontier ||
+            command === undefined ||
+            command.kind === 'MoveRoomAction' ||
+            index(command) !== index(offered.command) ||
+            placed.has(roomActionKey(reference)) ||
+            roomActionKey(reference) === roomActionKey(offered.reference)
+          )
+            continue;
+          unlocks.push({ reference, command });
+        }
+      }
+    if (unlocks.length === 1) return offered;
+    const entry = roomLayoutAuthoringForProjectEvaluationAssembly(this.assembly, room)?.settlement
+      .entry;
+    const from =
+      last !== undefined
+        ? cagePoint(last)
+        : entry === undefined || entry.kind === 'unknown'
+          ? undefined
+          : draftHeroStart(declaration, entry.point.startPointId);
+    return nearestFirst(from, unlocks, (unlock) =>
+      unlock.reference.kind === 'completeFieldsCage'
+        ? cagePoint(unlock.reference.phaseKey)
+        : undefined,
+    )[0]!;
   }
 
   /**
