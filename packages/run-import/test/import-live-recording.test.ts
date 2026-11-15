@@ -241,14 +241,20 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       [],
     );
     walk.context.sweep();
-    // Athena follows the first cage the engine admits; its Gorgon row joins the authored order.
+    // Athena follows the first cage in fight order, Cage02's Unlock row before Cage01's;
+    // its Gorgon row joins the authored order.
+    expect(
+      room.roomActions.order.flatMap((action) =>
+        action.kind === 'completeFieldsCage' ? [action.phaseKey] : [],
+      ),
+    ).toEqual(['Cage02', 'Cage01']);
     const restored = occurrence(walk.assembly.project, 'H-r26');
     const athena = Object.entries(restored.encounters.gorgonResultByPhase ?? {}).filter(
       ([, result]) => result.athenaOffer != null,
     );
     expect(athena).toEqual([
       [
-        expect.stringMatching(/^Cage0[12]$/),
+        'Cage02',
         expect.objectContaining({
           athenaTriggerConditionMet: true,
           athenaOffer: expect.objectContaining({ selectedOptionKey: 'option1' }),
@@ -257,7 +263,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     ]);
     expect(restored.roomActions.order).toContainEqual({
       kind: 'interactGorgon',
-      phaseKey: athena[0]![0],
+      phaseKey: 'Cage02',
     });
   });
 
