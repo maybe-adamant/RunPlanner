@@ -119,12 +119,27 @@ export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
 /** A purchase the draft wants now, or filler it buys with gold to spare. */
 export type DraftPurchaseKind = 'wanted' | 'filler';
 
+/** The filler a spending style buys: none, the ranked kinds still short, or any Shop filler. */
+export type DraftFillerAppetite = 'none' | 'ranked' | 'any';
+
 /**
- * The mean gold a purchase must leave spare, by spending style; a wanted item needs half. A
- * purchase the player cannot afford desyncs the run, so every style keeps some gold in hand.
+ * Each buying style's appetite for filler, the mean gold a purchase must leave spare (a wanted
+ * item needs half) and the factor on a plain mid-biome Shop door's weight.
  */
-export const DRAFT_SPENDING_CUSHIONS: Readonly<Record<Exclude<DraftSpending, 'none'>, number>> =
-  Object.freeze({ careful: 50, normal: 25, greedy: 10 });
+export const DRAFT_SPENDING_STYLES: Readonly<
+  Record<
+    Exclude<DraftSpending, 'none'>,
+    {
+      readonly filler: DraftFillerAppetite;
+      readonly cushion: number;
+      readonly shopDoorLean: number;
+    }
+  >
+> = Object.freeze({
+  careful: Object.freeze({ filler: 'none', cushion: 50, shopDoorLean: 1 }),
+  normal: Object.freeze({ filler: 'ranked', cushion: 25, shopDoorLean: 1 }),
+  greedy: Object.freeze({ filler: 'any', cushion: 0, shopDoorLean: 1.5 }),
+});
 
 /** The least chance the gold held before a purchase covers its price, under every style. */
 export const DRAFT_AFFORDABLE_FLOOR = 0.8;
@@ -849,14 +864,21 @@ export class DraftSteering {
     return rank < 0 ? 1 : FILLER_RANK_WEIGHTS[rank]!;
   }
 
-  /** A Shop item's weight as ranked Shop filler; 0 when it is none. */
+  /**
+   * A Shop item's weight as the filler the spending style buys: a ranked kind still short by its
+   * rank, any other Shop filler at 1 under Greedy; 0 when the style does not buy it.
+   */
   shopFillerWeight(offer: ResolvedRewardOffer): number {
     const kind = draftFillerKind(offer.rewardType);
-    return kind !== undefined &&
-      SHOP_FILLER_KINDS.includes(kind) &&
-      this.fillerPriority().includes(kind)
-      ? this.fillerWeight(offer.rewardType)
-      : 0;
+    if (kind === undefined || !SHOP_FILLER_KINDS.includes(kind)) return 0;
+    switch (this.fillerAppetite()) {
+      case 'none':
+        return 0;
+      case 'ranked':
+        return this.fillerPriority().includes(kind) ? this.fillerWeight(offer.rewardType) : 0;
+      case 'any':
+        return this.fillerWeight(offer.rewardType);
+    }
   }
 
   /**
@@ -900,13 +922,22 @@ export class DraftSteering {
 
   /**
    * Whether the draft buys a purchase with this gold: affordable at the floor and leaving the
-   * style's cushion spare, half of it for a wanted item; never when the draft spends nothing.
+   * style's cushion spare, half of it for a wanted item; never filler the style has no appetite
+   * for, and nothing when the draft spends nothing.
    */
   purchaseClears(kind: DraftPurchaseKind, gold: DraftPurchaseGold): boolean {
     const spending = this.spending();
     if (spending === 'none') return false;
-    const cushion = DRAFT_SPENDING_CUSHIONS[spending] * (kind === 'wanted' ? 0.5 : 1);
+    const style = DRAFT_SPENDING_STYLES[spending];
+    if (kind === 'filler' && style.filler === 'none') return false;
+    const cushion = style.cushion * (kind === 'wanted' ? 0.5 : 1);
     return gold.odds >= DRAFT_AFFORDABLE_FLOOR && gold.spare >= cushion;
+  }
+
+  /** The filler this draft's spending style buys at Shops. */
+  fillerAppetite(): DraftFillerAppetite {
+    const spending = this.spending();
+    return spending === 'none' ? 'none' : DRAFT_SPENDING_STYLES[spending].filler;
   }
 
   /** Bought Shop items over the run; elemental boosts aside. */
@@ -1034,9 +1065,10 @@ export class DraftSteering {
       // boon, is taken over any boon door, below a story room (200).
       if (this.spec.preferMidshops === true) return this.preferredShopWeight();
       // A Shop is welcome while the draft spends gold, and of no use when it never buys.
-      if (this.spending() === 'none') return 0.4;
+      const spending = this.spending();
+      if (spending === 'none') return 0.4;
       if (this.boonEntriesLeft() === 0) return this.preferredShopWeight();
-      return 1.5;
+      return 1.5 * DRAFT_SPENDING_STYLES[spending].shopDoorLean;
     }
     // A Preboss Shop is preferred when the boon bag runs low or a takeable trait is overdue.
     if (

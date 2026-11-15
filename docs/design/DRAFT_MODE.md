@@ -171,21 +171,24 @@ room as the route declares it, route overlays included.
   taken or not.
 - **Shop purchases.** A planned purchase the player cannot afford desyncs the
   run, so the draft buys only what the engine's gold ledger says the gold held
-  covers. Judged against the balance before the purchase, after every earlier
+  covers: judged against the balance before the purchase, after every earlier
   planned purchase, the chance it covers the price must reach one floor shared
-  by every style, and the mean gold left after it must keep the spending
-  style's cushion spare: the most under Careful, the least under Greedy.
-  Wanted items, a boon or Mystery boon of a god that can take its next queued
-  trait, Hermes or a Hammer when due and a Dream boost of a wanted element,
-  need half the cushion; `none` buys nothing. A wanted item that falls short
-  first takes back the run's earlier filler purchases, latest first, until it
-  clears, and is left only when no filler is left to take back; a take-back
-  that would add a finding is skipped. The draft builds forward, so each
-  purchase is judged against the purchases before it. A purchase the ledger
-  cannot reach until a choice it or an earlier purchase opens is made, such as
-  a Mystery boon's god boon screen, is judged once the next steps make it, and
-  taken back if they do not soon. A Contract pedestal's free item is collected
-  whenever wanted.
+  by every style. The spending style sets how readily the draft buys beyond
+  that: `none` buys nothing; Careful buys only wanted items and keeps the
+  largest cushion of spare mean gold after each; Normal also buys ranked filler
+  still short of its amount with a smaller cushion; Greedy buys any Shop filler
+  it can afford, spending down to the floor, and leans a little more toward
+  mid-biome Shop doors. Wanted items, a boon or Mystery boon of a god that can
+  take its next queued trait, Hermes or a Hammer when due and a Dream boost of
+  a wanted element, need half the style's cushion. A wanted item that falls
+  short first takes back the run's earlier filler purchases, latest first,
+  until it clears, and is left only when no filler is left to take back; a
+  take-back that would add a finding is skipped. The draft builds forward, so
+  each purchase is judged against the purchases before it. A purchase the
+  ledger cannot reach until a choice it or an earlier purchase opens is made,
+  such as a Mystery boon's god boon screen, is judged once the next steps make
+  it, and taken back if they do not soon. A Contract pedestal's free item is
+  collected whenever wanted.
 - **Filler.** Non-boon rewards group into four filler kinds, Max Health, Max
   Magick, Gold and Pom, each covering every size variant (Pom includes the Pom
   Slice); every pickup counts one, at a door or in a Shop. Rank weights apply
@@ -199,8 +202,9 @@ room as the route declares it, route overlays included.
   Deal item the same way once a purchase restocks it.
   Shops the plan entered before the draft are left as they are.
 - **Shop filler.** Once every slot of a Shop is steered, so its wanted items
-  are bought first, the draft buys ranked Max Health, Max Magick and Pom still
-  short of their amount, each a weighted pick bought when its gold clears the
+  are bought first, the draft buys the Max Health, Max Magick and Pom its style
+  takes (ranked kinds still short of their amount, or under Greedy any of them,
+  ranked kinds first), each a weighted pick bought when its gold clears the
   floor and the full cushion; Shops sell no Gold.
 - **Shop doors.** Without the midshop preference, a Preboss Shop door still
   takes the preferred-Shop weight when the boon bag runs low (the boon entries

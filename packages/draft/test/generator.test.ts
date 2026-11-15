@@ -24,7 +24,7 @@ import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { latestRunState } from '../src/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../src/basket';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../src/spec';
-import { DRAFT_AFFORDABLE_FLOOR, DRAFT_SPENDING_CUSHIONS, draftFillerKind } from '../src/steering';
+import { DRAFT_AFFORDABLE_FLOOR, DRAFT_SPENDING_STYLES, draftFillerKind } from '../src/steering';
 import { startDraftWalk } from './support/draft-walk';
 import { DRAFT_CORPUS_SPEC_COUNT, draftCorpusEntry } from './draft-corpus/corpus';
 import { draftBasket } from './support/draft-basket';
@@ -89,6 +89,8 @@ const dream = {
 const FILLER_SEED = 2;
 /** A Greedy walk under the Vow of Debt that takes back filler. */
 const TAKE_BACK_SEED = 9;
+/** A seed whose Greedy walk buys a filler kind the ranking leaves out. */
+const UNRANKED_FILLER_SEED = 5;
 
 const planned = (routeKey: string, configuredBiomeCount: number) =>
   createProjectDocument(catalog, { projectId: 'planned', routeKey, configuredBiomeCount });
@@ -516,9 +518,15 @@ describe('draftProject', () => {
       fillerPriority: [{ kind: 'pom' }, { kind: 'maxHealth' }, { kind: 'maxMagick' }],
     };
     /** A three-biome walk of the filler spec, so the commands it kept can be read. */
-    const fillerWalk = (seed: number, spending?: DraftSpending, debt = 0) => {
+    const fillerWalk = (
+      seed: number,
+      spending?: DraftSpending,
+      debt = 0,
+      fillerPriority = fillerSpec.fillerPriority,
+    ) => {
       const spec: DraftSpec = {
         ...fillerSpec,
+        ...(fillerPriority === undefined ? {} : { fillerPriority }),
         ...(spending === undefined ? {} : { spending }),
         loadout: {
           ...loadout,
@@ -530,6 +538,28 @@ describe('draftProject', () => {
         expect(walk.runBiome(biomeIndex, walk.steps + 600), walk.failure).toBe(true);
       return walk;
     };
+
+    it('never buys filler under Careful', () => {
+      for (const seed of [FILLER_SEED, TAKE_BACK_SEED])
+        expect(
+          shopOdds(fillerWalk(seed, 'careful').project).filter(
+            (buy) => draftFillerKind(buy.rewardType) !== undefined,
+          ),
+        ).toEqual([]);
+    });
+
+    it('buys under Greedy an affordable filler kind the ranking leaves out, which Normal skips', () => {
+      const pomOnly = [{ kind: 'pom' as const }];
+      const unranked = (spending: DraftSpending) =>
+        shopOdds(fillerWalk(UNRANKED_FILLER_SEED, spending, 0, pomOnly).project).filter((buy) => {
+          const kind = draftFillerKind(buy.rewardType);
+          return kind !== undefined && kind !== 'pom';
+        });
+      expect(unranked('normal')).toEqual([]);
+      const greedy = unranked('greedy');
+      expect(greedy.length).toBeGreaterThan(0);
+      for (const buy of greedy) expect(clears(buy, 1, 'greedy')).toBe(true);
+    });
 
     it('buys nothing when spending is none', () => {
       const spec: DraftSpec = {
@@ -569,10 +599,10 @@ describe('draftProject', () => {
     const clears = (
       buy: { readonly odds: number | undefined; readonly spare: number | undefined },
       share: number,
-      style: keyof typeof DRAFT_SPENDING_CUSHIONS = 'normal',
+      style: keyof typeof DRAFT_SPENDING_STYLES = 'normal',
     ) =>
       (buy.odds ?? 0) >= DRAFT_AFFORDABLE_FLOOR &&
-      (buy.spare ?? -Infinity) >= DRAFT_SPENDING_CUSHIONS[style] * share;
+      (buy.spare ?? -Infinity) >= DRAFT_SPENDING_STYLES[style].cushion * share;
 
     it('buys ranked filler only with the full cushion to spare', () => {
       const walk = fillerWalk(FILLER_SEED);

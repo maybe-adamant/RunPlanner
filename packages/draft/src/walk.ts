@@ -739,10 +739,10 @@ export class DraftWalk {
   }
 
   /**
-   * Judges a steered Shop's items in slot order, its Travel Deal item last: each wanted item
-   * against the wanted bar, then, once every slot holds an item, ranked filler as weighted picks
-   * against the filler bar; filling an empty slot judges the Shop again. A pending purchase
-   * stops the judging until a later step settles it. True once done.
+   * Judges a steered Shop's items in slot order, its Travel Deal item last: each wanted item,
+   * then, once every slot holds an item, the filler the spending style buys as weighted picks;
+   * filling an empty slot judges the Shop again. A pending purchase stops the judging until a
+   * later step settles it. True once done.
    */
   private buyShop(biomeKey: string, occurrenceId: OccurrenceId): boolean {
     if (this.pendingPurchase !== undefined) return false;
@@ -789,8 +789,7 @@ export class DraftWalk {
       )
         return false;
     }
-    if (empty || this.steering.fillerPriority().length === 0 || this.steering.spending() === 'none')
-      return true;
+    if (empty || this.steering.fillerAppetite() === 'none') return true;
     const bought = new Set(
       (this.occurrence(biomeKey, occurrenceId)?.roomActions?.order ?? []).flatMap((action) =>
         action.kind === 'interactShopOffer' ? [action.offerKey] : [],
