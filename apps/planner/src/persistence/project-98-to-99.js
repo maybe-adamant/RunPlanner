@@ -24,7 +24,7 @@ function dropPhaseOutcomes(value) {
   }
 }
 
-// Browser-safe transform: Steady Growth and Embryo outcomes move to their source and are re-authored.
+// Steady Growth and Embryo outcomes move to their source; the 102 -> 103 step recovers them.
 export function migrateProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
@@ -39,4 +39,47 @@ export function migrateProjectDocument(value) {
   delete copy.schemaRevision;
   dropPhaseOutcomes(copy.route);
   return { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+}
+
+function plainRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+
+/**
+ * The phase-keyed outcomes a schema 98 document holds, each with the room and
+ * phase it landed at, which the 102 -> 103 step recovers before it settles.
+ */
+export function readLegacyTimedOutcomes(value) {
+  const outcomes = [];
+  const biomes = plainRecord(value)?.route?.biomes;
+  for (const biome of Array.isArray(biomes) ? biomes : []) {
+    const occurrences = plainRecord(biome)?.topology?.occurrences;
+    for (const occurrence of Array.isArray(occurrences) ? occurrences : []) {
+      const encounters = plainRecord(plainRecord(occurrence)?.encounters);
+      if (encounters === undefined) continue;
+      const at = (phaseKey) => ({
+        biomeKey: biome.biomeKey,
+        occurrenceId: occurrence.occurrenceId,
+        phaseKey,
+      });
+      for (const [phaseKey, targetTraitKey] of Object.entries(
+        plainRecord(encounters.steadyGrowthTargetByPhase) ?? {},
+      ))
+        if (typeof targetTraitKey === 'string')
+          outcomes.push({ ...at(phaseKey), kind: 'steadyGrowth', targetTraitKey });
+      for (const [phaseKey, blessing] of Object.entries(
+        plainRecord(encounters.transcendentEmbryoBlessingByPhase) ?? {},
+      ))
+        if (typeof plainRecord(blessing)?.blessingKey === 'string')
+          outcomes.push({
+            ...at(phaseKey),
+            kind: 'transcendentEmbryo',
+            blessing: {
+              blessingKey: blessing.blessingKey,
+              blessingValues: plainRecord(blessing.blessingValues) ?? {},
+            },
+          });
+    }
+  }
+  return Object.freeze(outcomes);
 }

@@ -29,9 +29,15 @@ import {
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
 import { migrateProjectDocumentJudgedBy as migrate100To101JudgedBy } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
-import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
+import {
+  liftProjectDocument as migrate102To103,
+  migrateProjectDocument as settle102To103,
+  migrateProjectDocumentRecoveredBy as settle102To103RecoveredBy,
+} from '@planner/persistence/project-102-to-103.js';
+import { readLegacyTimedOutcomes } from '@planner/persistence/project-98-to-99.js';
+import { PROJECT_TRANSITION_STEPS } from '@planner/persistence/project-transitions.js';
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   loadUnderworldFPoolCheckpoint,
@@ -66,7 +72,11 @@ import {
   pOccurrenceId,
   withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
-import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceScheduledLifecycleCheckpoint,
+  surfaceCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/surface';
+import { createAuthoringSession } from '@run-planner/engine/authoring';
 import {
   createFreshFileFProject,
   freshFileFPostbossId,
@@ -1542,5 +1552,130 @@ describe('project document loader', () => {
         evidence: { rewardType: 'ChaosWeaponUpgrade', role: 'self', lifecyclePoint: 'purchase' },
       }),
     ]);
+  });
+});
+
+describe('timed outcomes saved before schema 99', () => {
+  type Saved = { occurrenceId: string; biomeKey: string; phaseKey: string };
+  /** Each landed cycle: where a schema 98 save held it, its saved value and its authoring command. */
+  function landed(project: ProjectDocument) {
+    return simulateProjectAssembly(catalog, project).evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? [
+            ...biome.rewards.steadyGrowthOutcomes.map((outcome) => ({
+              at: { ...outcome.owner, phaseKey: outcome.phaseKey } as Saved,
+              field: 'steadyGrowthTargetByPhase',
+              value: outcome.targetTraitKey as unknown,
+              author: (set: boolean): ProjectCommand => ({
+                kind: 'ReplaceSteadyGrowthTarget',
+                outcome: outcome.address,
+                targetTraitKey: set ? outcome.targetTraitKey! : null,
+              }),
+            })),
+            ...biome.rewards.transcendentEmbryoOutcomes.map((outcome) => ({
+              at: { ...outcome.owner, phaseKey: outcome.phaseKey } as Saved,
+              field: 'transcendentEmbryoBlessingByPhase',
+              value: outcome.value as unknown,
+              author: (set: boolean): ProjectCommand => ({
+                kind: 'ReplaceTranscendentEmbryoTransformation',
+                outcome: outcome.address,
+                value: set ? outcome.value! : null,
+              }),
+            })),
+          ]
+        : [],
+    );
+  }
+
+  const authored = loadSurfaceScheduledLifecycleCheckpoint();
+  const outcomes = landed(authored);
+  const stripped = outcomes.reduce(
+    (project, { author }) => applyProjectCommand(project, catalog, author(false)),
+    authored,
+  );
+  /** The stripped plan saved at an older schema, holding these phase-keyed values. */
+  function savedAt(schemaVersion: number, held: readonly (typeof outcomes)[number][]) {
+    const body = legacySchema99Body(JSON.parse(encodeProjectDocument(stripped))) as {
+      route: {
+        biomes: {
+          biomeKey: string;
+          topology?: {
+            occurrences: {
+              occurrenceId: string;
+              encounters: Record<string, Record<string, unknown> | undefined>;
+            }[];
+          };
+        }[];
+      };
+    };
+    for (const { at, field, value } of held) {
+      const occurrence = body.route.biomes
+        .find((biome) => biome.biomeKey === at.biomeKey)!
+        .topology!.occurrences.find((room) => room.occurrenceId === at.occurrenceId)!;
+      occurrence.encounters[field] = { ...occurrence.encounters[field], [at.phaseKey]: value };
+    }
+    return JSON.stringify({ ...body, schemaVersion, schemaRevision: 1 });
+  }
+  const unrecovered = loadProjectDocument(savedAt(98, []), catalog).project;
+
+  it('puts each saved target and blessing back on its source cycle, as authoring them would', () => {
+    const session = createAuthoringSession(catalog, simulateProjectAssembly(catalog, unrecovered));
+    for (const { author } of outcomes) expect(session.apply(author(true)).kind).toBe('applied');
+    const expected = encodeProjectDocument(session.current().project);
+    for (const schemaVersion of [98, 96]) {
+      const loaded = loadProjectDocument(savedAt(schemaVersion, outcomes), catalog);
+      expect(loaded.migrationProvenance.at(-1)?.targetSchemaVersion).toBe(103);
+      expect(encodeProjectDocument(loaded.project)).toBe(expected);
+      expect(landed(loaded.project).map(({ value }) => value)).toEqual(
+        outcomes.map(({ value }) => value),
+      );
+    }
+  });
+
+  it('drops a saved value no cycle lands at', () => {
+    const [first] = outcomes;
+    const elsewhere = { ...first!, at: { ...first!.at, phaseKey: 'Elsewhere' } };
+    expect(loadProjectDocument(savedAt(98, [elsewhere]), catalog).project).toEqual(unrecovered);
+  });
+
+  it('leaves a plan saved at schema 99 as it was', () => {
+    const at99 = JSON.parse(savedAt(99, [])) as Record<string, unknown>;
+    delete at99.schemaRevision;
+    expect(loadProjectDocument(JSON.stringify(at99), catalog).project).toEqual(unrecovered);
+  });
+
+  it('rejects a schema 99 plan holding a stray phase-keyed target, as strict decoding did', () => {
+    const growth = outcomes.filter(({ field }) => field === 'steadyGrowthTargetByPhase');
+    const at99 = JSON.parse(savedAt(99, growth)) as Record<string, unknown>;
+    delete at99.schemaRevision;
+    expect(() => loadProjectDocument(JSON.stringify(at99), catalog)).toThrow(
+      /steadyGrowthTargetByPhase: is not a project document field/,
+    );
+  });
+
+  it('settles the plan without its saved outcomes when their recovery throws or faults', () => {
+    const at98 = JSON.parse(savedAt(98, outcomes)) as unknown;
+    const legacyTimedOutcomes = readLegacyTimedOutcomes(at98);
+    expect(legacyTimedOutcomes).toHaveLength(outcomes.length);
+    const at102 = PROJECT_TRANSITION_STEPS.filter(
+      (step) => step.SOURCE_SCHEMA_VERSION >= 98 && step.OUTPUT_SCHEMA_VERSION <= 102,
+    ).reduce((document, step) => step.migrateProjectDocument(document, { catalog }), at98);
+    const withoutOutcomes = settle102To103(at102, { catalog });
+    const failures = [
+      () => {
+        throw new Error('recovery failed');
+      },
+      () => ({
+        project: stripped,
+        recovered: [],
+        dropped: [],
+        fault: { key: 'test', owner: createOccurrenceAddress(nBiome, nOccurrenceId('combat03')) },
+      }),
+    ] as const;
+    for (const recover of failures) {
+      const migrated = settle102To103RecoveredBy(at102, { catalog, legacyTimedOutcomes }, recover);
+      expect(migrated).toEqual(withoutOutcomes);
+    }
+    expect(landed(parseProjectDocument(JSON.stringify(withoutOutcomes), catalog))).toHaveLength(1);
   });
 });

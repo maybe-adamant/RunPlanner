@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument } from '../apps/planner/src/persistence/project-98-to-99.js';
+import { fileURLToPath } from 'node:url';
+import { runnerImport } from 'vite';
+
+// The step's recovery half reaches the engine, a TypeScript source.
+const { module: step } = await runnerImport(
+  fileURLToPath(new URL('../apps/planner/src/persistence/project-98-to-99.js', import.meta.url)),
+  { configFile: false, logLevel: 'silent' },
+);
+const { migrateProjectDocument, readLegacyTimedOutcomes } = step;
 
 const occurrence = (encounters) => ({ occurrenceId: 'a', encounters });
 const document = (encounters) => ({
@@ -33,6 +41,31 @@ describe('schema 98 to 99 migration', () => {
     assert.equal(Object.keys(migrated)[0], 'schemaVersion');
     assert.equal(source.schemaVersion, 98);
     assert.ok(source.route.biomes[0].topology.occurrences[0].encounters.steadyGrowthTargetByPhase);
+  });
+
+  it('reads each phase-keyed outcome with the room and phase it landed at', () => {
+    const blessing = { blessingKey: 'ChaosBlessingAlpha', blessingValues: { Amount: 2 } };
+    const source = document({
+      steadyGrowthTargetByPhase: { Combat: 'ZeusWeaponBoon' },
+      transcendentEmbryoBlessingByPhase: { Combat: blessing },
+    });
+    assert.deepEqual(readLegacyTimedOutcomes(source), [
+      {
+        biomeKey: 'F',
+        occurrenceId: 'a',
+        phaseKey: 'Combat',
+        kind: 'steadyGrowth',
+        targetTraitKey: 'ZeusWeaponBoon',
+      },
+      {
+        biomeKey: 'F',
+        occurrenceId: 'a',
+        phaseKey: 'Combat',
+        kind: 'transcendentEmbryo',
+        blessing,
+      },
+    ]);
+    assert.deepEqual(readLegacyTimedOutcomes(document({ encounterKeyByPhase: {} })), []);
   });
 
   it('keeps a document without outcomes unchanged but for its version', () => {
