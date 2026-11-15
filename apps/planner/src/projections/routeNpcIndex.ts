@@ -13,7 +13,7 @@ import type {
 } from '@run-planner/engine/simulation';
 
 import { findingLocation } from './evaluationProjection';
-import { locationName, type PlaceName } from './placeName';
+import { locationName, locationRoom, type PlaceName, type PlaceRoom } from './placeName';
 import type { WorkspaceInspectorDestination, WorkspaceRoute } from './structured-workspace';
 
 /** A resolved NPC encounter together with its exact semantic navigation owner. */
@@ -22,6 +22,8 @@ export interface RouteNpcIndexEntry {
   readonly label: string;
   /** The encounter's room as references name it. */
   readonly place: PlaceName;
+  /** The encounter's room as the rail shows it. */
+  readonly room?: PlaceRoom;
   readonly phase: EncounterPhaseAddress;
   readonly sequence: number;
 }
@@ -148,17 +150,18 @@ export function projectRouteNpcIndex(
     }
     requireExactInspectorDestination(focusByOwner, phase);
     const entries = entriesByPresentationKey.get(presentationKey);
+    const location = findingLocation(
+      catalog,
+      phase,
+      focusByOwner.get(semanticAddressKey(phase)),
+      workspaceRoute,
+    );
+    const room = locationRoom(location);
     const entry = Object.freeze({
       encounterKey: definition.key,
       label: definition.label,
-      place: locationName(
-        findingLocation(
-          catalog,
-          phase,
-          focusByOwner.get(semanticAddressKey(phase)),
-          workspaceRoute,
-        ),
-      ),
+      place: locationName(location),
+      ...(room === undefined ? {} : { room }),
       phase,
       sequence: record.sequence,
     });

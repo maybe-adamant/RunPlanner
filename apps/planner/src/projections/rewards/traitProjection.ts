@@ -26,7 +26,7 @@ import {
   presentTraitOfferGenerationFinding,
   type TraitOfferGenerationFacts,
 } from '../evaluationProjection';
-import { locationName, type PlaceName } from '../placeName';
+import { locationName, locationRoom, type PlaceName, type PlaceRoom } from '../placeName';
 import type {
   WorkspaceInspectorDestination,
   WorkspaceInteractionCatalog,
@@ -316,6 +316,8 @@ export interface RouteTraitOfferProjection {
   readonly giverLabel: string;
   /** The offer's room as references name it. */
   readonly place: PlaceName;
+  /** The offer's room as the rail shows it. */
+  readonly room?: PlaceRoom;
   readonly selectedTraitKey: string;
   readonly selectedTraitLabel: string;
   readonly rarity?: string;
@@ -423,15 +425,16 @@ export function projectRouteTraitOffers(
     if (trait === undefined || giver === undefined || control === undefined) continue;
     const evidence = traceEvidence(trace.assessment);
     const selectedReplacement = optionReplacement(trace.assessment.assessments, option.traitKey);
+    const location = findingLocation(catalog, address, focusByOwner.get(key), workspaceRoute);
+    const room = locationRoom(location);
     rows.push(
       Object.freeze({
         address,
         biomeKey: address.biomeKey,
         giverKey: giver.key,
         giverLabel: giver.label,
-        place: locationName(
-          findingLocation(catalog, address, focusByOwner.get(key), workspaceRoute),
-        ),
+        place: locationName(location),
+        ...(room === undefined ? {} : { room }),
         selectedTraitKey: trait.key,
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
