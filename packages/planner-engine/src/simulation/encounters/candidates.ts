@@ -69,6 +69,24 @@ export interface EncounterCandidateArtifacts {
   readonly preparedAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
 }
 
+/**
+ * A room's phases its walk plays: its active slots less a suffix preparation
+ * left dormant behind a terminating encounter (a valid Heracles in a P Intro).
+ */
+export function playedEncounterPhaseKeys(
+  encounters: Pick<EncounterCandidateArtifacts, 'statusAt'>,
+  room: OccurrenceAddress,
+  activeSlotKeys: readonly string[],
+): readonly string[] {
+  const biome = createBiomeAddress(room.routeKey, room.biomeKey);
+  const owner = { kind: 'occurrence' as const, occurrenceId: room.occurrenceId };
+  return activeSlotKeys.filter(
+    (phaseKey) =>
+      encounters.statusAt(createEncounterPhaseAddress(biome, owner, phaseKey))?.kind !==
+      'dormantSuffix',
+  );
+}
+
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
     generationAt: () => undefined,

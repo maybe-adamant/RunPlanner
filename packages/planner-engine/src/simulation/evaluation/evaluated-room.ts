@@ -1,7 +1,14 @@
-import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  semanticAddressKey,
+  type OccurrenceAddress,
+} from '../../authored-project/addresses';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
+import { playedEncounterPhaseKeys } from '../encounters/candidates';
 import type { CanonicalAuthoredRoom } from '../materialization';
+import { scopeRoomActionRoster, type RoomActionRoster } from '../room-actions';
 import type { ProjectEvaluationAssembly, RoomStopCoverage } from './evaluation-products';
+import { candidateArtifactsForProjectEvaluationAssembly } from './project-evaluation-assembly';
 
 /** One room as the evaluated biome holds it; undefined for a room it does not hold. */
 export function authoredRoom(
@@ -12,6 +19,28 @@ export function authoredRoom(
   if (biome === undefined) return undefined;
   const key = semanticAddressKey(occurrence);
   return candidateBiomeRooms(biome).find((room) => semanticAddressKey(room.origin) === key);
+}
+
+/**
+ * A room's roster as its walk plays it: a phase preparation left dormant (a
+ * terminating encounter's suffix) does not run, so its rows stand stale and
+ * what would follow its fight follows the room's last played fight.
+ */
+export function activeRoomActionRoster(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: OccurrenceAddress,
+  room: CanonicalAuthoredRoom,
+): RoomActionRoster {
+  const roster = room.roomActionRoster;
+  const encounters = candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+  )?.encounters;
+  return encounters === undefined
+    ? roster
+    : scopeRoomActionRoster(
+        roster,
+        playedEncounterPhaseKeys(encounters, occurrence, roster.eventGraph.activeEncounterSlotKeys),
+      );
 }
 
 /**

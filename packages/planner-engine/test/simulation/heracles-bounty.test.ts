@@ -24,7 +24,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldLedgerForProjectEvaluationAssembly,
+  nextRequiredPlacement,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
   type GoldRoomSpending,
 } from '@run-planner/engine/simulation';
 import {
@@ -37,6 +39,8 @@ import {
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 import {
   authorTestTraitsAndRequiredItems,
@@ -269,6 +273,62 @@ describe('Heracles’s bounty', () => {
         evidence: expect.objectContaining({ requiredAction: roomActionKey(bounty) }),
       }),
     ]);
+  });
+
+  it('spawns a P room’s reward at his fight’s end when he ends the room’s encounters', () => {
+    // HeraclesCombatP blocks the room's later encounters, so his fight is its last and
+    // spawns its reward (`BlockMultipleEncounters`, `SpawnRoomReward`).
+    const pId = pOccurrenceId('P_Combat02', 2, 1);
+    const pRoom = createOccurrenceAddress(pBiome, pId);
+    const intro = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pId },
+      'Intro',
+    );
+    const rewardAction = createRoomActionAddress(
+      createBiomeAddress(pRoom.routeKey, pRoom.biomeKey),
+      pId,
+      roomActionKey(rewardRow),
+    );
+    let project = applyProjectCommand(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: intro,
+        encounterKey: 'HeraclesCombatP',
+      }),
+      catalog,
+      { kind: 'RemoveRoomAction', action: rewardAction },
+    );
+    let assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
+      ['roomActionPlacementRequired', rewardAction],
+    ]);
+    // The dormant Combat phase never plays: the walk waits at Doors open, not before it.
+    const biome = assembly.evaluation.route.biomes.find((entry) => entry.biomeKey === 'P');
+    expect(biome?.coverage.kind === 'prefix' ? biome.coverage.roomStop : undefined).toMatchObject({
+      anchor: { kind: 'event', eventKey: 'doorsOpened' },
+      placement: true,
+    });
+    const moments = spawnedLootForProjectEvaluationAssembly(catalog, assembly, pRoom)!.moments;
+    expect(moments.map((moment) => [moment.key, moment.items.map((item) => item.source)])).toEqual([
+      [
+        'encounterEnd:Intro',
+        [{ kind: 'roomReward' }, expect.objectContaining({ kind: 'generated' })],
+      ],
+    ]);
+    // Taking each required item the live room offers clears the room.
+    const placed: string[] = [];
+    for (;;) {
+      const next = nextRequiredPlacement(catalog, assembly, pRoom, new Set(placed));
+      if (!next.reached) throw new Error('P room is not reached');
+      if (next.placement === undefined) break;
+      placed.push(roomActionKey(next.placement.reference));
+      project = applyProjectCommand(project, catalog, next.placement.command);
+      assembly = simulateProjectAssembly(catalog, project);
+    }
+    const introBounty = { ...bountyRow, siteKey: heraclesBountySiteKey('Intro') };
+    expect(placed.sort()).toEqual([roomActionKey(introBounty), roomActionKey(rewardRow)].sort());
+    expect(assembly.evaluation.findings).toEqual([]);
   });
 
   it('pays its base unmultiplied, re-multiplied only by a money multiplier taken while it lies', () => {

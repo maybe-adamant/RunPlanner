@@ -11,7 +11,10 @@ import {
 } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
 import { createAssessmentIssue } from '../assessment-issue';
-import type { EncounterCandidateArtifacts } from '../encounters/candidates';
+import {
+  playedEncounterPhaseKeys,
+  type EncounterCandidateArtifacts,
+} from '../encounters/candidates';
 import { createBiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import {
   assessmentRepairOwner,
@@ -24,6 +27,8 @@ import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import type { ReachedHistoryRoomAction } from '../history/model';
 import { ROOM_TIMELINE_STAGE, ROOM_WALK_STAGES } from '../lifecycle';
+import { roomLifecycleEntryActive } from '../room-actions';
+import { scopeRoomEventGraph } from '../../authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
@@ -796,10 +801,19 @@ function roomStop(
   history: BiomeHistoryPrefix,
   reachedActions: readonly ReachedHistoryRoomAction[],
   rowKeys: readonly string[] | undefined,
+  encounters: EncounterCandidateArtifacts,
 ): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } | undefined {
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
   const room = block.owner.room;
   const entries = room.roomLifecycleTimeline.entries;
+  // A dormant phase's entries never play, so the walk is never stopped before one.
+  const graph = room.roomLifecycleTimeline.graph;
+  const played = scopeRoomEventGraph(
+    graph,
+    playedEncounterPhaseKeys(encounters, room.origin, graph.activeEncounterSlotKeys),
+  );
+  const dormant = (index: number): boolean =>
+    played !== graph && !roomLifecycleEntryActive(played, entries[index]!);
   const stop = (
     kind: RoomStopCoverage['kind'],
     entryIndex: number,
@@ -910,7 +924,7 @@ function roomStop(
   };
   const boundaryPassed = (index: number): boolean => {
     const entry = entries[index];
-    if (entry?.kind !== 'boundary') return true;
+    if (entry?.kind !== 'boundary' || dormant(index)) return true;
     const boundary = entry.boundary;
     switch (boundary.kind) {
       case 'roomEntered':
@@ -964,6 +978,7 @@ function roomStop(
       );
     const entryReached = (index: number): boolean => {
       const entry = entries[index]!;
+      if (dormant(index)) return true;
       switch (entry.kind) {
         case 'action':
           return rowReached(entry.action.key);
@@ -1330,6 +1345,7 @@ export function publishSelectedCut(
     selected.history,
     selected.reachedActions,
     rowKeys,
+    selected.candidateArtifacts.encounters,
   );
   const evaluation = Object.freeze({
     history,

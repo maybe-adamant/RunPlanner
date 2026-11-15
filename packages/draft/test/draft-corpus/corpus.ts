@@ -449,6 +449,14 @@ const recipes: readonly EntryRecipe[] = [
     godKeys: UNDERWORLD_GODS,
     basket: { godTraits: MEDIUM, leadTraits: ['NarcissusI'] },
   },
+  {
+    name: 'S13 medium Heracles P',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { P: ['Heracles'] },
+    basket: { godTraits: MEDIUM },
+  },
 ];
 
 function baseName(recipe: EntryRecipe): string {

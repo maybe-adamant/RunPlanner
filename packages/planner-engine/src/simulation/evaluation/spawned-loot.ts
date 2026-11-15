@@ -42,7 +42,7 @@ import {
   type RoomLifecycleTimelineEntry,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
-import { authoredRoom, roomWalk, type RoomWalk } from './evaluated-room';
+import { activeRoomActionRoster, authoredRoom, roomWalk, type RoomWalk } from './evaluated-room';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -523,7 +523,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   const room = authoredRoom(assembly, occurrence);
   if (room === undefined || !room.entered) return undefined;
   const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
-  const roster = room.roomActionRoster;
+  const roster = activeRoomActionRoster(assembly, occurrence, room);
   const structure = roster.eventGraph;
   const actionAddress = (reference: RoomActionReference) =>
     createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(reference));
