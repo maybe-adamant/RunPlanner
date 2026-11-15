@@ -634,8 +634,8 @@ export interface EncounterDefinition {
   readonly createsIncomingRewardAtStart?: boolean;
   /**
    * The room reward this encounter spawns can never be duplicated, nor can an
-   * Artificer replacement of it. Only a room's fixed binding names such an
-   * encounter, so the rule is a fact of the room declaration.
+   * Artificer replacement of it. Only a fixed slot binds such an encounter, as
+   * its sole encounter, so the rule is a fact of the room declaration.
    */
   readonly incomingRewardCannotDuplicate?: true;
   /**

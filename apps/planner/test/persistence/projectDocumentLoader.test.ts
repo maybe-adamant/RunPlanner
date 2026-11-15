@@ -1,5 +1,7 @@
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -32,6 +34,7 @@ import {
   loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
+  authorTestArtificerReplacement,
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
   goldenFBiome,
@@ -224,40 +227,91 @@ describe('project document loader', () => {
       acquisition: normal,
       procced: true,
     });
-    const anomalyCopy = seaStarDuplicateSiteKey(
-      createAcquisitionRoleAddress(createIncomingRewardAddress(g, anomalyId), 'self'),
-    );
     const anomalyOccurrence = (document: ProjectDocument) =>
       document.route.biomes
         .find((biome) => biome.biomeKey === 'G')!
         .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === anomalyId)!;
-    // Saved before the rule: the copy and its pickup row.
-    const withCopy = JSON.parse(encodeProjectDocument(current)) as ProjectDocument;
-    const saved = anomalyOccurrence(withCopy) as unknown as {
-      state: { reward: unknown };
-      acquisitionSites?: Record<string, unknown>;
-      roomActions: { order: unknown[] };
-    };
-    saved.acquisitionSites = {
-      ...saved.acquisitionSites,
-      [anomalyCopy]: { pickupEntries: { [SEA_STAR_DUPLICATE_ENTRY_KEY]: saved.state.reward } },
-    };
-    saved.roomActions.order.push({
-      kind: 'interactAcquisitionEntry',
-      siteKey: anomalyCopy,
-      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
-      content: ['native', 'MetaCardPointsCommonBigDrop'],
-    });
+    const incoming = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, anomalyId),
+      'self',
+    );
+    // The Anomaly reward converted by the Artificer into Max Health.
+    const replacementEntry = createAcquisitionEntryAddress(
+      artificerAcquisitionSite(createOccurrenceAddress(g, anomalyId), incoming.owner),
+      artificerReplacementEntryKey(incoming.owner, 'self'),
+    );
+    const converted = authorTestArtificerReplacement(
+      current,
+      catalog,
+      incoming,
+      Object.freeze({
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({
+          self: Object.freeze({ kind: 'normal' as const }),
+        }),
+      }),
+    );
+    /** Saved before the rule: a copy of `source`'s reward with its pickup row. */
+    function withCopyOf(
+      document: ProjectDocument,
+      source: ReturnType<typeof createAcquisitionRoleAddress>,
+      rewardType: string,
+    ): ProjectDocument {
+      const siteKey = seaStarDuplicateSiteKey(source);
+      const saved = JSON.parse(encodeProjectDocument(document)) as ProjectDocument;
+      const occurrence = anomalyOccurrence(saved) as unknown as {
+        acquisitionSites?: Record<string, unknown>;
+        roomActions: { order: unknown[] };
+      };
+      occurrence.acquisitionSites = {
+        ...occurrence.acquisitionSites,
+        [siteKey]: {
+          pickupEntries: {
+            [SEA_STAR_DUPLICATE_ENTRY_KEY]: {
+              offer: { rewardType },
+              traitOffersByAcquisitionRole: {},
+              dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+            },
+          },
+        },
+      };
+      occurrence.roomActions.order.push({
+        kind: 'interactAcquisitionEntry',
+        siteKey,
+        entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+        content: ['native', rewardType],
+      });
+      return saved;
+    }
 
-    it('is dropped with its row on load at every revision, leaving the other copy', () => {
-      expect(anomalyOccurrence(current).acquisitionSites).toBeUndefined();
+    it.each([
+      ['the reward', () => [current, incoming, 'MetaCardPointsCommonBigDrop'] as const],
+      [
+        'its Artificer replacement',
+        () =>
+          [
+            converted,
+            createAcquisitionRoleAddress(replacementEntry, 'self'),
+            'MaxHealthDrop',
+          ] as const,
+      ],
+    ])('drops a copy of %s with its row on load at every revision', (_, cases) => {
+      const [expected, source, rewardType] = cases();
+      const withCopy = withCopyOf(expected, source, rewardType);
+      expect(Object.keys(anomalyOccurrence(withCopy).acquisitionSites ?? {})).toContain(
+        seaStarDuplicateSiteKey(source),
+      );
       for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
         const loaded = loadProjectDocument(
           JSON.stringify({ ...withCopy, schemaRevision: revision }),
           catalog,
         ).project;
-        expect(loaded).toEqual(current);
+        expect(loaded).toEqual(expected);
       }
+    });
+
+    it("keeps an ordinary room reward's copy and a plan without one unchanged", () => {
       expect(
         Object.keys(
           current.route.biomes
@@ -267,18 +321,16 @@ describe('project document loader', () => {
             )!.acquisitionSites ?? {},
         ),
       ).toEqual([seaStarDuplicateSiteKey(normal)]);
-    });
-
-    it('leaves a plan without it unchanged', () => {
-      expect(
-        loadProjectDocument(
-          JSON.stringify({
-            ...JSON.parse(encodeProjectDocument(current)),
-            schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
-          }),
-          catalog,
-        ).project,
-      ).toEqual(current);
+      for (const document of [current, converted])
+        expect(
+          loadProjectDocument(
+            JSON.stringify({
+              ...JSON.parse(encodeProjectDocument(document)),
+              schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+            }),
+            catalog,
+          ).project,
+        ).toEqual(document);
     });
   });
 

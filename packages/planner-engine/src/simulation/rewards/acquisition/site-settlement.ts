@@ -830,9 +830,6 @@ export function settlePickupAcquisitionSite(
         sourceEntryKey: parsed.sourceKey,
         sourceOrigin: source.address,
         sourceReward: source.reward,
-        ...(request.seaStarDuplicateEntryKeys?.has(parsed.sourceKey) === true
-          ? { sourceBlocksSeaStarDuplication: true as const }
-          : {}),
         ...((request.timelineOwnerByEntryKey?.[key] ??
           request.timelineOwnerByEntryKey?.[parsed.sourceKey] ??
           request.timelineOwner) === undefined

@@ -176,7 +176,7 @@ export function validateEncounterSetClosure(
       if (definitions.byKey[definitionKey]?.incomingRewardCannotDuplicate === true)
         fail(
           `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
-          `${definitionKey} spawns a reward that cannot duplicate and must be bound fixed`,
+          `${definitionKey}: only a fixed slot binds its reward that can never duplicate, as its sole encounter`,
         );
     });
     set.authoringProfiles.forEach((profile, profileIndex) => {

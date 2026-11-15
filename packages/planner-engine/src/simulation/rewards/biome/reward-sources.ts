@@ -89,17 +89,9 @@ export function canonicalArtificerSource(
     }
   const found = candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
   if (found === undefined) return undefined;
-  const owner = found.owner;
-  const replaced =
-    owner.kind === 'acquisitionEntry'
-      ? parseArtificerReplacementEntryKey(owner.entryKey)
-      : undefined;
-  const blocks =
-    owner.kind === 'incomingReward'
-      ? room.incomingReward?.blocksSeaStarDuplication === true
-      : owner.kind === 'acquisitionEntry' &&
-        (owner.site.pointKey.startsWith('seaStarDuplicate:') ||
-          (replaced !== undefined &&
-            canonicalArtificerSource(room, replaced.sourceKey)?.blocksSeaStarDuplication === true));
-  return blocks ? Object.freeze({ ...found, blocksSeaStarDuplication: true as const }) : found;
+  // Only a room reward is an Artificer source that can carry this block.
+  return found.owner.kind === 'incomingReward' &&
+    room.incomingReward?.blocksSeaStarDuplication === true
+    ? Object.freeze({ ...found, blocksSeaStarDuplication: true as const })
+    : found;
 }

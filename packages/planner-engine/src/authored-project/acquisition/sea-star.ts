@@ -166,8 +166,8 @@ export function roomRewardCannotDuplicate(catalog: Catalog, gameName: string): b
 
 /**
  * Owners in one occurrence whose reward can never duplicate because its room's
- * encounter spawned it so: the room reward and every Artificer replacement
- * descended from it, which keeps its source's CanDuplicate.
+ * encounter spawned it so: the room reward and its Artificer replacements,
+ * which keep its CanDuplicate. A replacement is never converted again.
  */
 export function encounterUnduplicableOwnerKeys(
   catalog: Catalog,
@@ -181,37 +181,19 @@ export function encounterUnduplicableOwnerKeys(
   },
 ): ReadonlySet<string> {
   if (!roomRewardCannotDuplicate(catalog, occurrence.gameName)) return new Set();
-  const owners = new Set([
-    semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId)),
-  ]);
+  const incoming = semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId));
   const address = createOccurrenceAddress(biome, occurrence.occurrenceId);
-  const replacements = Object.entries(occurrence.acquisitionSites ?? {}).flatMap(
-    ([storageKey, site]) => {
+  return new Set([
+    incoming,
+    ...Object.entries(occurrence.acquisitionSites ?? {}).flatMap(([storageKey, site]) => {
       const siteAddress = acquisitionSiteFromStorageKey(address, storageKey);
       return siteAddress === undefined
         ? []
-        : Object.keys(site.pickupEntries ?? {}).flatMap((entryKey) => {
-            const parsed = parseArtificerReplacementEntryKey(entryKey);
-            return parsed === undefined
-              ? []
-              : [
-                  {
-                    sourceKey: parsed.sourceKey,
-                    ownerKey: semanticAddressKey(
-                      createAcquisitionEntryAddress(siteAddress, entryKey),
-                    ),
-                  },
-                ];
-          });
-    },
-  );
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const { sourceKey, ownerKey } of replacements)
-      if (owners.has(sourceKey) && !owners.has(ownerKey)) {
-        owners.add(ownerKey);
-        grew = true;
-      }
-  }
-  return owners;
+        : Object.keys(site.pickupEntries ?? {}).flatMap((entryKey) =>
+            parseArtificerReplacementEntryKey(entryKey)?.sourceKey === incoming
+              ? [semanticAddressKey(createAcquisitionEntryAddress(siteAddress, entryKey))]
+              : [],
+          );
+    }),
+  ]);
 }

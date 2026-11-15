@@ -253,6 +253,8 @@ describe('route detour catalog declarations', () => {
   });
 
   it("declares that the Anomaly encounter's room reward can never duplicate", () => {
+    const soleFixed =
+      'only a fixed slot binds its reward that can never duplicate, as its sole encounter';
     const catalog = createCatalog(declarations);
     expect(
       catalog.encounterDefinitions.values
@@ -279,28 +281,34 @@ describe('route detour catalog declarations', () => {
     expect(() => createCatalog(inSet)).toThrow(
       new CatalogContractError(
         `encounterSets[${setIndex}].encounterDefinitionKeys[${set.encounterDefinitionKeys.length - 1}]`,
-        'GeneratedAnomalyB spawns a reward that cannot duplicate and must be bound fixed',
+        `GeneratedAnomalyB: ${soleFixed}`,
       ),
     );
-    const asRivals = input();
-    const index = roomIndex(asRivals, 'G_Combat01');
-    const room = asRivals.rooms[index] as unknown as {
-      encounterSlotBindings: Record<string, unknown>[];
-    };
-    room.encounterSlotBindings = [
-      {
-        slotKey: 'Encounter',
-        kind: 'fixed',
-        encounterDefinitionKey: 'GeneratedAnomalyB',
-        rivalsEncounterDefinitionKey: 'GeneratedAnomalyB',
-      },
-    ];
-    expect(() => createCatalog(asRivals)).toThrow(
-      new CatalogContractError(
-        `rooms[${index}].encounterSlotBindings[0].rivalsEncounterDefinitionKey`,
-        'cannot name a reward that cannot duplicate',
-      ),
-    );
+    // Nor may its fixed slot resolve another encounter, in either direction.
+    for (const [encounterDefinitionKey, rivalsEncounterDefinitionKey] of [
+      ['GeneratedAnomalyB', 'BossZagreus01'],
+      ['BossZagreus01', 'GeneratedAnomalyB'],
+    ]) {
+      const withRival = input();
+      const index = roomIndex(withRival, 'G_Combat01');
+      const room = withRival.rooms[index] as unknown as {
+        encounterSlotBindings: Record<string, unknown>[];
+      };
+      room.encounterSlotBindings = [
+        {
+          slotKey: 'Encounter',
+          kind: 'fixed',
+          encounterDefinitionKey,
+          rivalsEncounterDefinitionKey,
+        },
+      ];
+      expect(() => createCatalog(withRival)).toThrow(
+        new CatalogContractError(
+          `rooms[${index}].encounterSlotBindings[0].rivalsEncounterDefinitionKey`,
+          soleFixed,
+        ),
+      );
+    }
   });
 
   it('normalizes the complete closed Oceanus Anomaly replacement matrix', () => {

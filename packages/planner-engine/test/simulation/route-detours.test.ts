@@ -7,6 +7,7 @@ import {
   applyProjectCommand,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
+  parseArtificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAdditionalExitAddress,
@@ -1206,9 +1207,11 @@ describe('route-detour simulation', () => {
         .find((target) => target.room.occurrenceId === occurrenceId)!.room;
     const anomaly = room(built.anomaly);
     expect(anomaly.incomingReward?.blocksSeaStarDuplication).toBe(true);
-    expect(
-      canonicalArtificerSource(anomaly, semanticAddressKey(replacement))?.blocksSeaStarDuplication,
-    ).toBe(true);
+    // The replacement's pickup reads its source's block from here.
+    const parsed = parseArtificerReplacementEntryKey(replacement.entryKey)!;
+    expect(canonicalArtificerSource(anomaly, parsed.sourceKey)?.blocksSeaStarDuplication).toBe(
+      true,
+    );
     expect(room(built.returned).incomingReward?.blocksSeaStarDuplication).toBeUndefined();
 
     // Neither can take a Sea Star result; the normal room reward still can.
