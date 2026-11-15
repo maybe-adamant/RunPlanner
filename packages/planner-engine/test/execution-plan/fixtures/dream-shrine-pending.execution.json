@@ -969,8 +969,7 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:first",
-            "rewardType": "HealBigDrop",
-            "rushed": false
+            "rewardType": "HealBigDrop"
           }
         }
       ],
@@ -1580,5 +1579,5 @@
       }
     }
   ],
-  "planFingerprint": "17f5f5d4"
+  "planFingerprint": "0a6c9bde"
 }

@@ -105,11 +105,33 @@ local function shrineButton(id, key)
     return { Id = id, Data = { __runPlannerShrine = true, __runPlannerGenerationKey = key } }
 end
 
+function TestStoreScreenGuidance:testShrineMarksARushPlannedLaterOnlyAtItsOwnStep()
+    self.rows[1] = { key = "a", description = { kind = "purchaseHermesShrineOffer",
+        generationKey = "initial:first", rewardType = "Boon" } }
+    self.rows[2] = { key = "b", description = { kind = "purchaseHermesShrineOffer",
+        generationKey = "initial:secondLeft", rewardType = "MaxHealthDrop" } }
+    self.rows[3] = { key = "a-rush", description = { kind = "rushHermesShrineOffer",
+        generationKey = "initial:first", rewardType = "Boon" } }
+    local screen = { Components = {
+        PurchaseButton1 = shrineButton(31, "initial:first"),
+        PurchaseButton2 = shrineButton(32, "initial:secondLeft"),
+    } }
+    self.progress["initial:first"] = "purchased"
+    self.stores.present(self.runtime, self.state, screen, "shrine")
+    lu.assertNil(screen.Components.RunPlannerPlannedStoreMarker31)
+    lu.assertNotNil(screen.Components.RunPlannerPlannedStoreMarker32)
+    self:call("HandleSurfaceShopAction", function() self.progress["initial:secondLeft"] = "purchased" end, screen, {})
+    lu.assertNotNil(screen.Components.RunPlannerPlannedStoreMarker31)
+    lu.assertNil(screen.Components.RunPlannerPlannedStoreMarker32)
+end
+
 function TestStoreScreenGuidance:testShrineMarksTheNextPurchaseOrRushInPlannedOrder()
     self.rows[1] = { key = "a", description = { kind = "purchaseHermesShrineOffer",
-        generationKey = "initial:first", rewardType = "Boon", rushed = true } }
-    self.rows[2] = { key = "b", description = { kind = "purchaseHermesShrineOffer",
-        generationKey = "initial:secondLeft", rewardType = "MaxHealthDrop", rushed = false } }
+        generationKey = "initial:first", rewardType = "Boon" } }
+    self.rows[2] = { key = "a-rush", description = { kind = "rushHermesShrineOffer",
+        generationKey = "initial:first", rewardType = "Boon" } }
+    self.rows[3] = { key = "b", description = { kind = "purchaseHermesShrineOffer",
+        generationKey = "initial:secondLeft", rewardType = "MaxHealthDrop" } }
     local screen = { Components = {
         PurchaseButton1 = shrineButton(31, "initial:first"),
         PurchaseButton2 = shrineButton(32, "initial:secondLeft"),

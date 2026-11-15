@@ -209,15 +209,15 @@ completion can hide its associated row, while informational rows remain
 visible unless native Shrine progress completes them. Guide rows neither add
 transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
-A Shrine purchase row is informational on the wire and carries its generation,
-reward type and rush; the authored rush row publishes through it, never as a
-row of its own. A purchase counts as rushed, and a Well generation as bought,
-exactly when the walk performs that row (a ranked, non-stale row), the same
-input the simulation settles them from. The module shows it as `Shrine: X` and, when rushed, a
-following `Rush: X`, and hides each step from the native Shrine options
-(`Purchased` marks a purchase; a rush removes the option). A delivered Shrine
-pickup is the ordinary acquisition row; outside its rushed purchase room it
-reads `Delivery: X`.
+Shrine purchase and rush rows are informational on the wire, each carrying its
+generation and reward type; an authored rush publishes as its own row at its
+own Timeline position, which may be later than its purchase. A purchase counts
+as rushed, and a Well generation as bought, exactly when the walk performs that
+row (a ranked, non-stale row), the same input the simulation settles them from.
+The module shows a purchase as `Shrine: X` and a rush as `Rush: X`, and hides
+each from the native Shrine options (`Purchased` marks a purchase; a rush
+removes the option). A delivered Shrine pickup is the ordinary acquisition row;
+outside its rushed purchase room it reads `Delivery: X`.
 
 The guide's header, each row and the footer share one 24-character budget. The
 module owns that wording: a guide-owned name for every catalog reward type,
