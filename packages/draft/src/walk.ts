@@ -2379,7 +2379,7 @@ export class DraftWalk {
   /**
    * The cage unlock to place next: of those the live room offers at the frontier beside the
    * engine's `offered` one, the cage whose stored point is nearest where the walk stands, the
-   * last unlocked cage's point or else the room's entry. Flipping mirrors the whole room, so it
+   * last unlocked cage's point or, while that is unknown, the room's entry. Flipping mirrors the whole room, so it
    * leaves the distances alone.
    */
   private nearestCageUnlock(
@@ -2429,12 +2429,11 @@ export class DraftWalk {
     if (unlocks.length === 1) return offered;
     const entry = roomLayoutAuthoringForProjectEvaluationAssembly(this.assembly, room)?.settlement
       .entry;
-    const from =
-      last !== undefined
-        ? cagePoint(last)
-        : entry === undefined || entry.kind === 'unknown'
-          ? undefined
-          : draftHeroStart(declaration, entry.point.startPointId);
+    const start =
+      entry === undefined || entry.kind === 'unknown'
+        ? undefined
+        : draftHeroStart(declaration, entry.point.startPointId);
+    const from = (last === undefined ? undefined : cagePoint(last)) ?? start;
     return nearestFirst(from, unlocks, (unlock) =>
       unlock.reference.kind === 'completeFieldsCage'
         ? cagePoint(unlock.reference.phaseKey)

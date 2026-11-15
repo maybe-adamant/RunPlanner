@@ -20,13 +20,16 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   liveRoomForProjectEvaluationAssembly,
+  roomLayoutAuthoringForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
+import type { AuthoringSession } from '@run-planner/engine/authoring';
 import { draftProject, type DraftSpec } from '../src';
 import { DraftWalk } from '../src/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { draftReport } from '../src/report';
+import { draftNpcHosts, draftNpcWindowOpen } from '../src/npc-windows';
 import { startDraftWalk } from './support/draft-walk';
 import { draftBasket } from './support/draft-basket';
 import {
@@ -444,7 +447,11 @@ describe('draft Ephyra Hub visit order', () => {
     (from.x - to.x) ** 2 + (from.y - to.y) ** 2;
 
   /** The Hub's stops in order, each a visit's slot key or `fountain`, and where each stands. */
-  function hubStops(seed: number, fieldNpcs: readonly string[]) {
+  function hubStops(
+    seed: number,
+    fieldNpcs: readonly string[],
+    observe?: (session: AuthoringSession) => AuthoringSession,
+  ) {
     const spec: DraftSpec = {
       loadout,
       world: {
@@ -455,7 +462,7 @@ describe('draft Ephyra Hub visit order', () => {
       basketByGiver: {},
       rackKeepsakeKeys: [],
     };
-    const walk = startDraftWalk(surface, spec, seed);
+    const walk = startDraftWalk(surface, spec, seed, observe === undefined ? {} : { observe });
     expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
     const topology = walk.project.route.biomes[0]!.topology!;
     const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
@@ -494,22 +501,56 @@ describe('draft Ephyra Hub visit order', () => {
     },
   );
 
-  it("takes a visit whose NPC's window is open first, then walks the rest nearest first", () => {
-    const { stops, encounterOf } = hubStops(2, ['Artemis']);
-    const met = stops.findIndex((stop) => encounterOf(stop)?.includes('ArtemisCombatN'));
-    expect(met).toBe(1);
-    // Artemis's visit came while a stop no NPC uses (the fountain, a miniboss or story room) was nearer.
-    const from = door(stops[0]!);
-    expect(
-      stops
-        .slice(met + 1)
-        .some(
-          (stop) =>
-            !stop.startsWith('combat') && squared(from, at(stop)) < squared(from, at(stops[met]!)),
-        ),
-    ).toBe(true);
-    expect(nearestNext(stops, met + 1)).toBe(true);
-  });
+  it.each([1, 2, 3, 4])(
+    'takes a visit hosting an NPC before any other stop while her window is open (seed %i)',
+    (seed) => {
+      const host = draftNpcHosts(catalog, 'Surface', { N: ['Artemis'] }).get('N')![0]!;
+      // Each Hub action the walk appended, with her window and whether she was met before it.
+      const appended: { stop: string; open: boolean; met: boolean }[] = [];
+      const observe = (session: AuthoringSession): AuthoringSession => ({
+        ...session,
+        apply: (command, admission) => {
+          const before = session.current();
+          const outcome = session.apply(command, admission);
+          if (outcome.kind === 'applied' && command.kind === 'ReplaceHubActionOrder') {
+            const last = command.actions.at(-1);
+            const biome = before.evaluation.route.biomes.find((b) => b.biomeKey === 'N');
+            appended.push({
+              stop:
+                last?.kind === 'roomVisit'
+                  ? last.hubSlotKey
+                  : last?.kind === 'useFountain'
+                    ? 'fountain'
+                    : '',
+              open: draftNpcWindowOpen(before, 'N', host.conditions),
+              met:
+                biome !== undefined &&
+                'history' in biome &&
+                biome.history.ledgers.encounterRecords.some(
+                  (record) => record.encounterKey === 'ArtemisCombatN',
+                ),
+            });
+          }
+          return outcome;
+        },
+      });
+      const { walk, stops, encounterOf } = hubStops(seed, ['Artemis'], observe);
+      const met = stops.findIndex((stop) => encounterOf(stop)?.includes('ArtemisCombatN'));
+      expect(met).toBeGreaterThanOrEqual(0);
+      const topology = walk.project.route.biomes[0]!.topology!;
+      const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
+      const hosts = (stop: string) => {
+        const target = hub.openTargets.find((t) => t.hubSlotKey === stop);
+        const room = topology.occurrences.find((o) => o.occurrenceId === target?.occurrenceId);
+        return room !== undefined && host.hostRooms.has(room.gameName);
+      };
+      const chasing = appended.filter((entry) => entry.open && !entry.met);
+      expect(chasing.length).toBeGreaterThan(0);
+      // No fountain, miniboss or story room is taken while a drawn host waits on an open window.
+      expect(chasing.filter((entry) => !hosts(entry.stop))).toEqual([]);
+      expect(nearestNext(stops, met + 1)).toBe(true);
+    },
+  );
 
   it('draws the same Hub order from the same seed', () => {
     const first = hubStops(5, ['Artemis']);
@@ -517,6 +558,67 @@ describe('draft Ephyra Hub visit order', () => {
     expect(second.stops).toEqual(first.stops);
     expect(second.walk.project).toEqual(first.walk.project);
   });
+});
+
+describe('draft Fields cage order', () => {
+  const dream = createProjectDocument(catalog, {
+    projectId: 'fields-order',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: ['H', 'F', 'N', 'I'],
+    configuredBiomeCount: 1,
+  });
+
+  it.each([1, 2, 3])(
+    'unlocks the cages of each drafted room nearest first from their stored points (seed %i)',
+    (seed) => {
+      const spec: DraftSpec = {
+        loadout,
+        world: { godKeys: ['Zeus', 'Hera'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+        basketByGiver: {},
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const result = draftProject(catalog, dream, spec, seed);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      const assembly = simulateProjectAssembly(catalog, result.project);
+      const biome = result.project.route.biomes[0]!;
+      let rooms = 0;
+      for (const occurrence of biome.topology!.occurrences) {
+        if (occurrence.state.kind !== 'fieldsCombat') continue;
+        const order = occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+        );
+        if (order.length < 2) continue;
+        rooms += 1;
+        const room = catalog.rooms.byKey[occurrence.gameName]!;
+        const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]!;
+        const spatial = occurrence.state.spatial;
+        // Settlement stored every unlocked cage's point by the time the walk placed it.
+        const points = order.map((phaseKey) => {
+          const attachment = envelope.slots.find((slot) => slot.key === phaseKey)!.rewardAttachment;
+          if (attachment?.kind !== 'localReward') throw new Error(`${phaseKey} has no cage slot`);
+          const pointId = spatial.cagePointIdBySlot[attachment.slotKey];
+          expect(pointId, `${occurrence.gameName} ${phaseKey}`).not.toBeNull();
+          return room.mapPoints!.fieldsCagePoints!.find((point) => point.id === pointId)!;
+        });
+        const entry = roomLayoutAuthoringForProjectEvaluationAssembly(
+          assembly,
+          createOccurrenceAddress(
+            createBiomeAddress(result.project.route.routeKey, biome.biomeKey),
+            occurrence.occurrenceId,
+          ),
+        )!.settlement.entry;
+        if (entry.kind === 'unknown') throw new Error(`${occurrence.gameName} has no entry`);
+        let from = room.mapPoints!.heroStarts.find((p) => p.id === entry.point.startPointId)!;
+        const squared = (a: typeof from, b: typeof from) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+        points.forEach((point, index) => {
+          for (const other of points.slice(index + 1))
+            expect(squared(from, point)).toBeLessThanOrEqual(squared(from, other));
+          from = point;
+        });
+      }
+      expect(rooms).toBeGreaterThan(0);
+    },
+  );
 });
 
 describe('a Travel Deal refill', () => {
