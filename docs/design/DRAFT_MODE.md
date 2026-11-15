@@ -177,8 +177,8 @@ room as the route declares it, route overlays included.
   that: `none` buys nothing; Careful buys only wanted items and keeps the
   largest cushion of spare mean gold after each; Normal also buys ranked filler
   still short of its amount with a smaller cushion; Greedy buys any Shop filler
-  it can afford, spending down to the floor, and leans a little more toward
-  mid-biome Shop doors. Wanted items, a boon or Mystery boon of a god that can
+  it can afford, spending down to the floor, and leans further toward plain
+  mid-biome Shop doors (see Shop doors). Wanted items, a boon or Mystery boon of a god that can
   take its next queued trait, Hermes or a Hammer when due and a Dream boost of
   a wanted element, need half the style's cushion. A wanted item that falls
   short first takes back the run's earlier filler purchases, latest first,
@@ -211,10 +211,11 @@ room as the route declares it, route overlays included.
   left in the bags this biome's doors draw from: its base-store policy, else
   the stores its rooms declare) or a trait some god can take is past its
   target, and a mid-biome Shop door does once the door bags hold no boon;
-  neither applies when the draft spends nothing. On a route whose save-file
-  god history starts closed (Fresh File), a Shop stocks only gods already
-  picked up, so a door offering a not-yet-met god with queued traits outranks
-  a Shop door, midshop preference included.
+  neither applies when the draft spends nothing. Otherwise a mid-biome Shop
+  door weighs 1.5 against a plain door's 1, times 1.5 under Greedy. On a route
+  whose save-file god history starts closed (Fresh File), a Shop stocks only
+  gods already picked up, so a door offering a not-yet-met god with queued
+  traits outranks a Shop door, midshop preference included.
 - **Room forcing.** A new door rolls each legal room inside its declared depth
   window and places a hit first. The spec's room forcing picks the chance: the
   game's ramp toward the deadline, that ramp softened one step (the default),

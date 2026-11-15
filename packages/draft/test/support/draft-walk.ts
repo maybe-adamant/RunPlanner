@@ -39,6 +39,8 @@ export function startDraftWalk(
     readonly scheduleSeed?: number;
     /** Wraps the walk's authoring session, to observe the commands it settles. */
     readonly observe?: (session: AuthoringSession) => AuthoringSession;
+    /** Rooms of the start an earlier walk of the same draft entered. */
+    readonly draftedBefore?: ReadonlySet<string>;
   } = {},
 ): DraftWalk {
   const route = base.route;
@@ -60,6 +62,7 @@ export function startDraftWalk(
     createDraftRng(seed),
     schedule,
     world,
+    options.draftedBefore,
   );
 }
 

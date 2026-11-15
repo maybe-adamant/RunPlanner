@@ -113,12 +113,15 @@ export function draftProject(
   );
   let attempts = 0;
   const faults: SettlementFault[] = [];
+  /** Rooms this draft's earlier biomes entered; their Shops' filler may be taken back. */
+  let draftedRooms: ReadonlySet<string> = new Set();
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best:
       | {
           assembly: ProjectEvaluationAssembly;
           faults: readonly SettlementFault[];
           draftedPhases: ReadonlySet<string>;
+          draftedRooms: ReadonlySet<string>;
           score: number;
           localMet: boolean;
         }
@@ -142,6 +145,7 @@ export function draftProject(
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
         schedule,
         world,
+        draftedRooms,
       );
       if (!walk.runBiome(biomeIndex, budget.maxStepsPerBiome)) {
         reasons.push(walk.failure ?? 'unknown');
@@ -168,6 +172,7 @@ export function draftProject(
           assembly: walk.assembly,
           faults: walk.faults,
           draftedPhases: walk.draftedPhases,
+          draftedRooms: walk.draftedRooms,
           score,
           localMet,
         };
@@ -194,6 +199,7 @@ export function draftProject(
       best.draftedPhases,
     );
     current = encounters.assembly;
+    draftedRooms = best.draftedRooms;
     faults.push(...best.faults, ...encounters.faults);
   }
   const evaluation = current.evaluation;

@@ -22,6 +22,7 @@ import {
   infernalContractPedestalOptionValues,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   takeoverPrebossGameNames,
+  type AuthoredTraitOfferTraits,
   type BiomeAddress,
   type BatchRewardStoreAddress,
   type ExitDecisionAddress,
@@ -66,6 +67,7 @@ import {
   nextRequiredPlacement,
   liveRoomForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
   GoldLedgerContractError,
   type GoldPurchaseAvailability,
@@ -204,13 +206,45 @@ const FREE: DraftPurchaseGold = Object.freeze({ odds: 1, spare: Infinity });
 /** Steps a pending purchase may wait for the gold walk to reach it. */
 const PENDING_PURCHASE_STEPS = 12;
 
-/** Where a walk stood: its assembly, the commands and faults it had kept and its drafted encounters. */
+/** Where a walk stood: its assembly, the commands and faults it had kept and its own memory. */
 interface DraftWalkMark {
   readonly assembly: ProjectEvaluationAssembly;
   readonly commands: number;
   readonly faults: number;
+  readonly memory: DraftWalkMemory;
+}
+
+/** A copy of what a walk remembers of its own decisions, beside the plan they authored. */
+interface DraftWalkMemory {
+  readonly stepCount: number;
   readonly phases: number;
+  readonly hooked: ReadonlySet<string>;
   readonly encounterRooms: ReadonlyMap<number, number>;
+  readonly essenceRooms: ReadonlyMap<number, number>;
+  readonly dropRoomsDone: ReadonlySet<string>;
+  readonly steeredShops: ReadonlySet<string>;
+  readonly judgedShopItems: ReadonlyMap<
+    string,
+    { readonly wanted: ReadonlySet<string>; readonly filler: ReadonlySet<string> }
+  >;
+  readonly steeredItems: ReadonlyMap<string, ResolvedRewardOffer>;
+  readonly waitingShops: ReadonlySet<string>;
+  readonly authoredRewards: ReadonlySet<string>;
+  readonly legalSupply: ReadonlySet<DraftSupply>;
+  readonly stoppedGods: ReadonlySet<string>;
+  readonly unacquiredDevotionSources: ReadonlyMap<string, number>;
+  readonly unvisitedHubDoors: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly authoredOffers: ReadonlyMap<string, AuthoredTraitOfferTraits>;
+}
+
+function refill<T>(target: Set<T>, from: ReadonlySet<T>): void {
+  target.clear();
+  from.forEach((value) => target.add(value));
+}
+
+function refillMap<K, V>(target: Map<K, V>, from: ReadonlyMap<K, V>): void {
+  target.clear();
+  from.forEach((value, key) => target.set(key, value));
 }
 
 /** A Shop door beside a door to a new god with queued traits. */
@@ -328,6 +362,8 @@ export class DraftWalk {
     readonly rng: DraftRng,
     schedule: DraftGodSchedule,
     world: DraftWorldProduct,
+    /** Rooms of the start an earlier walk of the same draft entered, by biome and occurrence ID. */
+    private readonly draftedBefore: ReadonlySet<string> = new Set(),
   ) {
     const held = prepareRouteStartTraitRequirements(
       catalog,
@@ -395,6 +431,17 @@ export class DraftWalk {
   /** Encounter phases this walk customized as it left their rooms, by phase key. */
   get draftedPhases(): ReadonlySet<string> {
     return new Set(this.draftedPhaseKeys);
+  }
+
+  /** Rooms this draft entered, in earlier walks or this one, by biome key and occurrence ID. */
+  get draftedRooms(): ReadonlySet<string> {
+    const rooms = new Set(this.draftedBefore);
+    for (const biomeKey of this.project.route.itineraryBiomeKeys)
+      for (const room of this.enteredRooms(biomeKey)) {
+        const key = `${biomeKey}/${room.occurrenceId}`;
+        if (!this.inheritedRooms.has(key)) rooms.add(key);
+      }
+    return rooms;
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
@@ -523,6 +570,12 @@ export class DraftWalk {
         phase.biomeKey !== biomeKey ||
         !left.has(phase.owner.occurrenceId) ||
         this.draftedPhaseKeys.includes(key)
+      )
+        continue;
+      // A phase not active yet (behind a Fig Leaf or Gorgon choice) is left to the post pass.
+      if (
+        encounterPhaseSequenceStatusForProjectEvaluationAssembly(this.assembly, phase)?.kind !==
+        'active'
       )
         continue;
       this.draftedPhaseKeys.push(key);
@@ -750,12 +803,7 @@ export class DraftWalk {
     const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
     const profile = this.catalog.rewards.shops.byKey[shop?.profileKey ?? ''];
     if (occurrence === undefined || shop === undefined || profile === undefined) return true;
-    const key = `${biomeKey}/${occurrenceId}`;
-    let judged = this.judgedShopItems.get(key);
-    if (judged === undefined) {
-      judged = { wanted: new Set(), filler: new Set() };
-      this.judgedShopItems.set(key, judged);
-    }
+    const judged = this.judgedItems(`${biomeKey}/${occurrenceId}`);
     const slotKeys = profile.slots.values.map((slot) => slot.key);
     const keys = [
       ...slotKeys,
@@ -823,13 +871,7 @@ export class DraftWalk {
     kind: DraftPurchaseKind,
   ): 'bought' | 'declined' | 'pending' {
     if (this.steering.spending() === 'none') return 'declined';
-    const mark: DraftWalkMark = {
-      assembly: this.assembly,
-      commands: this.appliedCommands.length,
-      faults: this.faults.length,
-      phases: this.draftedPhaseKeys.length,
-      encounterRooms: new Map(this.encounterRooms),
-    };
+    const mark = this.mark();
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
       return 'declined';
     const gold =
@@ -868,13 +910,97 @@ export class DraftWalk {
         if (this.steering.purchaseClears(kind, this.purchaseGold(offer) ?? UNAFFORDABLE))
           return true;
       }
+    this.returnTo(mark);
+    // The declined item stays judged, and its Shop's judging resumes.
+    const shop = `${offer.biomeKey}/${offer.occurrenceId}`;
+    this.judgedItems(shop)[kind].add(offer.offerKey);
+    this.waitingShops.add(shop);
+    return false;
+  }
+
+  /** Where the walk stands now, to return to. */
+  private mark(): DraftWalkMark {
+    return {
+      assembly: this.assembly,
+      commands: this.appliedCommands.length,
+      faults: this.faults.length,
+      memory: {
+        stepCount: this.stepCount,
+        phases: this.draftedPhaseKeys.length,
+        hooked: new Set(this.hooked),
+        encounterRooms: new Map(this.encounterRooms),
+        essenceRooms: new Map(this.essenceRooms),
+        dropRoomsDone: new Set(this.dropRoomsDone),
+        steeredShops: new Set(this.steeredShops),
+        judgedShopItems: new Map(
+          [...this.judgedShopItems].map(([key, judged]) => [
+            key,
+            { wanted: new Set(judged.wanted), filler: new Set(judged.filler) },
+          ]),
+        ),
+        steeredItems: new Map(this.steeredItems),
+        waitingShops: new Set(this.waitingShops),
+        authoredRewards: new Set(this.authoredRewards),
+        legalSupply: new Set(this.legalSupply),
+        stoppedGods: new Set(this.stoppedGods),
+        unacquiredDevotionSources: new Map(this.unacquiredDevotionSources),
+        unvisitedHubDoors: new Map(
+          [...this.unvisitedHubDoors].map(([key, doors]) => [key, new Set(doors)]),
+        ),
+        authoredOffers: this.traitOffers.memory(),
+      },
+    };
+  }
+
+  /**
+   * Returns the walk to a mark, as if it never took the steps since: the plan, the commands
+   * and faults it kept and everything it remembers of its decisions. Its RNG and occurrence
+   * IDs move on.
+   */
+  private returnTo(mark: DraftWalkMark): void {
+    const { memory } = mark;
     this.authoring.restore(mark.assembly);
     this.appliedCommands.length = mark.commands;
     this.faults.length = mark.faults;
-    this.draftedPhaseKeys.length = mark.phases;
-    this.encounterRooms.clear();
-    mark.encounterRooms.forEach((rooms, biome) => this.encounterRooms.set(biome, rooms));
-    return false;
+    this.stepCount = memory.stepCount;
+    this.draftedPhaseKeys.length = memory.phases;
+    refill(this.hooked, memory.hooked);
+    refillMap(this.encounterRooms, memory.encounterRooms);
+    refillMap(this.essenceRooms, memory.essenceRooms);
+    refill(this.dropRoomsDone, memory.dropRoomsDone);
+    refill(this.steeredShops, memory.steeredShops);
+    // In place, so a Shop's judging under way keeps reading the same sets.
+    for (const key of [...this.judgedShopItems.keys()])
+      if (!memory.judgedShopItems.has(key)) this.judgedShopItems.delete(key);
+    memory.judgedShopItems.forEach((judged, key) => {
+      const current = this.judgedItems(key);
+      refill(current.wanted, judged.wanted);
+      refill(current.filler, judged.filler);
+    });
+    refillMap(this.steeredItems, memory.steeredItems);
+    refill(this.waitingShops, memory.waitingShops);
+    refill(this.authoredRewards, memory.authoredRewards);
+    refill(this.legalSupply, memory.legalSupply);
+    refill(this.stoppedGods, memory.stoppedGods);
+    refillMap(this.unacquiredDevotionSources, memory.unacquiredDevotionSources);
+    this.unvisitedHubDoors.clear();
+    memory.unvisitedHubDoors.forEach((doors, key) =>
+      this.unvisitedHubDoors.set(key, new Set(doors)),
+    );
+    this.traitOffers.restoreMemory(memory.authoredOffers);
+  }
+
+  /** A steered Shop's judged items, by biome key and occurrence ID. */
+  private judgedItems(shop: string): {
+    readonly wanted: Set<string>;
+    readonly filler: Set<string>;
+  } {
+    let judged = this.judgedShopItems.get(shop);
+    if (judged === undefined) {
+      judged = { wanted: new Set(), filler: new Set() };
+      this.judgedShopItems.set(shop, judged);
+    }
+    return judged;
   }
 
   /**
@@ -919,7 +1045,10 @@ export class DraftWalk {
       : { odds, spare: purchase.balanceBefore.balance.mean - purchase.price.mean };
   }
 
-  /** The run's filler purchases before a purchase, latest first: Shops in entry order, each in purchase order. */
+  /**
+   * The draft's filler purchases before a purchase, latest first: Shops in entry order, each in
+   * purchase order. A Shop the plan held before the draft keeps what was bought there.
+   */
   private fillerPurchases(
     except: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
   ): Extract<SemanticAddress, { readonly kind: 'shopOffer' }>[] {
@@ -928,8 +1057,10 @@ export class DraftWalk {
     for (const biomeKey of this.project.route.itineraryBiomeKeys) {
       const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
       for (const room of this.enteredRooms(biomeKey)) {
-        if (seen.has(`${biomeKey}/${room.occurrenceId}`)) continue;
-        seen.add(`${biomeKey}/${room.occurrenceId}`);
+        const key = `${biomeKey}/${room.occurrenceId}`;
+        if (seen.has(key) || (this.inheritedRooms.has(key) && !this.draftedBefore.has(key)))
+          continue;
+        seen.add(key);
         const occurrence = this.occurrence(biomeKey, room.occurrenceId);
         if (occurrence === undefined) continue;
         for (const action of occurrence.roomActions?.order ?? []) {

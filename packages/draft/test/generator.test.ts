@@ -84,7 +84,6 @@ const dream = {
     rackKeepsakeKeys: [null, 'DoorHealReserveKeepsake', null],
   } satisfies DraftSpec,
 };
-/** A route planned to its first biomes only. */
 /** Seeds whose filler walks witness each spending rule. */
 const FILLER_SEED = 2;
 /** A Greedy walk under the Vow of Debt that takes back filler. */
@@ -92,6 +91,7 @@ const TAKE_BACK_SEED = 9;
 /** A seed whose Greedy walk buys a filler kind the ranking leaves out. */
 const UNRANKED_FILLER_SEED = 5;
 
+/** A route planned to its first biomes only. */
 const planned = (routeKey: string, configuredBiomeCount: number) =>
   createProjectDocument(catalog, { projectId: 'planned', routeKey, configuredBiomeCount });
 
