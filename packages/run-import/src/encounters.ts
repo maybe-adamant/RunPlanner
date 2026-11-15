@@ -23,6 +23,7 @@ import {
 import type { RunRecordEncounter } from './run-record/model';
 import type { RunImportContext } from './import';
 import { recordedCageEncounter } from './fields';
+import { authoredOccurrence } from './occurrences';
 
 /** The record encounter a phase played: the room's encounters in declared slot order. */
 function recordedEncounter(
@@ -133,9 +134,46 @@ export function importEncounters(context: RunImportContext): void {
     if (recorded === undefined) continue;
     if (!context.used.has(`figLeaf:${semanticAddressKey(phase)}`))
       importFigLeafSkip(context, phase, recorded.encounter, recorded.roomIndex);
-    importGorgonAthena(context, phase, recorded.roomIndex);
     importAetos(context, phase, recorded.encounter, recorded.roomIndex);
   }
+  for (const phase of inFightOrder(
+    context,
+    reachedEncounterPhasesForProjectEvaluationAssembly(context.assembly()),
+  )) {
+    const recorded = recordedEncounter(context, phase);
+    if (recorded !== undefined) importGorgonAthena(context, phase, recorded.roomIndex);
+  }
+}
+
+/**
+ * The phases with each Fields room's cages in its authored cage order, the
+ * order of its cage Unlock rows; a cage without a row keeps its declared place after them.
+ */
+function inFightOrder(
+  context: RunImportContext,
+  phases: readonly EncounterPhaseAddress[],
+): readonly EncounterPhaseAddress[] {
+  const project = context.assembly().project;
+  const cagesByRoom = new Map<string, number[]>();
+  for (const [index, phase] of phases.entries()) {
+    if (!/^Cage\d+$/.test(phase.phaseKey)) continue;
+    const room = `${phase.biomeKey}\u0000${phase.owner.occurrenceId}`;
+    cagesByRoom.set(room, [...(cagesByRoom.get(room) ?? []), index]);
+  }
+  const ordered = [...phases];
+  for (const positions of cagesByRoom.values()) {
+    const first = phases[positions[0]!]!;
+    const rows = (
+      authoredOccurrence(project, first.biomeKey, first.owner.occurrenceId)?.roomActions.order ?? []
+    ).flatMap((reference) => (reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : []));
+    const rank = (phase: EncounterPhaseAddress) => {
+      const row = rows.indexOf(phase.phaseKey);
+      return row < 0 ? rows.length : row;
+    };
+    const cages = positions.map((position) => phases[position]!).sort((a, b) => rank(a) - rank(b));
+    for (const [slot, position] of positions.entries()) ordered[position] = cages[slot]!;
+  }
+  return ordered;
 }
 
 /**
@@ -181,7 +219,8 @@ function importAetos(
 /**
  * Gorgon Amulet's Athena: an Athena screen in a room whose own encounter gives
  * no Athena offer. The record does not say which phase she followed, so a
- * room with several Gorgon-eligible phases takes the first that the engine admits.
+ * room with several Gorgon-eligible phases takes the first in fight order that
+ * the engine admits.
  * A phase has no Gorgon capability while its room stops at its Overview, so
  * each phase is tried on every sweep until its capability is reached.
  */
