@@ -97,8 +97,8 @@ function lifecycleEntryKey(
 /**
  * Splits a room's Timeline at the stop the engine publishes for it: the entries before its
  * stop are reached, and the stop's own entry too when the walk reached it. The blocking rows
- * stay at the stop for repair; the authored rows after it wait, without their banners, until
- * the walk reaches them.
+ * and a reached stop's own automatic effects stay at the stop for repair; the authored rows
+ * after it wait, without their banners, until the walk reaches them.
  * Undefined while the walk passes through the room or stops only in its exit work.
  */
 export function splitAtRoomStop(
@@ -148,17 +148,29 @@ export function splitAtRoomStop(
   // waiting only for a required pickup to be placed shows its Timeline with that pickup live.
   const waitsOnOverview = roomStop.kind === 'overview' && roomStop.placement !== true;
   const after = waitsOnOverview ? [] : entries.slice(cut);
+  // The engine lands each automatic effect at its phase's encounter end and publishes it only
+  // once that end's effects applied, so a stop reached at that end reached its effects too.
+  const stopBoundary =
+    roomStop.at === 'entry' && showsStopEntry && stopEntry.kind === 'boundary'
+      ? stopEntry.boundary
+      : undefined;
+  const ownEffect = (entry: WorkspaceRoomLifecycleTimelineEntry) =>
+    entry.kind === 'automaticEffect' &&
+    stopBoundary?.kind === 'encounterEnd' &&
+    entry.phaseKey === stopBoundary.phaseKey;
   return Object.freeze({
     reached: Object.freeze([
       ...entries.slice(0, cut),
       ...after.flatMap((entry) =>
-        entry.kind === 'action' && blocking.has(entry.actionKey) ? [asRow(entry)] : [],
+        (entry.kind === 'action' && blocking.has(entry.actionKey)) || ownEffect(entry)
+          ? [entry.kind === 'action' ? asRow(entry) : entry]
+          : [],
       ),
     ]),
     notReached: Object.freeze(
       after.flatMap((entry): NotReachedEntry[] => {
         if (entry.kind === 'action') return blocking.has(entry.actionKey) ? [] : [asRow(entry)];
-        if (entry.kind === 'automaticEffect') return [entry];
+        if (entry.kind === 'automaticEffect') return ownEffect(entry) ? [] : [entry];
         const events = authoredBannerEvents(entry);
         return events === undefined ? [] : [events];
       }),
