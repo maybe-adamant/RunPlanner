@@ -333,12 +333,20 @@
 
 /*
  * Pins or unpins the panel list. It leads its column as the rail's toggle
- * leads the rail, at one place whether the list is pinned, folded or opened.
+ * leads the rail, at one place whether the list is pinned, folded or opened;
+ * the route's name shares its row, so the list below never moves.
  */
+.panel-navigation-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 8px 0 10px;
+}
+
 .panel-navigation-pin {
-  align-self: flex-start;
-  margin: 8px 8px -4px 10px;
-  padding: 2px 7px;
+  flex: 0 0 auto;
+  width: 2rem;
+  padding: 2px 0;
   border: 0;
   border-radius: 6px;
   color: #77757e;
@@ -357,15 +365,10 @@
   grid-template-columns: 48px minmax(0, 1fr);
 }
 
-/* Folded, the toggle keeps its full row above the strip's icons. */
-.editor-workspace[data-navigation-pinned='false'] .panel-navigation-pin {
-  margin-bottom: 0;
-}
-
 .editor-workspace[data-navigation-pinned='false']
   .panel-navigation-column:not([data-open])
   .panel-navigation {
-  padding: 8px 4px;
+  padding: 12px 4px;
   scrollbar-gutter: auto;
 }
 
@@ -431,8 +434,12 @@
 }
 
 .navigation-label {
-  margin: 0 8px 8px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   color: #77757e;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -445,6 +452,8 @@
   align-items: center;
   gap: 7px;
   width: 100%;
+  /* One line of the panel's name, kept when folded to its icon so the list never moves. */
+  min-height: calc(1lh + 16px);
   padding: 8px 10px;
   border: 0;
   border-radius: 8px;
