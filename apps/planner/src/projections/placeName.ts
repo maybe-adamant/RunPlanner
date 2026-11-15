@@ -1,4 +1,5 @@
 import type { FindingLocation } from './evaluationProjection';
+import type { WorkspaceRoomIcon } from './structured-workspace';
 
 /** A place as a reference from elsewhere names it, its own name on hover where shown. */
 export interface PlaceName {
@@ -42,4 +43,31 @@ export function locationName(location: FindingLocation): PlaceName {
 /** The place in words, its own name after its Location, as an accessible name reads it. */
 export function placeNameLabel(name: PlaceName): string {
   return name.hint === undefined ? name.text : `${name.text} · ${name.hint}`;
+}
+
+/** A place's room as the rail shows it: its run depth, icon and number. */
+export interface PlaceRoom {
+  readonly depth?: number;
+  readonly icon?: WorkspaceRoomIcon;
+  readonly number?: string;
+}
+
+/** The rail's short form of where a reference is; undefined where no room or depth stands. */
+export function locationRoom(location: FindingLocation): PlaceRoom | undefined {
+  switch (location.kind) {
+    case 'route':
+    case 'loadout':
+    case 'project':
+    case 'biome':
+      return undefined;
+    case 'hub':
+    case 'step':
+      return location.depth === undefined ? undefined : Object.freeze({ depth: location.depth });
+    case 'room':
+      return Object.freeze({
+        ...(location.depth === undefined ? {} : { depth: location.depth }),
+        icon: location.room.icon,
+        ...(location.room.number === undefined ? {} : { number: location.room.number }),
+      });
+  }
 }

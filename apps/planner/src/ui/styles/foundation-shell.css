@@ -613,27 +613,6 @@ input[type='checkbox']:checked:disabled {
   font-size: 0.86rem;
 }
 
-.semantic-focus-link {
-  display: inline-flex;
-  min-height: 28px;
-  align-items: center;
-  padding: 3px 0;
-  border: 0;
-  border-radius: 4px;
-  color: var(--selection-accent);
-  background: transparent;
-  font-weight: 600;
-  text-align: left;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.semantic-focus-link:hover:not(:disabled) {
-  color: #f4d18d;
-}
-
 button:disabled {
   opacity: 0.42;
   cursor: not-allowed;
