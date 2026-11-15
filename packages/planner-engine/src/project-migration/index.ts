@@ -10,4 +10,5 @@ export { stampRoomActionItemContent } from './room-action-content';
 export { stripEncounterPhaseKey } from './strip-encounter-phase-key';
 export { dropRouteExcludedObjects } from './route-excluded-objects';
 export { dropAutomaticRewardRows } from './automatic-reward-rows';
+export { dropUnduplicableSeaStarDuplicates } from './unduplicable-sea-star-duplicates';
 export { settleProjectFills, settleProjectUpgrade } from '../simulation/edit-settlement';

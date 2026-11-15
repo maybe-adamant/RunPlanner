@@ -1,11 +1,14 @@
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -15,6 +18,8 @@ import {
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateSiteKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
@@ -25,9 +30,11 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   loadUnderworldFPoolCheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
+  authorTestArtificerReplacement,
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
   goldenFBiome,
@@ -205,6 +212,126 @@ describe('project document loader', () => {
     expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
     // A plan saved at the current revision loads as is.
     expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  describe("a Sea Star copy of an Anomaly's reward, which never duplicates", () => {
+    const g = createBiomeAddress('Underworld', 'G');
+    const anomalyId = createOccurrenceId('golden-g-b3-e2');
+    const normal = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, createOccurrenceId('golden-g-b4-e1')),
+      'self',
+    );
+    // A copy of an ordinary room reward stays.
+    const current = applyProjectCommand(loadUnderworldGAnomalyRosterCheckpoint(), catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: normal,
+      procced: true,
+    });
+    const anomalyOccurrence = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === anomalyId)!;
+    const incoming = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(g, anomalyId),
+      'self',
+    );
+    // The Anomaly reward converted by the Artificer into Max Health.
+    const replacementEntry = createAcquisitionEntryAddress(
+      artificerAcquisitionSite(createOccurrenceAddress(g, anomalyId), incoming.owner),
+      artificerReplacementEntryKey(incoming.owner, 'self'),
+    );
+    const converted = authorTestArtificerReplacement(
+      current,
+      catalog,
+      incoming,
+      Object.freeze({
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({
+          self: Object.freeze({ kind: 'normal' as const }),
+        }),
+      }),
+    );
+    /** Saved before the rule: a copy of `source`'s reward with its pickup row. */
+    function withCopyOf(
+      document: ProjectDocument,
+      source: ReturnType<typeof createAcquisitionRoleAddress>,
+      rewardType: string,
+    ): ProjectDocument {
+      const siteKey = seaStarDuplicateSiteKey(source);
+      const saved = JSON.parse(encodeProjectDocument(document)) as ProjectDocument;
+      const occurrence = anomalyOccurrence(saved) as unknown as {
+        acquisitionSites?: Record<string, unknown>;
+        roomActions: { order: unknown[] };
+      };
+      occurrence.acquisitionSites = {
+        ...occurrence.acquisitionSites,
+        [siteKey]: {
+          pickupEntries: {
+            [SEA_STAR_DUPLICATE_ENTRY_KEY]: {
+              offer: { rewardType },
+              traitOffersByAcquisitionRole: {},
+              dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+            },
+          },
+        },
+      };
+      occurrence.roomActions.order.push({
+        kind: 'interactAcquisitionEntry',
+        siteKey,
+        entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+        content: ['native', rewardType],
+      });
+      return saved;
+    }
+
+    it.each([
+      ['the reward', () => [current, incoming, 'MetaCardPointsCommonBigDrop'] as const],
+      [
+        'its Artificer replacement',
+        () =>
+          [
+            converted,
+            createAcquisitionRoleAddress(replacementEntry, 'self'),
+            'MaxHealthDrop',
+          ] as const,
+      ],
+    ])('drops a copy of %s with its row on load at every revision', (_, cases) => {
+      const [expected, source, rewardType] = cases();
+      const withCopy = withCopyOf(expected, source, rewardType);
+      expect(Object.keys(anomalyOccurrence(withCopy).acquisitionSites ?? {})).toContain(
+        seaStarDuplicateSiteKey(source),
+      );
+      for (const revision of [0, 2, PROJECT_DOCUMENT_SCHEMA_REVISION]) {
+        const loaded = loadProjectDocument(
+          JSON.stringify({ ...withCopy, schemaRevision: revision }),
+          catalog,
+        ).project;
+        expect(loaded).toEqual(expected);
+      }
+    });
+
+    it("keeps an ordinary room reward's copy and a plan without one unchanged", () => {
+      expect(
+        Object.keys(
+          current.route.biomes
+            .find((biome) => biome.biomeKey === 'G')!
+            .topology!.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === 'golden-g-b4-e1',
+            )!.acquisitionSites ?? {},
+        ),
+      ).toEqual([seaStarDuplicateSiteKey(normal)]);
+      for (const document of [current, converted])
+        expect(
+          loadProjectDocument(
+            JSON.stringify({
+              ...JSON.parse(encodeProjectDocument(document)),
+              schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+            }),
+            catalog,
+          ).project,
+        ).toEqual(document);
+    });
   });
 
   describe('the Zagreus contract Champion row, granted with no pickup', () => {

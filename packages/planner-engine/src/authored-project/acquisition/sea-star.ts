@@ -1,11 +1,19 @@
 import type {
   AcquisitionRoleAddress,
   AcquisitionSiteAddress,
+  BiomeAddress,
   OccurrenceAddress,
 } from '../addresses';
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredRewardState, RoomOccurrence } from '../model';
-import { createAcquisitionSiteAddress, semanticAddressKey } from '../addresses';
+import type { AuthoredRewardState, OccurrenceId, RoomOccurrence } from '../model';
+import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+} from '../addresses';
+import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
 import {
   acquisitionSourceIsParticipating,
   authoredAcquisitionSources,
@@ -144,4 +152,48 @@ export function seaStarDuplicateSourceIsActive(
     ] !== undefined &&
     acquisitionSourceIsParticipating(occurrence, matched)
   );
+}
+
+/** Whether the room's own encounter spawns its reward as one that can never duplicate. */
+export function roomRewardCannotDuplicate(catalog: Catalog, gameName: string): boolean {
+  return (catalog.rooms.byKey[gameName]?.encounterSlotBindings ?? []).some(
+    (binding) =>
+      binding.kind === 'fixed' &&
+      catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]
+        ?.incomingRewardCannotDuplicate === true,
+  );
+}
+
+/**
+ * Owners in one occurrence whose reward can never duplicate because its room's
+ * encounter spawned it so: the room reward and its Artificer replacements,
+ * which keep its CanDuplicate. A replacement is never converted again.
+ */
+export function encounterUnduplicableOwnerKeys(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  occurrence: {
+    readonly occurrenceId: OccurrenceId;
+    readonly gameName: string;
+    readonly acquisitionSites?:
+      | Readonly<Record<string, { readonly pickupEntries?: Readonly<Record<string, unknown>> }>>
+      | undefined;
+  },
+): ReadonlySet<string> {
+  if (!roomRewardCannotDuplicate(catalog, occurrence.gameName)) return new Set();
+  const incoming = semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId));
+  const address = createOccurrenceAddress(biome, occurrence.occurrenceId);
+  return new Set([
+    incoming,
+    ...Object.entries(occurrence.acquisitionSites ?? {}).flatMap(([storageKey, site]) => {
+      const siteAddress = acquisitionSiteFromStorageKey(address, storageKey);
+      return siteAddress === undefined
+        ? []
+        : Object.keys(site.pickupEntries ?? {}).flatMap((entryKey) =>
+            parseArtificerReplacementEntryKey(entryKey)?.sourceKey === incoming
+              ? [semanticAddressKey(createAcquisitionEntryAddress(siteAddress, entryKey))]
+              : [],
+          );
+    }),
+  ]);
 }

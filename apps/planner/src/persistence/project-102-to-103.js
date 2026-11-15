@@ -121,3 +121,10 @@ export { dropRouteExcludedObjects } from '@run-planner/engine/project-migration'
  * does, such as one with the Zagreus contract's Champion row, loses it on load.
  */
 export { dropAutomaticRewardRows } from '@run-planner/engine/project-migration';
+
+/**
+ * No plan holds a Sea Star copy of a reward its room's encounter spawns as
+ * never duplicating: a plan that does, such as one copying an Anomaly's reward,
+ * loses the copy and its row on load.
+ */
+export { dropUnduplicableSeaStarDuplicates } from '@run-planner/engine/project-migration';

@@ -453,7 +453,11 @@ acquisition, not selection. `TrackCapturePointChallengeProgressReal`
 capture area, lowers it outside, and stops the encounter at 100 or 0:
 
 - when `CapturePointProgress >= 100`, `EndCapturePointChallengeEncounter`
-  calls `SpawnRoomReward`, making the selected reward available;
+  calls `SpawnRoomReward`, making the selected reward available. With no
+  challenge switch, which an Anomaly never has (`BaseAnomaly`
+  `ChallengeSpawnChance = 0.0`), it spawns with `CanDuplicate = false`
+  (`EncounterLogic.lua:2166-2181`), so Sea Star never copies it; an Artificer
+  replacement keeps its source's `CanDuplicate` (`GiftLogic.lua:24-36`);
 - otherwise it marks the objective failed and does not spawn the room reward;
 - the failed reward is not put back into the reward store.
 

@@ -17,3 +17,4 @@ export function fillReachedBlanksProject(
 
 export function dropRouteExcludedObjects(document: unknown, catalog: Catalog): unknown;
 export function dropAutomaticRewardRows(document: unknown, catalog: Catalog): unknown;
+export function dropUnduplicableSeaStarDuplicates(document: unknown, catalog: Catalog): unknown;

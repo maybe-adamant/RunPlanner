@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  parseArtificerReplacementEntryKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
@@ -56,6 +61,9 @@ import {
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { reachedFrontier } from '../support/reward-frontier';
+import { authorTestArtificerReplacement } from '@run-planner/test-fixtures/underworld';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
+import { canonicalArtificerSource } from '../../src/simulation/rewards/biome/reward-sources';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -1170,6 +1178,62 @@ describe('route-detour simulation', () => {
       ).toBe(false);
     },
   );
+
+  it("marks the Anomaly's reward and its Artificer replacement as never copied by Sea Star", () => {
+    // EncounterLogic.lua:2166-2181 spawns the Anomaly's success reward with
+    // CanDuplicate = false; an Artificer replacement keeps it (GiftLogic.lua:24-36).
+    const built = buildAnomalyProject(true);
+    const incoming = createIncomingRewardAddress(gBiome, built.anomaly);
+    const project = authorTestArtificerReplacement(
+      replaceIncomingReward(built.project, gBiome, built.returned, 'RoomMoneyDrop'),
+      catalog,
+      createAcquisitionRoleAddress(incoming, 'self'),
+      createUnresolvedAcquisitionRewardState(
+        catalog,
+        { rewardType: 'MaxHealthDrop' },
+        { kind: 'producerLifecycle', key: 'RoomReward' },
+        'Underworld',
+      ),
+    );
+    const replacement = createAcquisitionEntryAddress(
+      artificerAcquisitionSite(createOccurrenceAddress(gBiome, built.anomaly), incoming),
+      artificerReplacementEntryKey(incoming, 'self'),
+    );
+    const { snapshot } = prefix(project, gBiome);
+    const room = (occurrenceId: OccurrenceId) =>
+      snapshot.decisions
+        .filter((decision) => decision.kind === 'batch')
+        .flatMap((decision) => decision.targets)
+        .find((target) => target.room.occurrenceId === occurrenceId)!.room;
+    const anomaly = room(built.anomaly);
+    expect(anomaly.incomingReward?.blocksSeaStarDuplication).toBe(true);
+    // The replacement's pickup reads its source's block from here.
+    const parsed = parseArtificerReplacementEntryKey(replacement.entryKey)!;
+    expect(canonicalArtificerSource(anomaly, parsed.sourceKey)?.blocksSeaStarDuplication).toBe(
+      true,
+    );
+    expect(room(built.returned).incomingReward?.blocksSeaStarDuplication).toBeUndefined();
+
+    // Neither can take a Sea Star result; the normal room reward still can.
+    for (const owner of [incoming, replacement])
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceSeaStarResult',
+          acquisition: createAcquisitionRoleAddress(owner, 'self'),
+          procced: true,
+        }),
+      ).toThrow(/its room encounter spawned a reward that cannot duplicate/);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition: createAcquisitionRoleAddress(
+          createIncomingRewardAddress(gBiome, built.returned),
+          'self',
+        ),
+        procced: true,
+      }),
+    ).not.toThrow();
+  });
 
   it('retains an incompatible Anomaly reward as an editable finding rather than rerolling it', () => {
     const { anomaly, project: initial } = buildAnomalyProject(true);

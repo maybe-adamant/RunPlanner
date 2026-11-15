@@ -24,5 +24,11 @@ export const anomalyEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     blocksGorgon: true,
+    // EncounterLogic.lua:2148-2181 EndCapturePointChallengeEncounter (run by
+    // EncounterSets.lua:700-708 EncounterEventsAnomaly): with no challenge
+    // switch, which an Anomaly room never has (RoomDataAnomaly.lua BaseAnomaly
+    // ChallengeSpawnChance 0), the success reward spawns with CanDuplicate =
+    // false; an Artificer replacement inherits it (GiftLogic.lua:24-36).
+    incomingRewardCannotDuplicate: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];

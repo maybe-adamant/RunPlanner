@@ -22,7 +22,10 @@ import {
   sitesWithNemesisResultPickups,
 } from '../../../authored-project/acquisition/pickup-producers';
 import { acquisitionSiteFromStorageKey } from '../../../authored-project/acquisition/artificer';
-import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquisition/sea-star';
+import {
+  roomRewardCannotDuplicate,
+  seaStarDuplicateSourceIsActive,
+} from '../../../authored-project/acquisition/sea-star';
 import { assembleRoomActionDomain } from '../../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
@@ -249,10 +252,15 @@ export function materializeAuthoredRoom(
       true
     );
   });
+  const cannotDuplicate = roomRewardCannotDuplicate(context.catalog, context.room.gameName);
   const incomingReward =
-    leaf.incomingReward === undefined || !suppressesIncomingReward
+    leaf.incomingReward === undefined || (!suppressesIncomingReward && !cannotDuplicate)
       ? leaf.incomingReward
-      : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
+      : Object.freeze({
+          ...leaf.incomingReward,
+          ...(suppressesIncomingReward ? { acquisitionEnabled: false } : {}),
+          ...(cannotDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
+        });
   const entered = enteredRewardStore(context.room, context.batchStoreKey);
   const enteredRewardStoreKey =
     resolvedEntry.enteredRewardStoreKey ??

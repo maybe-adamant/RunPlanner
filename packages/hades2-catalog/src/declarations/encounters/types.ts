@@ -94,6 +94,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
+  /** The room reward this encounter spawns can never be duplicated (Sea Star). */
+  readonly incomingRewardCannotDuplicate?: true;
   /**
    * A kill-contest bet on the encounter's end: the bet is the held gold up to
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.

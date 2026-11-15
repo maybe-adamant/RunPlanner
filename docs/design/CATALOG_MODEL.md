@@ -352,7 +352,10 @@ identity. Concrete acquisitions separately declare exact history projection
 `resourceGrant` of whole resource amounts by resource key. A producer lifecycle
 may declare `resourceBonusExempt` (source `NPCDrop`), `duplicationExempt`
 (source `CanDuplicate = false`) or per-acquisition `resourceGrantOverrides`; a trait may declare a rarity-resolved
-`resourceRewardBonus` whose resources some pickup must grant.
+`resourceRewardBonus` whose resources some pickup must grant. An encounter
+definition may declare that the room reward it spawns can never duplicate (the
+Anomaly's); only a fixed slot binds it, as its sole encounter, so the rule is a
+fact of that room, inherited by an Artificer replacement of the reward.
 
 The source-support vocabulary is closed: `ordinaryBoonPeer`,
 `ordinaryNoPeer`, `ordinaryInteracted` and `devotionAcquiredPair`. An ordinary

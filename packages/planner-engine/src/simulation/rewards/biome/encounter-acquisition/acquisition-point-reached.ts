@@ -633,6 +633,9 @@ export function applyAcquisitionPointReachedTransition(
         sourceEntryKey: parsed.sourceKey,
         sourceOrigin: source.owner,
         sourceReward: source.reward,
+        ...(source.blocksSeaStarDuplication === true
+          ? { sourceBlocksSeaStarDuplication: true as const }
+          : {}),
         replacement,
         acquisitionRole: parsed.acquisitionRole,
         participation: row?.participation === 'required' ? 'mandatory' : 'optional',

@@ -37,6 +37,8 @@ export function canonicalArtificerSource(
       readonly owner: TraitOfferOwnerAddress;
       readonly reward: AuthoredRewardState;
       readonly producerLifecycleKey?: string;
+      /** The source can never duplicate, which an Artificer replacement of it inherits. */
+      readonly blocksSeaStarDuplication?: true;
     }
   | undefined {
   const candidates: {
@@ -85,5 +87,11 @@ export function canonicalArtificerSource(
         ...(producerLifecycleKey === undefined ? {} : { producerLifecycleKey }),
       });
     }
-  return candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  const found = candidates.find((candidate) => semanticAddressKey(candidate.owner) === sourceKey);
+  if (found === undefined) return undefined;
+  // Only a room reward is an Artificer source that can carry this block.
+  return found.owner.kind === 'incomingReward' &&
+    room.incomingReward?.blocksSeaStarDuplication === true
+    ? Object.freeze({ ...found, blocksSeaStarDuplication: true as const })
+    : found;
 }

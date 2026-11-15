@@ -425,6 +425,11 @@ export function normalizeEncounterDefinitions(
       )
         fail(`${path}.createsIncomingRewardAtStart`, 'must be boolean');
       if (
+        raw.incomingRewardCannotDuplicate !== undefined &&
+        raw.incomingRewardCannotDuplicate !== true
+      )
+        fail(`${path}.incomingRewardCannotDuplicate`, 'must be true when declared');
+      if (
         raw.enemyTriggeredIntroduction !== undefined &&
         typeof raw.enemyTriggeredIntroduction !== 'boolean'
       )
@@ -739,6 +744,9 @@ export function normalizeEncounterDefinitions(
           : {}),
         ...(raw.createsIncomingRewardAtStart === true
           ? { createsIncomingRewardAtStart: true as const }
+          : {}),
+        ...(raw.incomingRewardCannotDuplicate === true
+          ? { incomingRewardCannotDuplicate: true as const }
           : {}),
         ...(raw.goldBet === undefined
           ? {}
