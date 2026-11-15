@@ -54,6 +54,7 @@ import {
   collectTestRequiredItems,
   scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { reachedFrontier } from '../support/reward-frontier';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
 
@@ -1352,6 +1353,105 @@ describe('route-detour simulation', () => {
         .filter((entry) => entry.gameName === 'C_Boss01')
         .map((entry) => entry.storeKey),
     ).toEqual(['RunProgress']);
+  });
+
+  describe('while the gems lie unplaced', () => {
+    const withoutRoomActions = (
+      project: ProjectDocument,
+      biomeKey: string,
+      occurrenceId: OccurrenceId,
+    ): ProjectDocument => ({
+      ...project,
+      route: {
+        ...project.route!,
+        biomes: project.route!.biomes.map((biome) =>
+          biome.biomeKey !== biomeKey
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology!,
+                  occurrences: biome.topology!.occurrences.map((room) =>
+                    room.occurrenceId !== occurrenceId
+                      ? room
+                      : { ...room, roomActions: { ...room.roomActions, order: [] } },
+                  ),
+                },
+              },
+        ),
+      },
+    });
+
+    it('grants the Contract trait after combat', () => {
+      const { project, contract } = buildMidshopProject({ normalTargets: true });
+      const gemsUnplaced = withoutRoomActions(
+        scheduleTestRequiredRoomActions(project, catalog, fBiome),
+        'F',
+        contract,
+      );
+      const materialized = materializeBiomePrefix(
+        catalog,
+        fBiome,
+        ordinaryPositionFor(catalog, fBiome),
+        plan(gemsUnplaced, fBiome),
+        traitContext(gemsUnplaced, fBiome),
+      );
+      if (materialized?.entryRoom === undefined) throw new Error('F did not materialize');
+      const snapshot = { ...materialized, entryRoom: materialized.entryRoom };
+      const history = composeBiomeHistoryPrefix(
+        catalog,
+        snapshot,
+        ordinaryPositionFor(catalog, snapshot),
+      )!;
+      const contractOrigin = semanticAddressKey(createOccurrenceAddress(fBiome, contract));
+      expect(
+        history.events.filter(
+          (event) =>
+            event.kind === 'producerRoleAdvanced' &&
+            semanticAddressKey(event.origin) === contractOrigin,
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          rewardType: 'InfernalContractBoon',
+          role: 'self',
+          lifecyclePoint: 'afterCombat',
+        }),
+      ]);
+      const rewards = evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        ordinaryPositionFor(catalog, snapshot),
+        traitContext(gemsUnplaced, fBiome),
+      );
+      expect(
+        reachedFrontier(rewards).some(
+          (branch) =>
+            branch.state.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
+            'InfernalContractBoon',
+        ),
+      ).toBe(true);
+    });
+
+    it("leaves the gems' placement as the only finding", () => {
+      const saved = loadUnderworldZagreusContractCheckpoint();
+      expect(simulateProject(catalog, saved).findings).toEqual([]);
+      const gemsUnplaced = withoutRoomActions(
+        saved,
+        'G',
+        createOccurrenceId('zagreus-contract-showcase'),
+      );
+      expect(simulateProject(catalog, gemsUnplaced).findings).toEqual([
+        expect.objectContaining({
+          code: 'roomActionPlacementRequired',
+          origin: expect.objectContaining({
+            kind: 'roomAction',
+            occurrenceId: 'zagreus-contract-showcase',
+            actionKey: '["collectRequiredReward"]',
+          }),
+        }),
+      ]);
+    });
   });
 
   it('keeps a later unpicked contract authored but invalidates it from the earlier entered route contract', () => {

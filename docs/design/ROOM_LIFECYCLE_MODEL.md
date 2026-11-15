@@ -636,8 +636,8 @@ goes at the next edit of its room.
 Loading a plan saved before schema 103.3 silently removes a Stygian Well or
 Pool of Purging its route never spawns in that room, kept from before the
 route excluded it (a Fresh File Postboss's), with its purchase, sale and
-reroll rows, and a pickup row for an automatic reward role (the Zagreus
-contract's Champion of Elysium), which no room action takes.
+reroll rows. Loading any plan removes a pickup row for an automatic reward
+role (the Zagreus contract's Champion of Elysium), which no room action takes.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it

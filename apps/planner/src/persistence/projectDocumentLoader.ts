@@ -119,7 +119,7 @@ export function loadProjectDocument(
     context: options.legacyName === undefined ? {} : { name: options.legacyName },
   });
   // A migrated plan lands at the major's first revision.
-  const migratedJson = JSON.stringify(dropBefore103Revision3(migrated.document, catalog));
+  const migratedJson = JSON.stringify(dropImpossibleState(migrated.document, catalog, 0));
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
@@ -173,12 +173,21 @@ export function applyProjectDocumentTransitions(options: {
 
 // From this revision every reached stock slot and position is stored; earlier, a blank one meant the game's roll.
 const BLANKS_FILLED_REVISION = 2;
-// From this revision a plan holds no Well or Pool its route never spawns, and
-// no pickup row for a reward granted with no pickup.
-const IMPOSSIBLE_STATE_DROPPED_REVISION = 3;
+// From this revision a plan holds no Well or Pool its route never spawns.
+const ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION = 3;
 
-function dropBefore103Revision3(document: unknown, catalog: Catalog): unknown {
-  return dropAutomaticRewardRows(dropRouteExcludedObjects(document, catalog), catalog);
+/**
+ * State no plan can hold any more, removed on every load: a Well or Pool its
+ * route never spawns (from a plan before 103.3) and, at any revision, a pickup
+ * row for a reward role granted with no pickup.
+ */
+function dropImpossibleState(document: unknown, catalog: Catalog, revision: number): unknown {
+  return dropAutomaticRewardRows(
+    revision < ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION
+      ? dropRouteExcludedObjects(document, catalog)
+      : document,
+    catalog,
+  );
 }
 
 function currentProject(
@@ -187,9 +196,7 @@ function currentProject(
   revision = PROJECT_DOCUMENT_SCHEMA_REVISION,
 ): LoadedProjectDocument {
   const project = parseProjectDocument(
-    revision < IMPOSSIBLE_STATE_DROPPED_REVISION
-      ? JSON.stringify(dropBefore103Revision3(parseJson(json), catalog))
-      : json,
+    JSON.stringify(dropImpossibleState(parseJson(json), catalog, revision)),
     catalog,
   );
   return Object.freeze({
