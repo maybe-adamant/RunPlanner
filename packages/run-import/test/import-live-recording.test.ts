@@ -1,7 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { projectFromRunRecord, type RunImport } from '../src/import';
+import type { ProjectDocument, RoomOccurrence } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import { projectFromRunRecord, RunImportWalk, type RunImport } from '../src/import';
 import {
   fixture,
   describeEntry,
@@ -111,6 +113,15 @@ describe('run import of the live Underworld recording', () => {
   });
 });
 
+/** A Fields room's state with its first cage's Path of Stars nodes unchosen. */
+function withoutCage1Hex(state: RoomOccurrence['state']): RoomOccurrence['state'] {
+  const cage = state.kind === 'fieldsCombat' ? state.cages['cage1'] : undefined;
+  if (state.kind !== 'fieldsCombat' || cage == null) return state;
+  const { hexActivationsByAcquisitionRole: _hex, ...rest } = cage;
+  void _hex;
+  return { ...state, cages: { ...state.cages, cage1: rest } };
+}
+
 describe('run import of the Underworld attempt reset at H_Combat04', () => {
   const record = fixture('underworld-1010');
   let imported: RunImport;
@@ -181,6 +192,72 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
           selectedOptionKey: 'option1',
         },
       },
+    });
+  });
+
+  it("imports Gorgon's Athena into a Fields room whose cage order is already authored", () => {
+    // The room as authored before its Athena screen: the cage order without the Gorgon's action.
+    const withoutAthena: ProjectDocument = {
+      ...imported.project,
+      route: {
+        ...imported.project.route,
+        biomes: imported.project.route.biomes.map((biome) => ({
+          ...biome,
+          topology: biome.topology && {
+            ...biome.topology,
+            occurrences: biome.topology.occurrences.map((entry) =>
+              entry.occurrenceId !== 'H-r26'
+                ? entry
+                : {
+                    ...entry,
+                    state: withoutCage1Hex(entry.state),
+                    encounters: {
+                      ...entry.encounters,
+                      gorgonResultByPhase: {
+                        ...entry.encounters.gorgonResultByPhase,
+                        Cage02: { athenaTriggerConditionMet: false },
+                      },
+                    },
+                    roomActions: {
+                      ...entry.roomActions,
+                      order: entry.roomActions.order.filter(
+                        (action) => action.kind !== 'interactGorgon',
+                      ),
+                    },
+                  },
+            ),
+          },
+        })),
+      },
+    };
+    const room = occurrence(withoutAthena, 'H-r26');
+    expect(room.encounters.gorgonResultByPhase?.['Cage02']?.athenaOffer).toBeUndefined();
+    expect(room.roomActions.order.some((action) => action.kind === 'interactGorgon')).toBe(false);
+    expect(room.roomActions.order.length).toBeGreaterThan(0);
+    const walk = new RunImportWalk(
+      catalog,
+      record,
+      simulateProjectAssembly(catalog, withoutAthena),
+      [],
+    );
+    walk.context.sweep();
+    // Athena follows the first cage the engine admits; its Gorgon row joins the authored order.
+    const restored = occurrence(walk.assembly.project, 'H-r26');
+    const athena = Object.entries(restored.encounters.gorgonResultByPhase ?? {}).filter(
+      ([, result]) => result.athenaOffer != null,
+    );
+    expect(athena).toEqual([
+      [
+        expect.stringMatching(/^Cage0[12]$/),
+        expect.objectContaining({
+          athenaTriggerConditionMet: true,
+          athenaOffer: expect.objectContaining({ selectedOptionKey: 'option1' }),
+        }),
+      ],
+    ]);
+    expect(restored.roomActions.order).toContainEqual({
+      kind: 'interactGorgon',
+      phaseKey: athena[0]![0],
     });
   });
 

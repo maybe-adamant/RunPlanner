@@ -251,9 +251,14 @@ function restockShopSlot(
   const at = record(visit.roomIndex);
   const holds = (value: ShopOptionSelection) => holdsShopOption(context, offer, value);
   // The one recorded item a peer's draw rules out: the peer's own recorded item replaces that draw.
-  if (values.length === 0 && matches.length === 1)
+  // A Mystery Boon matches once per god payload; its acquisition resolves the god.
+  if (
+    values.length === 0 &&
+    matches.length > 0 &&
+    new Set(matches.map((value) => value.optionKey)).size === 1
+  )
     return (
-      holds(matches[0]!) ||
+      matches.some(holds) ||
       context.apply({ kind: 'ReplaceShopOfferOption', offer, value: matches[0]! })
     );
   // A boon whose god the stock does not name is any god the room's next entry save accepts.

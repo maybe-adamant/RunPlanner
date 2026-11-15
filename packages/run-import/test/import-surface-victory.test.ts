@@ -501,6 +501,47 @@ describe('run import of the Surface victory', () => {
     expect(gods.sort()).toEqual(['ApolloUpgrade', 'PoseidonUpgrade']);
   });
 
+  it("buys a Mystery Boon in Q_PreBoss01's first slot over settlement's draw of it in the second", () => {
+    // Settlement draws BlindBoxLoot into MixedProgress2; the record moves it to MixedProgress1.
+    const preboss = record.rooms[49]!;
+    const [boon, ...rest] = preboss.store!.stock;
+    const result = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 49
+          ? {
+              ...preboss,
+              uses: { ...preboss.uses, BlindBoxLoot: 1 },
+              store: {
+                ...preboss.store!,
+                stock: [
+                  { slot: 1, name: 'BlindBoxLoot', type: 'Consumable' },
+                  { ...boon!, slot: 2 },
+                  ...rest.slice(1),
+                ],
+              },
+            }
+          : room,
+      ),
+    });
+    const shop = occurrence(result.project, 'Q-r49').state;
+    expect(shop.kind === 'shop' && shop.shop?.offers).toMatchObject({
+      MixedProgress1: { optionKey: 'BlindBoxLoot' },
+      MixedProgress2: {
+        optionKey: 'RandomLoot',
+        reward: { offer: { payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } } },
+      },
+    });
+    expect(occurrence(result.project, 'Q-r49').roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactShopOffer', offerKey: 'MixedProgress1' }),
+    );
+    expect(
+      result.report.entries.filter(
+        (entry) => entry.reason === 'refused' && entry.record?.roomIndex === 49,
+      ),
+    ).toEqual([]);
+  });
+
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
