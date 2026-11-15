@@ -1313,8 +1313,8 @@ offer and repriced only by the room's first purchase, always earlier, so the
 rush's position never changes it. Shrine purchase and rush rows
 never become timeline transactions: each stocked item's delay, bought or not,
 and each purchase's rush publish through the room Overview inventory, and the
-execution room guide carries the purchase row, with its rush, only as an
-informational reminder.
+execution room guide carries the purchase and rush rows, each at its own
+position, only as informational reminders.
 
 A rush, including one of a Travel Deal replacement, makes one optional
 same-room pickup live at the post-outgoing action rank; the author may place

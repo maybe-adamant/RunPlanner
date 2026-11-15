@@ -5815,8 +5815,15 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:secondLeft",
-            "rewardType": "ShopHermesUpgrade",
-            "rushed": true
+            "rewardType": "ShopHermesUpgrade"
+          }
+        },
+        {
+          "key": "[\"rushHermesShrineOffer\",\"initial:secondLeft\"]",
+          "description": {
+            "kind": "rushHermesShrineOffer",
+            "generationKey": "initial:secondLeft",
+            "rewardType": "ShopHermesUpgrade"
           }
         },
         {
@@ -6025,5 +6032,5 @@
       }
     }
   ],
-  "planFingerprint": "a85c025d"
+  "planFingerprint": "fc774377"
 }

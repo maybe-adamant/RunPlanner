@@ -367,8 +367,8 @@ local function rerollInstruction(description, occurrence, pressed)
     return "Reroll: " .. doorRewardName(reward, true)
 end
 
--- Expands published rows into display entries. A Shrine purchase shows its
--- purchase and, when planned, its rush; native Shrine state hides each step.
+-- Expands published rows into display entries. Native Shrine state hides a
+-- Shrine purchase once bought and a rush once rushed.
 local function visibleEntries(snapshot)
     local entries = {}
     local occurrence = snapshot.occurrence
@@ -377,14 +377,14 @@ local function visibleEntries(snapshot)
         local description = row.description
         if type(description) == "table" and description.kind == "reroll" then
             entries[#entries + 1] = { text = rerollInstruction(description, occurrence, pressed) }
-        elseif type(description) == "table" and description.kind == "purchaseHermesShrineOffer" then
+        elseif type(description) == "table" and (description.kind == "purchaseHermesShrineOffer"
+            or description.kind == "rushHermesShrineOffer") then
             local progress = type(snapshot.shrineProgress) == "function"
                 and snapshot.shrineProgress(description.generationKey) or "pending"
             local name = rewardName({ rewardType = description.rewardType })
-            if progress == "pending" then
+            if description.kind == "purchaseHermesShrineOffer" and progress == "pending" then
                 entries[#entries + 1] = { text = "Shrine: " .. name, actionable = true }
-            end
-            if description.rushed == true and progress ~= "rushed" then
+            elseif description.kind == "rushHermesShrineOffer" and progress ~= "rushed" then
                 entries[#entries + 1] = { text = "Rush: " .. name, actionable = true }
             end
         else

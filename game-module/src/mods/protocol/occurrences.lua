@@ -337,13 +337,12 @@ local function guideDescription(value, label)
         end
         return row
     end
-    if kind == "purchaseHermesShrineOffer" then
-        local row, rowError = p.exact(record, { "kind", "generationKey", "rewardType", "rushed" }, {}, label)
+    if kind == "purchaseHermesShrineOffer" or kind == "rushHermesShrineOffer" then
+        local row, rowError = p.exact(record, { "kind", "generationKey", "rewardType" }, {}, label)
         if not row then return nil, rowError end
         if not p.one(row.generationKey, { ["initial:first"] = true, ["initial:secondLeft"] = true,
             ["initial:secondRight"] = true, travelDealRefill = true }, label .. ".generationKey")
-            or not p.str(row.rewardType, label .. ".rewardType")
-            or not p.bool(row.rushed, label .. ".rushed") then
+            or not p.str(row.rewardType, label .. ".rewardType") then
             return p.fail(label .. " has invalid Shrine guide operands")
         end
         return row
@@ -451,8 +450,9 @@ local function roomGuide(value, transactionsByOwner, requiredReward, label)
             and not overview.sameRequiredReward(description.drop, requiredReward) then
             return p.fail(label .. "[" .. index .. "].description.drop must be the overview's required reward")
         end
-        if description.kind == "purchaseHermesShrineOffer" and row.transactionOwner ~= nil then
-            return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases")
+        if (description.kind == "purchaseHermesShrineOffer" or description.kind == "rushHermesShrineOffer")
+            and row.transactionOwner ~= nil then
+            return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases or rushes")
         end
     end
     return rows
