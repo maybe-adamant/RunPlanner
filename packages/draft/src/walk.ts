@@ -65,6 +65,7 @@ import {
   routeResourceAuthoring,
   nextRequiredPlacement,
   liveRoomForProjectEvaluationAssembly,
+  reachedEncounterPhasesForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
   GoldLedgerContractError,
   type GoldPurchaseAvailability,
@@ -74,6 +75,7 @@ import { latestRunState } from './report';
 import {
   draftEncounterChoice,
   draftOccurrenceEncounterChoice,
+  draftPhaseEncounter,
   type DraftEncounterChoiceContext,
 } from './encounters';
 import { createDraftPrerequisites } from './prerequisites';
@@ -98,6 +100,7 @@ import {
   NPC_EXCLUDED_REWARD_FACTOR,
   NPC_WINDOW_WEIGHT,
   type DraftProgress,
+  type DraftPurchaseGold,
   type DraftPurchaseKind,
 } from './steering';
 import { DraftTraitOffers } from './trait-offers';
@@ -194,14 +197,20 @@ function earliestRequiredPickup(
   return undefined;
 }
 
+/** The gold of a purchase the draft never buys, and of one that costs nothing. */
+const UNAFFORDABLE: DraftPurchaseGold = Object.freeze({ odds: 0, spare: -Infinity });
+const FREE: DraftPurchaseGold = Object.freeze({ odds: 1, spare: Infinity });
+
 /** Steps a pending purchase may wait for the gold walk to reach it. */
 const PENDING_PURCHASE_STEPS = 12;
 
-/** Where a walk stood: its assembly and the commands and faults it had kept. */
+/** Where a walk stood: its assembly, the commands and faults it had kept and its drafted encounters. */
 interface DraftWalkMark {
   readonly assembly: ProjectEvaluationAssembly;
   readonly commands: number;
   readonly faults: number;
+  readonly phases: number;
+  readonly encounterRooms: ReadonlyMap<number, number>;
 }
 
 /** A Shop door beside a door to a new god with queued traits. */
@@ -263,6 +272,12 @@ export class DraftWalk {
   private readonly samples: DraftSampleContext;
   private readonly encounterChoices: DraftEncounterChoiceContext;
   private nextOccurrence = 0;
+  /** Encounter phases this walk customized as it left their rooms, by phase key, in order. */
+  private readonly draftedPhaseKeys: string[] = [];
+  /** Rooms the plan entered before this walk, by biome key and occurrence ID; their encounters stay. */
+  private readonly inheritedRooms = new Set<string>();
+  /** Rooms per biome whose encounters the walk has customized, in entry order. */
+  private readonly encounterRooms = new Map<number, number>();
   /** Rooms entered per biome that have had their essence roll. */
   private readonly essenceRooms = new Map<number, number>();
   /** Rooms the walk passed after their Quick Buck and Buried Treasure drops were picked up. */
@@ -283,7 +298,6 @@ export class DraftWalk {
     | {
         readonly offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>;
         readonly kind: DraftPurchaseKind;
-        readonly bar: number;
         readonly mark: DraftWalkMark;
         readonly step: number;
       }
@@ -371,10 +385,16 @@ export class DraftWalk {
     // The Shops the plan already entered were stocked by whoever entered them.
     for (const biomeKey of this.project.route.itineraryBiomeKeys)
       for (const room of this.enteredRooms(biomeKey)) {
+        this.inheritedRooms.add(`${biomeKey}/${room.occurrenceId}`);
         this.steeredShops.add(`${biomeKey}/${room.occurrenceId}`);
         this.steeredShops.add(`${biomeKey}/${room.occurrenceId}/${TRAVEL_DEAL_REFILL_ENTRY_KEY}`);
         this.steeredShops.add(`${biomeKey}/${room.occurrenceId}/${PEDESTAL_STEER_KEY}`);
       }
+  }
+
+  /** Encounter phases this walk customized as it left their rooms, by phase key. */
+  get draftedPhases(): ReadonlySet<string> {
+    return new Set(this.draftedPhaseKeys);
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
@@ -415,6 +435,7 @@ export class DraftWalk {
     while (this.stepCount < maxSteps) {
       // Before the biome closes, so the rooms its last step entered roll too.
       this.maybePlaceEssence(biomeIndex);
+      this.draftLeftEncounters(biomeIndex);
       this.pickUpTraitDrops(biomeIndex);
       this.steerShops(biomeIndex);
       if (this.issueBiomeIndex() > biomeIndex) {
@@ -465,6 +486,47 @@ export class DraftWalk {
       this.essenceRooms.set(index, entered.length);
       for (const room of entered.slice(rolled ?? 0))
         this.rollEssence(biomeKey, room.occurrenceId, room.gameName);
+    }
+  }
+
+  /**
+   * Customizes the encounters of each room the walk has left, as the post pass would, so a
+   * later Shop's gold reads the rosters the plan keeps; the post pass covers the rest.
+   */
+  private draftLeftEncounters(biomeIndex: number): void {
+    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    if (biomeKey === undefined) return;
+    const entered = this.enteredRooms(biomeKey);
+    const done = this.encounterRooms.get(biomeIndex) ?? 0;
+    // The last entered room is where the walk stands.
+    if (entered.length - 1 <= done) return;
+    this.encounterRooms.set(biomeIndex, entered.length - 1);
+    const left = new Set(
+      entered
+        .slice(done, -1)
+        .map((room) => room.occurrenceId as string)
+        .filter((occurrenceId) => !this.inheritedRooms.has(`${biomeKey}/${occurrenceId}`)),
+    );
+    const authoring = {
+      current: () => this.assembly,
+      settle: (command: ProjectCommand) => {
+        const outcome = this.authoring.apply(command, 'noNewFinding');
+        if (outcome.kind !== 'applied') return false;
+        this.appliedCommands.push(command);
+        if (outcome.fault !== undefined) this.faults.push(outcome.fault);
+        return true;
+      },
+    };
+    for (const phase of reachedEncounterPhasesForProjectEvaluationAssembly(this.assembly)) {
+      const key = semanticAddressKey(phase);
+      if (
+        phase.biomeKey !== biomeKey ||
+        !left.has(phase.owner.occurrenceId) ||
+        this.draftedPhaseKeys.includes(key)
+      )
+        continue;
+      this.draftedPhaseKeys.push(key);
+      draftPhaseEncounter(this.catalog, authoring, phase, this.rng);
     }
   }
 
@@ -727,11 +789,7 @@ export class DraftWalk {
       )
         return false;
     }
-    if (
-      empty ||
-      this.steering.fillerPriority().length === 0 ||
-      this.steering.purchaseBar('filler') === undefined
-    )
+    if (empty || this.steering.fillerPriority().length === 0 || this.steering.spending() === 'none')
       return true;
     const bought = new Set(
       (this.occurrence(biomeKey, occurrenceId)?.roomActions?.order ?? []).flatMap((action) =>
@@ -757,45 +815,45 @@ export class DraftWalk {
   }
 
   /**
-   * Buys a Shop item when the chance the gold held before it, after every earlier purchase,
-   * covers its price reaches the spending style's bar. A purchase the gold walk does not reach
-   * until its own choice is made, such as a Mystery boon's god boon screen, is pending until a
-   * later step reaches it.
+   * Buys a Shop item when its gold clears the spending style (see `purchaseClears`), judged
+   * after every earlier purchase. A purchase the gold walk does not reach until its own choice
+   * is made, such as a Mystery boon's god boon screen, is pending until a later step reaches it.
    */
   private purchase(
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     kind: DraftPurchaseKind,
   ): 'bought' | 'declined' | 'pending' {
-    const bar = this.steering.purchaseBar(kind);
-    if (bar === undefined) return 'declined';
+    if (this.steering.spending() === 'none') return 'declined';
     const mark: DraftWalkMark = {
       assembly: this.assembly,
       commands: this.appliedCommands.length,
       faults: this.faults.length,
+      phases: this.draftedPhaseKeys.length,
+      encounterRooms: new Map(this.encounterRooms),
     };
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
       return 'declined';
-    const odds = this.assembly.evaluation.issue?.kind === 'invalid' ? 0 : this.affordable(offer);
-    if (odds === undefined) {
-      this.pendingPurchase = { offer, kind, bar, mark, step: this.stepCount };
+    const gold =
+      this.assembly.evaluation.issue?.kind === 'invalid' ? UNAFFORDABLE : this.purchaseGold(offer);
+    if (gold === undefined) {
+      this.pendingPurchase = { offer, kind, mark, step: this.stepCount };
       return 'pending';
     }
-    return this.settlePurchase(offer, kind, bar, odds, mark) ? 'bought' : 'declined';
+    return this.settlePurchase(offer, kind, gold, mark) ? 'bought' : 'declined';
   }
 
   /**
-   * Keeps a purchase whose odds reach its bar. A wanted item below its bar takes back the run's
-   * earlier filler purchases, latest first, until it clears it; failing that, the walk returns
+   * Keeps a purchase whose gold clears its kind. A wanted item that does not takes back the
+   * run's earlier filler purchases, latest first, until it does; failing that, the walk returns
    * to where it stood before the purchase.
    */
   private settlePurchase(
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     kind: DraftPurchaseKind,
-    bar: number,
-    odds: number,
+    gold: DraftPurchaseGold,
     mark: DraftWalkMark,
   ): boolean {
-    if (odds >= bar) return true;
+    if (this.steering.purchaseClears(kind, gold)) return true;
     if (kind === 'wanted')
       for (const filler of this.fillerPurchases(offer)) {
         // A take-back that would add a finding keeps its filler.
@@ -808,11 +866,15 @@ export class DraftWalk {
         if (applied.kind !== 'applied') continue;
         this.appliedCommands.push(command);
         if (applied.fault !== undefined) this.faults.push(applied.fault);
-        if ((this.affordable(offer) ?? 0) >= bar) return true;
+        if (this.steering.purchaseClears(kind, this.purchaseGold(offer) ?? UNAFFORDABLE))
+          return true;
       }
     this.authoring.restore(mark.assembly);
     this.appliedCommands.length = mark.commands;
     this.faults.length = mark.faults;
+    this.draftedPhaseKeys.length = mark.phases;
+    this.encounterRooms.clear();
+    mark.encounterRooms.forEach((rooms, biome) => this.encounterRooms.set(biome, rooms));
     return false;
   }
 
@@ -825,31 +887,37 @@ export class DraftWalk {
     const pending = this.pendingPurchase;
     if (pending === undefined) return false;
     const { offer } = pending;
-    const odds = this.affordable(offer);
-    if (odds === undefined && !now && this.stepCount - pending.step < PENDING_PURCHASE_STEPS)
+    const gold = this.purchaseGold(offer);
+    if (gold === undefined && !now && this.stepCount - pending.step < PENDING_PURCHASE_STEPS)
       return true;
     this.pendingPurchase = undefined;
-    this.settlePurchase(offer, pending.kind, pending.bar, odds ?? 0, pending.mark);
+    this.settlePurchase(offer, pending.kind, gold ?? UNAFFORDABLE, pending.mark);
     return false;
   }
 
   /**
-   * The engine's chance the gold held before a purchase covers its price: 0 when the plan
-   * leaves it unpriced, undefined when the gold walk does not reach it yet.
+   * The engine's gold for a reached purchase: the chance the gold held before it covers its
+   * price and the mean gold left after it; unaffordable when the plan leaves it unpriced,
+   * undefined when the gold walk does not reach it yet.
    */
-  private affordable(offer: SemanticAddress): number | undefined {
+  private purchaseGold(offer: SemanticAddress): DraftPurchaseGold | undefined {
     let priced: GoldPurchaseAvailability;
     try {
       priced = goldLedgerForProjectEvaluationAssembly(this.catalog, this.assembly).purchaseAt(
         offer,
       );
     } catch (error) {
-      if (error instanceof GoldLedgerContractError) return 0;
+      if (error instanceof GoldLedgerContractError) return UNAFFORDABLE;
       throw error;
     }
     if (priced.availability === 'unavailable')
-      return priced.reason === 'coverageNotReached' ? undefined : 0;
-    return priced.purchase.venue === 'free' ? 1 : (priced.purchase.affordableProbability ?? 0);
+      return priced.reason === 'coverageNotReached' ? undefined : UNAFFORDABLE;
+    const { purchase } = priced;
+    if (purchase.venue === 'free') return FREE;
+    const odds = purchase.affordableProbability;
+    return odds === undefined || purchase.balanceBefore.availability !== 'available'
+      ? UNAFFORDABLE
+      : { odds, spare: purchase.balanceBefore.balance.mean - purchase.price.mean };
   }
 
   /** The run's filler purchases before a purchase, latest first: Shops in entry order, each in purchase order. */

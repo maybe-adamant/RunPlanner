@@ -118,6 +118,7 @@ export function draftProject(
       | {
           assembly: ProjectEvaluationAssembly;
           faults: readonly SettlementFault[];
+          draftedPhases: ReadonlySet<string>;
           score: number;
           localMet: boolean;
         }
@@ -163,7 +164,13 @@ export function draftProject(
         score > best.score ||
         (score === best.score && localMet && !best.localMet)
       )
-        best = { assembly: walk.assembly, faults: walk.faults, score, localMet };
+        best = {
+          assembly: walk.assembly,
+          faults: walk.faults,
+          draftedPhases: walk.draftedPhases,
+          score,
+          localMet,
+        };
       // An unmet scheduled Hermes or Hammer some decision could take here earns one retry.
       if (
         localMet &&
@@ -177,12 +184,14 @@ export function draftProject(
       if (localMet) supplyRetried = true;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
-    // Only the chosen attempt's encounters are drafted, before the next biome builds on them.
+    // The chosen attempt's encounters the walk left undrafted are drafted before the next biome
+    // builds on them.
     const encounters = draftEncounters(
       catalog,
       best.assembly,
       biomeKey,
       createDraftRng((seed * 2_246_822_519 + biomeIndex * 7_919 + 1) >>> 0),
+      best.draftedPhases,
     );
     current = encounters.assembly;
     faults.push(...best.faults, ...encounters.faults);

@@ -19,6 +19,8 @@ import {
   draftSiblingHoldsGodBoon,
   draftPaceWeight,
   draftWindowForceChance,
+  DRAFT_AFFORDABLE_FLOOR,
+  DRAFT_SPENDING_CUSHIONS,
 } from '../src/steering';
 import { draftSteeringFor } from './support/draft-walk';
 import { createDraftRng } from '../src/rng';
@@ -372,6 +374,72 @@ describe('hosted Duos', () => {
     expect(apolloHosts.queueGiver(duo)).toBe('Apollo');
     expect(apolloHosts.godTakes('Zeus', ready)).toBe(false);
     expect(apolloHosts.godTakes('Apollo', ready)).toBe(true);
+  });
+});
+
+describe('spending cushions', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'c',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const steering = (spending: DraftSpending) =>
+    draftSteeringFor(base, {
+      loadout,
+      world: { godKeys: ['Zeus'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [],
+      spending,
+    });
+  const styles = ['careful', 'normal', 'greedy'] as const;
+
+  it('keeps more gold spare from Greedy to Careful', () => {
+    const cushions = styles.map((style) => DRAFT_SPENDING_CUSHIONS[style]);
+    expect(cushions).toEqual([...cushions].sort((a, b) => b - a));
+    expect(new Set(cushions).size).toBe(cushions.length);
+    expect(cushions.at(-1)).toBeGreaterThan(0);
+  });
+
+  it('asks filler for the full cushion and a wanted item for half', () => {
+    for (const style of styles) {
+      const cushion = DRAFT_SPENDING_CUSHIONS[style];
+      const clears = (kind: 'wanted' | 'filler', spare: number) =>
+        steering(style).purchaseClears(kind, { odds: 0.99, spare });
+      expect(clears('filler', cushion)).toBe(true);
+      expect(clears('filler', cushion - 1)).toBe(false);
+      expect(clears('wanted', cushion / 2)).toBe(true);
+      expect(clears('wanted', cushion / 2 - 1)).toBe(false);
+    }
+  });
+
+  it('buys under a smaller cushion whatever a larger one buys', () => {
+    for (const kind of ['wanted', 'filler'] as const)
+      for (let spare = -10; spare <= 60; spare += 1)
+        for (const odds of [0.79, 0.8, 0.95]) {
+          const bought = styles.map((style) =>
+            steering(style).purchaseClears(kind, { odds, spare }),
+          );
+          // Careful, Normal, Greedy: once one buys, every later style buys too.
+          expect(bought).toEqual([...bought].sort((a, b) => Number(a) - Number(b)));
+        }
+  });
+
+  it('holds one affordable floor under every style, and none buys nothing', () => {
+    for (const style of styles)
+      for (const kind of ['wanted', 'filler'] as const) {
+        expect(
+          steering(style).purchaseClears(kind, { odds: DRAFT_AFFORDABLE_FLOOR, spare: 500 }),
+        ).toBe(true);
+        expect(
+          steering(style).purchaseClears(kind, {
+            odds: DRAFT_AFFORDABLE_FLOOR - 0.01,
+            spare: 500,
+          }),
+        ).toBe(false);
+      }
+    expect(steering('none').purchaseClears('wanted', { odds: 1, spare: 500 })).toBe(false);
   });
 });
 

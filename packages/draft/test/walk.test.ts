@@ -650,7 +650,7 @@ describe('draft trait drops', () => {
       rackKeepsakeKeys: [null, null, null],
       resourceRoomChance: 0,
     };
-    const walk = startDraftWalk(base, spec, 4);
+    const walk = startDraftWalk(base, spec, 3);
     expect(walk.runBiome(0, 600), walk.failure).toBe(true);
     const occurrences = walk.project.route.biomes[0]!.topology!.occurrences;
     const pickedUp = occurrences.flatMap((occurrence) => {
@@ -669,7 +669,7 @@ describe('draft trait drops', () => {
     // Each boon is the room's reward; its drops follow it in spawn order.
     expect(pickedUp).toEqual([
       [
-        'F_Combat02',
+        'F_Combat07',
         'interactIncomingReward',
         'smallGold',
         'tinyGold1',
@@ -678,7 +678,7 @@ describe('draft trait drops', () => {
         'minorHeal2',
         'bones',
       ],
-      ['F_Combat21', 'interactIncomingReward', 'quickBuckGold'],
+      ['F_Combat14', 'interactIncomingReward', 'quickBuckGold'],
     ]);
     const biome = createBiomeAddress('Underworld', 'F');
     const leftBehind = occurrences.flatMap(

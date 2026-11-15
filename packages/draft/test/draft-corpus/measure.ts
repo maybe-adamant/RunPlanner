@@ -74,8 +74,15 @@ export interface DraftCorpusRun {
 
 export interface ShopGold {
   readonly spent: number;
-  /** Per paid purchase in route order; null where the balance before it is unavailable. */
-  readonly odds: readonly { readonly filler: boolean; readonly p: number | null }[];
+  /**
+   * Per paid purchase in route order: its affordable chance and the mean gold it leaves spare;
+   * null where the balance before it is unavailable.
+   */
+  readonly odds: readonly {
+    readonly filler: boolean;
+    readonly p: number | null;
+    readonly spare: number | null;
+  }[];
 }
 
 /** Taken rooms whose reward grants a god boon (Mystery and Devotion included), per planned biome. */
@@ -346,7 +353,7 @@ function shopGold(project: ProjectDocument): ShopGold {
   const assembly = simulateProjectAssembly(catalog, project);
   const ledger = goldLedgerForProjectEvaluationAssembly(catalog, assembly);
   let spent = 0;
-  const odds: { filler: boolean; p: number | null }[] = [];
+  const odds: { filler: boolean; p: number | null; spare: number | null }[] = [];
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? [])
       for (const action of occurrence.roomActions?.order ?? []) {
@@ -364,6 +371,10 @@ function shopGold(project: ProjectDocument): ShopGold {
         odds.push({
           filler: offer !== undefined && draftFillerKind(offer.rewardType) !== undefined,
           p: priced.purchase.affordableProbability ?? null,
+          spare:
+            priced.purchase.balanceBefore.availability === 'available'
+              ? priced.purchase.balanceBefore.balance.mean - priced.purchase.price.mean
+              : null,
         });
       }
   return { spent, odds };

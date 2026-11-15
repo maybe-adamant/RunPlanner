@@ -31,8 +31,11 @@ always has zero findings, and the report lists each basket trait, story and
 field NPC and rack keepsake as met or unmet. After a biome's first success that
 misses a target there, it retries up to the spec's retries per biome and keeps
 the best. A biome that dead-ends retries only itself; attempt counts alone bound
-the search, so a seed drafts the same project on every machine. The encounter
-post pass then makes every reached encounter deterministic from the same seed.
+the search, so a seed drafts the same project on every machine. Every reached
+encounter is made deterministic from the same seed: the walk customizes each
+room's encounters as it leaves the room, so a later Shop's gold reads the
+rosters the plan keeps, and the encounter post pass customizes the rest and
+places the biome's Aetos wave.
 
 Draft collects in the order things appear in the room, never batched where the
 walk stands: each required pickup is placed at the earliest point the engine's
@@ -168,19 +171,21 @@ room as the route declares it, route overlays included.
   taken or not.
 - **Shop purchases.** A planned purchase the player cannot afford desyncs the
   run, so the draft buys only what the engine's gold ledger says the gold held
-  covers: the chance the balance before the purchase, after every earlier
-  planned purchase, covers its price must reach the spending style's bar.
+  covers. Judged against the balance before the purchase, after every earlier
+  planned purchase, the chance it covers the price must reach one floor shared
+  by every style, and the mean gold left after it must keep the spending
+  style's cushion spare: the most under Careful, the least under Greedy.
   Wanted items, a boon or Mystery boon of a god that can take its next queued
   trait, Hermes or a Hammer when due and a Dream boost of a wanted element,
-  have a lower bar than filler, and each style lowers both bars from Careful to
-  Greedy; `none` buys nothing. A wanted item below its bar first takes back the
-  run's earlier filler purchases, latest first, until it clears the bar, and is
-  left only when no filler is left to take back; a take-back that would add a
-  finding is skipped. The draft builds forward, so each purchase is judged
-  against the purchases before it. A purchase the ledger cannot reach until a
-  choice it or an earlier purchase opens is made, such as a Mystery boon's god
-  boon screen, is judged once the next steps make it, and taken back if they
-  do not soon. A Contract pedestal's free item is collected whenever wanted.
+  need half the cushion; `none` buys nothing. A wanted item that falls short
+  first takes back the run's earlier filler purchases, latest first, until it
+  clears, and is left only when no filler is left to take back; a take-back
+  that would add a finding is skipped. The draft builds forward, so each
+  purchase is judged against the purchases before it. A purchase the ledger
+  cannot reach until a choice it or an earlier purchase opens is made, such as
+  a Mystery boon's god boon screen, is judged once the next steps make it, and
+  taken back if they do not soon. A Contract pedestal's free item is collected
+  whenever wanted.
 - **Filler.** Non-boon rewards group into four filler kinds, Max Health, Max
   Magick, Gold and Pom, each covering every size variant (Pom includes the Pom
   Slice); every pickup counts one, at a door or in a Shop. Rank weights apply
@@ -196,7 +201,7 @@ room as the route declares it, route overlays included.
 - **Shop filler.** Once every slot of a Shop is steered, so its wanted items
   are bought first, the draft buys ranked Max Health, Max Magick and Pom still
   short of their amount, each a weighted pick bought when its gold clears the
-  filler bar; Shops sell no Gold.
+  floor and the full cushion; Shops sell no Gold.
 - **Shop doors.** Without the midshop preference, a Preboss Shop door still
   takes the preferred-Shop weight when the boon bag runs low (the boon entries
   left in the bags this biome's doors draw from: its base-store policy, else

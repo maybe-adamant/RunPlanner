@@ -207,27 +207,25 @@ export interface DraftedEncounters {
   readonly faults: readonly SettlementFault[];
 }
 
+/** Where a phase's customizations are authored: the current assembly and a settling apply. */
+export interface DraftEncounterAuthoring {
+  readonly current: () => ProjectEvaluationAssembly;
+  /** Applies a command only when it adds no finding; false when refused. */
+  readonly settle: (command: ProjectCommand) => boolean;
+}
+
 /**
- * Customizes every reached encounter phase of one biome in route order from the engine's
- * legal options, re-querying each after the previous one settles. A value that
- * adds a finding is dropped for the engine's initialisation, then native Default.
+ * Customizes one active encounter phase from the engine's legal options: its generated
+ * composition, infinite roster and declared decisions. A value that adds a finding is dropped
+ * for the engine's initialisation, then native Default.
  */
-export function draftEncounters(
+export function draftPhaseEncounter(
   catalog: Catalog,
-  start: ProjectEvaluationAssembly,
-  biomeKey: string,
+  authoring: DraftEncounterAuthoring,
+  phase: EncounterPhaseAddress,
   rng: DraftRng,
-): DraftedEncounters {
-  const session = createAuthoringSession(catalog, start);
-  const faults: SettlementFault[] = [];
-  const settle = (command: ProjectCommand): boolean => {
-    const outcome = session.apply(command, 'noNewFinding');
-    if (outcome.kind !== 'applied') return false;
-    if (outcome.fault !== undefined) faults.push(outcome.fault);
-    return true;
-  };
+): void {
   const customize = (
-    phase: EncounterPhaseAddress,
     decisionKey: string,
     ...values: readonly (() => AuthoredEncounterCustomization | undefined)[]
   ): void => {
@@ -235,10 +233,73 @@ export function draftEncounters(
       const value = next();
       if (
         value !== undefined &&
-        settle({ kind: 'ReplaceEncounterCustomization', phase, decisionKey, value })
+        authoring.settle({ kind: 'ReplaceEncounterCustomization', phase, decisionKey, value })
       )
         return;
     }
+  };
+  const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+    authoring.current(),
+    phase,
+  );
+  if (status?.kind !== 'active') return;
+  const generated = generatedEncounterSupportForProjectEvaluationAssembly(
+    authoring.current(),
+    phase,
+  );
+  if (generated !== undefined) {
+    let sampled: AuthoredGeneratedEncounterCustomization | undefined;
+    for (let attempt = 0; sampled === undefined && attempt < GENERATED_ATTEMPTS; attempt += 1)
+      sampled = sampleGenerated(catalog, generated, rng);
+    customize(generated.decisionKey, () => sampled, generated.initialize);
+  }
+  const roster = infiniteRosterSupportForProjectEvaluationAssembly(authoring.current(), phase);
+  if (roster !== undefined) {
+    const typeKeys = sampleRoster(roster, rng);
+    customize(roster.decisionKey, () => typeKeys && { kind: 'infiniteRoster', typeKeys });
+  }
+  const occurrence = authoring
+    .current()
+    .project.route.biomes.find((biome) => biome.biomeKey === phase.biomeKey)
+    ?.topology?.occurrences.find((entry) => entry.occurrenceId === phase.owner.occurrenceId);
+  const cocoonRewardPointIds =
+    catalog.rooms.byKey[occurrence?.gameName ?? '']?.cocoonRewardPointIds ?? [];
+  const definition =
+    status.encounterDefinitionKey === undefined
+      ? undefined
+      : catalog.encounterDefinitions.byKey[status.encounterDefinitionKey];
+  for (const decision of definition?.customization ?? [])
+    customize(decision.key, () =>
+      sampleDeclared(
+        customizationDecisionOnRoute(decision, phase.routeKey),
+        cocoonRewardPointIds,
+        rng,
+      ),
+    );
+}
+
+/**
+ * Customizes every reached encounter phase of one biome in route order that the walk did not
+ * already customize (`drafted`, by phase key), re-querying each after the previous one settles,
+ * then places the biome's Aetos wave among them all.
+ */
+export function draftEncounters(
+  catalog: Catalog,
+  start: ProjectEvaluationAssembly,
+  biomeKey: string,
+  rng: DraftRng,
+  drafted: ReadonlySet<string> = new Set(),
+): DraftedEncounters {
+  const session = createAuthoringSession(catalog, start);
+  const faults: SettlementFault[] = [];
+  const authoring: DraftEncounterAuthoring = {
+    current: () => session.current(),
+    settle: (command) => {
+      const outcome = session.apply(command, 'noNewFinding');
+      if (outcome.kind !== 'applied') return false;
+      if (outcome.fault !== undefined) faults.push(outcome.fault);
+      return true;
+    },
   };
   const aetosWaves = (phase: EncounterPhaseAddress): readonly number[] => {
     const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
@@ -251,44 +312,8 @@ export function draftEncounters(
     (phase) => phase.biomeKey === biomeKey,
   );
   for (const [index, phase] of phases.entries()) {
-    const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
-      session.current(),
-      phase,
-    );
-    if (status?.kind !== 'active') continue;
-    const generated = generatedEncounterSupportForProjectEvaluationAssembly(
-      session.current(),
-      phase,
-    );
-    if (generated !== undefined) {
-      let sampled: AuthoredGeneratedEncounterCustomization | undefined;
-      for (let attempt = 0; sampled === undefined && attempt < GENERATED_ATTEMPTS; attempt += 1)
-        sampled = sampleGenerated(catalog, generated, rng);
-      customize(phase, generated.decisionKey, () => sampled, generated.initialize);
-    }
-    const roster = infiniteRosterSupportForProjectEvaluationAssembly(session.current(), phase);
-    if (roster !== undefined) {
-      const typeKeys = sampleRoster(roster, rng);
-      customize(phase, roster.decisionKey, () => typeKeys && { kind: 'infiniteRoster', typeKeys });
-    }
-    const occurrence = session
-      .current()
-      .project.route.biomes.find((biome) => biome.biomeKey === phase.biomeKey)
-      ?.topology?.occurrences.find((entry) => entry.occurrenceId === phase.owner.occurrenceId);
-    const cocoonRewardPointIds =
-      catalog.rooms.byKey[occurrence?.gameName ?? '']?.cocoonRewardPointIds ?? [];
-    const definition =
-      status.encounterDefinitionKey === undefined
-        ? undefined
-        : catalog.encounterDefinitions.byKey[status.encounterDefinitionKey];
-    for (const decision of definition?.customization ?? [])
-      customize(phase, decision.key, () =>
-        sampleDeclared(
-          customizationDecisionOnRoute(decision, phase.routeKey),
-          cocoonRewardPointIds,
-          rng,
-        ),
-      );
+    if (!drafted.has(semanticAddressKey(phase)))
+      draftPhaseEncounter(catalog, authoring, phase, rng);
     // Native Aetos has a ChanceToPlay, so a biome may have none; each remaining
     // eligible phase and none are equally likely.
     const waves = aetosWaves(phase);
@@ -296,7 +321,7 @@ export function draftEncounters(
       const eligible = phases.slice(index).filter((later) => aetosWaves(later).length > 0);
       const wave = pick(rng, waves);
       if (rng() * (eligible.length + 1) < 1 && wave !== undefined)
-        settle({ kind: 'ReplaceAetosWave', phase, value: wave });
+        authoring.settle({ kind: 'ReplaceAetosWave', phase, value: wave });
     }
   }
   return Object.freeze({ assembly: session.current(), faults: Object.freeze(faults) });

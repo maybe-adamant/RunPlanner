@@ -120,17 +120,20 @@ export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
 export type DraftPurchaseKind = 'wanted' | 'filler';
 
 /**
- * The least chance the gold held before a purchase covers its price for the draft to buy it,
- * by spending style. A purchase the player cannot afford desyncs the run, so even filler needs
- * near certainty; a wanted item may take a little more risk.
+ * The mean gold a purchase must leave spare, by spending style; a wanted item needs half. A
+ * purchase the player cannot afford desyncs the run, so every style keeps some gold in hand.
  */
-export const DRAFT_SPENDING_BARS: Readonly<
-  Record<Exclude<DraftSpending, 'none'>, Readonly<Record<DraftPurchaseKind, number>>>
-> = Object.freeze({
-  careful: Object.freeze({ wanted: 0.92, filler: 0.97 }),
-  normal: Object.freeze({ wanted: 0.88, filler: 0.95 }),
-  greedy: Object.freeze({ wanted: 0.8, filler: 0.9 }),
-});
+export const DRAFT_SPENDING_CUSHIONS: Readonly<Record<Exclude<DraftSpending, 'none'>, number>> =
+  Object.freeze({ careful: 50, normal: 25, greedy: 10 });
+
+/** The least chance the gold held before a purchase covers its price, under every style. */
+export const DRAFT_AFFORDABLE_FLOOR = 0.8;
+
+/** A reached purchase's gold: the chance it is affordable and the mean gold it leaves spare. */
+export interface DraftPurchaseGold {
+  readonly odds: number;
+  readonly spare: number;
+}
 
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
@@ -895,10 +898,15 @@ export class DraftSteering {
     return this.spec.spending ?? DRAFT_OPTIONS.spending.default;
   }
 
-  /** The chance a purchase's gold must reach for the draft to buy it; undefined buys nothing. */
-  purchaseBar(kind: DraftPurchaseKind): number | undefined {
+  /**
+   * Whether the draft buys a purchase with this gold: affordable at the floor and leaving the
+   * style's cushion spare, half of it for a wanted item; never when the draft spends nothing.
+   */
+  purchaseClears(kind: DraftPurchaseKind, gold: DraftPurchaseGold): boolean {
     const spending = this.spending();
-    return spending === 'none' ? undefined : DRAFT_SPENDING_BARS[spending][kind];
+    if (spending === 'none') return false;
+    const cushion = DRAFT_SPENDING_CUSHIONS[spending] * (kind === 'wanted' ? 0.5 : 1);
+    return gold.odds >= DRAFT_AFFORDABLE_FLOOR && gold.spare >= cushion;
   }
 
   /** Bought Shop items over the run; elemental boosts aside. */
