@@ -300,8 +300,8 @@
 
 .biome-workspace[data-rail='folded']:not([data-rail-open]) .biome-rail-node {
   justify-items: start;
-  /* Narrow enough that a room icon beside a reward icon fits the folded column. */
-  padding: 8px 6px;
+  /* Pinned height, with sides narrow enough that a room icon beside a reward icon fits the column. */
+  padding: 10px 6px;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
@@ -342,7 +342,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 1px;
 }
 
 .biome-workspace[data-rail='folded']:not([data-rail-open])
@@ -592,6 +592,9 @@
 
 .biome-rail-node {
   display: grid;
+  /* One height whether the rail is pinned or folded: the room icon's, with the card's padding. */
+  min-height: calc(1.5rem + 22px);
+  align-content: center;
   width: 100%;
   min-width: 0;
   gap: 2px;
@@ -707,6 +710,7 @@
 
 /* A side room is a slim sub-row: no frame until it is hovered, selected or has a finding. */
 .biome-hub-rail-side-visit .biome-rail-node {
+  min-height: calc(1.2rem + 10px);
   padding: 4px 9px;
 }
 
