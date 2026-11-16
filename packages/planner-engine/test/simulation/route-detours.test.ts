@@ -371,7 +371,8 @@ function buildAnomalyProject(success: boolean) {
   project = replaceApolloReward(project, gBiome, combat02Peer2);
   project = setNormalSelection(project, gBiome, combat02, 'exit1');
   project = createBatch(project, gBiome, anomaly);
-  project = replaceBatchStore(project, gBiome, anomaly, 'RunProgress');
+  // The Anomaly rolls with the Hero target, which this ledger saturates to MetaProgress.
+  project = replaceBatchStore(project, gBiome, anomaly, 'MetaProgress');
   project = addTarget(project, gBiome, anomaly, 'exit1', returned, 'G_Combat07');
   project = addTarget(project, gBiome, anomaly, 'exit2', returnedPeer, 'G_Combat08');
   project = setNormalSelection(project, gBiome, anomaly, 'exit1');
@@ -385,7 +386,7 @@ function buildAnomalyProject(success: boolean) {
     occurrence: createOccurrenceAddress(gBiome, anomaly),
     success,
   });
-  project = replaceApolloReward(project, gBiome, returned);
+  project = replaceIncomingReward(project, gBiome, returned, 'MetaCardPointsCommonBigDrop');
   return {
     project,
     anomaly,
@@ -1185,7 +1186,7 @@ describe('route-detour simulation', () => {
     const built = buildAnomalyProject(true);
     const incoming = createIncomingRewardAddress(gBiome, built.anomaly);
     const project = authorTestArtificerReplacement(
-      replaceIncomingReward(built.project, gBiome, built.returned, 'RoomMoneyDrop'),
+      built.project,
       catalog,
       createAcquisitionRoleAddress(incoming, 'self'),
       createUnresolvedAcquisitionRewardState(

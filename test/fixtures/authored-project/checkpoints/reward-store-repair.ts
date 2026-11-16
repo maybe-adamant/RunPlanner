@@ -4,7 +4,9 @@ import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createTraitOfferAddress,
+  roomActionKey,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredTraitOfferTraits,
@@ -353,6 +355,42 @@ const plans: Readonly<
       ['59213773-32f1-4ccc-87a4-4eaf95e43b54', 'MaxManaDrop'],
       ['4a89190c-43f9-471a-9d8e-654d25338fa0', 'RoomMoneyDrop'],
     ]),
+    // Chaos_01 rolls with the Hero target (HeroData.lua:71), not P's: at 11 entered / 2 meta
+    // the selection value is 0.45 + 10 * (0.45 - 2/11) = 3.13, so its door is MetaProgress
+    // and both rooms behind it take Meta rewards.
+    {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: batchStore('P', 'b5108a85-1adf-42b3-9d55-dabf2a721156', 'Surface'),
+      storeKey: 'MetaProgress',
+    },
+    {
+      kind: 'ReplaceIncomingReward',
+      reward: incoming('P', 'c34604d0-c4e3-4c26-8539-54a82158716f', 'Surface'),
+      value: drop('MetaCardPointsCommonBigDrop'),
+    },
+    // The replaced reward lost its pickup row; the frontier room picks the new one up.
+    (() => {
+      const reference = {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      } as const;
+      return {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          createBiomeAddress('Surface', 'P'),
+          createOccurrenceId('c34604d0-c4e3-4c26-8539-54a82158716f'),
+          roomActionKey(reference),
+        ),
+        reference,
+        index: 0,
+      } satisfies RewardStoreRepairStep;
+    })(),
+    {
+      kind: 'ReplaceIncomingReward',
+      reward: incoming('P', 'b7cb89c8-7221-4a84-8fb5-38ee21ccb701', 'Surface'),
+      value: drop('MetaCurrencyBigDrop'),
+    },
   ]),
 };
 
@@ -364,10 +402,27 @@ export function applyRewardStoreRepair(
 ): ProjectDocument {
   let current = document;
   for (const step of steps) {
+    if (step.kind === 'InsertRoomAction' && roomActionOrdered(current, step)) continue;
     current =
       step.kind === 'AuthorLegalTraitOffers'
         ? authorLegalTraitOffers(current)
         : settleTestEdit(current, step);
   }
   return current;
+}
+
+/** A row the committed bytes already order, so re-applying the plan stays a fixed point. */
+function roomActionOrdered(
+  document: ProjectDocument,
+  step: Extract<ProjectCommand, { readonly kind: 'InsertRoomAction' }>,
+): boolean {
+  return (
+    document.route.biomes
+      .find((biome) => biome.biomeKey === step.action.biomeKey)
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === step.action.occurrenceId,
+      )
+      ?.roomActions.order.some((reference) => roomActionKey(reference) === step.action.actionKey) ??
+    false
+  );
 }

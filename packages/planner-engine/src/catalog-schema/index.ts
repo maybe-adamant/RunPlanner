@@ -1528,6 +1528,15 @@ export type RewardStorePolicy =
     }
   | { readonly kind: 'none' };
 
+/**
+ * The Hero's base-store controller target, which a room whose room set declares no
+ * `TargetMetaRewardsRatio` of its own uses when it rolls its exits' store.
+ */
+export interface HeroMetaRewardsTarget {
+  readonly targetMetaRewardsRatio: number;
+  readonly targetMetaRewardsAdjustSpeed: number;
+}
+
 type SourceOfferPointSelector = 'lastActiveWheel';
 
 export interface SourceRewardStorePolicyOverride {
@@ -1936,6 +1945,7 @@ export interface Catalog {
   readonly defaultFamiliarKey: string;
   /** `HeroData` base maxima before any trait. */
   readonly heroMaxStats: Readonly<Record<MaxStatKey, number>>;
+  readonly heroMetaRewardsTarget: HeroMetaRewardsTarget;
   readonly gold: GoldCatalogDeclaration;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;

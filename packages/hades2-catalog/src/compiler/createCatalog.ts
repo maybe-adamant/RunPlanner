@@ -27,6 +27,7 @@ import {
   validateEchoGiftBindings,
   validateKeepsakeReferences,
 } from './keepsakes';
+import { normalizeHeroMetaRewardsTarget } from './layouts/generated-progression';
 import { normalizeBiomeLayouts } from './layouts/normalize';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
 import { validateErisHosts, validateFirstRunOfferRules } from './rooms/feature-facts';
@@ -85,6 +86,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     maxHealth: requirePositiveInteger(input.heroMaxStats.maxHealth, 'heroMaxStats.maxHealth'),
     maxMana: requirePositiveInteger(input.heroMaxStats.maxMana, 'heroMaxStats.maxMana'),
   });
+  const heroMetaRewardsTarget = normalizeHeroMetaRewardsTarget(
+    input.heroMetaRewardsTarget,
+    'heroMetaRewardsTarget',
+  );
   const gold = normalizeGold(input.gold);
   validateHexBindings({
     hexes: traitCatalog.hexes,
@@ -204,6 +209,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     familiars,
     defaultFamiliarKey,
     heroMaxStats,
+    heroMetaRewardsTarget,
     gold,
     rewards,
     encounterEnvelopes,

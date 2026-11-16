@@ -216,6 +216,7 @@ export function applyOutgoingGenerationTransition(
         `${source.gameName} cannot own an authored base reward store`,
       );
     const support = assessAuthoredBatchRewardStore(
+      catalog,
       layout,
       { rewardStore },
       source,

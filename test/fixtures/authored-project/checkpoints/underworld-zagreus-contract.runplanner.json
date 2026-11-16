@@ -2782,7 +2782,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "RunProgress"
+                  "baseRewardStoreKey": "MetaProgress"
                 },
                 "batchState": null,
                 "targets": [

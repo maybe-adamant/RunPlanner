@@ -2,6 +2,7 @@ import type {
   BiomeDeclaration,
   ExitCompatibilityPolicy,
   GoldCatalogDeclaration,
+  HeroMetaRewardsTarget,
   RequiredRewardDropDeclaration,
   RoomMapPoints,
   RoomOrientation,
@@ -40,6 +41,7 @@ export interface RawCatalogInput {
   readonly familiars: readonly RawFamiliarDeclaration[];
   readonly defaultFamiliarKey: string;
   readonly heroMaxStats: { readonly maxHealth: number; readonly maxMana: number };
+  readonly heroMetaRewardsTarget: HeroMetaRewardsTarget;
   readonly gold: GoldCatalogDeclaration;
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
