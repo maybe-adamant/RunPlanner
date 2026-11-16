@@ -10,7 +10,7 @@ export {
   assessResourcePlacement,
   deriveResourceExecutionPolicy,
   routeResourceAuthoring,
-  type ResourceEnteredRoom,
+  type ResourceRoomAppearance,
   type ResourceExecutionPolicy,
   type ResourcePlacementLegality,
   type RouteResourceAuthoring,

@@ -9,7 +9,7 @@ import {
 import type { SemanticFinding } from './model';
 import { findingRegion, ownerRegion, type FindingRegionEntry } from './finding-regions';
 import type { HistoryEvent } from './history';
-import type { AuthoredRoutePlan, ResourcePlacement } from '../authored-project/model';
+import type { AuthoredRoutePlan, OccurrenceId, ResourcePlacement } from '../authored-project/model';
 import { resolveRoutePosition } from '../authored-project/route-context';
 import { composeBiomeHistoryPrefix } from './history/compose';
 import type { RoomHistoryOrigin } from './lifecycle/model';
@@ -27,7 +27,8 @@ export interface ResourcePlacementLegality {
   readonly refusals: readonly ResourcePlacementRefusal[];
 }
 
-export interface ResourceEnteredRoom {
+/** One RoomHistory entry: a room's entry or a restore of it. */
+export interface ResourceRoomAppearance {
   readonly biomeKey: string;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
@@ -46,7 +47,8 @@ export interface ResourceExecutionPolicy {
 export interface RouteResourceAuthoring {
   /** Exact saved route identity used for declaration-owned point availability. */
   readonly routeKey: string;
-  readonly entered: readonly ResourceEnteredRoom[];
+  /** The route's room appearances in RoomHistory order, Hub and restores included. */
+  readonly appearances: readonly ResourceRoomAppearance[];
   readonly placements: Readonly<Record<ResourceFamily, ResourcePlacement | null>>;
   readonly assessmentByFamily: Readonly<
     Record<ResourceFamily, ResourcePlacementLegality | undefined>
@@ -143,13 +145,13 @@ export function effectiveRouteResourcePlacements(
 
 /**
  * Materialization and history composition own selected chronology. This query
- * only projects their room-created sequence into resource candidate addresses.
+ * only projects their room-appearance ledger into resource candidate addresses.
  */
 export function routeResourceAuthoring(
   catalog: Catalog,
   route: AuthoredRoutePlan,
 ): RouteResourceAuthoring {
-  const entered: ResourceEnteredRoom[] = [];
+  const appearances: ResourceRoomAppearance[] = [];
   for (const biome of route.biomes) {
     const routePosition = resolveRoutePosition(catalog, route, biome.biomeKey);
     const prefix = materializeBiomePrefix(
@@ -162,16 +164,8 @@ export function routeResourceAuthoring(
     if (prefix?.entryRoom === undefined) break;
     const history = composeBiomeHistoryPrefix(catalog, prefix, routePosition);
     if (history === null) break;
-    const names = new Map<string, string>();
-    for (const event of history.events) {
-      if (event.kind === 'roomCreated') names.set(semanticAddressKey(event.origin), event.gameName);
-    }
-    for (const event of history.events) {
-      if (event.kind !== 'roomEntered') continue;
-      const gameName = names.get(semanticAddressKey(event.origin));
-      if (gameName !== undefined)
-        entered.push(Object.freeze({ biomeKey: biome.biomeKey, origin: event.origin, gameName }));
-    }
+    for (const { origin, gameName } of history.ledgers.roomAppearances)
+      appearances.push(Object.freeze({ biomeKey: biome.biomeKey, origin, gameName }));
     if (prefix.frontier !== undefined) break;
   }
   const assessmentByFamily = Object.fromEntries(
@@ -186,7 +180,7 @@ export function routeResourceAuthoring(
               route.routeKey,
               family,
               placement,
-              entered,
+              appearances,
               route.resourcePlacements,
             ),
       ] as const;
@@ -201,9 +195,9 @@ export function routeResourceAuthoring(
       assessmentByFamily[family]?.legal === true ? route.resourcePlacements[family] : null,
     ]),
   ) as Record<ResourceFamily, ResourcePlacement | null>;
+  const entered = enteredOccurrences(appearances);
   const assessedTargets = (family: ResourceFamily) =>
     entered.flatMap((entry): RouteResourceAuthoring['refusedTargetsByFamily'][ResourceFamily] => {
-      if (entry.origin.kind !== 'occurrence') return [];
       const room = catalog.rooms.byKey[entry.gameName];
       if (
         room?.resourcePointSupport.families.includes(family) !== true ||
@@ -212,7 +206,7 @@ export function routeResourceAuthoring(
         return [];
       const placement = Object.freeze({
         biomeKey: entry.biomeKey,
-        occurrenceId: entry.origin.occurrenceId,
+        occurrenceId: entry.occurrenceId,
       });
       const proposal = { ...legalPlacements, [family]: placement };
       const refusals = assessResourcePlacement(
@@ -220,7 +214,7 @@ export function routeResourceAuthoring(
         route.routeKey,
         family,
         placement,
-        entered,
+        appearances,
         proposal,
       ).refusals.filter(
         (refusal): refusal is Exclude<ResourcePlacementRefusal, NotHostRefusal> =>
@@ -253,7 +247,7 @@ export function routeResourceAuthoring(
   ) as RouteResourceAuthoring['refusedTargetsByFamily'];
   return Object.freeze({
     routeKey: route.routeKey,
-    entered: Object.freeze(entered),
+    appearances: Object.freeze(appearances),
     placements: route.resourcePlacements,
     assessmentByFamily: Object.freeze(assessmentByFamily),
     legalTargetsByFamily: Object.freeze(legalTargetsByFamily),
@@ -261,22 +255,17 @@ export function routeResourceAuthoring(
   });
 }
 
-/** The caller supplies the actual entered order; topology storage order is never used as chronology. */
+/** The caller supplies the actual appearance order; topology storage order is never used as chronology. */
 export function assessResourcePlacement(
   catalog: Catalog,
   routeKey: string,
   family: ResourceFamily,
   placement: ResourcePlacement,
-  entered: readonly ResourceEnteredRoom[],
+  appearances: readonly ResourceRoomAppearance[],
   selected: Readonly<Record<ResourceFamily, ResourcePlacement | null>>,
 ): ResourcePlacementLegality {
-  const index = entered.findIndex(
-    (entry) =>
-      entry.origin.kind === 'occurrence' &&
-      entry.biomeKey === placement.biomeKey &&
-      entry.origin.occurrenceId === placement.occurrenceId,
-  );
-  const target = index < 0 ? undefined : entered[index];
+  const indices = appearanceIndices(appearances, placement);
+  const target = indices.length === 0 ? undefined : appearances[indices[0]!];
   const refusals: ResourcePlacementRefusal[] = [];
   const refuse = (refusal: ResourcePlacementRefusal) => {
     const key = JSON.stringify(refusal);
@@ -299,7 +288,7 @@ export function assessResourcePlacement(
   const targetCandidate: ResourceCandidate = {
     biomeKey: placement.biomeKey,
     occurrenceId: placement.occurrenceId,
-    index,
+    appearances: indices,
     room,
   };
   for (const [otherFamily, other] of Object.entries(selected) as [
@@ -313,21 +302,15 @@ export function assessResourcePlacement(
         other.occurrenceId === placement.occurrenceId)
     )
       continue;
-    const otherIndex = entered.findIndex(
-      (entry) =>
-        entry.origin.kind === 'occurrence' &&
-        entry.biomeKey === other.biomeKey &&
-        entry.origin.occurrenceId === other.occurrenceId,
-    );
-    if (otherIndex < 0 || index < 0) continue;
-    const otherEntry = entered[otherIndex];
+    const otherIndices = appearanceIndices(appearances, other);
+    const otherEntry = otherIndices.length === 0 ? undefined : appearances[otherIndices[0]!];
     const otherRoom =
       otherEntry === undefined ? undefined : catalog.rooms.byKey[otherEntry.gameName];
-    if (otherEntry === undefined || otherRoom === undefined) continue;
+    if (otherRoom === undefined) continue;
     const otherCandidate: ResourceCandidate = {
       biomeKey: other.biomeKey,
       occurrenceId: other.occurrenceId,
-      index: otherIndex,
+      appearances: otherIndices,
       room: otherRoom,
     };
     for (const refusal of [
@@ -352,9 +335,50 @@ const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 type ResourceCandidate = {
   readonly biomeKey: string;
   readonly occurrenceId: string;
-  readonly index: number;
+  /** Ascending appearance indices; the first is the room's entry, where its points spawn. */
+  readonly appearances: readonly number[];
   readonly room: NonNullable<Catalog['rooms']['byKey'][string]>;
 };
+
+function appearanceIndices(
+  appearances: readonly ResourceRoomAppearance[],
+  placement: ResourcePlacement,
+): readonly number[] {
+  return appearances.flatMap((appearance, index) =>
+    appearance.origin.kind === 'occurrence' &&
+    appearance.biomeKey === placement.biomeKey &&
+    appearance.origin.occurrenceId === placement.occurrenceId
+      ? [index]
+      : [],
+  );
+}
+
+/** Each entered occurrence once, in entry order, with every appearance of it. */
+function enteredOccurrences(appearances: readonly ResourceRoomAppearance[]): readonly {
+  readonly biomeKey: string;
+  readonly occurrenceId: OccurrenceId;
+  readonly gameName: string;
+  readonly appearances: readonly number[];
+}[] {
+  const byKey = new Map<
+    string,
+    { biomeKey: string; occurrenceId: OccurrenceId; gameName: string; appearances: number[] }
+  >();
+  appearances.forEach((appearance, index) => {
+    if (appearance.origin.kind !== 'occurrence') return;
+    const key = semanticAddressKey(appearance.origin);
+    const known = byKey.get(key);
+    if (known !== undefined) known.appearances.push(index);
+    else
+      byKey.set(key, {
+        biomeKey: appearance.biomeKey,
+        occurrenceId: appearance.origin.occurrenceId,
+        gameName: appearance.gameName,
+        appearances: [index],
+      });
+  });
+  return [...byKey.values()];
+}
 
 interface ResourcePointReference {
   readonly family: ResourceFamily;
@@ -377,10 +401,15 @@ function resourcePointConflicts(
   candidate: ResourcePointReference,
 ): readonly ResourcePlacementRefusal[] {
   const refusals: ResourcePlacementRefusal[] = [];
-  if (candidate.candidate.index < target.candidate.index) {
+  const targetEntry = target.candidate.appearances[0]!;
+  const candidateEntry = candidate.candidate.appearances[0]!;
+  if (candidateEntry < targetEntry) {
     const targetRule = target.candidate.room.resourcePointSupport.rules[target.family];
     if (targetRule !== undefined) {
-      const distance = target.candidate.index - candidate.candidate.index;
+      // CreateRoom rolls the point in the appearance before entry (restores re-create
+      // doors, RoomLogic.lua:1577): SumPrevRooms = n reaches n appearances back.
+      const distance =
+        targetEntry - candidate.candidate.appearances.findLast((index) => index < targetEntry)!;
       if (target.family === candidate.family && distance <= targetRule.sameFamilyLookback)
         refusals.push({
           reason: 'resourceLookback',
@@ -408,7 +437,7 @@ function resourcePointConflicts(
         refusals.push({ reason: 'capReached', per: 'biome', count: 1, maximum: 1 });
     }
   }
-  if (candidate.candidate.index === target.candidate.index && candidate.family !== target.family) {
+  if (candidateEntry === targetEntry && candidate.family !== target.family) {
     if (target.candidate.room.resourcePointSupport.capacity === 'allTools')
       refusals.push({ reason: 'roomCapacity', family: candidate.family, capacity: 'allTools' });
     else if (resourceKindByFamily[candidate.family] === resourceKindByFamily[target.family])
@@ -438,15 +467,23 @@ export function deriveResourceExecutionPolicy(
       ),
     ),
   );
-  const candidates: ResourceCandidate[] = authoring.entered.flatMap((entry, index) => {
-    if (entry.origin.kind !== 'occurrence' || !enteredOccurrenceIds.has(entry.origin.occurrenceId))
-      return [];
-    const room = catalog.rooms.byKey[entry.gameName];
-    return room === undefined ||
-      room.resourcePointSupport.excludedRouteKeys?.includes(authoring.routeKey)
-      ? []
-      : [{ biomeKey: entry.biomeKey, occurrenceId: entry.origin.occurrenceId, index, room }];
-  });
+  const candidates: ResourceCandidate[] = enteredOccurrences(authoring.appearances).flatMap(
+    (entry) => {
+      if (!enteredOccurrenceIds.has(entry.occurrenceId)) return [];
+      const room = catalog.rooms.byKey[entry.gameName];
+      return room === undefined ||
+        room.resourcePointSupport.excludedRouteKeys?.includes(authoring.routeKey)
+        ? []
+        : [
+            {
+              biomeKey: entry.biomeKey,
+              occurrenceId: entry.occurrenceId,
+              appearances: entry.appearances,
+              room,
+            },
+          ];
+    },
+  );
   const placements = Object.fromEntries(
     resourceFamilies.map((family) => [
       family,

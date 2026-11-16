@@ -107,13 +107,19 @@ lookback requirements are:
 | Fishing / Water | no Fishing point in the previous 5 rooms  |
 
 Every family also excludes every other tool-point family in the immediately
-previous room. N expands off-diagonal windows to three rooms and uses
-same-family windows of 12 (Shovel/Pickaxe), 16 (Exorcism), and 14 (Fishing);
-H uses a two-room same-family window. Each family normally has a per-biome
-limit of one; a matching familiar raises that limit by one; a declaration can
-force a point or ignore the biome limit. These are point-generation facts, not
-element cooldowns. A spawned point that fails its element roll still consumes
-spacing and biome-count capacity in the game.
+previous room. "Rooms" are `RoomHistory` entries: `CreateRoom` rolls a point
+(`RunLogic.lua:675-705`) in the room left just before entry, which a restore
+re-creates for its untaken doors (`RoomLogic.lua:1577,3916`), so a
+`SumPrevRooms = n` window holds that room and the `n - 1` entries before it.
+Hub returns, side rooms and restored main rooms each count, and a restored
+room's point counts at its latest entry. N expands off-diagonal windows to
+three rooms and uses same-family windows of 12 (Shovel/Pickaxe), 16
+(Exorcism), and 14 (Fishing); H uses a two-room same-family window. Each
+family normally has a per-biome limit of one; a matching familiar raises that
+limit by one; a declaration can force a point or ignore the biome limit.
+These are point-generation facts, not element cooldowns. A spawned point that
+fails its element roll still consumes spacing and biome-count capacity in the
+game.
 
 A room's own requirement list replaces the base one. F, G, I, N, O and P
 `Story01` and `H_Bridge01` replace Shovel and Pickaxe with lists that keep only

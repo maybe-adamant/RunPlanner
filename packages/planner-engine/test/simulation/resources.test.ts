@@ -26,7 +26,7 @@ import {
   materializeBiome,
   routeResourceAuthoring,
   simulateProject,
-  type ResourceEnteredRoom,
+  type ResourceRoomAppearance,
   type RouteResourceAuthoring,
   type TraitHistoryEvent,
 } from '@run-planner/engine/simulation';
@@ -72,16 +72,16 @@ const enteredAt = (biomeKey: string, occurrenceId: string, gameName: string) => 
 const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 
 function directResourcePolicy(
-  entered: readonly ResourceEnteredRoom[],
+  appearances: readonly ResourceRoomAppearance[],
   placements: ReturnType<typeof none>,
 ) {
-  const occurrences = entered.filter(
-    (entry): entry is ResourceEnteredRoom & { origin: { kind: 'occurrence' } } =>
+  const occurrences = appearances.filter(
+    (entry): entry is ResourceRoomAppearance & { origin: { kind: 'occurrence' } } =>
       entry.origin.kind === 'occurrence',
   );
   const authoring: RouteResourceAuthoring = {
     routeKey: 'Underworld',
-    entered,
+    appearances,
     placements,
     assessmentByFamily: Object.fromEntries(
       resourceFamilies.map((family) => [
@@ -257,7 +257,7 @@ describe('selected resource success legality', () => {
     expect(
       deriveResourceExecutionPolicy(
         catalog,
-        [{ history: { rooms: authoring.entered.map(({ origin }) => ({ origin })) } }],
+        [{ history: { rooms: authoring.appearances.map(({ origin }) => ({ origin })) } }],
         authoring,
       ).occurrences,
     ).toEqual([]);
@@ -390,14 +390,15 @@ describe('selected resource success legality', () => {
       throw new Error('expected complete-valid N resource checkpoint');
     const authoring = routeResourceAuthoring(catalog, loadSurfaceNResourcesProject().route);
     const sideRoomId = 'surface-n-combat11-sideDoor1';
-    const sideIndex = authoring.entered.findIndex(
+    const sideIndex = authoring.appearances.findIndex(
       (entry) => entry.origin.kind === 'occurrence' && entry.origin.occurrenceId === sideRoomId,
     );
     const sideRow = evaluated.route.resources.occurrences.find(
       (entry) => entry.occurrenceId === sideRoomId,
     );
     expect(sideIndex).toBeGreaterThan(-1);
-    expect(sideIndex).toBe(10);
+    // Hub returns and restored main rooms before it are RoomHistory entries too.
+    expect(sideIndex).toBe(16);
     expect(sideRow).toMatchObject({
       occurrenceId: sideRoomId,
       pointDispositions: expect.objectContaining({ Exorcism: 'force' }),
@@ -423,7 +424,7 @@ describe('selected resource success legality', () => {
       origin: { kind: 'hubRoom', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const,
       gameName: 'N_Hub',
     };
-    const withHub: ResourceEnteredRoom[] = [
+    const withHub: ResourceRoomAppearance[] = [
       ...Array.from({ length: 16 }, (_, index) => enteredAt('F', `prior-${index}`, 'F_Combat01')),
       hub,
       enteredAt('N', 'side-target', 'N_Sub14'),
@@ -467,22 +468,22 @@ describe('selected resource success legality', () => {
     const route = project.route;
     if (route === undefined) throw new Error('expected Surface fixture route');
     const authoring = routeResourceAuthoring(catalog, route);
-    const openingIndex = authoring.entered.findIndex(
+    const openingIndex = authoring.appearances.findIndex(
       (entry) =>
         entry.origin.kind === 'occurrence' && entry.origin.occurrenceId === nOccurrenceIds.opening,
     );
-    const hubIndex = authoring.entered.findIndex((entry) => entry.origin.kind === 'hubRoom');
+    const hubIndex = authoring.appearances.findIndex((entry) => entry.origin.kind === 'hubRoom');
     const sideRoom = nLocalOccurrenceId('combat05', 'sideDoor2');
-    const sideRoomIndex = authoring.entered.findIndex(
+    const sideRoomIndex = authoring.appearances.findIndex(
       (entry) => entry.origin.kind === 'occurrence' && entry.origin.occurrenceId === sideRoom,
     );
 
-    expect(authoring.entered[hubIndex]).toEqual({
+    expect(authoring.appearances[hubIndex]).toEqual({
       biomeKey: 'N',
       origin: { kind: 'hubRoom', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' },
       gameName: 'N_Hub',
     });
-    expect('occurrenceId' in authoring.entered[hubIndex]!).toBe(false);
+    expect('occurrenceId' in authoring.appearances[hubIndex]!).toBe(false);
     expect([openingIndex, hubIndex, sideRoomIndex]).toEqual([0, 2, 4]);
     expect(
       assessResourcePlacement(
@@ -490,7 +491,7 @@ describe('selected resource success legality', () => {
         'Surface',
         'Exorcism',
         at('N', sideRoom),
-        authoring.entered,
+        authoring.appearances,
         {
           ...none(),
           Pickaxe: at('N', nOccurrenceIds.opening),
@@ -499,7 +500,7 @@ describe('selected resource success legality', () => {
     ).toBe(true);
 
     const enteredOccurrenceIds = new Set(
-      authoring.entered.flatMap((entry) =>
+      authoring.appearances.flatMap((entry) =>
         entry.origin.kind === 'occurrence' ? [entry.origin.occurrenceId] : [],
       ),
     );
@@ -526,6 +527,97 @@ describe('selected resource success legality', () => {
         Fishing: at('N', 'n0'),
       }).legal,
     ).toBe(false);
+  });
+
+  it('counts Hub returns and restored main rooms between Ephyra points, as RoomHistory does', () => {
+    const base = loadSurfaceNResourcesProject();
+    const miniBoss = 'surface-n-miniBoss01';
+    const combat11 = 'surface-n-combat11';
+    const project = (['Shovel', 'Exorcism'] as const).reduce(
+      (current, family) =>
+        applyProjectCommand(current, catalog, {
+          kind: 'ReplaceResourcePlacement',
+          route: createRouteAddress('Surface'),
+          family,
+          value: at('N', family === 'Shovel' ? miniBoss : combat11),
+        }),
+      base,
+    );
+    const authoring = routeResourceAuthoring(catalog, project.route!);
+    const indexOf = (occurrenceId: string) =>
+      authoring.appearances.findIndex(
+        (entry) => entry.origin.kind === 'occurrence' && entry.origin.occurrenceId === occurrenceId,
+      );
+    // Shovel's room, then the Hub, a visit with its side room and the return
+    // to its main room, the Hub again, and the Exorcism room: six entries.
+    expect(
+      authoring.appearances
+        .slice(indexOf(miniBoss), indexOf(combat11) + 1)
+        .map((entry) => entry.gameName),
+    ).toEqual([
+      'N_MiniBoss01',
+      'N_Hub',
+      'N_Combat02',
+      'N_Sub01',
+      'N_Combat02',
+      'N_Hub',
+      'N_Combat11',
+    ]);
+    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, refusals: [] });
+    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, refusals: [] });
+
+    const evaluated = simulateProject(catalog, project);
+    expect(evaluated.findings).toEqual([]);
+    const disposition = (occurrenceId: string) =>
+      evaluated.route?.resources.occurrences.find((entry) => entry.occurrenceId === occurrenceId)
+        ?.pointDispositions;
+    expect(disposition(miniBoss)?.Shovel).toBe('force');
+    expect(disposition(combat11)?.Exorcism).toBe('force');
+  });
+
+  it('closes the N three-room window at the third appearance back, a restore included', () => {
+    const hub = {
+      biomeKey: 'N',
+      origin: { kind: 'hubRoom', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const,
+      gameName: 'N_Hub',
+    };
+    const main = enteredAt('N', 'main', 'N_Combat02');
+    const target = enteredAt('N', 'target', 'N_Combat11');
+    const withReturn = [
+      enteredAt('N', 'outside', 'N_Combat01'),
+      main,
+      enteredAt('N', 'side', 'N_Sub01'),
+      main,
+      hub,
+      target,
+    ];
+    const withoutReturn = [
+      enteredAt('N', 'outside', 'N_Combat01'),
+      main,
+      hub,
+      enteredAt('N', 'visit', 'N_Combat05'),
+      hub,
+      target,
+    ];
+    const exorcismAt = (appearances: readonly ResourceRoomAppearance[], occurrenceId: string) =>
+      assessResourcePlacement(catalog, 'Surface', 'Exorcism', at('N', 'target'), appearances, {
+        ...none(),
+        Shovel: at('N', occurrenceId),
+      });
+    // Inside: CreateRoom reads the Hub, the restored main room and the side room.
+    expect(exorcismAt(withReturn, 'side').refusals).toEqual([
+      {
+        reason: 'resourceLookback',
+        family: 'Shovel',
+        scope: 'crossFamily',
+        order: 'before',
+        rooms: 3,
+      },
+    ]);
+    // Outside: four appearances back.
+    expect(exorcismAt(withoutReturn, 'main')).toEqual({ legal: true, refusals: [] });
+    // The same first entry four back is inside once its restore is two back.
+    expect(exorcismAt(withReturn, 'main').legal).toBe(false);
   });
 
   it("drops a Story room's own Pickaxe and Shovel spacing while later rooms still count it", () => {
