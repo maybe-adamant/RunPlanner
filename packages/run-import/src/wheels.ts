@@ -473,9 +473,12 @@ export function solveWheelOffers(context: RunImportContext): boolean {
     const replacement = solveShip(context, roomIndex, targets, kinds);
     if (kinds.length > 0) {
       context.used.add(`conversion:${roomIndex}`);
+      // A pinned replacement that does not hold leaves nothing behind for the fallback.
       if (
         replacement === undefined ||
-        !convertWheelPickups(context, roomIndex, true, { kinds, replacement })
+        !context.transaction(() =>
+          convertWheelPickups(context, roomIndex, true, { kinds, replacement }),
+        )
       )
         convertWheelPickups(context, roomIndex, true, { kinds });
     }
@@ -1149,8 +1152,10 @@ function convertWheelPickups(
   // A Time Piece may take the replacement of an Artificer the solve still searches.
   const artificerWaits =
     !kinds.includes('artificer') && recordedConversions(context, roomIndex).includes('artificer');
-  // A pinned replacement the room has no use of was not taken: a Time Piece must take it.
-  const unused = replacement !== undefined && (room.conversions?.timePiece ?? 0) > 0;
+  const timePieces = room.conversions?.timePiece ?? 0;
+  // The solve draws one replacement: only the first Artificer takes it. One the room has no
+  // use of was not taken, so a Time Piece must take it.
+  let unpinned = replacement;
   let goldified: AcquisitionRoleAddress | undefined;
   // Every recorded conversion takes its pickup in turn, so one authored apart keeps its target.
   for (const kind of conversionSequence(room)) {
@@ -1171,7 +1176,11 @@ function convertWheelPickups(
       uncollected.find(
         (pickup) => disposition(pickup) === 'normal' && supports(pickup.acquisition),
       );
-    const pinned = kind === 'artificer' ? replacement : undefined;
+    const pinned =
+      kind === 'artificer' && unpinned !== undefined
+        ? { ...unpinned, unused: timePieces > 0 }
+        : undefined;
+    if (kind === 'artificer') unpinned = undefined;
     if (target === undefined) {
       if (pinned !== undefined) return false;
       if (kinds.includes(kind) && !(kind === 'timePiece' && artificerWaits)) refused();
@@ -1189,20 +1198,21 @@ function convertWheelPickups(
         target.reward.offer.rewardType,
         roomIndex,
         pinned,
-        unused,
       ) &&
       pinned !== undefined
     )
       return false;
-    if (kind !== 'artificer') continue;
-    // The replacement spawns where its source stood, before any later wheel's pickup,
-    // and is required like it: collecting the room reaches it for a later Time Piece.
-    if (placedArtificerReplacement(context, target.acquisition) === undefined) continue;
+    if (kind !== 'artificer' || timePieces === 0) continue;
+    // The replacement spawns where its source stood, before any later wheel's pickup, and
+    // is required like it: collecting the room reaches it for a later Time Piece.
+    const spawned = placedArtificerReplacement(context, target.acquisition);
+    if (spawned === undefined || collected(spawned.reward)) continue;
     context.collectRequired(roomAddress);
     const placed = placedArtificerReplacement(context, target.acquisition);
+    // A replacement pickup has the one acquisition role.
     const role =
       placed === undefined ? undefined : Object.keys(placed.reward.dispositionByAcquisitionRole)[0];
-    if (placed === undefined || role === undefined || collected(placed.reward)) continue;
+    if (placed === undefined || role === undefined) continue;
     uncollected.splice(position, 0, {
       reward: placed.reward,
       acquisition: createAcquisitionRoleAddress(placed.entry, role),

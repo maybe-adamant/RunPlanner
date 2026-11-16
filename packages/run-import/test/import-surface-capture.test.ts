@@ -26,12 +26,15 @@ import {
   generatedCustomizations,
 } from './support/run-import';
 
-/** The reward types an occurrence's Artificer replacements hold. */
-const artificerReplacements = (project: ProjectDocument, occurrenceId: string) =>
+/** An occurrence's Artificer replacement pickups. */
+const replacementEntries = (project: ProjectDocument, occurrenceId: string) =>
   Object.entries(occurrence(project, occurrenceId).acquisitionSites ?? {})
     .filter(([siteKey]) => siteKey.includes('artificerSource:'))
-    .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}))
-    .map((entry) => entry?.offer.rewardType);
+    .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}));
+
+/** The reward types an occurrence's Artificer replacements hold. */
+const artificerReplacements = (project: ProjectDocument, occurrenceId: string) =>
+  replacementEntries(project, occurrenceId).map((entry) => entry?.offer.rewardType);
 
 describe('run import of the Surface capture', () => {
   const record = fixture('surface');
@@ -380,10 +383,7 @@ describe('run import of the Surface capture', () => {
     });
     // The replacement is a pickup of its own, which the second charge takes. With no use left
     // to tell the Max pickups apart the saves accept either, and the first draw is authored.
-    const replacements = Object.entries(ship.acquisitionSites ?? {})
-      .filter(([siteKey]) => siteKey.includes('artificerSource:'))
-      .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}));
-    expect(replacements).toMatchObject([
+    expect(replacementEntries(result.project, 'O-r25')).toMatchObject([
       {
         offer: { rewardType: 'MaxManaDrop' },
         dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
@@ -392,6 +392,79 @@ describe('run import of the Surface capture', () => {
     expect(
       result.report.entries
         .filter((entry) => entry.record?.roomIndex === 25 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
+  it('leaves a taken Artificer replacement alone when the Time Piece converts another wheel', () => {
+    // O_Combat05 as captured: the Artificer replaced the Meta pickup with the Max Health it
+    // used, and its one Time Piece charge took the Spell of the other phase.
+    const ship = occurrence(imported.project, 'O-r25');
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel2']?.offers['offer1'],
+    ).toMatchObject({ dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } });
+    expect(replacementEntries(imported.project, 'O-r25')).toMatchObject([
+      {
+        offer: { rewardType: 'MaxHealthDrop' },
+        dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      },
+    ]);
+    expect(imported.report.rooms?.[25]).toMatchObject({ verdict: 'accepted' });
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.record?.roomIndex === 25 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
+  it("turns a one-wheel ship's Artificer replacement to Gold by the room's Time Piece", () => {
+    // O_Combat01 as if its Pom replacement had been goldified, not taken: no use or level-up
+    // shows it, and one more Time Piece charge is gone from the next entry save on.
+    const goldified: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 21) {
+          const { StackUpgrade: _used, ...uses } = room.uses;
+          void _used;
+          return {
+            ...room,
+            uses,
+            conversions: { artificer: 1, timePiece: 1 },
+            traits: { ...room.traits, upgraded: [] },
+          };
+        }
+        if (index < 22 || room.entry === undefined) return room;
+        const { AphroditeCastBoon: _pom, ...traits } = room.entry.traits ?? {};
+        void _pom;
+        const charges = index === 22 ? 4 : traits['GoldifyKeepsake']?.boonConversionUses;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            traits:
+              charges === undefined
+                ? traits
+                : {
+                    ...traits,
+                    GoldifyKeepsake: { rarity: 'Epic', boonConversionUses: charges - 1 },
+                  },
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, goldified);
+    expect(result.kind).toBe('complete');
+    expect(result.report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
+    const ship = occurrence(result.project, 'O-r21');
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel1']?.offers['offer1'],
+    ).toMatchObject({ dispositionByAcquisitionRole: { self: { kind: 'artificer' } } });
+    expect(replacementEntries(result.project, 'O-r21')).toMatchObject([
+      { dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } },
+    ]);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 21 && entry.area === 'conversion')
         .map(describeEntry),
     ).toEqual([]);
   });

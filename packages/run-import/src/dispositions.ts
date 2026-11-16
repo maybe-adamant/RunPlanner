@@ -17,10 +17,14 @@ export type ConversionKind = 'artificer' | 'timePiece';
 /** The store an Artificer replacement draws from. */
 export const ARTIFICER_STORE = 'RunProgress';
 
-/** An Artificer replacement a search pinned; `assumed` unless the next entry save settled it. */
+/**
+ * An Artificer replacement a search pinned; `assumed` unless the next entry save settled it,
+ * `unused` when it may lack a use because a Time Piece of the room then takes it.
+ */
 export interface ConversionReplacement {
   readonly rewardType: string;
   readonly assumed: boolean;
+  readonly unused?: boolean;
 }
 
 export function recordedConversions(
@@ -82,7 +86,6 @@ export function convertAcquisition(
   convertedRewardType: string,
   roomIndex: number,
   pinned?: ConversionReplacement,
-  unused = false,
 ): boolean {
   const room = context.record.rooms[roomIndex]!;
   const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
@@ -115,7 +118,7 @@ export function convertAcquisition(
     .find(
       (offer) =>
         (pinned === undefined || offer.rewardType === pinned.rewardType) &&
-        ((pinned !== undefined && unused) ||
+        (pinned?.unused === true ||
           offer.rewardType === 'Boon' ||
           (room.uses[offer.rewardType] ?? 0) > 0),
     );
@@ -165,21 +168,26 @@ export function roomRewardArtificer(
     ),
     'self',
   );
-  const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
   const placed = placedArtificerReplacement(context, acquisition);
-  if (placed === undefined || evaluation.kind !== 'acquisitionConversion') return undefined;
-  return {
-    entry: placed.entry,
-    current: placed.reward.offer,
-    rewardTypes: evaluation.result.artificerReplacementRewardTypes ?? [],
-  };
+  return placed === undefined
+    ? undefined
+    : { entry: placed.entry, current: placed.reward.offer, rewardTypes: placed.rewardTypes };
 }
 
-/** The pickup an Artificer conversion of `acquisition` placed, once one holds a reward. */
+/**
+ * The pickup an Artificer conversion of `acquisition` placed, once one holds a
+ * reward, with the types the engine admits there.
+ */
 export function placedArtificerReplacement(
   context: RunImportContext,
   acquisition: AcquisitionRoleAddress,
-): { readonly entry: AcquisitionEntryAddress; readonly reward: AuthoredRewardState } | undefined {
+):
+  | {
+      readonly entry: AcquisitionEntryAddress;
+      readonly reward: AuthoredRewardState;
+      readonly rewardTypes: readonly string[];
+    }
+  | undefined {
   const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
   const entry =
     evaluation.kind === 'acquisitionConversion'
@@ -192,9 +200,12 @@ export function placedArtificerReplacement(
       : authoredOccurrence(context.assembly().project, entry.biomeKey, hostId)?.acquisitionSites?.[
           acquisitionSiteStorageKey(entry.site)
         ]?.pickupEntries?.[entry.entryKey];
-  return entry === undefined || reward === undefined || reward === null
+  return entry === undefined ||
+    reward === undefined ||
+    reward === null ||
+    evaluation.kind !== 'acquisitionConversion'
     ? undefined
-    : { entry, reward };
+    : { entry, reward, rewardTypes: evaluation.result.artificerReplacementRewardTypes ?? [] };
 }
 
 /** Replaces a placed Artificer replacement with one of `rewardType`; a boon takes a god the room used. */
