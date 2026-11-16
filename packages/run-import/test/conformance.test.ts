@@ -405,3 +405,61 @@ describe('import conformance field groups', () => {
     ]);
   });
 });
+
+describe('import conformance of traits the game removes in combat', () => {
+  it('accepts a room whose fight broke Protective Coating', () => {
+    // surface-circe as if O_Combat14's Icarus pick had been Protective Coating, not Hard Target
+    // and its Melee levels, and its armor then broke in O_Combat06: the next save lacks it.
+    const record = fixture('surface-circe');
+    const swap = (name: string) =>
+      name === 'FocusAttackDamageTrait' ? 'BreakInvincibleArmorBoon' : name;
+    const broken: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 20)
+          return {
+            ...room,
+            traitScreens: room.traitScreens.map((screen) => ({
+              ...screen,
+              options: screen.options.map((option) => ({ ...option, name: swap(option.name) })),
+            })),
+            traits: {
+              ...room.traits,
+              acquired: room.traits.acquired.map((trait) => ({ ...trait, name: swap(trait.name) })),
+              upgraded: [],
+            },
+          };
+        if (index === 21 && room.entry !== undefined) {
+          const { FocusAttackDamageTrait: held, ...traits } = room.entry.traits ?? {};
+          return {
+            ...room,
+            entry: {
+              ...room.entry,
+              traits: {
+                ...traits,
+                BreakInvincibleArmorBoon: held!,
+                ApolloWeaponBoon: { rarity: 'Common', level: 4 },
+              },
+            },
+          };
+        }
+        if (index === 22 && room.entry !== undefined)
+          return {
+            ...room,
+            entry: {
+              ...room.entry,
+              lostTraits: [...(room.entry.lostTraits ?? []), 'BreakInvincibleArmorBoon'],
+            },
+          };
+        return room;
+      }),
+    };
+    const { project, report } = projectFromRunRecord(catalog, broken);
+    expect(
+      project.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .some((occurrence) => JSON.stringify(occurrence).includes('BreakInvincibleArmorBoon')),
+    ).toBe(true);
+    expect(report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
+  });
+});

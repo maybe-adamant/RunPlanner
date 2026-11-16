@@ -187,7 +187,8 @@ The same projection owns the held-keepsake rows and exact store contents that
 every [Run State snapshot](SIMULATION_AND_VALIDATION.md#run-state-snapshots),
 and so every execution frame, carries. The engine also owns the room-exit fact
 kinds conformance reads from those snapshots and the traits snap mode
-restores, from which the module's modeled-traits table is generated.
+restores, from which the module's modeled-traits table is generated with the
+catalog's traits removed in combat, which neither conformance nor snap judges.
 
 ### Published `startState`
 

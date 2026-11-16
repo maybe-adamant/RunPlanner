@@ -743,6 +743,11 @@ export interface TraitDeclaration {
   readonly raisesAspectToPerfect?: true;
   /** Its native offer requirement reads Death Defiance state, which the planner does not model. */
   readonly offerDependsOnDeathDefiance?: true;
+  /**
+   * The game removes it in combat, which the planner assumes undamaged: as its
+   * armor breaks, or as each dodge decays its chance away.
+   */
+  readonly combatRemoval?: 'armorBreak' | 'dodgeDecay';
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

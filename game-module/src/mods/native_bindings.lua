@@ -68,22 +68,6 @@ return {
         },
     },
     conformance = {
-        -- Armor depletion and per-dodge decay are outside the planner's state
-        -- model. These NPC traits can disappear natively without invalidating
-        -- modeled outcomes.
-        disposableTraits = {
-            AgilityCostume = true,
-            ManaCostume = true,
-            VitalityCostume = true,
-            HighArmorCostume = true,
-            CastDamageCostume = true,
-            IncomeCostume = true,
-            SpellCostume = true,
-            EscalatingCostume = true,
-            BreakInvincibleArmorBoon = true,
-            BreakExplosiveArmorBoon = true,
-            DiminishingDodgeBoon = true,
-        },
         shrineUpgrades = {
             forfeit = "BoonSkipShrineUpgrade",
         },

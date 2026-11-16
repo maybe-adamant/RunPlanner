@@ -10,13 +10,15 @@ const raritylessNpcTrait = {
 } as const;
 
 /** Arachne's Story-room costume choices. Armor is `CostumeArmor` `BaseAmount`,
- * full under no damage; only Onyx's scales with the Dream menu rarity. */
+ * full under no damage; only Onyx's scales with the Dream menu rarity. Not
+ * `Invincible`, a dress is removed as its armor breaks (`OnHealthBufferDamage`). */
 export const arachneTraits = [
   {
     key: 'AgilityCostume',
     label: 'Lavender Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 30 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -25,6 +27,7 @@ export const arachneTraits = [
     label: 'Azure Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 40 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -33,6 +36,7 @@ export const arachneTraits = [
     label: 'Emerald Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 50 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -42,6 +46,7 @@ export const arachneTraits = [
     ...raritylessNpcTrait,
     // BaseValue 60 scaled by the Dream menu rarity: 80/60, 100/60, 140/60.
     armor: { source: 'Robe', amount: [60, 80, 100, 140] },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -50,6 +55,7 @@ export const arachneTraits = [
     label: 'Fuchsia Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 20 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -58,6 +64,7 @@ export const arachneTraits = [
     label: 'Gilded Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 10 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -66,6 +73,7 @@ export const arachneTraits = [
     label: 'Moonlight Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 55 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -74,6 +82,7 @@ export const arachneTraits = [
     label: 'Crimson Dress',
     ...raritylessNpcTrait,
     armor: { source: 'Robe', amount: 5 },
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

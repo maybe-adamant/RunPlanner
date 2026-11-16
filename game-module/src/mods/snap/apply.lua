@@ -291,7 +291,7 @@ local function newLoan(data, goldBefore)
 end
 
 local function modeled(frame, goldBefore)
-    local disposable, planned = nativeBindings.conformance.disposableTraits, {}
+    local disposable, planned = modeledTraits.removedInCombat, {}
     for _, row in ipairs(frame.traits.equipped) do
         if universe[row.traitKey] and not disposable[row.traitKey] then planned[row.traitKey] = row end
     end

@@ -85,6 +85,8 @@ export const icarusTraits = [
     ...raritylessNpcTrait,
     // BaseValue 100; only Heroic scales it (14/10).
     armor: { source: 'Icarus', amount: [100, 100, 100, 140] },
+    // `Invincible`, but its `OnArmorBreakFunction` removes it (PowersLogic.IcarusArmorInvulnerability).
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -93,6 +95,8 @@ export const icarusTraits = [
     label: 'Volatile Coating',
     ...raritylessNpcTrait,
     armor: { source: 'Icarus', amount: 50 },
+    // `Invincible`, but its `OnArmorBreakFunction` removes it (PowersLogic.IcarusArmorExplosion).
+    combatRemoval: 'armorBreak',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
