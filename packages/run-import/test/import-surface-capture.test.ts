@@ -26,12 +26,15 @@ import {
   generatedCustomizations,
 } from './support/run-import';
 
-/** The reward types an occurrence's Artificer replacements hold. */
-const artificerReplacements = (project: ProjectDocument, occurrenceId: string) =>
+/** An occurrence's Artificer replacement pickups. */
+const replacementEntries = (project: ProjectDocument, occurrenceId: string) =>
   Object.entries(occurrence(project, occurrenceId).acquisitionSites ?? {})
     .filter(([siteKey]) => siteKey.includes('artificerSource:'))
-    .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}))
-    .map((entry) => entry?.offer.rewardType);
+    .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}));
+
+/** The reward types an occurrence's Artificer replacements hold. */
+const artificerReplacements = (project: ProjectDocument, occurrenceId: string) =>
+  replacementEntries(project, occurrenceId).map((entry) => entry?.offer.rewardType);
 
 describe('run import of the Surface capture', () => {
   const record = fixture('surface');
@@ -297,6 +300,173 @@ describe('run import of the Surface capture', () => {
         .map(describeEntry),
     ).toEqual([]);
     expect(result.report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
+  });
+
+  it('stops at a ship whose Artificer replacement the room neither used nor turned to Gold', () => {
+    // O_Combat01 without its StackUpgrade use: a replacement no use shows needs a Time Piece
+    // to have taken it, and the room spent none.
+    const unused: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index !== 21) return room;
+        const { StackUpgrade: _used, ...uses } = room.uses;
+        void _used;
+        return { ...room, uses };
+      }),
+    };
+    expect(projectFromRunRecord(catalog, unused)).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'wheel', code: 'wheelOffersUnaccepted', record: { roomIndex: 21 } },
+    });
+  });
+
+  it('turns an Artificer replacement to Gold by a later Time Piece of the same ship', () => {
+    // O_Combat05 as if its Max Health replacement had been goldified, not taken: a second Time
+    // Piece charge is spent in the room, and no use or Max Health trait shows the pickup.
+    const goldified: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 25) {
+          const { MaxHealthDrop: _used, ...uses } = room.uses;
+          void _used;
+          return {
+            ...room,
+            uses,
+            conversions: { artificer: 1, timePiece: 2 },
+            traits: {
+              ...room.traits,
+              acquired: room.traits.acquired.filter(
+                (trait) => trait.name !== 'RoomRewardMaxHealthTrait',
+              ),
+            },
+          };
+        }
+        const timePiece = room.entry?.traits?.['GoldifyKeepsake'];
+        if (index < 26 || room.entry === undefined) return room;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            ...(room.entry.maxHealth === undefined ? {} : { maxHealth: room.entry.maxHealth - 25 }),
+            ...(timePiece?.boonConversionUses === undefined
+              ? {}
+              : {
+                  traits: {
+                    ...room.entry.traits,
+                    GoldifyKeepsake: {
+                      ...timePiece,
+                      boonConversionUses: timePiece.boonConversionUses - 1,
+                    },
+                  },
+                }),
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, goldified);
+    expect(result.kind).toBe('complete');
+    expect(result.report.rooms?.[25]).toMatchObject({ verdict: 'accepted' });
+    const ship = occurrence(result.project, 'O-r25');
+    expect(ship.state.kind === 'shipCombat' && ship.state.wheels['wheel1']).toMatchObject({
+      offers: {
+        offer1: {
+          offer: { rewardType: 'MetaCardPointsCommonBigDrop' },
+          dispositionByAcquisitionRole: { self: { kind: 'artificer' } },
+        },
+      },
+    });
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel2']?.offers['offer1'],
+    ).toMatchObject({
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+    });
+    // The replacement is a pickup of its own, which the second charge takes. With no use left
+    // to tell the Max pickups apart the saves accept either, and the first draw is authored.
+    expect(replacementEntries(result.project, 'O-r25')).toMatchObject([
+      {
+        offer: { rewardType: 'MaxManaDrop' },
+        dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+      },
+    ]);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 25 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
+  it('leaves a taken Artificer replacement alone when the Time Piece converts another wheel', () => {
+    // O_Combat05 as captured: the Artificer replaced the Meta pickup with the Max Health it
+    // used, and its one Time Piece charge took the Spell of the other phase.
+    const ship = occurrence(imported.project, 'O-r25');
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel2']?.offers['offer1'],
+    ).toMatchObject({ dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } });
+    expect(replacementEntries(imported.project, 'O-r25')).toMatchObject([
+      {
+        offer: { rewardType: 'MaxHealthDrop' },
+        dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      },
+    ]);
+    expect(imported.report.rooms?.[25]).toMatchObject({ verdict: 'accepted' });
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.record?.roomIndex === 25 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
+  it("turns a one-wheel ship's Artificer replacement to Gold by the room's Time Piece", () => {
+    // O_Combat01 as if its Pom replacement had been goldified, not taken: no use or level-up
+    // shows it, and one more Time Piece charge is gone from the next entry save on.
+    const goldified: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 21) {
+          const { StackUpgrade: _used, ...uses } = room.uses;
+          void _used;
+          return {
+            ...room,
+            uses,
+            conversions: { artificer: 1, timePiece: 1 },
+            traits: { ...room.traits, upgraded: [] },
+          };
+        }
+        if (index < 22 || room.entry === undefined) return room;
+        const { AphroditeCastBoon: _pom, ...traits } = room.entry.traits ?? {};
+        void _pom;
+        const charges = index === 22 ? 4 : traits['GoldifyKeepsake']?.boonConversionUses;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            traits:
+              charges === undefined
+                ? traits
+                : {
+                    ...traits,
+                    GoldifyKeepsake: { rarity: 'Epic', boonConversionUses: charges - 1 },
+                  },
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, goldified);
+    expect(result.kind).toBe('complete');
+    expect(result.report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
+    const ship = occurrence(result.project, 'O-r21');
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel1']?.offers['offer1'],
+    ).toMatchObject({ dispositionByAcquisitionRole: { self: { kind: 'artificer' } } });
+    expect(replacementEntries(result.project, 'O-r21')).toMatchObject([
+      { dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } },
+    ]);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 21 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
   });
 
   /** O_Combat05 as if its wheels, in `order`, had used one side each: the record no longer says which. */
