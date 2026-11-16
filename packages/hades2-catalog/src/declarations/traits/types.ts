@@ -75,6 +75,8 @@ export interface RawTraitDeclaration {
   readonly raisesAspectToPerfect?: true;
   /** The native offer requirement reads Death Defiance (Last Stand) state, which is not modeled. */
   readonly offerDependsOnDeathDefiance?: true;
+  /** Source removes the held trait as its armor breaks or its dodge decays away. */
+  readonly combatRemoval?: TraitDeclaration['combatRemoval'];
 }
 
 /**

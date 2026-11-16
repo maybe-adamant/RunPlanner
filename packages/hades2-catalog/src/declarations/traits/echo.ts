@@ -34,6 +34,8 @@ export const echoTraits = [
     label: 'Evade Evade Evade',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
+    // PowersLogic.DiminishingDodge removes it once its dodge chance decays away.
+    combatRemoval: 'dodgeDecay',
     selectedDisposition: { kind: 'echo', effect: 'numericNoOp' },
   },
   {

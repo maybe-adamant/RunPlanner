@@ -205,7 +205,16 @@ armor into `MinorArmorBoon` (`KeepsakeLogic.lua:173-182`).
 Excluded as temporary or not hero armor: Security System, Selene Hex armor and
 the Axe armor-damage trait.
 
-The planner assumes no damage, so armor is never consumed. `deriveArmor` sums
+Broken armor removes its trait only for a non-`Invincible` costume trait
+(`OnHealthBufferDamage`, `CostumeLogic.lua:143-184`): the dresses and the hidden
+`MinorArmorBoon`. Heavy Metal, Trusty Shield, the Sash and both Icarus coatings
+are `Invincible` and stay held at zero armor, but each coating's
+`OnArmorBreakFunction` removes it (`PowersLogic.lua:3673-3686`). Evade Evade
+Evade likewise removes itself once its dodge chance decays away
+(`PowersLogic.lua:4793-4803`). The catalog declares these combat removals.
+
+The planner assumes no damage, so armor is never consumed and those traits stay
+held; conformance and snap do not judge them. `deriveArmor` sums
 held trait armor at its rarity and Pom level (or acquisition ordinal for
 dresses and coatings), the item total and the held Sash's `CurrentArmor`, and
 Run State publishes it with its sources. Practice starts install the item total

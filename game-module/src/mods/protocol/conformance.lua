@@ -3,9 +3,8 @@
 -- module owns only the fact-kind-to-state projection.
 local p = type(import) == "function" and import("mods/protocol/primitives.lua")
     or require("mods.protocol.primitives")
-local nativeBindings = type(import) == "function" and import("mods/native_bindings.lua")
-    or require("mods.native_bindings")
-local disposableTraits = nativeBindings.conformance.disposableTraits
+local disposableTraits = (type(import) == "function" and import("modeled_traits.lua")
+    or require("modeled_traits")).removedInCombat
 
 local conformance = {}
 

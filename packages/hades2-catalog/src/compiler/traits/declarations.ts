@@ -250,6 +250,18 @@ function normalizeMaxStatValue(
   ) as Readonly<Record<(typeof IN_RUN_RARITIES)[number], number>>;
 }
 
+/** Breaking armor removes only a trait that sets armor; decay names Evade Evade Evade's dodge. */
+function normalizeCombatRemoval(
+  trait: RawTraitDeclaration,
+  path: string,
+): NonNullable<TraitDeclaration['combatRemoval']> {
+  const removal = trait.combatRemoval as unknown;
+  if (removal === 'armorBreak')
+    return trait.armor === undefined ? fail(path, 'armorBreak requires declared armor') : removal;
+  if (removal === 'dodgeDecay') return removal;
+  return fail(path, 'must be armorBreak or dodgeDecay');
+}
+
 /** Ranked armor scales to an integer per equipped rarity; rarityless armor resolves by ordinal. */
 function normalizeTraitArmor(
   raw: RawTraitArmor,
@@ -988,6 +1000,9 @@ export function normalizeTraits(
         : (trait.offerDependsOnDeathDefiance as unknown) === true
           ? { offerDependsOnDeathDefiance: true as const }
           : fail(`${path}.offerDependsOnDeathDefiance`, 'must be true when declared')),
+      ...(trait.combatRemoval === undefined
+        ? {}
+        : { combatRemoval: normalizeCombatRemoval(trait, `${path}.combatRemoval`) }),
       selectedDisposition,
     });
   });

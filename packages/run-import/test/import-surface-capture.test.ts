@@ -469,6 +469,67 @@ describe('run import of the Surface capture', () => {
     ).toEqual([]);
   });
 
+  it("turns a room's Boon reward to Gold by the room's Time Piece", () => {
+    // O_MiniBoss01 as if its Poseidon Boon had been goldified: no use, screen or boon shows it,
+    // and one more Time Piece charge is gone from the next entry save on.
+    const goldified: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 23) {
+          const { PoseidonUpgrade: _used, ...uses } = room.uses;
+          void _used;
+          const { npcInteractions: _talked, bannedTraits: _banned, ...rest } = room;
+          void _talked;
+          void _banned;
+          return {
+            ...rest,
+            uses,
+            conversions: { timePiece: 1 },
+            traitScreens: [],
+            traits: {
+              ...room.traits,
+              acquired: room.traits.acquired.filter(
+                (trait) => trait.name !== 'EncounterStartOffenseBuffBoon',
+              ),
+            },
+          };
+        }
+        if (index < 24 || room.entry === undefined) return room;
+        const { EncounterStartOffenseBuffBoon: _boon, ...traits } = room.entry.traits ?? {};
+        void _boon;
+        const charges = index === 24 ? 3 : traits['GoldifyKeepsake']?.boonConversionUses;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            elements: { ...room.entry.elements, Water: (room.entry.elements?.['Water'] ?? 1) - 1 },
+            bannedTraits: (room.entry.bannedTraits ?? []).filter(
+              (name) => name !== 'PoseidonExCastBoon' && name !== 'PoseidonWeaponBoon',
+            ),
+            traits:
+              charges === undefined
+                ? traits
+                : {
+                    ...traits,
+                    GoldifyKeepsake: { rarity: 'Epic', boonConversionUses: charges - 1 },
+                  },
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, goldified);
+    expect(result.report.rooms?.[23]).toMatchObject({ verdict: 'accepted' });
+    expect(reward(result.project, 'O-r23')).toMatchObject({
+      offer: { rewardType: 'Boon' },
+      dispositionByAcquisitionRole: { source: { kind: 'timePiece' } },
+    });
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 23 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
   /** O_Combat05 as if its wheels, in `order`, had used one side each: the record no longer says which. */
   const mixedCombat05 = (order: readonly number[]): RunRecord => ({
     ...record,

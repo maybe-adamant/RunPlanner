@@ -7,6 +7,7 @@ import {
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
   type ProjectCommand,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { RunImportContext } from './import';
@@ -51,24 +52,53 @@ export function importDispositions(context: RunImportContext): void {
     const used = `conversion:${roomIndex}`;
     if (kinds.length !== 1 || context.used.has(used)) continue;
     const kind = kinds[0]!;
-    const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
-    const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
-    const occurrence = authoredOccurrence(project, biomeKey, occurrenceId);
-    const reward =
-      occurrence === undefined
-        ? undefined
-        : deliveredIncomingReward(createBiomeAddress(project.route.routeKey, biomeKey), occurrence);
-    if (reward === undefined || reward === null) continue;
-    const acquisition = createAcquisitionRoleAddress(
-      createIncomingRewardAddress(
-        createBiomeAddress(project.route.routeKey, biomeKey),
-        occurrenceId,
-      ),
-      'self',
-    );
-    if (convertAcquisition(context, acquisition, kind, reward.offer.rewardType, roomIndex))
+    const pickup = roomRewardAcquisition(context, project, roomIndex);
+    if (pickup === undefined) continue;
+    if (
+      convertAcquisition(
+        context,
+        pickup.acquisition,
+        kind,
+        pickup.reward.offer.rewardType,
+        roomIndex,
+      )
+    )
       context.used.add(used);
   }
+}
+
+/**
+ * The room reward's delivered pickup at the acquisition role its disposition
+ * names: `self` for a direct reward, `source` for a Boon.
+ */
+function roomRewardAcquisition(
+  context: RunImportContext,
+  project: ProjectDocument,
+  roomIndex: number,
+):
+  | { readonly acquisition: AcquisitionRoleAddress; readonly reward: AuthoredRewardState }
+  | undefined {
+  const biome = createBiomeAddress(
+    project.route.routeKey,
+    context.occurrences.biomeOfRoom[roomIndex]!,
+  );
+  const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
+  const occurrence = authoredOccurrence(project, biome.biomeKey, occurrenceId);
+  const reward = occurrence === undefined ? undefined : deliveredIncomingReward(biome, occurrence);
+  // The first declared acquisition role: Devotion's chosen pickup, a Mystery Boon's box.
+  const role =
+    reward === undefined || reward === null
+      ? undefined
+      : Object.keys(reward.dispositionByAcquisitionRole)[0];
+  return reward === undefined || reward === null || role === undefined
+    ? undefined
+    : {
+        acquisition: createAcquisitionRoleAddress(
+          createIncomingRewardAddress(biome, occurrenceId),
+          role,
+        ),
+        reward,
+      };
 }
 
 /**
@@ -159,16 +189,9 @@ export function roomRewardArtificer(
   roomIndex: number,
 ): RoomArtificer | undefined {
   if (!recordedConversions(context, roomIndex).includes('artificer')) return undefined;
-  const project = context.assembly().project;
-  const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
-  const acquisition = createAcquisitionRoleAddress(
-    createIncomingRewardAddress(
-      createBiomeAddress(project.route.routeKey, biomeKey),
-      context.occurrences.occurrenceOf(roomIndex),
-    ),
-    'self',
-  );
-  const placed = placedArtificerReplacement(context, acquisition);
+  const pickup = roomRewardAcquisition(context, context.assembly().project, roomIndex);
+  const placed =
+    pickup === undefined ? undefined : placedArtificerReplacement(context, pickup.acquisition);
   return placed === undefined
     ? undefined
     : { entry: placed.entry, current: placed.reward.offer, rewardTypes: placed.rewardTypes };
@@ -242,10 +265,15 @@ function replacementBoons(context: RunImportContext, roomIndex: number): Resolve
 
 /**
  * Conversions never placed: a room recording two on its room reward, or one
- * whose pickup the record does not identify.
+ * whose pickup the record does not identify. A stopped walk reports those
+ * through its stop's room.
  */
-export function reportUnplacedDispositions(context: RunImportContext): void {
+export function reportUnplacedDispositions(
+  context: RunImportContext,
+  throughRoom = context.record.rooms.length - 1,
+): void {
   for (const roomIndex of context.record.rooms.keys()) {
+    if (roomIndex > throughRoom) break;
     const kinds = recordedConversions(context, roomIndex);
     if (kinds.length === 0 || context.used.has(`conversion:${roomIndex}`)) continue;
     for (let count = 0; count < kinds.length; count++)

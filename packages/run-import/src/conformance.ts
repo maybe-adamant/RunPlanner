@@ -315,11 +315,11 @@ function compareEntry(
   const curseKeys = new Set(curses.values.map((curse) => curse.key));
   const blessingKeys = new Set(blessings.values.map((blessing) => blessing.key));
   const arcanaTraits = new Set(catalog.arcanaCards.values.map((card) => card.traitKey));
-  // The planner assumes no damage, so it never loses a dress; the game removes one as its armor breaks.
-  const isDress = (key: string) => key.endsWith('Costume');
+  // The planner assumes no damage; the game removes these as their armor breaks or dodge decays.
+  const removedInCombat = (key: string) => catalog.traits.byKey[key]?.combatRemoval !== undefined;
   const simulated = new Map(
     snapshotTraitInventory(snapshot)
-      .filter((row) => !isDress(row.traitKey))
+      .filter((row) => !removedInCombat(row.traitKey))
       .map((row) => [row.traitKey, row]),
   );
   for (const [key, row] of simulated) {
@@ -343,7 +343,7 @@ function compareEntry(
   for (const [name, held] of saved.traits)
     if (
       !simulated.has(name) &&
-      !isDress(name) &&
+      !removedInCombat(name) &&
       catalog.traits.byKey[name] !== undefined &&
       !arcanaTraits.has(name) &&
       !curseKeys.has(name) &&

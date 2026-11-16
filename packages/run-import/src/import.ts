@@ -845,6 +845,8 @@ export class RunImportWalk {
           importRoomActionOrders(this.context);
           if (this.assembly !== before) continue;
         }
+        if (this.halted.record !== undefined)
+          reportUnplacedDispositions(this.context, this.halted.record.roomIndex);
         return this.halted;
       }
       const issue = this.assembly.evaluation.issue;

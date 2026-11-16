@@ -266,6 +266,45 @@ describe('trait dispositions and requirements compiler owner', () => {
     ).toThrow('is declared only for ranked traits');
   });
 
+  it('declares exactly the traits the game removes in combat', () => {
+    // Heavy Metal and Trusty Shield are `Invincible`: their broken armor leaves them held.
+    expect(
+      Object.fromEntries(
+        catalog.traits.values
+          .filter((trait) => trait.combatRemoval !== undefined)
+          .map((trait) => [trait.key, trait.combatRemoval]),
+      ),
+    ).toEqual({
+      AgilityCostume: 'armorBreak',
+      ManaCostume: 'armorBreak',
+      VitalityCostume: 'armorBreak',
+      HighArmorCostume: 'armorBreak',
+      CastDamageCostume: 'armorBreak',
+      IncomeCostume: 'armorBreak',
+      SpellCostume: 'armorBreak',
+      EscalatingCostume: 'armorBreak',
+      BreakInvincibleArmorBoon: 'armorBreak',
+      BreakExplosiveArmorBoon: 'armorBreak',
+      DiminishingDodgeBoon: 'dodgeDecay',
+    });
+    const withRemoval = (key: string, combatRemoval: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === key ? ({ ...trait, combatRemoval } as RawTraitDeclaration) : trait,
+          ),
+        },
+      });
+    expect(() => withRemoval('ZeusWeaponBoon', 'armorBreak')).toThrow(
+      'armorBreak requires declared armor',
+    );
+    expect(() => withRemoval('HeavyArmorBoon', 'decay')).toThrow(
+      'must be armorBreak or dodgeDecay',
+    );
+  });
+
   it('declares the Worry Free acquisition max-health roll per rarity', () => {
     expect(
       catalog.traits.values
