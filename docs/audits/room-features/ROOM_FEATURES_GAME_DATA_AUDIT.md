@@ -108,15 +108,16 @@ lookback requirements are:
 
 Every family also excludes every other tool-point family in the immediately
 previous room. "Rooms" are `RoomHistory` entries: `CreateRoom` rolls a point
-(`RunLogic.lua:675-705`) in the room left just before entry, which a restore
+(`RunLogic.lua:647-705`) in the room left just before entry, which a restore
 re-creates for its untaken doors (`RoomLogic.lua:1577,3916`), so a
-`SumPrevRooms = n` window holds that room and the `n - 1` entries before it.
-Hub returns, side rooms and restored main rooms each count, and a restored
-room's point counts at its latest entry. N expands off-diagonal windows to
-three rooms and uses same-family windows of 12 (Shovel/Pickaxe), 16
-(Exorcism), and 14 (Fishing); H uses a two-room same-family window. Each
-family normally has a per-biome limit of one; a matching familiar raises that
-limit by one; a declaration can force a point or ignore the biome limit.
+`SumPrevRooms = n` window holds the room left just before the target's entry
+and the `n - 1` entries before it. Hub returns, side rooms and restored main
+rooms each count, and a restored room's point counts at its latest entry. N
+expands off-diagonal windows to three rooms and uses same-family windows of
+12 (Shovel/Pickaxe), 16 (Exorcism), and 14 (Fishing); H uses a two-room
+same-family window. Each family normally has a per-biome limit of one; a
+matching familiar raises that limit by one; a declaration can force a point or
+ignore the biome limit.
 These are point-generation facts, not element cooldowns. A spawned point that
 fails its element roll still consumes spacing and biome-count capacity in the
 game.

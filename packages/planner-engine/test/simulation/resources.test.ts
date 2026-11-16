@@ -620,6 +620,62 @@ describe('selected resource success legality', () => {
     expect(exorcismAt(withReturn, 'main').legal).toBe(false);
   });
 
+  it('rolls a side room in its restored parent, which sees the earlier side room', () => {
+    const parent = enteredAt('N', 'parent', 'N_Combat02');
+    const appearances = [
+      parent,
+      enteredAt('N', 'shovel', 'N_Sub01'),
+      parent,
+      enteredAt('N', 'target', 'N_Sub02'),
+    ];
+    // Rolled when the parent's first entry opened its doors, the target could
+    // not see the side room; the restore re-rolls it with the side room two back.
+    expect(
+      assessResourcePlacement(catalog, 'Surface', 'Exorcism', at('N', 'target'), appearances, {
+        ...none(),
+        Shovel: at('N', 'shovel'),
+      }).refusals,
+    ).toEqual([
+      {
+        reason: 'resourceLookback',
+        family: 'Shovel',
+        scope: 'crossFamily',
+        order: 'before',
+        rooms: 3,
+      },
+    ]);
+  });
+
+  it("measures a later spot's window from the target's restore", () => {
+    const hub = {
+      biomeKey: 'N',
+      origin: { kind: 'hubRoom', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const,
+      gameName: 'N_Hub',
+    };
+    const target = enteredAt('N', 'target', 'N_Combat02');
+    const later = enteredAt('N', 'later', 'N_Combat11');
+    const exorcismAtTarget = (appearances: readonly ResourceRoomAppearance[]) =>
+      assessResourcePlacement(catalog, 'Surface', 'Exorcism', at('N', 'target'), appearances, {
+        ...none(),
+        Shovel: at('N', 'later'),
+      });
+    // The target's first entry is four back from the later spot; its restore is two back.
+    expect(
+      exorcismAtTarget([target, enteredAt('N', 'side', 'N_Sub01'), target, hub, later]).refusals,
+    ).toEqual([
+      {
+        reason: 'resourceLookback',
+        family: 'Shovel',
+        scope: 'crossFamily',
+        order: 'after',
+        rooms: 3,
+      },
+    ]);
+    expect(
+      exorcismAtTarget([target, hub, enteredAt('N', 'visit', 'N_Combat05'), hub, later]),
+    ).toEqual({ legal: true, refusals: [] });
+  });
+
   it("drops a Story room's own Pickaxe and Shovel spacing while later rooms still count it", () => {
     const entered = [
       enteredAt('F', 'f0', 'F_Combat01'),

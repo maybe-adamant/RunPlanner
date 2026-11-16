@@ -406,8 +406,8 @@ function resourcePointConflicts(
   if (candidateEntry < targetEntry) {
     const targetRule = target.candidate.room.resourcePointSupport.rules[target.family];
     if (targetRule !== undefined) {
-      // CreateRoom rolls the point in the appearance before entry (restores re-create
-      // doors, RoomLogic.lua:1577): SumPrevRooms = n reaches n appearances back.
+      // CreateRoom rolls the point in the room left before entry (restores re-create doors,
+      // RoomLogic.lua:1577): SumPrevRooms = n reads the n appearances up to and including it.
       const distance =
         targetEntry - candidate.candidate.appearances.findLast((index) => index < targetEntry)!;
       if (target.family === candidate.family && distance <= targetRule.sameFamilyLookback)
