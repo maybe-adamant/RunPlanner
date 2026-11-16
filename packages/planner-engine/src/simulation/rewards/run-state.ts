@@ -5,7 +5,7 @@ import {
   type HubRunStateCheckpointAddress,
   type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
-import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
+import type { BiomeLayout, Catalog, RoomDeclaration, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import {
@@ -23,7 +23,8 @@ import type { HistoryCounters } from '../history';
 import {
   bankableRewardStoreKeys,
   enteredRewardStoreTally,
-  rolledRewardStoreTargetRatio,
+  rolledRewardStorePolicy,
+  sourceMetaRewardsTarget,
   type EnteredRewardStoreTally,
 } from './biome/reward-store-support';
 import type { TraitHistoryState } from '../traits/history/model';
@@ -134,7 +135,7 @@ export interface DecisionRewardBagState {
 
 /** The base-store controller's inputs at this checkpoint, for comparison against the live game. */
 export interface RunStateRewardStoreController extends EnteredRewardStoreTally {
-  /** The biome's rolled target, or `bankableStoreKeys` instead where no door rolls. */
+  /** The target this room's doors roll with, or `bankableStoreKeys` where no door rolls. */
   readonly targetMetaRewardsRatio?: number;
   readonly bankableStoreKeys?: readonly string[];
 }
@@ -220,8 +221,10 @@ export interface RunStatePublication {
 
 interface RunStateContext {
   readonly catalog: Catalog;
-  /** This checkpoint's biome; the controller's target is a biome declaration, not a run fact. */
+  /** This checkpoint's biome, which decides whether any door rolls a store. */
   readonly layout: BiomeLayout;
+  /** The checkpoint's room, whose own target its doors roll with. */
+  readonly sourceDeclaration: RoomDeclaration;
   readonly owner: RunStateOwner;
   /**
    * The exact reached state this checkpoint projects. It already carries the
@@ -623,7 +626,10 @@ export function createRunState(context: RunStateContext): RunStateSnapshot {
     if (bagCacheKey !== undefined) derivationCache?.bagsByState.set(bagCacheKey, bags);
   }
   const currentArtificerStatus = artificerStatus(context.catalog, projected.arcanaFear);
-  const targetMetaRewardsRatio = rolledRewardStoreTargetRatio(context.layout);
+  const targetMetaRewardsRatio =
+    rolledRewardStorePolicy(context.layout) === undefined
+      ? undefined
+      : sourceMetaRewardsTarget(context.catalog, context.sourceDeclaration).targetMetaRewardsRatio;
   return Object.freeze({
     owner: context.owner,
     historySequence: state.reached.historyView.sequence,

@@ -483,7 +483,7 @@ describe('Run State presentation', () => {
       'Reward Store Ratio': [
         'Entered stores | 7 entered, 2 Minor Reward',
         'Current ratio | 0.286',
-        'Biome target | 0.300',
+        'Target | 0.300',
       ],
       Counters: [
         'biomeDepthCache | 0',
@@ -536,7 +536,7 @@ describe('Run State presentation', () => {
     expect(lines([{ key: 'r', rows: target([]) }]).r).toEqual([
       'Entered stores | 0 entered, 0 Minor Reward',
       'Current ratio | None counted yet',
-      'Biome target | This biome ignores Reward Store.',
+      'Target | This biome ignores Reward Store.',
     ]);
     expect(target(['TartarusRewards'])[2]?.right).toBe('This biome rolls only Tartarus Reward.');
     expect(target(['RunProgress', 'MetaProgress'])[2]?.right).toBe(

@@ -24,6 +24,7 @@ import {
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
+import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -309,6 +310,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
         state: reachedTestState(branch, historyView),
         rewardFacts: () => requirementFacts(0),
@@ -384,6 +386,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
         state: reachedTestState(Object.freeze({ ...base, state }), historyView),
         rewardFacts: () => requirementFacts(0),
@@ -565,6 +568,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner,
         state: reachedTestState(branch, view),
         rewardFacts: () => facts,
@@ -627,6 +631,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner,
         state: reachedTestState(
           Object.freeze({
@@ -674,6 +679,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner,
         state: reachedTestState(
           {
@@ -734,6 +740,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         layout: fLayout,
+        sourceDeclaration: catalog.rooms.byKey['F_Combat01']!,
         owner,
         state: reachedTestState(branch, historyView),
         derivationCache: lookupCache,
@@ -776,6 +783,27 @@ describe('decision run-state snapshots', () => {
       historySequence: history?.postCommit.sequence,
     });
     expect(entry?.historySequence).toBeLessThan(exit?.historySequence ?? 0);
+  });
+
+  it("reports a Chaos room's own Hero target and the host room's biome target", () => {
+    const evaluation = simulateProject(catalog, loadUnderworldIxionChaosCheckpoint());
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'G');
+    if (biome === undefined || !('rewards' in biome) || biome.rewards === undefined)
+      throw new Error('G lost its reward evaluation');
+    const target = (occurrenceId: string) =>
+      biome.rewards!.runStateSnapshots.find(
+        (snapshot) =>
+          semanticAddressKey(snapshot.owner) ===
+          semanticAddressKey(
+            createRoomRunStateCheckpointAddress(
+              createOccurrenceAddress(goldenGBiome, createOccurrenceId(occurrenceId)),
+              { kind: 'beforeRoomExit' },
+            ),
+          ),
+      )?.rewardStoreController.targetMetaRewardsRatio;
+    // The Chaos room rolls its doors back into G with the Hero's 0.45 (HeroData.lua:71).
+    expect(target('golden-g-intro:chaos')).toBe(0.45);
+    expect(target('golden-g-intro')).toBe(0.35);
   });
 
   it('publishes Ship pre-start checkpoints from exact phase views without a room-entry owner', () => {
@@ -1403,6 +1431,7 @@ describe('decision run-state snapshots', () => {
     const snapshot = createRunState({
       catalog,
       layout: fLayout,
+      sourceDeclaration: catalog.rooms.byKey['F_Opening01']!,
       owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
@@ -1451,6 +1480,7 @@ describe('decision run-state snapshots', () => {
     const snapshot = createRunState({
       catalog,
       layout: fLayout,
+      sourceDeclaration: catalog.rooms.byKey['F_Opening01']!,
       owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
@@ -1543,6 +1573,7 @@ describe('decision run-state snapshots', () => {
     const snapshot = createRunState({
       catalog,
       layout: fLayout,
+      sourceDeclaration: catalog.rooms.byKey['F_Opening01']!,
       owner,
       state: reachedTestState(branch, {
         sequence: traits.events.length,

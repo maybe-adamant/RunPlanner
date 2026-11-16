@@ -48,15 +48,11 @@ export function enteredRewardStoreTally(
 }
 
 /**
- * The controller's `T` for this biome's rolled doors — ordinary progression first, then the
- * completion descriptor for Q, whose only rolling door is the boss door. Undefined where no
- * door rolls at all: H and I pin every door, and the N hub declares no base store.
+ * The biome's rolling store policy — ordinary progression first, then the completion
+ * descriptor for Q, whose only rolling door is the boss door. Undefined where no door rolls
+ * at all: H and I pin every door, and the N hub declares no base store.
  */
-export function rolledRewardStoreTargetRatio(layout: BiomeLayout): number | undefined {
-  return rolledRewardStorePolicy(layout)?.targetMetaRewardsRatio;
-}
-
-function rolledRewardStorePolicy(
+export function rolledRewardStorePolicy(
   layout: BiomeLayout,
 ): Extract<RewardStorePolicy, { readonly kind: 'authoredBaseStore' }> | undefined {
   const ordinary = normalDecisionProgressionForLayout(layout)?.rewardStorePolicy;
@@ -69,9 +65,10 @@ function rolledRewardStorePolicy(
  * The target `ChooseNextRewardStore` reads as the source room starts (RoomLogic.lua:1179,
  * 3852): the one its own room set's base block declares, which a biome layout carries, else
  * the Hero's. Chaos, Anomaly and Zagreus's C room sets declare none, so their doors back into
- * the host roll with the Hero's.
+ * the host roll with the Hero's. H's 0.0 and I's 0.25 are not carried: no door there rolls,
+ * so an H or I room is never a rolling source.
  */
-function sourceMetaRewardsTarget(
+export function sourceMetaRewardsTarget(
   catalog: Pick<Catalog, 'biomeLayouts' | 'heroMetaRewardsTarget'>,
   sourceDeclaration: RoomDeclaration,
 ): HeroMetaRewardsTarget {

@@ -109,14 +109,19 @@ describe("the source room's store target", () => {
       view.sequence + 1,
     );
 
-  it("rolls a Chaos room's exits with the Hero target, where the tally makes Meta certain", () => {
-    // 0.45 + 10 * (0.45 - 3/11) > 1: both of Chaos_04's doors are MetaProgress.
-    expect(support('Chaos_04', {})).toMatchObject({
-      enteredStoreCount: 11,
-      enteredMetaStoreCount: 3,
-      supportStoreKeys: ['MetaProgress'],
-    });
-  });
+  it.each(['Chaos_04', 'B_Combat01', 'C_Boss01'])(
+    "rolls %s's exits with the Hero target, where the tally makes Meta certain",
+    (gameName) => {
+      // 0.45 + 10 * (0.45 - 3/11) > 1: every door is MetaProgress.
+      expect(
+        support(gameName, { incomingReward: { resolvedStoreKey: 'RunProgress' } }),
+      ).toMatchObject({
+        enteredStoreCount: 11,
+        enteredMetaStoreCount: 3,
+        supportStoreKeys: ['MetaProgress'],
+      });
+    },
+  );
 
   it("rolls a biome room's exits with the biome target, where the same tally rules Meta out", () => {
     // 0.20 + 10 * (0.20 - 3/11) < 0.

@@ -960,7 +960,8 @@ or counted again:
 - The generated base-store controller's inputs at the checkpoint's own settled
   boundary: the run-wide entered and Meta-entered tallies and their ratio, read
   from the door controller's ledger rather than recounted, and the target Meta
-  rewards ratio this biome's rolled doors consult. The ratio is null before
+  rewards ratio the checkpoint room's doors roll with: its room set's own, else
+  the Hero's, as in a Chaos, Anomaly or Zagreus room. The ratio is null before
   anything is counted. Where no door in the biome rolls, the target is absent
   and the snapshot reports instead the distinct store keys the biome's room
   declarations can bank (a room's fixed key, or a resolved offer's
