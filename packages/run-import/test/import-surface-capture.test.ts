@@ -299,6 +299,103 @@ describe('run import of the Surface capture', () => {
     expect(result.report.rooms?.[21]).toMatchObject({ verdict: 'accepted' });
   });
 
+  it('stops at a ship whose Artificer replacement the room neither used nor turned to Gold', () => {
+    // O_Combat01 without its StackUpgrade use: a replacement no use shows needs a Time Piece
+    // to have taken it, and the room spent none.
+    const unused: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index !== 21) return room;
+        const { StackUpgrade: _used, ...uses } = room.uses;
+        void _used;
+        return { ...room, uses };
+      }),
+    };
+    expect(projectFromRunRecord(catalog, unused)).toMatchObject({
+      kind: 'stopped',
+      stop: { area: 'wheel', code: 'wheelOffersUnaccepted', record: { roomIndex: 21 } },
+    });
+  });
+
+  it('turns an Artificer replacement to Gold by a later Time Piece of the same ship', () => {
+    // O_Combat05 as if its Max Health replacement had been goldified, not taken: a second Time
+    // Piece charge is spent in the room, and no use or Max Health trait shows the pickup.
+    const goldified: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index === 25) {
+          const { MaxHealthDrop: _used, ...uses } = room.uses;
+          void _used;
+          return {
+            ...room,
+            uses,
+            conversions: { artificer: 1, timePiece: 2 },
+            traits: {
+              ...room.traits,
+              acquired: room.traits.acquired.filter(
+                (trait) => trait.name !== 'RoomRewardMaxHealthTrait',
+              ),
+            },
+          };
+        }
+        const timePiece = room.entry?.traits?.['GoldifyKeepsake'];
+        if (index < 26 || room.entry === undefined) return room;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            ...(room.entry.maxHealth === undefined ? {} : { maxHealth: room.entry.maxHealth - 25 }),
+            ...(timePiece?.boonConversionUses === undefined
+              ? {}
+              : {
+                  traits: {
+                    ...room.entry.traits,
+                    GoldifyKeepsake: {
+                      ...timePiece,
+                      boonConversionUses: timePiece.boonConversionUses - 1,
+                    },
+                  },
+                }),
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, goldified);
+    expect(result.kind).toBe('complete');
+    expect(result.report.rooms?.[25]).toMatchObject({ verdict: 'accepted' });
+    const ship = occurrence(result.project, 'O-r25');
+    expect(ship.state.kind === 'shipCombat' && ship.state.wheels['wheel1']).toMatchObject({
+      offers: {
+        offer1: {
+          offer: { rewardType: 'MetaCardPointsCommonBigDrop' },
+          dispositionByAcquisitionRole: { self: { kind: 'artificer' } },
+        },
+      },
+    });
+    expect(
+      ship.state.kind === 'shipCombat' && ship.state.wheels['wheel2']?.offers['offer1'],
+    ).toMatchObject({
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+    });
+    // The replacement is a pickup of its own, which the second charge takes. With no use left
+    // to tell the Max pickups apart the saves accept either, and the first draw is authored.
+    const replacements = Object.entries(ship.acquisitionSites ?? {})
+      .filter(([siteKey]) => siteKey.includes('artificerSource:'))
+      .flatMap(([, site]) => Object.values(site.pickupEntries ?? {}));
+    expect(replacements).toMatchObject([
+      {
+        offer: { rewardType: 'MaxManaDrop' },
+        dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+      },
+    ]);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.record?.roomIndex === 25 && entry.area === 'conversion')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
   /** O_Combat05 as if its wheels, in `order`, had used one side each: the record no longer says which. */
   const mixedCombat05 = (order: readonly number[]): RunRecord => ({
     ...record,

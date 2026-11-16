@@ -5,6 +5,7 @@ import {
   createIncomingRewardAddress,
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
+  type AuthoredRewardState,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -69,8 +70,10 @@ export function importDispositions(context: RunImportContext): void {
 /**
  * Applies a recorded conversion to one acquisition. Artificer's replacement is
  * the first reward the room's uses name that the converted pickup is not, of
- * the type a search pinned. False when the acquisition has no
- * conversion context yet, or the pinned replacement does not place.
+ * the type a search pinned. A pinned one `unused` needs no use: a Time Piece
+ * that turns it to Gold leaves none, which the caller then checks. False when
+ * the acquisition has no conversion context yet, or the pinned replacement
+ * does not place.
  */
 export function convertAcquisition(
   context: RunImportContext,
@@ -79,6 +82,7 @@ export function convertAcquisition(
   convertedRewardType: string,
   roomIndex: number,
   pinned?: ConversionReplacement,
+  unused = false,
 ): boolean {
   const room = context.record.rooms[roomIndex]!;
   const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
@@ -111,7 +115,9 @@ export function convertAcquisition(
     .find(
       (offer) =>
         (pinned === undefined || offer.rewardType === pinned.rewardType) &&
-        (offer.rewardType === 'Boon' || (room.uses[offer.rewardType] ?? 0) > 0),
+        ((pinned !== undefined && unused) ||
+          offer.rewardType === 'Boon' ||
+          (room.uses[offer.rewardType] ?? 0) > 0),
     );
   if (entry === undefined || replacement === undefined) {
     if (pinned !== undefined) return false;
@@ -160,24 +166,35 @@ export function roomRewardArtificer(
     'self',
   );
   const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
+  const placed = placedArtificerReplacement(context, acquisition);
+  if (placed === undefined || evaluation.kind !== 'acquisitionConversion') return undefined;
+  return {
+    entry: placed.entry,
+    current: placed.reward.offer,
+    rewardTypes: evaluation.result.artificerReplacementRewardTypes ?? [],
+  };
+}
+
+/** The pickup an Artificer conversion of `acquisition` placed, once one holds a reward. */
+export function placedArtificerReplacement(
+  context: RunImportContext,
+  acquisition: AcquisitionRoleAddress,
+): { readonly entry: AcquisitionEntryAddress; readonly reward: AuthoredRewardState } | undefined {
+  const evaluation = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
   const entry =
     evaluation.kind === 'acquisitionConversion'
       ? evaluation.result.artificerReplacementAddress
       : undefined;
   const hostId = entry === undefined ? undefined : occurrenceIdOf(entry);
-  const current =
+  const reward =
     entry === undefined || hostId === undefined
       ? undefined
-      : authoredOccurrence(project, entry.biomeKey, hostId)?.acquisitionSites?.[
+      : authoredOccurrence(context.assembly().project, entry.biomeKey, hostId)?.acquisitionSites?.[
           acquisitionSiteStorageKey(entry.site)
-        ]?.pickupEntries?.[entry.entryKey]?.offer;
-  if (entry === undefined || current === undefined || evaluation.kind !== 'acquisitionConversion')
-    return undefined;
-  return {
-    entry,
-    current,
-    rewardTypes: evaluation.result.artificerReplacementRewardTypes ?? [],
-  };
+        ]?.pickupEntries?.[entry.entryKey];
+  return entry === undefined || reward === undefined || reward === null
+    ? undefined
+    : { entry, reward };
 }
 
 /** Replaces a placed Artificer replacement with one of `rewardType`; a boon takes a god the room used. */

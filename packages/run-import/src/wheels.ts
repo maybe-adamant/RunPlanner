@@ -1,5 +1,7 @@
 import {
   createAcquisitionRoleAddress,
+  type AcquisitionRoleAddress,
+  type AuthoredRewardState,
   createBiomeAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
@@ -22,6 +24,7 @@ import { entrySnapshot, recordedEntryStates, storeCounts } from './conformance';
 import {
   ARTIFICER_STORE,
   convertAcquisition,
+  placedArtificerReplacement,
   recordedConversions,
   type ConversionKind,
   type ConversionReplacement,
@@ -485,8 +488,8 @@ const isConverted = (context: RunImportContext, roomIndex: number) =>
 
 /**
  * The conversions a ship room authors with its solve: all of them while its
- * sides are open, its Artificer while the solve searches the replacement and
- * the walk has placed the others, none otherwise.
+ * sides are open or the solve searches its Artificer replacement, which a
+ * Time Piece the walk could not place may take; none otherwise.
  */
 function deferredConversions(
   context: RunImportContext,
@@ -496,9 +499,7 @@ function deferredConversions(
   if (isConverted(context, roomIndex)) return [];
   if (wheelAuthoringWaits(context, roomIndex)) return recorded;
   if (!conversionWaits(context, roomIndex)) return [];
-  return recorded.length === 1 || context.used.has(`conversionEarly:${roomIndex}`)
-    ? ['artificer']
-    : [];
+  return recorded.length === 1 || context.used.has(`conversionEarly:${roomIndex}`) ? recorded : [];
 }
 
 /** Whether the solve has taken up a ship room's window, or the walk ended with it open. */
@@ -1052,12 +1053,22 @@ export function importWheelConversions(context: RunImportContext): void {
     }
 }
 
+/** A room's recorded conversions one by one: each Artificer, then each Time Piece. */
+function conversionSequence(room: RunRecordRoom): readonly ConversionKind[] {
+  return [
+    ...Array<ConversionKind>(room.conversions?.artificer ?? 0).fill('artificer'),
+    ...Array<ConversionKind>(room.conversions?.timePiece ?? 0).fill('timePiece'),
+  ];
+}
+
 /**
  * Applies a ship room's recorded conversions to its wheel pickups, each to an
  * uncollected pickup that takes it, Artificer with `replacement` when a search
- * pinned one. Waits, returning false, until every pickup is authored and
- * reached; once the window has closed what is missing is refused. A pinned
- * replacement that does not place also returns false.
+ * pinned one. An Artificer's replacement is itself a pickup a later Time Piece
+ * may take; a pickup already holding its conversion is not converted again.
+ * Waits, returning false, until every pickup is authored and reached; once the
+ * window has closed what is missing is refused. A pinned replacement that does
+ * not place also returns false.
  */
 function convertWheelPickups(
   context: RunImportContext,
@@ -1090,11 +1101,15 @@ function convertWheelPickups(
       : [{ key, offerKey: `offer${wheel.pickedOfferIndex}`, reward, role }];
   });
   const biomeAddress = createBiomeAddress(project.route.routeKey, biomeKey);
+  const roomAddress = createOccurrenceAddress(
+    biomeAddress,
+    occurrence.occurrenceId as OccurrenceId,
+  );
   const refused = () =>
     context.note({
       area: 'conversion',
       reason: 'refused',
-      address: createOccurrenceAddress(biomeAddress, occurrence.occurrenceId as OccurrenceId),
+      address: roomAddress,
       record: record(roomIndex),
     });
   const acquisitionOf = (pickup: (typeof pickups)[number]) =>
@@ -1122,47 +1137,84 @@ function convertWheelPickups(
     if (closed) kinds.forEach(() => refused());
     return closed;
   }
-  const uncollected = pickups.filter(
-    ({ reward }) =>
-      (room.uses[reward.offer.rewardType] ?? 0) === 0 &&
-      !(
-        reward.offer.payload?.kind === 'BoonSource' &&
-        (room.uses[reward.offer.payload.source] ?? 0) > 0
-      ),
-  );
+  const collected = (reward: AuthoredRewardState) =>
+    (room.uses[reward.offer.rewardType] ?? 0) > 0 ||
+    (reward.offer.payload?.kind === 'BoonSource' &&
+      (room.uses[reward.offer.payload.source] ?? 0) > 0);
+  const uncollected = pickups
+    .filter(({ reward }) => !collected(reward))
+    .map((pickup) => ({ reward: pickup.reward, acquisition: acquisitionOf(pickup) }));
+  const disposition = ({ reward, acquisition }: (typeof uncollected)[number]) =>
+    reward.dispositionByAcquisitionRole[acquisition.acquisitionRole]?.kind ?? 'normal';
+  // A Time Piece may take the replacement of an Artificer the solve still searches.
+  const artificerWaits =
+    !kinds.includes('artificer') && recordedConversions(context, roomIndex).includes('artificer');
+  // A pinned replacement the room has no use of was not taken: a Time Piece must take it.
+  const unused = replacement !== undefined && (room.conversions?.timePiece ?? 0) > 0;
+  let goldified: AcquisitionRoleAddress | undefined;
   // Every recorded conversion takes its pickup in turn, so one authored apart keeps its target.
-  for (const kind of recordedConversions(context, roomIndex)) {
-    const target = uncollected.find((pickup) => {
+  for (const kind of conversionSequence(room)) {
+    const supports = (acquisition: AcquisitionRoleAddress) => {
       const evaluation = context
         .candidates()
-        .evaluate({ kind: 'acquisitionConversion', acquisition: acquisitionOf(pickup) });
+        .evaluate({ kind: 'acquisitionConversion', acquisition });
       return (
         evaluation.kind === 'acquisitionConversion' &&
         (kind === 'artificer'
           ? evaluation.result.artificerSupported
           : evaluation.result.timePieceSupported)
       );
-    });
+    };
+    const converted = uncollected.find((pickup) => disposition(pickup) === kind);
+    const target =
+      converted ??
+      uncollected.find(
+        (pickup) => disposition(pickup) === 'normal' && supports(pickup.acquisition),
+      );
     const pinned = kind === 'artificer' ? replacement : undefined;
     if (target === undefined) {
       if (pinned !== undefined) return false;
-      if (kinds.includes(kind)) refused();
+      if (kinds.includes(kind) && !(kind === 'timePiece' && artificerWaits)) refused();
       continue;
     }
-    uncollected.splice(uncollected.indexOf(target), 1);
-    if (!kinds.includes(kind)) continue;
+    const position = uncollected.indexOf(target);
+    uncollected.splice(position, 1);
     if (
+      converted === undefined &&
+      kinds.includes(kind) &&
       !convertAcquisition(
         context,
-        acquisitionOf(target),
+        target.acquisition,
         kind,
         target.reward.offer.rewardType,
         roomIndex,
         pinned,
+        unused,
       ) &&
       pinned !== undefined
     )
       return false;
+    if (kind !== 'artificer') continue;
+    // The replacement spawns where its source stood, before any later wheel's pickup,
+    // and is required like it: collecting the room reaches it for a later Time Piece.
+    if (placedArtificerReplacement(context, target.acquisition) === undefined) continue;
+    context.collectRequired(roomAddress);
+    const placed = placedArtificerReplacement(context, target.acquisition);
+    const role =
+      placed === undefined ? undefined : Object.keys(placed.reward.dispositionByAcquisitionRole)[0];
+    if (placed === undefined || role === undefined || collected(placed.reward)) continue;
+    uncollected.splice(position, 0, {
+      reward: placed.reward,
+      acquisition: createAcquisitionRoleAddress(placed.entry, role),
+    });
+    if (pinned !== undefined) goldified = target.acquisition;
   }
-  return true;
+  if (goldified === undefined) return true;
+  const placed = placedArtificerReplacement(context, goldified);
+  return (
+    placed !== undefined &&
+    Object.values(placed.reward.dispositionByAcquisitionRole).some(
+      (value) => value.kind === 'timePiece',
+    )
+  );
 }
