@@ -85,6 +85,7 @@ function roomRewardAcquisition(
   const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
   const occurrence = authoredOccurrence(project, biome.biomeKey, occurrenceId);
   const reward = occurrence === undefined ? undefined : deliveredIncomingReward(biome, occurrence);
+  // The first declared acquisition role: Devotion's chosen pickup, a Mystery Boon's box.
   const role =
     reward === undefined || reward === null
       ? undefined
