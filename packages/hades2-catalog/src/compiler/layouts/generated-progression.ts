@@ -2,6 +2,7 @@ import type {
   CatalogCollection,
   GeneratedProgressionDescriptor,
   GeneratedProgressionPolicy,
+  HeroMetaRewardsTarget,
   NormalDoorBatchPolicy,
   OceanusAnomalyReplacementDescriptor,
   RewardStorePolicy,
@@ -21,6 +22,33 @@ import {
 import { normalizeAuthoredFields } from '../descriptors';
 import { fail } from '../errors';
 
+function normalizeMetaRewardsTarget(
+  raw: HeroMetaRewardsTarget,
+  path: string,
+): HeroMetaRewardsTarget {
+  if (
+    !Number.isFinite(raw.targetMetaRewardsRatio) ||
+    raw.targetMetaRewardsRatio < 0 ||
+    raw.targetMetaRewardsRatio > 1
+  ) {
+    fail(`${path}.targetMetaRewardsRatio`, 'must be a finite ratio from 0 through 1');
+  }
+  if (!Number.isFinite(raw.targetMetaRewardsAdjustSpeed) || raw.targetMetaRewardsAdjustSpeed < 0) {
+    fail(`${path}.targetMetaRewardsAdjustSpeed`, 'must be a finite non-negative number');
+  }
+  return {
+    targetMetaRewardsRatio: raw.targetMetaRewardsRatio,
+    targetMetaRewardsAdjustSpeed: raw.targetMetaRewardsAdjustSpeed,
+  };
+}
+
+export function normalizeHeroMetaRewardsTarget(
+  raw: HeroMetaRewardsTarget,
+  path: string,
+): HeroMetaRewardsTarget {
+  return Object.freeze(normalizeMetaRewardsTarget(raw, path));
+}
+
 export function normalizeRewardStorePolicy(
   rawPolicy: RewardStorePolicy,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
@@ -37,24 +65,10 @@ export function normalizeRewardStorePolicy(
         fail(`${path}.storeKeys[${index}]`, `unknown reward store ${storeKey}`);
       }
     }
-    if (
-      !Number.isFinite(rawPolicy.targetMetaRewardsRatio) ||
-      rawPolicy.targetMetaRewardsRatio < 0 ||
-      rawPolicy.targetMetaRewardsRatio > 1
-    ) {
-      fail(`${path}.targetMetaRewardsRatio`, 'must be a finite ratio from 0 through 1');
-    }
-    if (
-      !Number.isFinite(rawPolicy.targetMetaRewardsAdjustSpeed) ||
-      rawPolicy.targetMetaRewardsAdjustSpeed < 0
-    ) {
-      fail(`${path}.targetMetaRewardsAdjustSpeed`, 'must be a finite non-negative number');
-    }
     return Object.freeze({
       kind: 'authoredBaseStore',
       storeKeys,
-      targetMetaRewardsRatio: rawPolicy.targetMetaRewardsRatio,
-      targetMetaRewardsAdjustSpeed: rawPolicy.targetMetaRewardsAdjustSpeed,
+      ...normalizeMetaRewardsTarget(rawPolicy, path),
     });
   }
   if (rawPolicy.kind === 'sourceOfferPoint') {

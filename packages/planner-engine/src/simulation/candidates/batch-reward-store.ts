@@ -121,6 +121,7 @@ function prefixBatchRewardStoreSupport(
     return undefined;
   }
   const support = rewardStoreCandidateSupport(
+    catalog,
     layout,
     query.rewardStore,
     source,

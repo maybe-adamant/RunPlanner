@@ -1,6 +1,7 @@
 import type {
   BiomeLayout,
   Catalog,
+  HeroMetaRewardsTarget,
   RewardStorePolicy,
   RoomDeclaration,
 } from '../../../catalog-schema';
@@ -47,15 +48,35 @@ export function enteredRewardStoreTally(
 }
 
 /**
- * The controller's `T` for this biome's rolled doors — ordinary progression first, then the
- * completion descriptor for Q, whose only rolling door is the boss door. Undefined where no
- * door rolls at all: H and I pin every door, and the N hub declares no base store.
+ * The biome's rolling store policy — ordinary progression first, then the completion
+ * descriptor for Q, whose only rolling door is the boss door. Undefined where no door rolls
+ * at all: H and I pin every door, and the N hub declares no base store.
  */
-export function rolledRewardStoreTargetRatio(layout: BiomeLayout): number | undefined {
+export function rolledRewardStorePolicy(
+  layout: BiomeLayout,
+): Extract<RewardStorePolicy, { readonly kind: 'authoredBaseStore' }> | undefined {
   const ordinary = normalDecisionProgressionForLayout(layout)?.rewardStorePolicy;
   const policy =
     ordinary?.kind === 'authoredBaseStore' ? ordinary : bossDoorRewardStorePolicyForLayout(layout);
-  return policy?.kind === 'authoredBaseStore' ? policy.targetMetaRewardsRatio : undefined;
+  return policy?.kind === 'authoredBaseStore' ? policy : undefined;
+}
+
+/**
+ * The target `ChooseNextRewardStore` reads as the source room starts (RoomLogic.lua:1179,
+ * 3852): the one its own room set's base block declares, which a biome layout carries, else
+ * the Hero's. Chaos, Anomaly and Zagreus's C room sets declare none, so their doors back into
+ * the host roll with the Hero's. H's 0.0 and I's 0.25 are not carried: no door there rolls,
+ * so an H or I room is never a rolling source.
+ */
+export function sourceMetaRewardsTarget(
+  catalog: Pick<Catalog, 'biomeLayouts' | 'heroMetaRewardsTarget'>,
+  sourceDeclaration: RoomDeclaration,
+): HeroMetaRewardsTarget {
+  const roomSetLayout = catalog.biomeLayouts.byKey[sourceDeclaration.roomSetKey];
+  return (
+    (roomSetLayout === undefined ? undefined : rolledRewardStorePolicy(roomSetLayout)) ??
+    catalog.heroMetaRewardsTarget
+  );
 }
 
 /**
@@ -99,8 +120,12 @@ export function declaredEnteredStoreKey(
   }
 }
 
-/** Projects one authored base-store decision from its immutable layout and history facts. */
+/**
+ * Projects one authored base-store decision from its immutable layout and history facts,
+ * with the source room's own target.
+ */
 export function rewardStoreCandidateSupport(
+  catalog: Pick<Catalog, 'biomeLayouts' | 'heroMetaRewardsTarget'>,
   layout: BiomeLayout,
   origin: BatchRewardStoreAddress,
   source: CanonicalAuthoredRoom,
@@ -109,11 +134,16 @@ export function rewardStoreCandidateSupport(
   historySequence: number,
 ): RewardStoreCandidateSupport {
   const currentStore = declaredEnteredStoreKey(source, sourceDeclaration.enteredRewardStoreHistory);
-  const support = rewardStoreHistorySupport(layout, view, currentStore);
+  const target = sourceMetaRewardsTarget(catalog, sourceDeclaration);
+  const policy = {
+    ...generatedBaseStorePolicy(layout),
+    targetMetaRewardsRatio: target.targetMetaRewardsRatio,
+    targetMetaRewardsAdjustSpeed: target.targetMetaRewardsAdjustSpeed,
+  };
   return Object.freeze({
     origin,
     historySequence,
-    ...support,
+    ...rewardStorePolicySupport(policy, view, currentStore),
   });
 }
 
@@ -127,6 +157,12 @@ export function rewardStoreHistorySupport(
   view: HistoryStateView,
   currentStoreKey?: string,
 ): RewardStoreHistorySupport {
+  return rewardStorePolicySupport(generatedBaseStorePolicy(layout), view, currentStoreKey);
+}
+
+function generatedBaseStorePolicy(
+  layout: BiomeLayout,
+): Extract<RewardStorePolicy, { readonly kind: 'authoredBaseStore' }> {
   if (layout.progression.kind !== 'generated') {
     throw new BiomeRewardSimulationContractError(
       'Hub progression has no authored base-store policy',
@@ -138,7 +174,7 @@ export function rewardStoreHistorySupport(
       'generated progression lost its authored base-store contract',
     );
   }
-  return rewardStorePolicySupport(policy, view, currentStoreKey);
+  return policy;
 }
 
 /**
@@ -209,6 +245,7 @@ export function assessAuthoredBossDoorRewardStore(
 }
 
 export function assessAuthoredBatchRewardStore(
+  catalog: Pick<Catalog, 'biomeLayouts' | 'heroMetaRewardsTarget'>,
   layout: BiomeLayout,
   batch: Pick<CanonicalBatch, 'rewardStore'>,
   source: CanonicalAuthoredRoom,
@@ -222,6 +259,7 @@ export function assessAuthoredBatchRewardStore(
     );
   }
   const support = rewardStoreCandidateSupport(
+    catalog,
     layout,
     batch.rewardStore.origin,
     source,

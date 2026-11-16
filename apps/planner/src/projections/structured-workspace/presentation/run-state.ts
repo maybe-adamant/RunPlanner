@@ -151,7 +151,7 @@ function rewardStoreSection(
             ? 'None counted yet'
             : controller.currentMetaRatio.toFixed(3),
       }),
-      row('target', 'Biome target', {
+      row('target', 'Target', {
         right:
           controller.targetMetaRewardsRatio === undefined
             ? unrolledTargetLabel(controller.bankableStoreKeys)

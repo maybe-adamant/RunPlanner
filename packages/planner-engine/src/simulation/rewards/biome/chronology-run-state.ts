@@ -52,6 +52,7 @@ function runStateAt(
     createRunState({
       catalog,
       layout: context.prepared.layout,
+      sourceDeclaration: declaration,
       owner,
       state: reachSimulationHistory(checkpointBranch.state, routePosition, view),
       derivationCache: context.runStateDerivationCache,

@@ -5764,7 +5764,7 @@
   "P/c34604d0-c4e3-4c26-8539-54a82158716f P_Combat07": [
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat merged | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
       "loot": []
     }

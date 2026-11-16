@@ -116,7 +116,7 @@ describe('Run State product loop', () => {
     // Nothing is counted yet at the Opening's first action, and F declares 0.315.
     expect(stateRowValue(sheet, 'Entered stores')).toBe('0 entered, 0 Minor Reward');
     expect(stateRowValue(sheet, 'Current ratio')).toBe('None counted yet');
-    expect(stateRowValue(sheet, 'Biome target')).toBe('0.315');
+    expect(stateRowValue(sheet, 'Target')).toBe('0.315');
     await view.user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
@@ -151,7 +151,7 @@ describe('Run State product loop', () => {
     // Every N room is count-excluded natively and banks no store of any kind.
     expect(stateRowValue(sheet, 'Entered stores')).toBe('0 entered, 0 Minor Reward');
     expect(stateRowValue(sheet, 'Current ratio')).toBe('None counted yet');
-    expect(stateRowValue(sheet, 'Biome target')).toBe('This biome ignores Reward Store.');
+    expect(stateRowValue(sheet, 'Target')).toBe('This biome ignores Reward Store.');
     await view.user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);

@@ -52,6 +52,7 @@ describe('summarizeCatalog', () => {
       familiars: emptyCollection(),
       defaultFamiliarKey: 'FixtureFamiliar',
       heroMaxStats: { maxHealth: 30, maxMana: 50 },
+      heroMetaRewardsTarget: { targetMetaRewardsRatio: 0.45, targetMetaRewardsAdjustSpeed: 10 },
       gold: {
         fallbackGold: 90,
         purgingPoolSale: {

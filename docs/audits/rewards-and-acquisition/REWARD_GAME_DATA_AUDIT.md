@@ -163,9 +163,15 @@ chance = T + AdjustSpeed * (T - C) = 11T - 10C
 ```
 
 `T` is resolved by a three-way fallback at `RoomLogic.lua:3852`:
-`run.TargetMetaRewardsRatio`, else `run.CurrentRoom.TargetMetaRewardsRatio`
-(the biome base block, which is where every biome target below is declared),
-else `run.Hero.TargetMetaRewardsRatio`. `C` is `CalcMetaProgressRatio`, and
+`run.TargetMetaRewardsRatio` (set only by packaged bounties,
+`BountyData.lua:55`, outside the modeled non-bounty run), else
+`run.CurrentRoom.TargetMetaRewardsRatio`, else
+`run.Hero.TargetMetaRewardsRatio = 0.45` (`HeroData.lua:71`). The store is
+rolled as the source room starts (`RoomLogic.lua:1179`), so `T` is the source
+room's own: only the biome base blocks below declare one, and every other room
+set takes the Hero's. A Chaos, Anomaly or Zagreus (`C_Boss01`) room therefore
+rolls its doors back into the host with `0.45`, not the host's target.
+`C` is `CalcMetaProgressRatio`, and
 `AdjustSpeed` is `Hero.TargetMetaRewardsAdjustSpeed = 10` (`HeroData.lua:72`),
 unmodified anywhere in the data. `RandomChance` applies no clamp, so the chance
 saturates: `chance >= 1` is always MetaProgress and `chance <= 0` is
@@ -187,16 +193,18 @@ forces G's opening (`C = 0.300`, reachable in some shapes, gives
 are common enough that every consumer must treat them as ordinary, but calling
 saturation the common case overstates what the reachable states show.
 
-| Biome | Target `T` | Source                                                                                                                                            |
-| ----- | ---------: | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F     |      0.315 | biome base block                                                                                                                                  |
-| G     |       0.35 | biome base block                                                                                                                                  |
-| H     |        0.0 | biome base block; never consulted, see the pin below                                                                                              |
-| I     |       0.25 | biome base block                                                                                                                                  |
-| O     |       0.30 | biome base block                                                                                                                                  |
-| P     |       0.20 | biome base block                                                                                                                                  |
-| Q     |       0.15 | biome base block (`RoomDataQ.lua:44`)                                                                                                             |
-| N     |       0.45 | no base block; falls through to the Hero default. Never consulted: the hub is count-excluded and its progression declares no generated base store |
+| Room set          | Target `T` | Source                                                                                                                                                                                      |
+| ----------------- | ---------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F                 |      0.315 | biome base block                                                                                                                                                                            |
+| G                 |       0.35 | biome base block                                                                                                                                                                            |
+| H                 |        0.0 | biome base block; never consulted, see the pin below                                                                                                                                        |
+| I                 |       0.25 | biome base block                                                                                                                                                                            |
+| O                 |       0.30 | biome base block                                                                                                                                                                            |
+| P                 |       0.20 | biome base block                                                                                                                                                                            |
+| Q                 |       0.15 | biome base block (`RoomDataQ.lua:44`)                                                                                                                                                       |
+| N                 |       0.45 | no base block; falls through to the Hero default. Never consulted: every N target forces or pins its store (`RoomDataN.lua:359`, `:2849`, `:3795`)                                          |
+| Chaos, Anomaly, C |       0.45 | no target on `BaseChaos` (`RoomDataChaos.lua:3`), `BaseAnomaly` (`RoomDataAnomaly.lua:3`) or `C_Boss01` (`RoomDataC.lua:3`); the Hero default, consulted for their doors back into the host |
+| Dream             |       0.45 | no target in `RoomDataDream.lua`; never consulted: a Dream Postboss leads only to the next biome's fixed start                                                                              |
 
 ### The counted ratio
 

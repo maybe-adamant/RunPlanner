@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createTargetAddress,
   type ProjectDocument,
@@ -13,6 +14,9 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
+import type { HistoryStateView } from '../../src/simulation/history';
+import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
+import { rewardStoreCandidateSupport } from '../../src/simulation/rewards';
 import {
   createFStart,
   createUnresolvedFOpeningBatch,
@@ -58,6 +62,76 @@ describe('reward store support', () => {
         },
       },
     ]);
+  });
+});
+
+describe("the source room's store target", () => {
+  const surfaceLedgers = (biomeKey: string): HistoryStateView['ledgers'] => {
+    const biome = simulateProjectAssembly(
+      catalog,
+      loadSurfaceNOPQProject(),
+    ).evaluation.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+    if (biome === undefined || !('history' in biome))
+      throw new Error(`${biomeKey} lost its composed history`);
+    return biome.history.ledgers;
+  };
+  // Ten entered stores, three of them MetaProgress; the source's own entered store
+  // makes eleven, so the counted ratio is 3/11.
+  const priorStores = [...Array(7).fill('RunProgress'), ...Array(3).fill('MetaProgress')];
+  const view: HistoryStateView = Object.freeze({
+    sequence: priorStores.length,
+    ledgers: Object.freeze({
+      ...surfaceLedgers('P'),
+      enteredRewardStores: Object.freeze(
+        priorStores.map((storeKey, sequence) =>
+          Object.freeze({
+            sequence,
+            origin: createOccurrenceAddress(pBiome, createOccurrenceId(`prior-${sequence}`)),
+            gameName: 'P_Combat01',
+            storeKey,
+          }),
+        ),
+      ),
+    }),
+  });
+  const pLayout = catalog.biomeLayouts.byKey['P']!;
+  const support = (gameName: string, source: object) =>
+    rewardStoreCandidateSupport(
+      catalog,
+      pLayout,
+      createBatchRewardStoreAddress(pBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId(gameName),
+      }),
+      source as CanonicalAuthoredRoom,
+      catalog.rooms.byKey[gameName]!,
+      view,
+      view.sequence + 1,
+    );
+
+  it.each(['Chaos_04', 'B_Combat01', 'C_Boss01'])(
+    "rolls %s's exits with the Hero target, where the tally makes Meta certain",
+    (gameName) => {
+      // 0.45 + 10 * (0.45 - 3/11) > 1: every door is MetaProgress.
+      expect(
+        support(gameName, { incomingReward: { resolvedStoreKey: 'RunProgress' } }),
+      ).toMatchObject({
+        enteredStoreCount: 11,
+        enteredMetaStoreCount: 3,
+        supportStoreKeys: ['MetaProgress'],
+      });
+    },
+  );
+
+  it("rolls a biome room's exits with the biome target, where the same tally rules Meta out", () => {
+    // 0.20 + 10 * (0.20 - 3/11) < 0.
+    expect(
+      support('P_Combat01', { incomingReward: { resolvedStoreKey: 'RunProgress' } }),
+    ).toMatchObject({
+      enteredStoreCount: 11,
+      enteredMetaStoreCount: 3,
+      supportStoreKeys: ['RunProgress'],
+    });
   });
 });
 

@@ -5,6 +5,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAdditionalExitAddress,
+  createBatchRewardStoreAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createShopOfferAddress,
@@ -289,6 +290,15 @@ function contractShopProject(withHex = false): ProjectDocument {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenGBiome, returned),
     gameName: 'G_MiniBoss03',
+  });
+  // Zagreus rolls with the Hero target, which this ledger saturates to MetaProgress.
+  project = settleTestEdit(project, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('contract-pedestal-witness'),
+    }),
+    storeKey: 'MetaProgress',
   });
   project = settleTestEdit(project, {
     kind: 'ReplaceIncomingReward',

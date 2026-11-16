@@ -830,10 +830,12 @@ export function underworldZagreusContractProject(): ProjectDocument {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(goldenGBiome, contractSource),
   });
+  // C_Boss01 rolls with the Hero target (HeroData.lua:71), which the ledger saturates to
+  // MetaProgress here; the return miniboss forces RunProgress either way.
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBatchRewardStore',
     rewardStore: createBatchRewardStoreAddress(goldenGBiome, contractSource),
-    storeKey: 'RunProgress',
+    storeKey: 'MetaProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',

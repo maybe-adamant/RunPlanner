@@ -1,5 +1,6 @@
 {
   "schemaVersion": 103,
+  "schemaRevision": 3,
   "projectId": "run-plan",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -2886,11 +2887,9 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "WeaponUpgrade"
+                    "rewardType": "MetaCardPointsCommonBigDrop"
                   },
-                  "traitOffersByAcquisitionRole": {
-                    "self": null
-                  },
+                  "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
                     "self": {
                       "kind": "normal"
@@ -2922,7 +2921,7 @@
                     "acquisitionRole": "self",
                     "content": [
                       "native",
-                      "WeaponUpgrade"
+                      "MetaCardPointsCommonBigDrop"
                     ]
                   }
                 ]
@@ -2936,7 +2935,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "RoomMoneyDrop"
+                    "rewardType": "MetaCurrencyBigDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -3037,7 +3036,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "RunProgress"
+                  "baseRewardStoreKey": "MetaProgress"
                 },
                 "batchState": null,
                 "targets": [
