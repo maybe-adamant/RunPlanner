@@ -137,6 +137,28 @@ jobs:
             echo "appimage=${staging}/${artifact_name}.AppImage"
           } >> "${GITHUB_OUTPUT}"
 
+      # linuxdeploy bundles the build host's Wayland client libraries with
+      # WebKitGTK; against a newer host's Mesa they fail EGL display creation
+      # (EGL_BAD_PARAMETER), so the AppImage uses the host's own, like libEGL.
+      # The repack reuses the AppImage plugin Tauri cached for the build.
+      - name: Drop bundled Wayland libraries
+        env:
+          APPIMAGE: ${{ steps.package.outputs.appimage }}
+        run: |
+          work="${RUNNER_TEMP}/wayland-strip"
+          mkdir -p "${work}"
+          (cd "${work}" && "${APPIMAGE}" --appimage-extract >/dev/null)
+          appdir="${work}/squashfs-root"
+          mapfile -t bundled < <(find "${appdir}/usr/lib" -maxdepth 1 -name 'libwayland-*.so*')
+          if [ "${#bundled[@]}" -eq 0 ]; then
+            echo "The AppImage bundles no libwayland libraries; this step is no longer needed." >&2
+            exit 1
+          fi
+          rm -f "${bundled[@]}"
+          plugin="${XDG_CACHE_HOME:-${HOME}/.cache}/tauri/linuxdeploy-plugin-appimage.AppImage"
+          ARCH=x86_64 LDAI_OUTPUT="${APPIMAGE}" "${plugin}" --appdir "${appdir}"
+          rm -rf "${work}"
+
       # The updater picks its manifest entry by the bundle type Tauri patches
       # into the packaged executable over its unknown-type marker.
       - name: Verify bundle type
