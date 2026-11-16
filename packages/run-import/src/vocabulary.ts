@@ -103,6 +103,20 @@ export function pickupUseCount(catalog: Catalog, room: RunRecordRoom, rewardType
   return [...names].reduce((count, name) => count + (room.uses[name] ?? 0), 0);
 }
 
+/**
+ * How many times the room's uses record its entered reward. A god's reward is
+ * used under the god's loot name; undefined when that god is not recorded.
+ */
+export function roomRewardUseCount(catalog: Catalog, room: RunRecordRoom): number | undefined {
+  const type = room.reward?.type;
+  if (type === undefined) return undefined;
+  const lootName = room.reward?.lootName;
+  const godPayload = catalog.rewards.rewardTypes.byKey[type]?.payloadDomain !== undefined;
+  if (lootName === undefined && godPayload) return undefined;
+  const godUses = lootName === undefined ? 0 : (room.uses[lootName] ?? 0);
+  return pickupUseCount(catalog, room, type) + godUses;
+}
+
 /** Pom level-up screens, by their loot: a Pom of Power, a Big Pom and a Triple Pom. */
 export const POM_GIVERS: ReadonlySet<string> = new Set([
   'StackUpgrade',

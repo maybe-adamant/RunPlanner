@@ -189,7 +189,11 @@ describe('run import door assignment', () => {
    * Oceanus through its Preboss, G_MiniBoss01's doors swapped for two Anomaly
    * maps and the entered one returning to the Preboss.
    */
-  function oceanusWithAnomalyDoors(collected: boolean): RunRecord {
+  function oceanusWithAnomalyDoors(collected: boolean, boon = false): RunRecord {
+    const reward = boon
+      ? { type: 'Boon', lootName: 'ZeusUpgrade' }
+      : { type: 'MetaCardPointsCommonBigDrop' };
+    const use = boon ? 'ZeusUpgrade' : 'MetaCardPointsCommonBigDrop';
     const record = fixture('underworld');
     const rooms = record.rooms.slice(0, 23).map((room, index) =>
       index === 20
@@ -197,7 +201,7 @@ describe('run import door assignment', () => {
             ...room,
             doors: [
               { door: 558528, room: 'B_Combat05', reward: { type: 'MetaCurrencyBigDrop' } },
-              { door: 568792, room: 'B_Combat06', reward: { type: 'MetaCardPointsCommonBigDrop' } },
+              { door: 568792, room: 'B_Combat06', reward },
             ],
             exit: 'B_Combat06',
           }
@@ -207,7 +211,8 @@ describe('run import door assignment', () => {
               name: 'B_Combat06',
               doors: [{ door: 569281, room: 'G_PreBoss01', reward: { type: 'Shop' } }],
               encounters: [{ name: 'GeneratedAnomalyB' }],
-              uses: collected ? { MetaCardPointsCommonBigDrop: 1 } : { CapturePointSwitch: 1 },
+              ...(boon ? { reward: { ...reward, store: 'RunProgress' } } : {}),
+              uses: collected ? { [use]: 1 } : { CapturePointSwitch: 1 },
               traits: { acquired: [], removed: [], upgraded: [] },
             }
           : room,
@@ -241,6 +246,14 @@ describe('run import door assignment', () => {
         (entry) => entry.area === 'doors' && entry.record?.roomIndex === 20,
       ),
     ).toEqual([]);
+  });
+
+  it("counts a god's reward picked up in the entered Anomaly under the god's loot name", () => {
+    const imported = projectFromRunRecord(catalog, oceanusWithAnomalyDoors(true, true));
+    expect(occurrence(imported.project, 'G-r21').state).toMatchObject({
+      kind: 'anomaly',
+      success: true,
+    });
   });
 
   it("fails the entered Anomaly's challenge when its reward was not picked up", () => {

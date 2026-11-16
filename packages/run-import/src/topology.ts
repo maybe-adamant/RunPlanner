@@ -21,7 +21,7 @@ import type { RunRecordDoor } from './run-record/model';
 import type { RunImportContext } from './import';
 import { recordedEntryStates } from './conformance';
 import { searchRoom } from './room-search';
-import { pickupUseCount } from './vocabulary';
+import { roomRewardUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -431,15 +431,10 @@ function switchAnomaly(
     occurrenceId === context.occurrences.occurrenceOf(sourceIndex + 1)
       ? context.record.rooms[sourceIndex + 1]
       : undefined;
-  const rewardType = entered?.reward?.type;
   const switched = context.transaction(() => {
     if (!context.apply({ kind: 'SwitchTargetToAnomaly', target })) return false;
     context.apply({ kind: 'ReplaceAnomalyMap', occurrence, gameName: door.room });
-    if (
-      entered !== undefined &&
-      rewardType !== undefined &&
-      pickupUseCount(context.catalog, entered, rewardType) === 0
-    )
+    if (entered !== undefined && roomRewardUseCount(context.catalog, entered) === 0)
       context.apply({ kind: 'ReplaceAnomalySuccess', occurrence, success: false });
     return topologyOccurrence(context, target.biomeKey, occurrenceId)?.gameName === door.room;
   });
